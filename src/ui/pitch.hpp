@@ -116,6 +116,7 @@ private:
     std::optional<PitchRequest> pending_;
     std::optional<int> selected_, hovered_;
     std::optional<std::pair<int,int>> ghost_;
+    std::optional<std::pair<int,int>> order_hover_grid_;
     int scroll_ = 0;
     bool close_ = false, return_team_ = false;
     bool weights_dirty_ = false; // original local_30: reapply current AA after a weight change

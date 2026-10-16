@@ -249,12 +249,48 @@ int main(int argc,char**argv){try{
                 hidden_page.click(241,215).kind==PitchRequestKind::none))&&
               hidden_page.save_formation(250,166).kind==PitchRequestKind::none&&!hidden_page.pending(),
               "inactive Source AA page ignores hidden formation, weight and held-save coordinates");
-        if(word==0x08||word==0x28)for(int y=110;y<131;++y)for(int x=243;x<278;++x)
+        if(word==0x08)for(int y=110;y<131;++y)for(int x=243;x<278;++x)
             check(before.pixels[size_t(y)*before.width+x]==0x42,"inactive Source page does not draw the KB2 formation panel");
         check(hidden_page.extras().formations==aa.formations&&
               hidden_page.extras().automatic_weights==aa.automatic_weights,
               "ignored AA input preserves authoritative templates and packed weights");
     }
+    auto order_lineup=s;auto order_extras=e;order_extras.native_display_word=0x28;
+    order_lineup.players[0].board[2]=12;order_lineup.players[0].board[3]=10;
+    order_lineup.players[0].board[4]=20;order_lineup.players[0].board[5]=8;
+    PitchScreen orders(data,order_lineup,order_extras);
+    auto order_idle=orders.render();
+    auto order_atlas=load_vga(asset_path(data/"KB","2.VGA"));
+    for(int side=0;side<2;++side)for(int aspect=0;aspect<4;++aspect)
+        for(int y=0;y<12;++y)for(int x=0;x<15;++x){
+            const auto value=order_atlas.at(196+aspect*16+x,56+side*12+y);
+            if(value!=0xc0)check(order_idle.at(243+side*58+x,179+aspect*12+y)==value,
+                "Anweis controls use all eight original atlas sprites");
+        }
+    check(orders.move(20,38),"Anweis accepts hover over the first starter");
+    auto order_hover=orders.render();int coverage_changes=0;
+    for(int y=111;y<220;++y)for(int x=3;x<193;++x)
+        if((order_idle.at(x,y)^order_hover.at(x,y))&0x80)++coverage_changes;
+    check(coverage_changes>100&&!orders.pending()&&orders.state().revision==s.revision&&
+          orders.state().players[0].board==order_lineup.players[0].board,
+          "hover previews the red ORDER coverage without selecting or mutating a player");
+    check(orders.move(150,200),"moving over an empty pitch cell updates its position hints");
+    auto hints=orders.render();int hint_pixels=0;
+    for(int y=159;y<=173;++y)for(int x=241;x<319;++x)
+        if(hints.at(x,y)!=order_idle.at(x,y))++hint_pixels;
+    check(hint_pixels>0&&!orders.pending(),"Anweis cell hints come from runtime zone masks and texts");
+    PitchScreen orders_copy=orders;
+    check(orders_copy.render().pixels==hints.pixels,"copying a preview preserves its hovered position hints");
+    orders.move(220,100);
+    check(orders.render().pixels==order_idle.pixels,"leaving Anweis hover restores the idle page");
+    auto cancel_extras=e;cancel_extras.native_display_word=0;
+    PitchScreen team_cancel(data,s,cancel_extras);
+    team_cancel.click(20,38);
+    team_cancel.pointer_down(310,230,true);
+    check(!team_cancel.close_requested()&&!team_cancel.pending(),
+          "a live-compatible full sheet first cancels its selected player on right press");
+    team_cancel.pointer_down(309,229,true);
+    check(team_cancel.close_requested(),"the next right press leaves the full sheet");
     auto hall_pages=aa;hall_pages.indoor=true;
     PitchScreen hall_transition(data,s,hall_pages);
     const auto instructions=hall_transition.click(210,154);

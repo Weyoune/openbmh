@@ -195,6 +195,7 @@ PitchScreen::PitchScreen(const std::filesystem::path& data,LineupState state,Pit
 PitchScreen::PitchScreen(const PitchScreen& other)
     :PitchScreen(other.data_,other.state_,other.extras_){
     pending_=other.pending_;selected_=other.selected_;hovered_=other.hovered_;ghost_=other.ghost_;
+    order_hover_grid_=other.order_hover_grid_;
     scroll_=other.scroll_;close_=other.close_;return_team_=other.return_team_;rejection_=other.rejection_;
     weights_dirty_=other.weights_dirty_;
     shooter_editor_open_=other.shooter_editor_open_;shooter_selection_=other.shooter_selection_;
@@ -311,14 +312,18 @@ Image PitchScreen::render()const{
     for(auto[row,baseline]:rows())if(baseline>34&&baseline<107&&(selected_==row||hovered_==row)){
         copy(out,background_,13,baseline-5,13,baseline-5,51,6);
         text(out,13,baseline,state_.players.at(row).name,selected_==row?0x27:0x3e);}
-    if(shooter_editor_open_&&zone_cover_open_){
-        // TestsTemporaryDisplayBitCallsBeff tests the temporary 0x80 display bit and calls DerivesRedCoverage
-        // for each healthy active starter. DerivesRedCoverage derives the red coverage
-        // bounds from the native ORDER bytes at player+2..+4 and clips them
-        // to the Source pitch's x=3..192 / y=113..219 area.
-        for(int row=0;row<11;++row){
-            const auto& p=state_.players.at(size_t(row));
-            if(!(p.slot&0x8000)||((p.attributes.w364>>16)&0x1f)!=0)continue;
+    const auto eligible_order_row = [&](std::optional<int> row) {
+        return row && *row >= 0 && *row < 11 &&
+            (state_.players.at(size_t(*row)).slot & 0x8000) &&
+            ((state_.players.at(size_t(*row)).attributes.w364 >> 16) & 0x1f) == 0;
+    };
+    std::optional<int> order_row;
+    if(eligible_order_row(hovered_))order_row=hovered_;
+    else if(eligible_order_row(selected_))order_row=selected_;
+    // Both the order page's hovered player and the taker editor's coverage
+    // toggle use the native ORDER geometry and VGA plane-7 mask.
+    const auto draw_coverage = [&](const LineupPlayer& p) {
+            if(!(p.slot&0x8000)||((p.attributes.w364>>16)&0x1f)!=0)return;
             const int depth=int8_t(p.board[0x41]),lane=int8_t(p.board[0x42]);
             const int order_x=p.board[2],order_y=p.board[3];
             const int zone_count=p.board[4]/2;
@@ -355,7 +360,11 @@ Image PitchScreen::render()const{
                     source_mask_copy(out,atlas_,0xc4,0x59,draw_x0,lower,draw_x1-draw_x0,1);
                 }
             }
-        }
+    };
+    if(shooter_editor_open_&&zone_cover_open_){
+        for(int row=0;row<11;++row)draw_coverage(state_.players.at(size_t(row)));
+    }else if(order_panel_open_&&order_row){
+        draw_coverage(state_.players.at(size_t(*order_row)));
     }
     for(int row=0;row<11;++row){const auto& p=state_.players.at(row);if(!(p.slot&0x8000))continue;
         jersey(out,p,int8_t(p.board[0x41]),int8_t(p.board[0x42]),selected_==row||hovered_==row?3:0);}
@@ -423,8 +432,40 @@ Image PitchScreen::render()const{
             text(out,243,baseline+6,details,0x69);
         }
     }
-    if(extras_.mode!=1&&order_panel_open_&&selected_&&*selected_<11){
-        const auto& player=state_.players.at(size_t(*selected_));
+    if(extras_.mode!=1&&order_panel_open_){
+        // The original panel includes its eight atlas controls and up to six
+        // marked substitutes above the order bars; none are generated artwork.
+        for(int side=0;side<2;++side)for(int aspect=0;aspect<4;++aspect)
+            copy(out,atlas_,196+aspect*16,56+side*12,243+side*58,179+aspect*12,15,12,0xc0);
+        int bench_row=0;
+        for(const auto& player:state_.players){
+            if(bench_row==6)break;
+            if(player.player_id<0||!(player.slot&0x4000))continue;
+            const int baseline=118+7*bench_row++;
+            text(out,243,baseline,exe_.string_at_pointer(::bmh::layout::PitchOrderPositionPointers+
+                player.attributes.position()*4),0x6b);
+            std::string name=player.name;
+            while(!name.empty()&&font_.text_width(name)>48)name.pop_back();
+            text(out,252,baseline,name,0x6b);
+            text(out,302,baseline,"("+std::to_string(player.attributes.strength())+")",0x6b);
+        }
+        if(order_hover_grid_){
+            const auto [depth,lane]=*order_hover_grid_;
+            const auto mask=exe_.u16(::bmh::layout::PitchOrderZoneMasks+lane*38+std::min(depth,18)*2);
+            std::string position,zone;
+            const auto label=[&](int bit)->const std::string&{
+                return texts_[(::bmh::layout::PitchOrderZoneTextPointers-::bmh::layout::TextPointerTable)/4+bit];
+            };
+            for(int bit=0;bit<6;++bit)if(mask&(1<<bit)){position=label(bit);break;}
+            for(int bit=6;bit<14;++bit)if(mask&(1<<bit))zone+=label(bit);
+            while(!position.empty()&&font_.text_width(position)>78)position.pop_back();
+            while(!zone.empty()&&font_.text_width(zone)>78)zone.pop_back();
+            text(out,241,165,position,0x6b);
+            text(out,241,173,zone,0x69);
+        }
+    }
+    if(extras_.mode!=1&&order_panel_open_&&order_row){
+        const auto& player=state_.players.at(size_t(*order_row));
         for(int aspect=0;aspect<4;++aspect){
             const int y=181+12*aspect,value=player.board[size_t(2+aspect)];
             if(value){copy(out,atlas_,0x103,0x3b,0x103,y,value,9,0xc0);
@@ -529,10 +570,15 @@ PitchRequest PitchScreen::order_request(int aspect,int value){
 }
 PitchRequest PitchScreen::click(int x,int y,bool right){
     if(pending_||close_)return {};
-    if(right){if(selected_){selected_.reset();ghost_.reset();}else {close_=true;zone_cover_open_=false;}return {};}
     const uint16_t display_word=shooter_editor_open_
         ? uint16_t(extras_.native_display_word&0xff0f)
         : extras_.native_display_word;
+    if(right){
+        if((display_word&0x08)==0){sheet_->click(x,y,true);close_=sheet_->close_requested();}
+        else if(selected_){selected_.reset();ghost_.reset();}
+        else {close_=true;zone_cover_open_=false;}
+        return {};
+    }
     if((display_word&0x08)==0){
         // On the full-sheet redraw, PitchScreen presents its original footer
         // controls at (1,215) and (58,215): data A/B and the pitch/team page.
@@ -694,8 +740,11 @@ PitchRequest PitchScreen::save_formation(int x,int y){
     pending_=r;return r;
 }
 bool PitchScreen::move(int x,int y){if(pending_||close_)return false;
+    if((extras_.native_display_word&0x08)==0)return sheet_->move(x,y);
     const auto old=hovered_;const auto oldghost=ghost_;hovered_=hit_row(x,y);ghost_=selected_?grid(x,y):std::nullopt;
-    return old!=hovered_||oldghost!=ghost_;
+    const auto old_grid=order_hover_grid_;
+    order_hover_grid_=order_panel_open_?grid(x,y):std::nullopt;
+    return old!=hovered_||oldghost!=ghost_||old_grid!=order_hover_grid_;
 }
 PitchRequest PitchScreen::key(std::string_view key){
     // PitchScreen's desktop pages cancel selection/return on mouse event 8.
@@ -862,12 +911,12 @@ void PitchScreen::acknowledge(LineupState s,PitchExtras e){
     if(kind==PitchRequestKind::set_player_marking){marking_target_row_.reset();}
     state_=std::move(s);extras_=std::move(e);sheet_=std::move(new_sheet);badge_=std::move(new_badge);
     scroll_=0;
-    if(kind!=PitchRequestKind::set_player_order){selected_.reset();hovered_.reset();ghost_.reset();}
+    if(kind!=PitchRequestKind::set_player_order){selected_.reset();hovered_.reset();ghost_.reset();order_hover_grid_.reset();}
     pending_.reset();rejection_.clear();
 }
 void PitchScreen::reject_action(std::string reason){if(!pending_||reason.empty())throw FormatError("pitch: rejection requires pending action and reason");
     if(sheet_->pending())sheet_=std::make_unique<LineupScreen>(data_,state_);
-    pending_.reset();selected_.reset();hovered_.reset();ghost_.reset();marking_target_row_.reset();rejection_=std::move(reason);
+    pending_.reset();selected_.reset();hovered_.reset();ghost_.reset();order_hover_grid_.reset();marking_target_row_.reset();rejection_=std::move(reason);
 }
 void PitchScreen::resolve_local_navigation(){
     if(!pending_||pending_->kind!=PitchRequestKind::open_player_info)

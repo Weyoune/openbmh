@@ -1749,11 +1749,57 @@ int main(int argc, char** argv) {
                         auto live_lineup = ui::lineup_from_game(lineup_state, season_exe, live_revision);
                         live_lineup.in_match = true;
                         live_lineup.entry_prepared = true;
-                        ui::LineupScreen screen(data, std::move(live_lineup));
-                        SDL_SetWindowTitle(window, "OpenBMH - live_lineup");
+                        // The live menu owns the same native display word and both pages
+                        // as the desk. A separate team-sheet parent can hide a saved
+                        // pitch page and strand its navigation request after return.
+                        ui::PitchScreen screen(data, std::move(live_lineup),
+                            ui::pitch_extras_from_game(state, season_exe, live_revision, selected_opponent));
+                        const auto live_title = [&] {
+                            return (screen.extras().native_display_word & 8)
+                                ? "OpenBMH - live_pitch" : "OpenBMH - live_lineup";
+                        };
+                        SDL_SetWindowTitle(window, live_title());
                         bool closed = false;
-                        std::optional<SDL_MouseButtonEvent> lineup_down;
-                        std::optional<SDL_MouseButtonEvent> lineup_right_down;
+                        const auto apply_live_pitch = [&](const ui::PitchRequest& action) {
+                            if (action.kind == ui::PitchRequestKind::none) return;
+                            if (action.kind == ui::PitchRequestKind::open_player_info) {
+                                try {
+                                    if (action.row < 0 || size_t(action.row) >= screen.state().players.size() ||
+                                        screen.state().players.at(size_t(action.row)).player_id != action.player_id)
+                                        throw FormatError("live player information request is stale");
+                                    auto services = session->live_club_modal_services(live_revision);
+                                    const ClubPlayerDetailSelection selection{selected_team, action.player_id,
+                                        action.row, action.row, -1};
+                                    if (!present_player_detail)
+                                        throw FormatError("live player information presenter stopped");
+                                    const auto return_parent = present_player_detail(services, selection, screen.render());
+                                    if (!return_parent) throw FormatError("live player information presenter stopped");
+                                    if (*return_parent) closed = true;
+                                } catch (const std::exception& e) {
+                                    std::fprintf(stderr, "live player information: %s\n", e.what());
+                                }
+                                screen.resolve_local_navigation();
+                            } else {
+                                const auto result = dispatch_pitch(action);
+                                if (result.status == app::LiveSubstitutionStatus::applied) {
+                                    auto updated = ui::lineup_from_game(state, season_exe, live_revision);
+                                    updated.in_match = true; updated.entry_prepared = true;
+                                    screen.acknowledge(std::move(updated),
+                                        ui::pitch_extras_from_game(state, season_exe, live_revision, selected_opponent));
+                                } else if (result.status == app::LiveSubstitutionStatus::source_notice) {
+                                    show_live_substitution_notice(result, screen.render(), live_title());
+                                    auto updated = ui::lineup_from_game(state, season_exe, live_revision);
+                                    updated.in_match = true; updated.entry_prepared = true;
+                                    screen = ui::PitchScreen(data, std::move(updated),
+                                        ui::pitch_extras_from_game(state, season_exe, live_revision, selected_opponent));
+                                } else {
+                                    screen.reject_action(result.error.empty()
+                                        ? "Der Spielerwechsel ist nicht freigegeben." : result.error);
+                                }
+                            }
+                            SDL_SetWindowTitle(window, live_title());
+                        };
+                        bool left_held = false, left_release_consumed = false, right_held = false;
                         while (running && !closed) {
                             const Image image = screen.render();
                             for (size_t i = 0; i < pixels.size(); ++i)
@@ -1769,188 +1815,35 @@ int main(int argc, char** argv) {
                                 if (modal.type == SDL_KEYDOWN && modal.key.keysym.sym == SDLK_ESCAPE) {
                                     screen.key("ESC"); closed = true; break;
                                 }
-                                if (modal.type == SDL_MOUSEBUTTONDOWN && modal.button.button == SDL_BUTTON_RIGHT)
-                                    lineup_right_down = modal.button;
-                                else if (modal.type == SDL_MOUSEBUTTONUP && lineup_right_down &&
-                                         modal.button.button == SDL_BUTTON_RIGHT &&
-                                         modal.button.x == lineup_right_down->x && modal.button.y == lineup_right_down->y) {
-                                    lineup_right_down.reset();
-                                    screen.click(modal.button.x, modal.button.y, true);
+                                if (modal.type == SDL_MOUSEBUTTONDOWN && modal.button.button == SDL_BUTTON_LEFT) {
+                                    left_held = true;
+                                    const auto action = screen.pointer_down(modal.button.x, modal.button.y);
+                                    left_release_consumed = screen.take_source_down_release_barrier();
+                                    // Native page/order controls act on DOWN. ACK before
+                                    // polling another event; their UP cannot toggle twice.
+                                    apply_live_pitch(action);
+                                    redrawn = true;
+                                } else if (modal.type == SDL_MOUSEBUTTONUP && modal.button.button == SDL_BUTTON_LEFT && left_held) {
+                                    left_held = false;
+                                    if (!left_release_consumed)
+                                        apply_live_pitch(screen.click(modal.button.x, modal.button.y));
+                                    left_release_consumed = false;
+                                    redrawn = true;
+                                } else if (modal.type == SDL_MOUSEBUTTONDOWN && modal.button.button == SDL_BUTTON_RIGHT) {
+                                    right_held = true;
+                                    (void)screen.pointer_down(modal.button.x, modal.button.y, true);
+                                    (void)screen.take_source_down_release_barrier();
+                                    redrawn = true;
+                                } else if (modal.type == SDL_MOUSEBUTTONUP && modal.button.button == SDL_BUTTON_RIGHT && right_held) {
+                                    right_held = false;
+                                    // Mouse movement between DOWN and UP must not leave
+                                    // a closed modal or an accepted request suspended.
                                     if (screen.close_requested()) closed = true;
                                     redrawn = true;
-                                }
-                                if (modal.type == SDL_MOUSEBUTTONDOWN && modal.button.button == SDL_BUTTON_LEFT)
-                                    lineup_down = modal.button;
-                                else if (modal.type == SDL_MOUSEBUTTONUP && lineup_down &&
-                                         modal.button.button == SDL_BUTTON_LEFT &&
-                                         modal.button.x == lineup_down->x && modal.button.y == lineup_down->y) {
-                                    lineup_down.reset();
-                                    const auto request = screen.click(modal.button.x, modal.button.y);
-                                    if (request.kind == ui::LineupRequestKind::swap_players) {
-                                        const auto result = dispatch(request);
-                                        if (result.status == app::LiveSubstitutionStatus::applied) {
-                                            auto updated = ui::lineup_from_game(state, season_exe, live_revision);
-                                            updated.in_match = true; updated.entry_prepared = true;
-                                            screen.acknowledge(std::move(updated));
-                                            redrawn = true;
-                                        } else if (result.status == app::LiveSubstitutionStatus::source_notice) {
-                                            show_live_substitution_notice(result, screen.render(),
-                                                "OpenBMH - live_lineup");
-                                            auto updated = ui::lineup_from_game(state, season_exe, live_revision);
-                                            updated.in_match = true; updated.entry_prepared = true;
-                                            screen = ui::LineupScreen(data, std::move(updated));
-                                            redrawn = true;
-                                        } else {
-                                            screen.reject_action(result.error.empty()
-                                                ? "Der Spielerwechsel ist nicht freigegeben."
-                                                : result.error);
-                                            redrawn = true;
-                                        }
-                                    } else if (request.kind == ui::LineupRequestKind::open_player_info) {
-                                        const auto& player = screen.state().players.at(size_t(request.first_row));
-                                        try {
-                                            if (player.player_id != request.first_player)
-                                                throw FormatError("live player information request is stale");
-                                            auto services = session->live_club_modal_services(live_revision);
-                                            const ClubPlayerDetailSelection selection{selected_team, request.first_player,
-                                                request.first_row, request.first_row, -1};
-                                            if (!present_player_detail)
-                                                throw FormatError("live player information presenter stopped");
-                                            const auto return_parent = present_player_detail(services, selection, screen.render());
-                                            if (!return_parent) throw FormatError("live player information presenter stopped");
-                                            if (*return_parent) closed = true;
-                                            SDL_SetWindowTitle(window, "OpenBMH - live_lineup");
-                                        } catch (const std::exception& e) {
-                                            std::fprintf(stderr, "live player information: %s\n", e.what());
-                                        }
-                                        screen.resolve_local_navigation(request.kind);
-                                        redrawn = true;
-                                    } else if (request.kind == ui::LineupRequestKind::open_pitch) {
-                                        bool returned_to_lineup = false;
-                                        try {
-                                            ui::PitchScreen pitch(data, screen.state(),
-                                                ui::pitch_extras_from_game(state, season_exe, live_revision, selected_opponent));
-                                            auto pitch_entry = pitch.request_page_control(1);
-                                            app::LiveSubstitutionResult entry_result;
-                                            if (pitch_entry.kind == ui::PitchRequestKind::none ||
-                                                (entry_result = dispatch_pitch(pitch_entry)).status !=
-                                                    app::LiveSubstitutionStatus::applied) {
-                                                if (pitch_entry.kind != ui::PitchRequestKind::none)
-                                                    pitch.reject_action(entry_result.error.empty()
-                                                        ? "Source pitch entry was rejected" : entry_result.error);
-                                                throw FormatError(entry_result.error.empty()
-                                                    ? "Source pitch entry could not be acknowledged" : entry_result.error);
-                                            }
-                                            auto entered_lineup = ui::lineup_from_game(state, season_exe, live_revision);
-                                            entered_lineup.in_match = true; entered_lineup.entry_prepared = true;
-                                            pitch.acknowledge(std::move(entered_lineup),
-                                                ui::pitch_extras_from_game(state, season_exe, live_revision, selected_opponent));
-                                            SDL_SetWindowTitle(window, "OpenBMH - live_pitch");
-                                            bool pitch_closed = false;
-                                            std::optional<SDL_MouseButtonEvent> pitch_down;
-                                            std::optional<SDL_MouseButtonEvent> pitch_right_down;
-                                            std::optional<ui::PitchRequest> pitch_down_request;
-                                            Uint32 pitch_down_at = 0;
-                                            while (running && !pitch_closed) {
-                                                const Image pitch_image = pitch.render();
-                                                for (size_t i = 0; i < pixels.size(); ++i)
-                                                    pixels[i] = palette.argb[pitch_image.pixels[i]];
-                                                SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                                                SDL_RenderClear(renderer);
-                                                SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                                                SDL_RenderPresent(renderer);
-                                                SDL_Event child;
-                                                bool pitch_redrawn = false;
-                                                while (SDL_PollEvent(&child)) {
-                                                    if (child.type == SDL_QUIT) { running = false; pitch_closed = true; break; }
-                                                    if (child.type == SDL_KEYDOWN && child.key.keysym.sym == SDLK_ESCAPE) {
-                                                        pitch.key("ESC"); pitch_closed = true; closed = true; break;
-                                                    }
-                                                    if (child.type == SDL_MOUSEBUTTONDOWN && child.button.button == SDL_BUTTON_LEFT) {
-                                                        pitch_down = child.button; pitch_down_at = SDL_GetTicks();
-                                                        pitch_down_request = pitch.pointer_down(child.button.x, child.button.y);
-                                                    } else if (child.type == SDL_MOUSEBUTTONDOWN && child.button.button == SDL_BUTTON_RIGHT) {
-                                                        pitch_right_down = child.button;
-                                                        (void)pitch.pointer_down(child.button.x, child.button.y, true);
-                                                    } else if (child.type == SDL_MOUSEBUTTONUP && pitch_down &&
-                                                               child.button.button == SDL_BUTTON_LEFT &&
-                                                               child.button.x == pitch_down->x && child.button.y == pitch_down->y) {
-                                                        pitch_down.reset();
-                                                        auto action = pitch_down_request.value_or(ui::PitchRequest{});
-                                                        pitch_down_request.reset();
-                                                        if (SDL_GetTicks() - pitch_down_at > 500)
-                                                            action = pitch.save_formation(child.button.x, child.button.y);
-                                                        else if (action.kind == ui::PitchRequestKind::none)
-                                                            action = pitch.click(child.button.x, child.button.y);
-                                                        if (action.kind == ui::PitchRequestKind::open_player_info) {
-                                                            try {
-                                                                if (action.row < 0 || size_t(action.row) >= pitch.state().players.size() ||
-                                                                    pitch.state().players.at(size_t(action.row)).player_id != action.player_id)
-                                                                    throw FormatError("live pitch player information request is stale");
-                                                                auto services = session->live_club_modal_services(live_revision);
-                                                                const ClubPlayerDetailSelection selection{selected_team, action.player_id,
-                                                                    action.row, action.row, -1};
-                                                                if (!present_player_detail)
-                                                                    throw FormatError("live pitch player information presenter stopped");
-                                                                const auto return_parent = present_player_detail(services, selection, pitch.render());
-                                                                if (!return_parent)
-                                                                    throw FormatError("live pitch player information presenter stopped");
-                                                                SDL_SetWindowTitle(window, "OpenBMH - live_pitch");
-                                                                if (*return_parent) { pitch_closed = true; closed = true; }
-                                                            } catch (const std::exception& e) {
-                                                                std::fprintf(stderr, "live pitch player information: %s\n", e.what());
-                                                            }
-                                                            pitch.resolve_local_navigation(); pitch_redrawn = true;
-                                                        } else if (action.kind != ui::PitchRequestKind::none) {
-                                                            const auto result = dispatch_pitch(action);
-                                                            if (result.status == app::LiveSubstitutionStatus::applied) {
-                                                                auto updated = ui::lineup_from_game(state, season_exe, live_revision);
-                                                                updated.in_match = true; updated.entry_prepared = true;
-                                                                pitch.acknowledge(std::move(updated),
-                                                                    ui::pitch_extras_from_game(state, season_exe, live_revision, selected_opponent));
-                                                                if (action.kind == ui::PitchRequestKind::select_pitch_page &&
-                                                                    action.page_control == 1) {
-                                                                    pitch_closed = true; returned_to_lineup = true;
-                                                                }
-                                                            } else if (result.status == app::LiveSubstitutionStatus::source_notice) {
-                                                                show_live_substitution_notice(result, pitch.render(),
-                                                                    "OpenBMH - live_pitch");
-                                                                auto updated = ui::lineup_from_game(state, season_exe, live_revision);
-                                                                updated.in_match = true; updated.entry_prepared = true;
-                                                                pitch = ui::PitchScreen(data, std::move(updated),
-                                                                    ui::pitch_extras_from_game(state, season_exe, live_revision, selected_opponent));
-                                                            } else {
-                                                                pitch.reject_action(result.error.empty()
-                                                                    ? "Der Spielerwechsel ist nicht freigegeben."
-                                                                    : result.error);
-                                                            }
-                                                            pitch_redrawn = true;
-                                                        } else pitch_redrawn = true;
-                                                    } else if (child.type == SDL_MOUSEBUTTONUP && pitch_right_down &&
-                                                               child.button.button == SDL_BUTTON_RIGHT &&
-                                                               child.button.x == pitch_right_down->x &&
-                                                               child.button.y == pitch_right_down->y) {
-                                                        pitch_right_down.reset();
-                                                        if (pitch.close_requested()) { pitch_closed = true; closed = true; break; }
-                                                        pitch_redrawn = true;
-                                                    } else if (child.type == SDL_MOUSEMOTION)
-                                                        pitch_redrawn |= pitch.move(child.motion.x, child.motion.y);
-                                                }
-                                                if (!pitch_redrawn && !pitch_closed && running) SDL_Delay(8);
-                                            }
-                                            SDL_SetWindowTitle(window, "OpenBMH - live_lineup");
-                                        } catch (const std::exception& e) {
-                                            std::fprintf(stderr, "live pitch: %s\n", e.what());
-                                        }
-                                        if (returned_to_lineup) {
-                                            auto updated = ui::lineup_from_game(state, season_exe, live_revision);
-                                            updated.in_match = true; updated.entry_prepared = true;
-                                            screen = ui::LineupScreen(data, std::move(updated));
-                                        } else if (!closed) screen.resolve_local_navigation(request.kind);
-                                        redrawn = true;
-                                    } else redrawn = true;
-                                } else if (modal.type == SDL_MOUSEMOTION)
+                                } else if (modal.type == SDL_MOUSEMOTION) {
                                     redrawn |= screen.move(modal.motion.x, modal.motion.y);
+                                }
+                                if (closed) break;
                             }
                             if (!redrawn && !closed) SDL_Delay(8);
                         }
@@ -2747,6 +2640,9 @@ int main(int argc, char** argv) {
                                         case SDLK_DOWN: key = "DOWN"; break;
                                         case SDLK_LEFT: key = "LEFT"; break;
                                         case SDLK_RIGHT: key = "RIGHT"; break;
+                                        case SDLK_a:
+                                            if (file_input.key.keysym.mod & (KMOD_CTRL | KMOD_GUI)) key = "SELECT_ALL";
+                                            break;
                                         default: break;
                                         }
                                         if (!key.empty()) file_changed |= file_screen.key(key);
@@ -3865,6 +3761,11 @@ int main(int argc, char** argv) {
                     } catch (const FormatError& err) {
                         std::fprintf(stderr, "input: %s\n", err.what());
                     }
+                }
+                if (e.type == SDL_KEYDOWN && flow.screen_name() == "save_load" &&
+                    e.key.keysym.sym == SDLK_a && (e.key.keysym.mod & (KMOD_CTRL | KMOD_GUI))) {
+                    handle(flow.send_key("SELECT_ALL"));
+                    continue;
                 }
                 if (e.type == SDL_KEYDOWN && (e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_BACKSPACE ||
                                               (flow.screen_name() == "save_load" && (e.key.keysym.sym == SDLK_UP ||

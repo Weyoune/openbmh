@@ -101,6 +101,9 @@ SaveLoadScreen::SaveLoadScreen(const std::filesystem::path& data, std::filesyste
         });
     } else feedback_ = "VERZEICHNIS NICHT VERFUEGBAR";
     if (mode_ == SaveLoadMode::save && !entries_.empty()) filename_ = path_to_utf8(entries_.front().path.stem());
+    // OpenBMH deviates from the original: focuses the host save filename on entry and selects an existing name for replacement.
+    filename_focus_ = mode_ == SaveLoadMode::save;
+    filename_selected_ = filename_focus_ && !filename_.empty();
 }
 
 Image SaveLoadScreen::render() const {
@@ -126,7 +129,7 @@ Image SaveLoadScreen::render() const {
     text(out, 55, 216, original_to_utf8(text_at(texts_, ::bmh::layout::SaveLoad_Render_TextPointer4)), 0x6c, 50, footer_font_, true);
     const std::string displayed_filename = mode_ == SaveLoadMode::load && selected_ >= 0 &&
         size_t(selected_) < entries_.size() ? path_to_utf8(entries_[size_t(selected_)].path.stem()) : filename_;
-    text(out, 106, 216, displayed_filename, 0x6c, 140, footer_font_, true);
+    text(out, 106, 216, displayed_filename, filename_selected_ ? 0x27 : 0x6c, 140, footer_font_, true);
 
     if (entries_.size() > 15) {
         button(out, 206, 183, 56, original_to_utf8(exe_.cstring(::bmh::layout::SaveLoad_Render_ExecutableField)));
@@ -282,7 +285,9 @@ bool SaveLoadScreen::select_row(int y) {
     if (row < 0 || row >= int(entries_.size())) return false;
     selected_ = row;
     if (mode_ == SaveLoadMode::save) filename_ = path_to_utf8(entries_[size_t(row)].path.stem());
-    filename_focus_ = false; overwrite_armed_ = false; feedback_.clear();
+    filename_focus_ = mode_ == SaveLoadMode::save;
+    filename_selected_ = filename_focus_;
+    overwrite_armed_ = false; feedback_.clear();
     return true;
 }
 
@@ -312,7 +317,9 @@ void SaveLoadScreen::request_action() {
 
 bool SaveLoadScreen::click(int x, int y, bool right) {
     if (info_) { info_.reset(); return true; }
-    if (pending_ || right) return false;
+    if (pending_) return false;
+    // OpenBMH deviates from the original: permits cancelling host file dialogs with the right mouse button.
+    if (right) { close_requested_ = true; return true; }
     if (x >= 206 && y >= 60 && y <= 169)
         return false; // Source drive/delete controls have no host mapping in this slice.
     if (entries_.size() > 15 && x >= 206 && x <= 262 && y >= 183 && y <= 193) {
@@ -329,7 +336,7 @@ bool SaveLoadScreen::click(int x, int y, bool right) {
         return true;
     }
     if (mode_ == SaveLoadMode::save && x >= 52 && x < 262 && y >= 209 && y < 219) {
-        filename_focus_ = true; feedback_.clear(); return true;
+        filename_focus_ = true; filename_selected_ = true; feedback_.clear(); return true;
     }
     if (x >= 52 && x < 262 && y >= 196 && y < 206) return false;
     return false;
@@ -350,13 +357,15 @@ bool SaveLoadScreen::key(std::string_view value) {
         }
     }
     if (mode_ == SaveLoadMode::save && filename_focus_) {
+        if (value == "SELECT_ALL") { filename_selected_ = true; return true; }
         if (value == "BACKSPACE") {
-            if (!filename_.empty()) {
+            if (filename_selected_) filename_.clear();
+            else if (!filename_.empty()) {
                 size_t last = filename_.size() - 1;
                 while (last > 0 && (uint8_t(filename_[last]) & 0xc0) == 0x80) --last;
                 filename_.erase(last);
             }
-            overwrite_armed_ = false; return true;
+            filename_selected_ = false; overwrite_armed_ = false; return true;
         }
         if (value == "ENTER") { request_action(); return true; }
     }
@@ -365,9 +374,10 @@ bool SaveLoadScreen::key(std::string_view value) {
 }
 
 bool SaveLoadScreen::text(std::string_view value) {
-    if (info_ || mode_ != SaveLoadMode::save || !filename_focus_ || pending_ || value.empty() ||
-        !valid_filename(filename_ + std::string(value))) return false;
-    filename_ += value;
+    if (info_ || mode_ != SaveLoadMode::save || !filename_focus_ || pending_ || value.empty()) return false;
+    const std::string next = (filename_selected_ ? std::string{} : filename_) + std::string(value);
+    if (!valid_filename(next)) return false;
+    filename_ = next; filename_selected_ = false;
     overwrite_armed_ = false; feedback_.clear(); return true;
 }
 

@@ -1490,6 +1490,9 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `Pitch_Render_TextPointer3` | `0xae0f0` | German-compatible image / runtime field |
 | `Pitch_Render_TextPointer4` | `0xae0f4` | German-compatible image / runtime field |
 | `Pitch_Render_TextPointer5` | `0xae0f8` | German-compatible image / runtime field |
+| `PitchOrderPositionPointers` | `0xa2a37` | German-compatible image / runtime field |
+| `PitchOrderZoneMasks` | `0xa2a4b` | German-compatible image / runtime field |
+| `PitchOrderZoneTextPointers` | `0xae818` | German-compatible image / runtime field |
 | `Placements` | `0xbd38c` | German-compatible image / runtime field |
 | `PlainBackground` | `0xa2569` | German-compatible image / runtime field |
 | `PlanTicketPrice` | `0xa4856` | German-compatible image / runtime field |
