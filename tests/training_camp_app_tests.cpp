@@ -51,12 +51,10 @@ void content_lifecycle(const std::filesystem::path& data) {
           "fresh save loading restores resort content from the selected EXE, not defaults or save bytes");
     auto projected = training_camp_from_game(reloaded.state(), exe, 0, 1);
     check(projected.quality == expected_quality, "UI stars project the same table that booking effects use");
-    if (exe.cstring(::bmh::layout::CurrencySuffixText) == " EU") {
-        GameState defaults;
-        check(expected_prices == defaults.training_camp_base_prices &&
-              expected_quality == defaults.training_camp_quality,
-              "German supported edition price and quality content stays byte-identical to the former constants");
-    }
+    // GameState carries no built-in resort content; a career must take it from the EXE.
+    GameState defaults;
+    check(expected_prices != defaults.training_camp_base_prices,
+          "resort prices come from the selected EXE, not from empty defaults");
 }
 }
 

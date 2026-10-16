@@ -26,9 +26,10 @@ def validate(directory, windows):
         allowed |= (len(relative.parts) >= 2 and relative.parts[0] == 'docs' and
                     'licenses' not in relative.parts and file.suffix in {'.md', '.txt', '.csv'} and
                     all(part not in {'analyses', 'agents', 'manuals', 'validation'} for part in relative.parts))
+        # App-local UCRT deployment must ship the whole redist set, core forwarders included.
         allowed |= (windows and len(relative.parts) == 1 and
                     bool(re.fullmatch(r'(?:vcruntime\d+(?:_\d+)?|msvcp\d+(?:_\d+|_atomic_wait|_codecvt_ids)?|'
-                                      r'concrt\d+|ucrtbase|api-ms-win-crt-[a-z0-9-]+)\.dll', file.name, re.I)))
+                                      r'concrt\d+|ucrtbase|api-ms-win-(?:crt|core)-[a-z0-9-]+)\.dll', file.name, re.I)))
         if not allowed:
             raise RuntimeError('Unexpected package entry: ' + relative.as_posix())
     required = products | documents | {'docs/licenses/' + name for name in licenses}

@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "game/schedule.hpp"
+#include "../../tests/fixture_tables.hpp"
 
 namespace {
 void require(bool condition, const char* message) {
@@ -21,6 +22,8 @@ void require(bool condition, const char* message) {
 
 int main(int argc, char** argv) {
     using namespace bmh;
+    // The public tree carries no fixture tables; install the authored test copy.
+    set_fixture_tables(test::authored_fixture_tables());
     GameState game;
     game.manager_records.assign(5 * 0xb0c, 0);
     game.manager_records[0x290] = 0;
