@@ -21,7 +21,7 @@ openbmh_play --data "path/to/game" --save-directory "path/to/saves"
 openbmh_cli --console --data "path/to/game" --saves "path/to/saves"
 ```
 
-Version 0.1 ships binary packages for Windows x64 and macOS on Apple silicon (arm64, macOS 11 or later); Linux users can build from source. The macOS package is not signed or notarized, so Gatekeeper asks for confirmation on first start: open it once via right-click → Open, or allow it under System Settings → Privacy & Security. Packages and their native platform results are listed with the release assets. The [build instructions](../../BUILDING.md) cover Windows, Linux and macOS source builds; an instruction is not a claim of native acceptance. Linux's default file dialog backend requires GTK3 system libraries. A macOS terminal executable is distinct from a signed application bundle.
+Version 0.1 ships binary packages for Windows x64, macOS on Apple silicon (arm64, macOS 11 or later) and Linux x64. The Linux package passes the automated build and tests but has not yet been played natively; reports are welcome. The macOS package is not signed or notarized, so Gatekeeper asks for confirmation on first start: open it once via right-click → Open, or allow it under System Settings → Privacy & Security. Packages and their native platform results are listed with the release assets. The [build instructions](../../BUILDING.md) cover Windows, Linux and macOS source builds; an instruction is not a claim of native acceptance. Linux's default file dialog backend requires GTK3 system libraries. A macOS terminal executable is distinct from a signed application bundle.
 
 ## License
 
