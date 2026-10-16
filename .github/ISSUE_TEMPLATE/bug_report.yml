@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: GPL-3.0-only
+name: Bug report
+description: Report a reproducible OpenBMH problem.
+body:
+  - type: markdown
+    attributes:
+      value: "Do not attach original game files, saves, screenshots, recordings or logs containing game text or personal information. Describe the problem in your own words."
+  - type: input
+    id: version
+    attributes:
+      label: OpenBMH version or commit
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and architecture
+    validations:
+      required: true
+  - type: input
+    id: edition
+    attributes:
+      label: Game edition and version
+      description: "Edition name only; do not upload its files."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: "Include relevant settings or console commands, with private paths removed."
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true

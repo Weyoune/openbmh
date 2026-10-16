@@ -1,0 +1,44 @@
+OpenBMH v0.1.0
+===============
+
+OpenBMH ist eine eigenstaendige Neuumsetzung der Engine von Bundesliga Manager
+Hattrick und der englischen Fassung Football Limited. Die englische Unterstuetzung
+ist experimentell. Originale Spielinhalte sind nicht enthalten; du benoetigst eine
+eigene unterstuetzte Installation. Originale V2.20-Spielstaende der englischen
+Fassung sind nicht mit dem unterstuetzten Speicherlayout austauschbar.
+
+Start
+-----
+Paket in einen eigenen Ordner oder neben die Installation entpacken.
+openbmh_play starten (unter Windows openbmh_play.exe). Der Dateidialog nimmt einen
+Spielordner, die Programmdatei oder ZIP/7z mit einer einzelnen Installation an.
+
+Aus einem Terminal:
+  openbmh_play --data "path/to/game" --save-directory "path/to/saves"
+  openbmh_cli --console --data "path/to/game" --saves "path/to/saves"
+
+Unter Windows den Programmnamen um .exe ergaenzen. Ein beschreibbarer separater
+Spielstandordner wird empfohlen. Vorhandene Spielstaende vorher sichern.
+Tonoptionen: --mute, --no-music, --volume 0.5. --version zeigt die Programmversion.
+In der Konsole zeigt ListOptions die aktuellen Befehle; eine eigene Zeile go.
+fuehrt den eingegebenen Block aus. Help beschreibt die Parameter.
+
+Dokumentation und Rueckmeldungen
+-------------------------------
+README.md enthaelt die Bauanleitungen fuer Windows, Linux und macOS.
+Die Releasehinweise beschreiben den Umfang und die bekannten Grenzen.
+Linux benoetigt je nach Paket Systembibliotheken, insbesondere GTK3 fuer den
+Standard-Dateidialog. Plattform-Bauhinweise sind kein Nachweis eines nativen Tests.
+
+Fehler mit Programmversion, Spielfassung und kurzen eigenen Schritten melden.
+Keine Originaldateien, Spielbilder, Aufnahmen, Textlisten oder Spielstaende in
+oeffentliche Issues hochladen.
+
+Lizenz
+------
+Eigener OpenBMH-Code und Dokumentation: GNU GPL Version 3 ausschliesslich
+(GPL-3.0-only). LICENSE enthaelt den vollstaendigen Text. Drittanbieter behalten
+ihre Lizenzen; siehe THIRD_PARTY_NOTICES.md und docs/licenses/.
+Diese Lizenzen gelten nicht fuer die separat benoetigten Originalinhalte.
+OpenBMH ist ein unabhaengiges Projekt ohne Verbindung oder Billigung durch die
+urspruenglichen Rechteinhaber, DFL oder Bundesliga.

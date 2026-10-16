@@ -1,0 +1,286 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 OpenBMH contributors
+"""Check source distributions without printing matched credentials or file contents."""
+
+from __future__ import annotations
+
+import argparse
+import dataclasses
+import json
+from pathlib import Path, PurePosixPath
+import re
+import subprocess
+import sys
+
+
+@dataclasses.dataclass(frozen=True, order=True)
+class Finding:
+    path: str
+    line: int
+    rule: str
+
+
+ASSET_SUFFIXES = {
+    ".fbm", ".vga", ".blk", ".col", ".lbm", ".fnt", ".wap", ".ein", ".men", ".dat",
+    ".exe", ".dll", ".so", ".dylib", ".wav", ".mp3", ".ogg", ".flac",
+    ".avi", ".mov", ".mp4", ".png", ".jpg", ".jpeg", ".bmp", ".gif",
+    ".bin", ".zip", ".7z", ".dmg", ".tar", ".gz", ".pdf",
+}
+PRIVATE_PREFIXES = (
+    ("data", "original"), ("docs", "manuals"), ("docs", "analyses"),
+    ("docs", "agents"), ("src", "ui", "validation"),
+    ("src", "ui", "reference"), ("src", "audio", "validation"),
+    ("re",), ("tests", "fixtures"),
+)
+PRIVATE_DOCUMENTS = {
+    "Status.md", "fltd.md", "BUILD_0.1_HANDOFF.md",
+    "PUBLIC_RELEASE_TODO.md", "chat.txt",
+}
+SOURCE_SUFFIXES = {".cpp", ".hpp", ".h", ".c", ".inc"}
+SKIP_DIRECTORIES = {".git", "__pycache__", ".cache", "_deps", "node_modules"}
+
+LEGACY_SYMBOLS = re.compile(
+    r"(?<![A-Za-z0-9])(?:" + "FUN" + r"_?[0-9a-f]{4,8}|" + "DAT" +
+    r"_[0-9a-f]{5,8}|source[_ ]*(?=[0-9a-f]*[0-9])[0-9a-f]{4,8}|"
+    r"(?:raw|heap|saved|expected|sound_cfg)_(?=[ab][0-9a-f]*[0-9])[ab][0-9a-f]{4})(?![A-Za-z0-9])",
+    re.IGNORECASE,
+)
+PRIVATE_TEXT = re.compile(
+    r"(?:(?<![\w}./\\])/" + r"tools/|[A-Z]:[/\\]Users[/\\]|[A-Z]:[/\\]OpenBMH[/\\]|"
+    r"docs/(?:analyses|agents)/|src/ui/(?:validation|reference)/|"
+    + "bmh" + r"-work|matter" + r"most|\bMich" + r"ael\b|\bDIA" +
+    r"MOND\b|(?<![\w}./\\])/" + r"root/[^\s]+|https?://(?:10\.|192\.168\.|172\.(?:1[6-9]|2[0-9]|3[01])\.)|"
+    r"github\.com/[^/\s]+/openbmh[_-]dc\b)",
+    re.IGNORECASE,
+)
+SECRET_PATTERNS = (
+    re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"),
+    re.compile(r"\bgithub_pat_[A-Za-z0-9_]{30,}\b"),
+    re.compile(r"-----BEGIN (?:[A-Z0-9]+ )?PRIVATE KEY-----"),
+    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),
+    re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/-]{20,}"),
+    re.compile(r"(?i)\b[A-Z_]*(?:TOKEN|PASSWORD|SECRET|API_KEY)['\"]?\s*[:=]\s*['\"][A-Za-z0-9_./+-]{20,}['\"]"),
+    re.compile(r"(?m)^(?:export\s+)?[A-Z_]*(?:TOKEN|PASSWORD|SECRET|API_KEY)\s*=\s*[A-Za-z0-9_./+-]{20,}(?:\s|$)"),
+)
+EMAIL = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
+HEX_NUMBER = re.compile(r"\b0x(?P<digits>[0-9a-f]{5,8})(?:u(?:ll?|z)?|ll?u?|z)?\b", re.IGNORECASE)
+LAYOUT_BEGIN = 0x50000
+LAYOUT_END = 0xE0000
+
+
+def line_at(text: str, position: int) -> int:
+    return text.count("\n", 0, position) + 1
+
+
+def cpp_exclusions(text: str):
+    """Yield comment/literal spans, respecting raw strings and numeric separators."""
+    at = 0
+    while at < len(text):
+        if text.startswith("//", at):
+            end = text.find("\n", at)
+            end = len(text) if end < 0 else end
+            yield at, end, "comment"
+            at = end
+        elif text.startswith("/*", at):
+            end = text.find("*/", at + 2)
+            end = len(text) if end < 0 else end + 2
+            yield at, end, "comment"
+            at = end
+        elif text.startswith('R"', at):
+            opening = text.find("(", at + 2, at + 19)
+            if opening < 0:
+                at += 2
+                continue
+            delimiter = text[at + 2:opening]
+            end = text.find(")" + delimiter + '"', opening + 1)
+            finish = len(text) if end < 0 else end + len(delimiter) + 2
+            yield at, finish, "literal"
+            at = finish
+        elif text[at] == "'" and at + 1 < len(text) and text[at + 1].isalnum() and re.search(
+                r"\b[0-9][a-fA-F0-9xXbB']*$", text[max(0, at - 200):at]):
+            at += 1  # C++ numeric separator, rather than a character literal.
+        elif text[at] in "\"'":
+            start = at
+            quote = text[at]
+            at += 1
+            while at < len(text):
+                if text[at] == "\\":
+                    at += 2
+                elif text[at] == quote:
+                    at += 1
+                    break
+                else:
+                    at += 1
+            yield start, at, "literal"
+        else:
+            at += 1
+
+
+def is_layout_value(value: int) -> bool:
+    return LAYOUT_BEGIN <= value < LAYOUT_END and value & (value - 1) != 0 and value & (value + 1) != 0
+
+
+def layout_findings(name: str, text: str):
+    exclusions = list(cpp_exclusions(text))
+    code = list(text)
+    for start, end, kind in exclusions:
+        if kind == "comment":
+            for match in HEX_NUMBER.finditer(text, start, end):
+                if is_layout_value(int(match.group("digits"), 16)):
+                    yield Finding(name, line_at(text, match.start()), "address-in-comment")
+        for index in range(start, end):
+            if code[index] != "\n":
+                code[index] = " "
+    code = "".join(code)
+    for match in HEX_NUMBER.finditer(code):
+        if not is_layout_value(int(match.group("digits"), 16)):
+            continue
+        # Keep numeric format knowledge in a named constant, preserving its type.
+        begin = max(code.rfind(";", 0, match.start()), code.rfind("{", 0, match.start()),
+                    code.rfind("}", 0, match.start())) + 1
+        prefix = code[begin:match.start()]
+        declaration = re.search(r"\b(?:constexpr|constinit|const)\b[^;{}]*\b[A-Za-z_]\w*\s*=\s*\(?\s*$", prefix)
+        if declaration is None:
+            yield Finding(name, line_at(text, match.start()), "unnamed-layout-address")
+
+
+def path_findings(name: str) -> list[Finding]:
+    path = PurePosixPath(name)
+    parts = path.parts
+    result = []
+    if path.is_absolute() or ".." in parts:
+        result.append(Finding(name, 0, "unsafe-path"))
+    if path.suffix.lower() in ASSET_SUFFIXES:
+        result.append(Finding(name, 0, "binary-or-game-asset"))
+    if path.name in PRIVATE_DOCUMENTS or any(parts[:len(p)] == p for p in PRIVATE_PREFIXES):
+        result.append(Finding(name, 0, "private-material-path"))
+    if any(p.startswith(".claude") or p.startswith(".codex") for p in parts):
+        result.append(Finding(name, 0, "private-agent-configuration"))
+    return result
+
+
+def scan_blob(name: str, blob: bytes) -> list[Finding]:
+    result = path_findings(name)
+    if len(blob) > 2_000_000:
+        result.append(Finding(name, 0, "oversized-source-file"))
+    if b"\0" in blob:
+        result.append(Finding(name, 0, "binary-content"))
+        return result
+    try:
+        text = blob.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        result.append(Finding(name, 0, "non-utf8-source"))
+        return result
+    for pattern in SECRET_PATTERNS:
+        for match in pattern.finditer(text):
+            result.append(Finding(name, line_at(text, match.start()), "credential-pattern"))
+    # These exact upstream license/copyright documents must remain unmodified.
+    upstream_notice = name.startswith(("docs/licenses/", "tools/package/licenses/",
+                                       "src/audio/third_party/"))
+    if upstream_notice:
+        return result
+    for pattern, rule in [(LEGACY_SYMBOLS, "legacy-address-symbol"), (PRIVATE_TEXT, "private-provenance")]:
+        for match in pattern.finditer(text):
+            result.append(Finding(name, line_at(text, match.start()), rule))
+    for match in EMAIL.finditer(text):
+        if match.group().lower() != "codex@openbmh.invalid":
+            result.append(Finding(name, line_at(text, match.start()), "personal-email"))
+    if PurePosixPath(name).suffix.lower() in SOURCE_SUFFIXES:
+        result.extend(layout_findings(name, text))
+    elif PurePosixPath(name).suffix.lower() == ".md" and not name.startswith("docs/formats/"):
+        for match in HEX_NUMBER.finditer(text):
+            if is_layout_value(int(match.group("digits"), 16)):
+                result.append(Finding(name, line_at(text, match.start()), "address-outside-format-documentation"))
+    return result
+
+
+def checked_files(root: Path):
+    """Use the Git index when available; otherwise inspect a plain source archive."""
+    git = subprocess.run(["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+                         capture_output=True, text=True)
+    if git.returncode == 0 and Path(git.stdout.strip()).resolve() == root:
+        output = subprocess.check_output(["git", "-C", str(root), "ls-files", "--cached",
+                                          "--others", "--exclude-standard", "-z"])
+        return sorted({p.decode("utf-8") for p in output.split(b"\0") if p})
+    return sorted(str(p.relative_to(root).as_posix()) for p in root.rglob("*")
+                  if p.is_file() and not any(part in SKIP_DIRECTORIES or part.startswith("build")
+                                             for part in p.relative_to(root).parts))
+
+
+def scan_tree(root: Path):
+    findings = []
+    names = checked_files(root)
+    for name in names:
+        path = root / name
+        if path.is_symlink():
+            findings.append(Finding(name, 0, "symlink-not-reviewed"))
+        elif not path.is_file():
+            findings.append(Finding(name, 0, "missing-tracked-file"))
+        else:
+            findings.extend(scan_blob(name, path.read_bytes()))
+    return findings, len(names)
+
+
+def scan_history(root: Path):
+    findings = []
+    references = subprocess.check_output(["git", "-C", str(root), "for-each-ref", "--format=%(refname)"])
+    findings.extend(scan_blob("ref-names", references))
+    refs = subprocess.check_output(["git", "-C", str(root), "rev-list", "--all"], text=True).splitlines()
+    seen = set()
+    checked = 0
+    for revision in refs:
+        entries = subprocess.check_output(["git", "-C", str(root), "ls-tree", "-rz", revision])
+        for entry in entries.split(b"\0"):
+            if not entry:
+                continue
+            metadata, name = entry.split(b"\t", 1)
+            mode, kind, object_id = metadata.decode().split()
+            path = name.decode("utf-8")
+            if kind != "blob":
+                findings.append(Finding(path, 0, "unreviewed-history-object"))
+                continue
+            if mode == "120000":
+                findings.append(Finding(path, 0, "symlink-in-history"))
+            key = (object_id, path)
+            if key in seen:
+                continue
+            seen.add(key)
+            data = subprocess.check_output(["git", "-C", str(root), "cat-file", "blob", object_id])
+            findings.extend(scan_blob(path, data))
+            checked += 1
+        message = subprocess.check_output(["git", "-C", str(root), "show", "-s", "--format=%B", revision])
+        findings.extend(scan_blob("commit-message", message))
+    return findings, len(refs), checked
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", type=Path, default=Path.cwd())
+    parser.add_argument("--history", action="store_true", help="also check all reachable commits and their blobs")
+    parser.add_argument("--json", type=Path, help="write a report containing rule names and locations only")
+    args = parser.parse_args(argv)
+    root = args.root.resolve(strict=True)
+    findings, files = scan_tree(root)
+    commits = blobs = 0
+    if args.history:
+        extra, commits, blobs = scan_history(root)
+        findings.extend(extra)
+    findings = sorted(set(findings))
+    def display_path(name):
+        for pattern in SECRET_PATTERNS:
+            name = pattern.sub("[redacted]", name)
+        return name
+    report = {"ok": not findings, "files_checked": files, "history_checked": args.history,
+              "commits_checked": commits, "history_blobs_checked": blobs,
+              "findings": [{**dataclasses.asdict(f), "path": display_path(f.path)} for f in findings]}
+    if args.json:
+        args.json.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    for finding in findings:
+        print(f"{display_path(finding.path)}:{finding.line}: {finding.rule}")
+    print(f"Public-source check: {files} files, {commits} commits, {len(findings)} findings")
+    return int(bool(findings))
+
+
+if __name__ == "__main__":
+    sys.exit(main())
