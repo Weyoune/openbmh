@@ -93,6 +93,36 @@ void data(const std::filesystem::path& directory) {
             }
         }
     }
+    const auto before = generate_fixtures(4, 1, 3, 37);
+    const auto reject_image = [&](const LeImage& image) {
+        invalid([&] { install_fixture_tables(image); });
+        same(before, generate_fixtures(4, 1, 3, 37));
+    };
+    const auto patch_pointer = [](LeImage& image, uint32_t at, uint32_t value) {
+        const uint8_t bytes[]{uint8_t(value), uint8_t(value >> 8), uint8_t(value >> 16), uint8_t(value >> 24)};
+        image.patch(at, bytes, sizeof(bytes));
+    };
+    auto malformed = exe;
+    patch_pointer(malformed, tables.at(4) + 4, exe.base() + exe.size());
+    reject_image(malformed);
+    malformed = exe;
+    patch_pointer(malformed, tables.at(4), exe.u32(tables.at(4) + 4));
+    reject_image(malformed);
+    malformed = exe;
+    const uint8_t nonzero = 1;
+    malformed.patch(exe.u32(tables.at(4) + 4) + 4, &nonzero, 1);
+    reject_image(malformed);
+    malformed = exe;
+    const auto first_row = exe.u32(tables.at(4) + 4);
+    const auto duplicate = exe.u8(first_row + 1);
+    malformed.patch(first_row, &duplicate, 1);
+    reject_image(malformed);
+    // An earlier valid change must not leak when a later table is malformed.
+    malformed = exe;
+    const uint8_t swapped[]{exe.u8(first_row + 1), exe.u8(first_row)};
+    malformed.patch(first_row, swapped, sizeof(swapped));
+    malformed.patch(exe.u32(tables.at(20) + 4) + 20, &nonzero, 1);
+    reject_image(malformed);
     if (is_english) {
         invalid([] { generate_fixtures(16, 1, 15, 0); });
         invalid([] { generate_fixtures(18, 1, 17, 0); });

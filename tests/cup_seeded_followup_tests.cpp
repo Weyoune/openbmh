@@ -1,3 +1,4 @@
+#include "fixture_tables.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include <algorithm>
@@ -116,6 +117,7 @@ void knockout_to_seeded_knockout() {
 }
 
 int main() {
+    bmh::set_fixture_tables(bmh::test::authored_fixture_tables());
     try {
         group_to_seeded_linked_groups(1);
         group_to_seeded_linked_groups(3);

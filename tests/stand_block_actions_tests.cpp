@@ -235,7 +235,7 @@ int main() {
         const auto option=options(g,4).front();WatcomRandom rand(53),expected(53);expected.range(6,14);
         auto offer=no_tip(option,rand);const auto before=g.manager_records;auto want=before;
         set32(want,0x314,20000000-245000);set32(want,0x8a0,245000);want[0x171]=0;
-        want[0x30]=4;want[0x40]=0x10;
+        want[0x30]=constants.weeks[4];want[0x40]=0x10;
         check(build(g,4,option,offer,rand)&&g.manager_records==want&&rand.seed()==expected.seed()&&rand.calls()==1,
               "Source sponsor deterministic subsidy consumes share and no extra W draw");
     }

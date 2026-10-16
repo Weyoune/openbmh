@@ -1,3 +1,4 @@
+#include "fixture_tables.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include <algorithm>
@@ -104,6 +105,7 @@ bmh::TextDb texts() {
 }  // namespace
 
 int main() {
+    bmh::set_fixture_tables(bmh::test::authored_fixture_tables());
     bmh::GameState game = fixture();
     const bmh::TextDb db = texts();
     bool rejected = false;
@@ -276,7 +278,8 @@ int main() {
     const auto group = bmh::other_games_from_game(game, db, 1, 0, 2,
         bmh::OtherGamesDisplayMode::compact, 0, false);
     check(!group.knockout && group.rows.size() == 2 && group.rows[0].home_team == 4 &&
-          group.rows[0].away_team == 7 && group.source_participant_count == 1 &&
+          group.rows[0].away_team == 5 && group.rows[1].home_team == 6 &&
+          group.rows[1].away_team == 7 && group.source_participant_count == 1 &&
           group.group_tables.size() == 1 && group.rows[0].source_second_leg == 0xcccc &&
           !group.rows[0].second_leg_array_present && group.rows[0].source_winner == -1,
           "group rows retain all later-round fixtures and ignore the unused second-result pointer");
