@@ -32,20 +32,105 @@ def git(directory, *arguments):
     return subprocess.check_output(['git', '-C', str(directory), *arguments])
 
 
-def copy_files(source, destination, files, required=False):
+def copy_files(source, destination, files, required=False, materialized_links=None):
+    """Copy only the explicit source inventory, materializing internal links.
+
+    Git dependencies pass their tracked paths here. Directory links expand only
+    paths in that inventory, never a recursive filesystem walk or untracked data.
+    """
+    source = source.resolve()
+    destination = Path(destination)
     manifest = {}
-    for relative in sorted(set(files)):
-        origin = source / relative
+    links = materialized_links if materialized_links is not None else {}
+
+    def normalized(path):
+        path = Path(path)
+        if path.is_absolute():
+            try:
+                path = path.relative_to(source)
+            except ValueError as error:
+                raise RuntimeError('Source symlink leaves its component') from error
+        parts = []
+        for part in path.parts:
+            if part == '..':
+                if not parts:
+                    raise RuntimeError('Source symlink leaves its component')
+                parts.pop()
+            elif part != '.':
+                parts.append(part)
+        return Path(*parts)
+
+    inventory = {normalized(path) for path in files}
+
+    def resolve(relative):
+        pending = normalized(relative)
+        visited = set()
+        chain = []
+        while True:
+            current = Path()
+            for index, part in enumerate(pending.parts):
+                if part == '..':
+                    if current == Path():
+                        raise RuntimeError('Source symlink leaves its component')
+                    current = current.parent
+                    continue
+                current /= part
+                origin = source / current
+                if not origin.is_symlink():
+                    if index + 1 < len(pending.parts) and not origin.is_dir() and (required or chain):
+                        raise RuntimeError('Source path parent is not a directory')
+                    continue
+                if current not in inventory:
+                    raise RuntimeError('Source symlink is not in the tracked inventory')
+                state = (current, pending.parts[index + 1:])
+                if state in visited or len(visited) >= 64:
+                    raise RuntimeError('Source symlink loop')
+                visited.add(state)
+                chain.append(current.as_posix())
+                target = origin.readlink()
+                if not target.is_absolute():
+                    target = current.parent / target
+                else:
+                    try:
+                        target = target.relative_to(source)
+                    except ValueError as error:
+                        raise RuntimeError('Source symlink leaves its component') from error
+                pending = target / Path(*pending.parts[index + 1:])
+                break
+            else:
+                return current, chain
+
+    def copy(relative, output, ancestors=()):
+        resolved, chain = resolve(relative)
+        origin = source / resolved
+        if origin.is_dir():
+            if not chain:
+                raise RuntimeError('Tracked source entry is a directory')
+            if resolved in ancestors:
+                raise RuntimeError('Source directory symlink loop')
+            children = sorted(path for path in inventory
+                              if path != resolved and path.is_relative_to(resolved))
+            if not children:
+                raise RuntimeError('Source directory target has no tracked contents')
+            links[output.as_posix()] = {'kind': 'directory', 'target': resolved.as_posix(), 'via': chain}
+            for child in children:
+                copy(child, output / child.relative_to(resolved), ancestors + (resolved,))
+            return
         if not origin.is_file():
-            if required:
+            if required or chain:
                 raise RuntimeError('Missing dependency source file: ' + relative.as_posix())
-            continue
-        if not origin.resolve().is_relative_to(source.resolve()):
-            raise RuntimeError('Source symlink leaves its component')
-        target = destination / relative
+            return
+        if resolved not in inventory:
+            raise RuntimeError('Source file target is not in the tracked inventory')
+        target = destination / output
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(origin, target)
-        manifest[relative.as_posix()] = hashlib.sha256(target.read_bytes()).hexdigest()
+        manifest[output.as_posix()] = hashlib.sha256(target.read_bytes()).hexdigest()
+        if chain:
+            links[output.as_posix()] = {'kind': 'file', 'target': resolved.as_posix(), 'via': chain}
+
+    for relative in sorted(inventory):
+        copy(relative, relative)
     return manifest
 
 
@@ -68,8 +153,11 @@ def main():
     with tempfile.TemporaryDirectory(prefix='openbmh-source-', dir=args.out) as temporary:
         stage = Path(temporary)
         project_files = [Path(p.decode('utf-8')) for p in git(source, 'ls-files', '-z', '--cached', '--others', '--exclude-standard').split(b'\0') if p]
+        project_links = {}
         manifest = {'version': version, 'project_commit': git(source, 'rev-parse', 'HEAD').decode().strip(),
-                    'project_files': copy_files(source, stage / 'project', project_files), 'dependencies': {}}
+                    'project_files': copy_files(source, stage / 'project', project_files,
+                                                materialized_links=project_links),
+                    'project_materialized_links': project_links, 'dependencies': {}}
         initial_cache = []
         for name, (reference, url, markers) in COMPONENTS.items():
             directory = Path(dependencies.get(name, ''))
@@ -95,9 +183,12 @@ def main():
                 for filename, expected in MINIZ_FILES.items():
                     if hashlib.sha256((directory / filename).read_bytes()).hexdigest() != expected:
                         raise RuntimeError('Dependency differs from its pinned archive: ' + name)
-            hashes = copy_files(directory, stage / 'dependencies' / name, files, required=True)
+            dependency_links = {}
+            hashes = copy_files(directory, stage / 'dependencies' / name, files, required=True,
+                                materialized_links=dependency_links)
             manifest['dependencies'][name] = {'upstream': url, 'reference': reference,
-                                              'commit': commit, 'files': hashes}
+                                              'commit': commit, 'files': hashes,
+                                              'materialized_links': dependency_links}
             initial_cache.append('set(FETCHCONTENT_SOURCE_DIR_' + name.upper() +
                                  ' "${CMAKE_CURRENT_LIST_DIR}/dependencies/' + name + '" CACHE PATH "" FORCE)')
         (stage / 'dependencies.cmake').write_text('\n'.join(initial_cache) + '\n')
@@ -105,7 +196,7 @@ def main():
         (stage / 'BUILD_SOURCE.md').write_text(
             '# Corresponding source\n\nThe project contains its patches, build scripts and vendored Nuked OPL3. '
             'The dependency folders contain the sources used by this build; the LZMA folder contains the C decoder tree and upstream license. '
-            'File hashes and upstream revisions are in SOURCE_MANIFEST.json. No game data or test references are included.\n\n'
+            'File hashes, upstream revisions and materialized internal links are in SOURCE_MANIFEST.json. No game data or test references are included.\n\n'
             'With the native compiler, CMake and platform development libraries described in project/README.md:\n\n'
             '```sh\ncmake -S project -B build -C dependencies.cmake -DCMAKE_BUILD_TYPE=Release -DBMH_DATA=\n'
             'cmake --build build --config Release --parallel 2\nctest --test-dir build -C Release --output-on-failure\n```\n\n'
