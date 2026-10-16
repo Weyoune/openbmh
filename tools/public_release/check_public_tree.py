@@ -65,6 +65,8 @@ SECRET_PATTERNS = (
     re.compile(r"(?m)^(?:export\s+)?[A-Z_]*(?:TOKEN|PASSWORD|SECRET|API_KEY)\s*=\s*[A-Za-z0-9_./+-]{20,}(?:\s|$)"),
 )
 EMAIL = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
+# Project bot identities and the co-author trailer address are not personal data.
+BOT_EMAILS = {"codex@openbmh.invalid", "claude@openbmh.invalid", "noreply@anthropic.com"}
 HEX_NUMBER = re.compile(r"\b0x(?P<digits>[0-9a-f]{5,8})(?:u(?:ll?|z)?|ll?u?|z)?\b", re.IGNORECASE)
 LAYOUT_BEGIN = 0x50000
 LAYOUT_END = 0xE0000
@@ -185,7 +187,7 @@ def scan_blob(name: str, blob: bytes) -> list[Finding]:
         for match in pattern.finditer(text):
             result.append(Finding(name, line_at(text, match.start()), rule))
     for match in EMAIL.finditer(text):
-        if match.group().lower() != "codex@openbmh.invalid":
+        if match.group().lower() not in BOT_EMAILS:
             result.append(Finding(name, line_at(text, match.start()), "personal-email"))
     if PurePosixPath(name).suffix.lower() in SOURCE_SUFFIXES:
         result.extend(layout_findings(name, text))
