@@ -10,6 +10,7 @@ import dataclasses
 import json
 from pathlib import Path, PurePosixPath
 import re
+import shutil
 import subprocess
 import sys
 
@@ -197,9 +198,12 @@ def scan_blob(name: str, blob: bytes) -> list[Finding]:
 
 def checked_files(root: Path):
     """Use the Git index when available; otherwise inspect a plain source archive."""
-    git = subprocess.run(["git", "-C", str(root), "rev-parse", "--show-toplevel"],
-                         capture_output=True, text=True)
-    if git.returncode == 0 and Path(git.stdout.strip()).resolve() == root:
+    try:
+        git = subprocess.run(["git", "-C", str(root), "rev-parse", "--show-toplevel"],
+                             capture_output=True, text=True)
+    except FileNotFoundError:
+        git = None
+    if git is not None and git.returncode == 0 and Path(git.stdout.strip()).resolve() == root:
         output = subprocess.check_output(["git", "-C", str(root), "ls-files", "--cached",
                                           "--others", "--exclude-standard", "-z"])
         return sorted({p.decode("utf-8") for p in output.split(b"\0") if p})
@@ -260,6 +264,8 @@ def main(argv=None):
     parser.add_argument("--history", action="store_true", help="also check all reachable commits and their blobs")
     parser.add_argument("--json", type=Path, help="write a report containing rule names and locations only")
     args = parser.parse_args(argv)
+    if args.history and shutil.which("git") is None:
+        parser.error("Git is required for history checks")
     root = args.root.resolve(strict=True)
     findings, files = scan_tree(root)
     commits = blobs = 0

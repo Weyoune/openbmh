@@ -7,9 +7,11 @@ import contextlib
 import io
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 import check_public_tree as guard
 
@@ -71,6 +73,19 @@ class BlobChecks(unittest.TestCase):
         self.assertNotIn("credential-pattern", self.rules("src/a.cpp", "const int token = state.seller_team_token;"))
 
 
+class ArchiveChecks(unittest.TestCase):
+    def test_archive_is_checked_when_git_is_not_installed(self):
+        with tempfile.TemporaryDirectory(prefix="openbmh-source-test-") as directory:
+            root = Path(directory)
+            (root / "README.md").write_text("Synthetic source\n", encoding="utf-8")
+            (root / "bad.FBM").write_text("Synthetic refusal case\n", encoding="utf-8")
+            with mock.patch.object(guard.subprocess, "run", side_effect=FileNotFoundError):
+                findings, count = guard.scan_tree(root)
+            self.assertEqual(count, 2)
+            self.assertIn("binary-or-game-asset", {f.rule for f in findings})
+
+
+@unittest.skipUnless(shutil.which("git"), "Git is required for repository-history tests")
 class RepositoryChecks(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix="openbmh-guard-test-")
