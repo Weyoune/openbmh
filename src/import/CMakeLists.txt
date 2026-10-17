@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-3.0-only
+add_library(bmh_obw STATIC obw.cpp ../cli/json.cpp)
+target_include_directories(bmh_obw PUBLIC ..)
+target_link_libraries(bmh_obw PUBLIC bmhlaunch PRIVATE bmh_miniz)
+add_executable(openbmh_import main.cpp)
+target_link_libraries(openbmh_import PRIVATE bmh_obw)
+set_target_properties(openbmh_import PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+add_executable(obw_import_tests ../../tests/obw_import_tests.cpp)
+target_link_libraries(obw_import_tests PRIVATE bmh_obw bmh_miniz)
+if(MSVC)
+    target_compile_options(bmh_obw PRIVATE /W4 /utf-8)
+    target_compile_options(openbmh_import PRIVATE /W4 /utf-8)
+    target_compile_options(obw_import_tests PRIVATE /W4 /utf-8)
+endif()
+add_test(NAME obw_import_tests COMMAND obw_import_tests)
+# A separate component: existing 0.1 runtime packages retain their two products.
+install(TARGETS openbmh_import RUNTIME DESTINATION . COMPONENT ImportTools)

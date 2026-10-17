@@ -316,6 +316,7 @@ if(MSVC)
 endif()
 
 add_subdirectory(src/ui)
+add_subdirectory(src/import)
 add_executable(driver_barrier_tests tests/driver_barrier_tests.cpp)
 target_link_libraries(driver_barrier_tests PRIVATE bmhcore)
 add_test(NAME driver_barrier_tests COMMAND driver_barrier_tests)

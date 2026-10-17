@@ -1,6 +1,6 @@
 # OBW: OpenBMH world, save and pack format (concept, format version 1.0)
 
-Status: **concept** for roadmap 0.2 (open data and typed state) with preparation for 0.4 (scalable interface, content packs). Nothing here is implemented yet; the legacy formats in this directory remain authoritative for the current engine.
+Status: **concept with an initial standalone converter** for roadmap 0.2 (open data and typed state), with preparation for 0.4 (scalable interface, content packs). `openbmh_import` implements the guarded `legacy-database-v1` conversion profile described in [import.md](obw/import.md). Its intermediate files cannot yet start a career. The legacy formats remain authoritative for the current engine; an OBW engine adapter and save conversion are not implemented.
 
 ## 1. Goals and non-goals
 
@@ -112,6 +112,8 @@ Fields and directories whose name starts with `x-` belong to extensions (`x-matc
 
 Each format version is published as JSON Schema (draft 2020-12) under `docs/formats/obw/schema/<major>.<minor>/`, one file per table. The schemas are the machine-readable specification and the basis of the validator (§10).
 
+The initial schemas describe the `legacy-database-v1` intermediate conversion profile only; save, pack, theme and complete playable-world schemas are still planned. This profile uses `requires` to prevent a partial conversion being mistaken for a complete world. Optional fields and unknown extensions remain allowed.
+
 ## 4. Identifiers and names
 
 - Every entity has a stable string id `<type>:<key>`, e.g. `nation:de`, `club:0042`, `player:01873`, `comp:de-1`, `stadium:0042`. Keys are opaque: they never encode a real name, so a world and a pack can be published independently.
@@ -161,7 +163,8 @@ Teams without a squad (`foreign`, or `national` in a world that does not simulat
 |---|---|---|---|
 | `id` | string | R | |
 | `name` | object | R | `{"first": "...", "last": "...", "known_as": "..."}`, each a plain string; `known_as` optional |
-| `born` | date | R | Age is derived from the in-game date |
+| `born` | date | R unless `age_at_start` | Age is derived from the in-game date |
+| `age_at_start` | object | Alternative to `born` | `{"years": 22, "on": "2026-07-01"}` when a legacy database gives an age but no exact birth date. Never invent a birthday. A consumer must explicitly support this precision. |
 | `nationalities` | array | R | Nation ids, first entry is the sporting nationality (national-team eligibility) |
 | `positions` | array | R | `gk`, `def`, `mid`, `fwd` in the classic set; finer positions in later attribute sets |
 | `foot` | enum | O | `left`, `right`, `both` |
@@ -348,7 +351,7 @@ Edition detection is the one the launcher already performs (`src/launch/game_dat
 
 ### 8.2 Mapping per edition
 
-Every edition has a mapping table in the importer (to be published with it as `docs/formats/obw/import.md`):
+The first standalone converter and its coverage are documented in [the edition mapping](obw/import.md). The full intended mapping is:
 
 | Legacy league | German editions | Football Limited | OBW |
 |---|---|---|---|
@@ -362,6 +365,8 @@ Every edition has a mapping table in the importer (to be published with it as `d
 Cups, European cups, the indoor tournament, the English FA Cup with its qualifying stage and the League Cup become competitions with the same rules the engine applies today. Relegation places, European places and promotion groups are taken from the installed tables (`kLeagueRelegation`, `kLeagueEurope`, `kGroupBelow`), not re-typed by hand.
 
 ### 8.3 Fidelity
+
+The initial `legacy-database-v1` converter preserves database seeds and source tables without starting a career. It does not yet satisfy the engine equivalence criteria below; those require the 0.2 adapter. Its manifest explicitly marks it non-playable, and its import report lists unresolved areas. Unmapped world data lives in `x-legacy/`; `state/x-legacy.json` is reserved for converted saves.
 
 - A new career imported from an installation must produce the same first season in the engine as the legacy start (same fixtures, same participants), verified by the regression runs.
 - A converted `.FBM` must continue with the same results as the legacy save for a fixed number of turns.

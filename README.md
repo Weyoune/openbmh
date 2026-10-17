@@ -31,6 +31,8 @@ The graphical client and console share career management, matches, transfers, co
 
 Version 0.1 establishes the playable engine and development interfaces. Later milestones introduce an open data format and typed model, configurable rules, a scalable interface and independently distributable content. These are goals rather than delivery dates; the [roadmap](docs/ROADMAP.md) describes their dependencies.
 
+The source tree also provides an initial standalone [`openbmh_import` tool](docs/formats/obw/import.md) to convert BMH and Football Limited installation data into the planned OBW format. These intermediate worlds are for conversion/development only; the game will gain OBW support in a later version.
+
 ## Build from source
 
 The following recipes target v0.1.2. They require Git, CMake 3.24 or newer and a C++20 compiler. The first configure fetches pinned open-source dependencies. Native build and package results are documented for each release; these instructions do not claim an untested platform result.

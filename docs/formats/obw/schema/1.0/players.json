@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Weyoune/openbmh/main/docs/formats/obw/schema/1.0/players.json",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "players@1.0"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^player:[a-zA-Z0-9._-]+$"
+          },
+          "name": {
+            "type": "object",
+            "properties": {
+              "first": {
+                "type": "string"
+              },
+              "last": {
+                "type": "string"
+              },
+              "known_as": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "first",
+              "last"
+            ],
+            "additionalProperties": true
+          },
+          "born": {
+            "$ref": "common.json#/$defs/date"
+          },
+          "age_at_start": {
+            "type": "object",
+            "properties": {
+              "years": {
+                "type": "integer",
+                "minimum": 16,
+                "maximum": 47
+              },
+              "on": {
+                "$ref": "common.json#/$defs/date"
+              }
+            },
+            "required": [
+              "years",
+              "on"
+            ],
+            "additionalProperties": true
+          },
+          "nationalities": {
+            "type": "array",
+            "items": {
+              "$ref": "common.json#/$defs/nation_id"
+            },
+            "minItems": 1
+          },
+          "positions": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "gk",
+                "def",
+                "mid",
+                "fwd"
+              ]
+            },
+            "minItems": 1
+          },
+          "attribute_set": {
+            "const": "bmh-classic@1"
+          },
+          "attributes": {
+            "$ref": "common.json#/$defs/attributes"
+          },
+          "team": {
+            "$ref": "common.json#/$defs/team_id"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "nationalities",
+          "positions",
+          "attribute_set",
+          "attributes"
+        ],
+        "additionalProperties": true,
+        "oneOf": [
+          {
+            "required": [
+              "born"
+            ],
+            "not": {
+              "required": [
+                "age_at_start"
+              ]
+            }
+          },
+          {
+            "required": [
+              "age_at_start"
+            ],
+            "not": {
+              "required": [
+                "born"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "items"
+  ],
+  "additionalProperties": true,
+  "$comment": "SPDX-License-Identifier: GPL-3.0-only; initial legacy-database-v1 conversion profile."
+}

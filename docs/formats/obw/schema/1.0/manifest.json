@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Weyoune/openbmh/main/docs/formats/obw/schema/1.0/manifest.json",
+  "type": "object",
+  "properties": {
+    "format": {
+      "const": "openbmh-world"
+    },
+    "format_version": {
+      "const": "1.0"
+    },
+    "kind": {
+      "const": "world"
+    },
+    "min_reader": {
+      "const": "1.0"
+    },
+    "title": {
+      "$ref": "common.json#/$defs/localized"
+    },
+    "generator": {
+      "type": "string"
+    },
+    "provenance": {
+      "enum": [
+        "import:bmh-de",
+        "import:fltd"
+      ]
+    },
+    "content_license": {
+      "const": "local-import-only"
+    },
+    "currency": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "minor_units": {
+          "const": 0
+        }
+      },
+      "required": [
+        "code",
+        "minor_units"
+      ],
+      "additionalProperties": true
+    },
+    "start_date": {
+      "$ref": "common.json#/$defs/date"
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "limits": {
+      "type": "object",
+      "properties": {
+        "leagues": {
+          "const": 32
+        }
+      },
+      "required": [
+        "leagues"
+      ],
+      "additionalProperties": true
+    },
+    "requires": {
+      "const": [
+        "import:legacy-database-v1"
+      ]
+    },
+    "extensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "x-import": {
+      "type": "object",
+      "properties": {
+        "profile": {
+          "const": "legacy-database-v1"
+        },
+        "playable": {
+          "const": false
+        },
+        "rule_profile": {
+          "const": "openbmh-supported"
+        },
+        "default_attribute_set": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "profile",
+        "playable",
+        "rule_profile"
+      ],
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "format",
+    "format_version",
+    "kind",
+    "min_reader",
+    "title",
+    "generator",
+    "provenance",
+    "content_license",
+    "currency",
+    "start_date",
+    "languages",
+    "limits",
+    "requires",
+    "extensions",
+    "x-import"
+  ],
+  "additionalProperties": true,
+  "$comment": "SPDX-License-Identifier: GPL-3.0-only; initial legacy-database-v1 conversion profile."
+}

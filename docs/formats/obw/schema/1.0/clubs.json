@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Weyoune/openbmh/main/docs/formats/obw/schema/1.0/clubs.json",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "clubs@1.0"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "common.json#/$defs/team_id"
+          },
+          "type": {
+            "enum": [
+              "club",
+              "national",
+              "amateur",
+              "foreign"
+            ]
+          },
+          "name": {
+            "$ref": "common.json#/$defs/localized"
+          },
+          "nation": {
+            "$ref": "common.json#/$defs/nation_id"
+          },
+          "stadium": {
+            "type": "string",
+            "pattern": "^stadium:[a-zA-Z0-9._-]+$"
+          },
+          "strength": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "name",
+          "nation"
+        ],
+        "additionalProperties": true
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "items"
+  ],
+  "additionalProperties": true,
+  "$comment": "SPDX-License-Identifier: GPL-3.0-only; initial legacy-database-v1 conversion profile."
+}

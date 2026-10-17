@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Weyoune/openbmh/main/docs/formats/obw/schema/1.0/competitions.json",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "competitions@1.0"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^comp:[a-zA-Z0-9._-]+$"
+          },
+          "name": {
+            "$ref": "common.json#/$defs/localized"
+          },
+          "type": {
+            "const": "league"
+          },
+          "nation": {
+            "$ref": "common.json#/$defs/nation_id"
+          },
+          "tier": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "played": {
+            "type": "boolean"
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "format": {
+                  "const": "league"
+                },
+                "teams": {
+                  "type": "integer",
+                  "minimum": 4,
+                  "maximum": 24
+                },
+                "legs": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "generator": {
+                  "type": "string"
+                },
+                "matchdays": {
+                  "type": "string"
+                },
+                "slots": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "teams": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "common.json#/$defs/team_id"
+                        },
+                        "uniqueItems": true
+                      }
+                    },
+                    "required": [
+                      "teams"
+                    ],
+                    "additionalProperties": true
+                  },
+                  "minItems": 1
+                }
+              },
+              "required": [
+                "id",
+                "format",
+                "teams",
+                "legs",
+                "slots"
+              ],
+              "additionalProperties": true
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "nation",
+          "tier",
+          "played",
+          "stages"
+        ],
+        "additionalProperties": true
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "items"
+  ],
+  "additionalProperties": true,
+  "$comment": "SPDX-License-Identifier: GPL-3.0-only; initial legacy-database-v1 conversion profile."
+}

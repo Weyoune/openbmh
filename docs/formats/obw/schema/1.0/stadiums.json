@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Weyoune/openbmh/main/docs/formats/obw/schema/1.0/stadiums.json",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "stadiums@1.0"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^stadium:[a-zA-Z0-9._-]+$"
+          },
+          "name": {
+            "$ref": "common.json#/$defs/localized"
+          },
+          "owner": {
+            "oneOf": [
+              {
+                "$ref": "common.json#/$defs/team_id"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "capacity": {
+            "type": "object"
+          },
+          "facilities": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": true
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "items"
+  ],
+  "additionalProperties": true,
+  "$comment": "SPDX-License-Identifier: GPL-3.0-only; initial legacy-database-v1 conversion profile."
+}

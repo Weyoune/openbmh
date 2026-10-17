@@ -13,6 +13,7 @@ OpenBMH is a C++20 engine with graphical and console frontends. The implementati
 | `src/cli` | Command language, structured protocol, console windows and multi-client seat routing |
 | `src/audio` | Bank decoding, synthesis, playback and cues, without authority to change gameplay |
 | `src/launch` | Locating user data, archive extraction, edition normalisation and file selection |
+| `src/import` | Standalone legacy-to-OBW conversion; no game-state ownership or OBW engine integration |
 
 `bmhcore` contains the format and game layers. `bmhui`, `openbmh_audio` and the application session provide reusable pieces above it. Frontends should translate actions and display results; they should not introduce independent transfer, calendar or financial rules.
 

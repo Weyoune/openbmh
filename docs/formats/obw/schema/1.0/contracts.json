@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Weyoune/openbmh/main/docs/formats/obw/schema/1.0/contracts.json",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "contracts@1.0"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^contract:[a-zA-Z0-9._-]+$"
+          },
+          "person": {
+            "$ref": "common.json#/$defs/person_id"
+          },
+          "team": {
+            "$ref": "common.json#/$defs/team_id"
+          },
+          "salary": {
+            "type": "integer"
+          },
+          "start": {
+            "$ref": "common.json#/$defs/date"
+          },
+          "end": {
+            "$ref": "common.json#/$defs/date"
+          }
+        },
+        "required": [
+          "id",
+          "person",
+          "team"
+        ],
+        "additionalProperties": true
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "items"
+  ],
+  "additionalProperties": true,
+  "$comment": "SPDX-License-Identifier: GPL-3.0-only; initial legacy-database-v1 conversion profile."
+}
