@@ -4,6 +4,10 @@ OpenBMH reconstructs the Bundesliga Manager Hattrick engine in C++20. The graphi
 
 ## Unreleased corrections
 
+- Application exits ask for confirmation in a native German/English message
+  box, with Cancel selected by default, including window close events during
+  matches and dialogs ([#11](https://github.com/Weyoune/openbmh/issues/11)).
+
 - Football Limited uses the correct enabled/disabled setup sprites, positive
   balance colour and outside controls of the desktop shortcut bar ([#7](https://github.com/Weyoune/openbmh/issues/7)).
   Its cached data is regenerated automatically for the corrected mapping.

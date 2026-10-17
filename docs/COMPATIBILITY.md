@@ -12,6 +12,17 @@ Intentional changes in code should use the marker `OpenBMH deviates from the ori
 
 The [generated differences catalogue](DIFFERENCES.md) lists these markers with links to their source files.
 
+## Application exit confirmation
+
+Closing the window, exiting with Escape or confirming the desktop's exit control
+opens a native confirmation dialog. BMH data uses German text and Football
+Limited data uses English. Enter, Escape and closing the confirmation cancel the
+exit; only the explicit Quit/Beenden button permits normal shutdown. Cancelling
+keeps the current dialog or match owner alive without a turn or implicit save.
+An unavailable native message box also cancels the request. This applies to
+voluntary application exits, including quit events received during animations;
+normal completed-career handling remains separate.
+
 ## Environment and presentation in 0.1.2
 
 The desktop environment provides three youth teams and three staff
