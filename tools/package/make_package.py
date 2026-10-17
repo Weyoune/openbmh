@@ -26,6 +26,9 @@ def validate(directory, windows):
         allowed |= (len(relative.parts) >= 2 and relative.parts[0] == 'docs' and
                     'licenses' not in relative.parts and file.suffix in {'.md', '.txt', '.csv'} and
                     all(part not in {'analyses', 'agents', 'manuals', 'validation'} for part in relative.parts))
+        # Versioned OBW schemas are authored format documentation, not game data.
+        allowed |= bool(re.fullmatch(r'docs/formats/obw/schema/[1-9][0-9]*\.[0-9]+/[a-z][a-z0-9_-]*\.json',
+                                     relative.as_posix()))
         # App-local UCRT deployment must ship the whole redist set, core forwarders included.
         allowed |= (windows and len(relative.parts) == 1 and
                     bool(re.fullmatch(r'(?:vcruntime\d+(?:_\d+)?|msvcp\d+(?:_\d+|_atomic_wait|_codecvt_ids)?|'

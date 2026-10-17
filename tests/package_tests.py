@@ -35,6 +35,15 @@ class PackageAllowlistTests(unittest.TestCase):
                     target.parent.mkdir(parents=True, exist_ok=True)
                     target.write_text('synthetic license placeholder')
             package.validate(root, False)
+            schema = root / 'docs/formats/obw/schema/1.0/manifest.json'
+            schema.parent.mkdir(parents=True)
+            schema.write_text('{"type":"object"}')
+            package.validate(root, False)
+            unexpected_json = root / 'docs/world.json'
+            unexpected_json.write_text('{"synthetic":true}')
+            with self.assertRaises(RuntimeError):
+                package.validate(root, False)
+            unexpected_json.unlink()
             for name in ['game.fbm', 'BMH.EXE', 'unit_tests', 'secret.txt']:
                 (root / name).write_text('synthetic refusal fixture')
                 with self.assertRaises(RuntimeError):
