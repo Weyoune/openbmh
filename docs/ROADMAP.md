@@ -12,7 +12,7 @@ Complete edition-specific loading, presentation, competitions and sound support.
 
 ## 0.2: open data and typed state
 
-Introduce a documented import format and a native save format, retaining supported legacy import where practical. Replace fixed-layout state gradually with typed clubs, players, contracts and competitions. Keep each intermediate stage usable and cover transitions with tests.
+Introduce a documented import format and a native save format, retaining supported legacy import where practical. The format concept is [OBW](formats/OBW.md). Replace fixed-layout state gradually with typed clubs, players, contracts and competitions. Keep each intermediate stage usable and cover transitions with tests.
 
 ## 0.3: configurable rules
 
@@ -20,7 +20,7 @@ Expose rule values and balance choices as configuration, with reproducible simul
 
 ## 0.4: adaptable interfaces and competitions
 
-Add a scalable interface through the shared application/protocol boundary. Make league sizes and competition structures data-driven. Define content-pack formats for independently licensed artwork, names and other resources; do not distribute third-party material without permission.
+Add a scalable interface (RmlUi) through the shared application/protocol boundary. Make league sizes and competition structures data-driven. Define content-pack formats for independently licensed artwork, names and other resources; do not distribute third-party material without permission.
 
 ## 0.5: independently distributable content
 
