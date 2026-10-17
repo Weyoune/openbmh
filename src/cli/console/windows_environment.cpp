@@ -1,11 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// OpenBMH deviates from the original: uses monthly staff levels in increments of five thousand and the supported youth-academy controls.
-// The club environment (menu 24, docs/CLI_CONCEPT/06-verein.md 10, H2 p. 93, supported rule profile p. 107,
-// 111): co-trainer, doctor and physio in levels of 5 000 a month, and the supported rule profile youth
-// academy that costs a season price of the league.
-//
-// The rules are the engine's (src/game/environment.hpp, a port of Image with the
-// supported rule profile patch); a command is one click of the original screen.
+// The console and desktop share all six monthly environment budgets.
 
 #include "app/desktop_actions.hpp"
 #include "cli/console/console.hpp"
@@ -19,20 +13,21 @@ using namespace detail;
 void Console::register_environment_commands() {
     auto show = [this] {
         const EnvironmentState s = environment_state(session_->state(), active_slot());
-        std::vector<std::vector<std::string>> rows = {
-            {"AssistantCoach", std::to_string(s.level[kCoTrainer]), money(s.monthly[kCoTrainer])},
-            {"Doctor", std::to_string(s.level[kDoctor]), money(s.monthly[kDoctor])},
-            {"Physio", std::to_string(s.level[kPhysio]), money(s.monthly[kPhysio])},
-            {"YouthAcademy", s.monthly[kYouthAcademy] != 0 ? "on" : "off", money(s.youth_price) + " per season"}};
-        emit_table({"Item", "Level", "Costs"}, rows);
-        emit('i', std::string("youth academy: ") + (s.youth_paid ? "paid this season" : s.youth_open ? "can be started (July/August)"
-                                                                                                        : "too late for this season"));
+        std::vector<std::vector<std::string>> rows;
+        constexpr const char* names[] = {"YouthYoungest", "YouthAcademy", "YouthOldest", "AssistantCoach", "Doctor", "Physio"};
+        for (int i = 0; i < kEnvironmentItems; ++i)
+            rows.push_back({names[i], std::to_string(s.level[size_t(i)]), money(s.monthly[size_t(i)])});
+        emit_table({"Item", "Level", "MonthlyCosts"}, rows);
+        rows.clear();
+        for (size_t i = 0; i < 3; ++i)
+            rows.push_back({names[i], std::to_string(s.youth_position[i] + 1), std::to_string(s.youth_league[i] + 1)});
+        emit_table({"YouthTeam", "Position", "Division"}, rows);
     };
     openers_[24] = [this, show] {
         open_window("Environment");
         show();
     };
-    add({"Environment", "ShowEnvironment", {}, "staff levels and the youth academy", false}, [show](const Values&) { show(); });
+    add({"Environment", "ShowEnvironment", {}, "all six monthly budgets and youth tables", false}, [show](const Values&) { show(); });
     auto apply = [this, show](int item, int level) {
         std::string error;
         const auto r=app::EnvironmentActions(*session_).set_console(
@@ -44,11 +39,14 @@ void Console::register_environment_commands() {
     add({"Environment", "SetStaffLevel", {choice("role", {"AssistantCoach", "Doctor", "Physio"}), integer("level", 0, 6)},
          "click a staff tile: level 0..6, 5 000 a month each", true},
         [apply](const Values& v) { apply(kCoTrainer + v.choice("role"), int(v.integer("level"))); });
-    add({"Environment", "SetYouthAcademy", {choice("state", {"On", "Off"})}, "start (July/August) or stop the youth academy", true},
+    add({"Environment", "SetYouthLevel", {choice("team", {"Youngest", "Academy", "Oldest"}), integer("level", 0, 6)},
+         "set one youth team's monthly budget, level 0..6", true},
+        [apply](const Values& v) { apply(v.choice("team"), int(v.integer("level"))); });
+    add({"Environment", "SetYouthAcademy", {choice("state", {"On", "Off"})}, "set the middle youth budget to level 6 or 0", true},
         [this, apply](const Values& v) {
             const bool on = environment_state(session_->state(), active_slot()).monthly[kYouthAcademy] != 0;
             const bool want = v.choice("state") == 0;
-            // the original's click on an active academy switches it off: click only for a change
+            // Retain the old On/Off command as an alias for the middle youth budget.
             if (on == want) emit('+', std::string("youth academy already ") + (on ? "on" : "off"));
             else apply(kYouthAcademy, want ? 6 : 0);
         });

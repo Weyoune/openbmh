@@ -1,91 +1,81 @@
-#include "runtime_fixture_tables.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
-#include "test_inputs.hpp"
-// The club environment (desk menu 24, src/game/environment.hpp) on a real savegame: staff
-// levels, and the supported edition youth academy - only in July/August, the league's season price,
-// no switching off once paid.
-
-#include <filesystem>
+#include "game/environment.hpp"
+#include "ui/live_timing.hpp"
 #include <iostream>
 #include <stdexcept>
-#include <string>
-
-#include "formats/fbm.hpp"
-#include "formats/le.hpp"
-#include "formats/savestate.hpp"
-#include "formats/textd.hpp"
-#include "game/career.hpp"
-#include "game/environment.hpp"
-#include "game/schedule.hpp"
 
 using namespace bmh;
-
 namespace {
-
-void check(bool ok, const std::string& message) {
-    if (!ok) throw std::runtime_error(message);
-}
-
-void set_rec32(GameState& g, size_t o, uint32_t v) {
-    for (int i = 0; i < 4; i++) g.manager_records.at(o + size_t(i)) = uint8_t(v >> (8 * i));
-}
-
-void environment_test(GameState g) {
-    // staff: level * 5 000
-    check(set_environment(g, 0, kDoctor, 4) != EnvironmentResult::invalid, "doctor level");
-    EnvironmentState s = environment_state(g, 0);
-    check(s.monthly[kDoctor] == 20000 && s.level[kDoctor] == 4, "doctor 4 x 5 000");
-    check(set_environment(g, 0, kPhysio, 7) == EnvironmentResult::invalid, "level 7 is no level");
-    // the other two youth groups are always 0
-    set_environment(g, 0, 0, 6);
-    check(environment_state(g, 0).monthly[0] == 0, "item 0 stays 0");
-    // the academy out of season (the savegame is in spring)
-    set_rec32(g, 0x880, 0);
-    std::string message;
-    check(set_environment(g, 0, kYouthAcademy, 6, &message) == EnvironmentResult::too_late, "too late in spring");
-    check(message.find("Zu sp") == 0 && environment_state(g, 0).monthly[kYouthAcademy] == 0, "too late message, stays off");
-    // July: on at the league's price, a second click switches it off again before it is paid
-    g.date = g.season_start + 5;
-    g.league_rounds.at(0) = 0;
-    s = environment_state(g, 0);
-    check(s.youth_open && !s.youth_paid, "July: the academy can be started");
-    check(set_environment(g, 0, kYouthAcademy, 6) == EnvironmentResult::changed, "academy on");
-    const int league = team_league(g.manager_teams.at(0));
-    const int32_t price = league == 0 ? 1500000 : league == 1 ? 1000000 : league <= 3 ? 580000 : 280000;
-    check(environment_state(g, 0).monthly[kYouthAcademy] == price, "season price of the league");
-    check(set_environment(g, 0, kYouthAcademy, 6) == EnvironmentResult::changed &&
-              environment_state(g, 0).monthly[kYouthAcademy] == 0, "a click on the active academy switches it off");
-    // paid this season: stays on
-    set_environment(g, 0, kYouthAcademy, 6);
-    set_rec32(g, 0x880, uint32_t(price));
-    message.clear();
-    check(set_environment(g, 0, kYouthAcademy, 0, &message) == EnvironmentResult::contract_runs, "paid: no switching off");
-    check(message == bmh::test::expected_text("environment_tests.0") && environment_state(g, 0).monthly[kYouthAcademy] == price,
-          "paid: the contract runs");
-}
-
-}  // namespace
-
-int main(int argc, char** argv) {
-    try {
-        check(argc == 3, "usage: environment_tests ORIGINAL_DATA SAVEGAME");
-        if (!*argv[1]) {
-            std::cout << "environment tests: skipped (Original data directory not configured)\n";
-            return 0;
+void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
+GameState fixture() {
+    GameState g;
+    g.manager_teams = {0, 1};
+    g.manager_records.resize(2 * 0xb0c);
+    g.league_rounds.resize(1);
+    g.memory.add_block(layout::EnvironmentYouthTeams, 0x90);
+    for (uint32_t m = 0; m < 2; ++m)
+        for (uint32_t i = 0; i < 3; ++i) {
+            g.memory.set8(layout::EnvironmentYouthTeams + m * 0x24 + i, uint8_t(60 - i * 10));
+            g.memory.set8(layout::EnvironmentYouthTeams + m * 0x24 + i + 3, 6);
+            g.memory.set8(layout::EnvironmentYouthTeams + m * 0x24 + i + 6, uint8_t(i));
         }
-        const auto exe = bmh::test::load_executable(std::filesystem::path(argv[1]) / "BMH.exe");
-        const auto file = load_savegame(argv[2]);
-        const DbCounts counts{exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField), exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField3), exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField2), exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField4)};
-        GameState g = GameState::from_save(SaveState(file.stream, counts), counts);
-        competition_pointers(g.memory, exe);
-        const auto texts = load_textd(std::filesystem::path(argv[1]) / "TEXTD.BLK");
-        g.texts = &texts;
-        environment_test(g);
-        std::cout << "environment tests: ok\n";
-        return 0;
-    } catch (const std::exception& error) {
-        std::cerr << "environment tests: " << error.what() << "\n";
-        return 1;
+    return g;
+}
+void budgets() {
+    auto g = fixture();
+    for (int i = 0; i < 6; ++i) check(set_environment(g, 0, i, 6) == EnvironmentResult::changed, "all six budgets accept maximum");
+    const auto s = environment_state(g, 0);
+    check(s.monthly == std::array<int32_t, 6>{12000,24000,30000,30000,30000,30000}, "six monthly costs match the supported price units");
+    check(environment_state(g, 1).monthly == std::array<int32_t, 6>{}, "other manager's budgets are isolated");
+    check(set_environment(g, 0, kYouthAcademy, 6) == EnvironmentResult::unchanged, "repeating a level does not toggle the youth budget");
+    for (int i = 0; i < 6; ++i) check(environment_monthly_cost(g, 0, i) == s.monthly[size_t(i)], "all six selected budgets reach monthly accounting");
+    check(set_environment(g, 0, kYouthAcademy, 0) == EnvironmentResult::changed && !environment_academy_active(g, 0), "youth budget can be stopped");
+    check(set_environment(g, 0, 6, 2) == EnvironmentResult::invalid &&
+          set_environment(g, -1, 0, 1) == EnvironmentResult::invalid &&
+          set_environment(g, 0, 0, 7) == EnvironmentResult::invalid, "invalid requests rejected");
+    g.memory.set32(layout::Spending + 4, 1500000);
+    check(environment_monthly_cost(g, 0, 1) == 1500000 && !environment_academy_active(g, 0), "unpaid legacy contract retains one season payment");
+    for (int i = 0; i < 4; ++i) g.manager_records[0x880 + size_t(i)] = uint8_t(1500000u >> (i * 8));
+    check(environment_monthly_cost(g, 0, 1) == 0 && environment_academy_active(g, 0), "paid legacy contract is never debited again");
+    set_environment(g, 0, 1, 2);
+    check(environment_monthly_cost(g, 0, 1) == 8000 && environment_academy_active(g, 0), "an explicit edit replaces the legacy contract with a monthly budget");
+}
+void progression() {
+    auto funded = fixture(), unfunded = fixture();
+    for (int i = 0; i < 3; ++i) set_environment(funded, 0, i, 6);
+    WatcomRandom rich(4711), poor(4711);
+    for (int round = 0; round < 100; ++round) {
+        funded.league_rounds[0] = unfunded.league_rounds[0] = uint8_t(round % 34);
+        advance_youth_teams(funded, 0, rich);
+        advance_youth_teams(unfunded, 0, poor);
     }
+    const auto a = environment_state(funded, 0), b = environment_state(unfunded, 0);
+    check(a.youth_strength[0] > b.youth_strength[0] && a.youth_strength[1] > b.youth_strength[1] &&
+          a.youth_strength[2] > b.youth_strength[2], "investment changes development in every youth group");
+    check(rich.seed() == poor.seed() && rich.calls() == poor.calls(), "budgets do not change the youth algorithm's RNG call sequence");
+    check(environment_state(funded, 1).youth_position == std::array<uint8_t,3>{6,6,6}, "youth results remain manager-local");
+    auto g = fixture();
+    for (uint32_t i = 0; i < 3; ++i) g.memory.set8(layout::EnvironmentYouthTeams + i, uint8_t(30 + 20 * i));
+    g.memory.set8(layout::EnvironmentYouthTeams + 3, 0);
+    g.memory.set8(layout::EnvironmentYouthTeams + 6, 1);
+    g.memory.set8(layout::EnvironmentYouthTeams + 4, 11);
+    g.memory.set8(layout::EnvironmentYouthTeams + 7, 0);
+    g.memory.set8(layout::EnvironmentYouthTeams + 5, 11);
+    finish_youth_season(g, 0);
+    const auto s = environment_state(g, 0);
+    check(s.youth_league == std::array<uint8_t,3>{0,1,2} && s.youth_position == std::array<uint8_t,3>{10,1,5}, "season transition handles promotion, relegation and bottom division");
+    check(s.youth_strength == std::array<uint8_t,3>{30,43,63}, "age-group handover uses previous strengths without cascading");
+}
+void timing() {
+    using bmh::ui::live_delay_milliseconds;
+    check(live_delay_milliseconds(0) == 0 && live_delay_milliseconds(1) == 0 &&
+          live_delay_milliseconds(2) == 20 && live_delay_milliseconds(5) == 40 &&
+          live_delay_milliseconds(6) == 120 && live_delay_milliseconds(30) == 600 &&
+          live_delay_milliseconds(198) == 3960, "original integer delay scale includes zero and manual speed range");
+}
+}
+int main() {
+    try { budgets(); progression(); timing(); std::cout << "environment and live timing: ok\n"; return 0; }
+    catch (const std::exception& e) { std::cerr << e.what() << '\n'; return 1; }
 }

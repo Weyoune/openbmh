@@ -1,6 +1,22 @@
-# OpenBMH v0.1.1
+# OpenBMH v0.1.2
 
 OpenBMH reconstructs the Bundesliga Manager Hattrick engine in C++20. The graphical client uses SDL2; the console provides command batches and local manager-client transports over the same career session. This release needs a supported game installation supplied by the player. No original executable, artwork, music, text database, manual or saved game is included.
+
+## Changes in 0.1.2
+
+- The environment menu shows all six original artwork panels: three youth teams,
+  assistant coach, doctor and physio. Youth panels include their league and rank.
+- All six monthly budgets can be set directly to zero through six stars. Youth
+  development, season promotion/relegation, finance previews and monthly accounts
+  share those values. Existing academy lump-sum saves retain their paid status.
+- Match-minute pacing follows the loaded original delay setting; A9 in Settings
+  allows faster or slower progression. No fixed 250-ms pause is added. Retrace
+  animations use the original reference rate on different host monitors.
+- External test fixtures are now recognised correctly by CMake instead of being
+  reported as unavailable despite configured paths.
+
+See [compatibility decisions](../../COMPATIBILITY.md) for youth recruitment and
+legacy contract handling. The previous UI corrections remain included.
 
 ## Changes in 0.1.1
 
@@ -9,13 +25,16 @@ OpenBMH reconstructs the Bundesliga Manager Hattrick engine in C++20. The graphi
 - Right-click cancels load/save dialogs, including settings and desktop-layout files ([#3](https://github.com/Weyoune/openbmh/issues/3)).
 - Save filenames accept typing immediately, replace a selected existing name and support Ctrl+A/Cmd+A. This also applies to desktop layouts saved as MEN files ([#4](https://github.com/Weyoune/openbmh/issues/4)).
 
-These corrections passed targeted UI/controller checks and Linux SDL input replays, including normal and Reality matches, substitutions, file writing and a fresh-process reload. Physical macOS window verification remains human QA. Use the new 0.1.1 packages to test these fixes; older 0.1.0 builds do not include them.
+These corrections passed targeted UI/controller checks and Linux SDL input replays, including normal and Reality matches, substitutions, file writing and a fresh-process reload. Physical macOS window verification remains human QA. Use packages from 0.1.1 or later to test these fixes; older 0.1.0 builds do not include them.
 
 ## Scope
 
 The engine includes career management, leagues and cups, transfers and contracts, finances, training and camps, stadium management, live match interventions, audio playback and normal saves. Supported actions remain subject to mode, manager and phase restrictions; an unimplemented path reports an explicit error rather than an invented result. The project aims for recognisable behaviour and plausible results, not a promise that every original version produces identical events.
 
-German game editions are the primary compatibility target. **Football Limited support is experimental.** English installation loading and edition-specific text/layout data are supported paths, while original V2.20 save import, English audio and remaining competition/interface differences have limitations. Check current issues before relying on a particular English workflow.
+German game editions are the primary compatibility target. **Football Limited support is experimental.** English installation loading and edition-specific text/layout data are supported paths, while original V2.20 save import, English audio and remaining competition/interface differences have limitations. A known limitation can reject an English save made after the first calendar
+advance: the saved turn cursor may no longer match the active calendar. Initial
+save/reload works; a complete English career is not yet verified. Check current
+issues before relying on a particular English workflow.
 
 ## Compatibility decisions
 
@@ -34,7 +53,7 @@ Version 0.1 ships binary packages for Windows x64, macOS on Apple silicon (arm64
 
 ## License
 
-The matching application source tag is [v0.1.1](https://github.com/Weyoune/openbmh/tree/v0.1.1). Source/build and relinking materials for linked components must also accompany or be offered with binary releases under their licenses.
+The matching application source tag is [v0.1.2](https://github.com/Weyoune/openbmh/tree/v0.1.2). Source/build and relinking materials for linked components must also accompany or be offered with binary releases under their licenses.
 
 OpenBMH-owned code and documentation use GPL-3.0-only. Third-party components retain their licenses; the full texts accompany the package. Read [LICENSE](../../../LICENSE) and [THIRD_PARTY_NOTICES](../../../THIRD_PARTY_NOTICES.md). These licenses do not grant rights to original game content.
 

@@ -1670,6 +1670,26 @@ void check_environment_controller(const std::filesystem::path& data) {
           flow.environment()->state().values.level[3] == 6 &&
           flow.environment()->state().values.monthly[3] == 30000,
           "valid environment transaction commits once and keeps the source screen open");
+    for (int item : {0, 1, 2, 4, 5}) {
+        const int tx = exe.u8(::bmh::layout::Environment_FormatError_RuntimeField + item) + 18;
+        const int ty = exe.u8(::bmh::layout::Environment_FormatError_RuntimeField2 + item) + 5;
+        const auto before = session->state();
+        const auto old_revision = revision;
+        (void)flow.pointer_down(tx, ty);
+        const auto write = flow.click(tx, ty);
+        check(write.request == FlowRequest::environment_action && write.environment_action.item == item &&
+              write.environment_action.level == 3 && serve(write).empty(),
+              "every youth and staff tile submits its own three-star budget");
+        auto expected = before;
+        expected.memory.set32(::bmh::layout::Spending + uint32_t(item) * 4, uint32_t(kEnvironmentStep[size_t(item)] * 3));
+        check(save_stream(session->state()) == save_stream(expected) && revision == old_revision + 1 &&
+              session->rand().seed() == watcom_before.seed() && session->rand().calls() == watcom_before.calls() &&
+              session->game().seed() == game_rng_before.seed() && session->game().calls() == game_rng_before.calls(),
+              "a tile edit changes only its saved budget and revision, without a turn or RNG draw");
+        (void)flow.pointer_down(tx, ty);
+        check(serve(flow.click(tx, ty)).empty() && revision == old_revision + 1 && !flow.pending_environment(),
+              "clicking the same youth or staff level again ACKs without toggling or another revision");
+    }
     (void)flow.pointer_down(10, 10, true);
     const auto close = flow.click(10, 10, true);
     check(close.request == FlowRequest::submenu_closed && !flow.in_environment() && flow.screen_name() == "desktop",
@@ -3241,7 +3261,7 @@ void check_live_delay_settings_writer(const std::filesystem::path& data,const st
     app::CareerSession session(data,8128,save_path);auto& game=session.state();
     const int manager=int(game.memory.u8(::bmh::layout::ActiveManager));uint64_t revision=1;std::string error;
     const auto exe=load_le(ui::asset_path(data,"BMH.exe"));const auto w=session.rand();const auto g=session.game();
-    const std::array<std::pair<int,int>,13> cells{{{3,7},{4,7},{5,7},{6,7},{1,8},{2,8},{3,8},{4,8},{5,8},{6,8},{10,8},{12,8},{15,8}}};
+    const std::array<std::pair<int,int>,14> cells{{{3,7},{4,7},{5,7},{6,7},{0,8},{1,8},{2,8},{3,8},{4,8},{5,8},{6,8},{10,8},{12,8},{15,8}}};
     for(const auto [row,col]:cells) {
         auto state=settings_from_game(game,manager,revision,exe);const size_t index=size_t(row*9+col);
         const auto old=state.cells[index];check(old<200,"real WEEK196 exposes the consumed speed/delay cell");
@@ -6959,6 +6979,9 @@ int main(int argc, char** argv) {
     try {
         if (argc != 2 && argc != 3 && argc != 4) throw std::runtime_error("app_controller_tests requires data directory [optional Original save]");
         const std::filesystem::path data = argv[1];
+        if(argc==3 && std::string_view(argv[2])=="--environment-only") {
+            check_environment_controller(data);return 0;
+        }
         if(argc==4 && std::string_view(argv[2])=="--delay-settings-only") {
             check_live_delay_settings_writer(data,argv[3]);check_gameplay_switches_writer(data,argv[3]);
             check_settings_refusal_controller(data,argv[3]);return 0;

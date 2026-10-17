@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/environment.hpp"
 #include "game/balance_plan.hpp"
 
 #include <algorithm>
@@ -160,13 +161,6 @@ uint32_t catering_per_game(const GameState& g, int m, int32_t gate) {
     return sum;
 }
 
-// OpenBMH deviates from the original: omits the discontinued youth-group cost categories and uses league-specific youth-academy limits.
-// TeamLeague3 (supported rule profile patch): the youth academy limit of the league
-int32_t youth_limit(const GameState& g, int m) {
-    const int league = team_league(g.manager_teams.at(size_t(m)));
-    return league == 0 ? 1500000 : league == 1 ? 1000000 : league <= 3 ? 580000 : 280000;
-}
-
 // The redraw of BalanceFromGame2 (with its continuation Redraw and the patch at
 // Redraw2): recomputes the items if `refresh` asks for it, then the spectator income
 // and the totals.
@@ -228,12 +222,12 @@ void redraw(const GameState& source, BalancePlanDraft& d) {
             r[4] = wrap(int64_t(r[4]) + int64_t(facility_income(g, m)) * months);
             const uint32_t catering = catering_per_game(g, m, r[kBalanceAverageGate]);
             r[4] = wrap(int64_t(r[4]) + int64_t((catering * uint32_t(home)) / 12) * months);
-            // running costs Spending: the patch counts only the youth academy (index 1),
-            // with the whole league limit while +0x880 is below it
             const uint32_t costs = ::bmh::layout::Spending + uint32_t(m) * 0x24;
-            if (mem32(g, costs + 4) != 0 && int64_t(months) * mem32(g, costs + 4) != 0) {
-                const int32_t limit = youth_limit(g, m);
-                if (uint32_t(rec32(g, m, 0x880)) < uint32_t(limit)) r[9] = wrap(int64_t(r[9]) + limit);
+            for (int k = 0; k < 3; ++k) {
+                const auto value = environment_monthly_cost(g, m, k);
+                const auto raw = mem32(g, costs + uint32_t(k) * 4);
+                const int count = k == kYouthAcademy && raw > kEnvironmentStep[k] * 6 ? 1 : months;
+                r[9] = wrap(int64_t(r[9]) + int64_t(count) * value);
             }
             for (int k = 0; k < 3; k++) r[size_t(10 + k)] = wrap(int64_t(r[size_t(10 + k)]) + int64_t(months) * mem32(g, costs + 0xc + uint32_t(k) * 4));
             for (int k = 0; k < 2; k++) r[size_t(14 + k)] = wrap(int64_t(r[size_t(14 + k)]) + int64_t(months) * rec32(g, m, 0x854 + size_t(k) * 4));
@@ -276,11 +270,7 @@ int32_t stadium_required_attendance(const GameState& source, int manager) {
     int32_t costs = wrap(int64_t(facility_costs(g, m)) + rec32(g, m, 0x854) + rec32(g, m, 0x858));
     costs = wrap(int64_t(costs) + monthly_pay(g, m, 0xa));
     for (int k = 0; k < 6; ++k) {
-        int32_t value = mem32(g, ::bmh::layout::Spending + uint32_t(m) * 0x24 + uint32_t(k) * 4);
-        if (k == 0 || k == 2) value = 0; // OpenBMH deviates from the original: omits the discontinued youth-group cost categories and uses league-specific youth-academy limits.
-// supported rule profile MonthlyExpenses
-        if (k == 1 && value != 0)
-            value = uint32_t(rec32(g, m, 0x880)) < uint32_t(youth_limit(g, m)) ? youth_limit(g, m) : 0;
+        const int32_t value = environment_monthly_cost(g, m, k);
         costs = wrap(int64_t(costs) + value);
     }
     costs = wrap(int64_t(costs) - shares_and_loans(g, m, 2, 0) + int(rec8(g, m, 0x179)) * 1000);

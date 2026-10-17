@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "ui/live_timing.hpp"
 // openbmh_play - the UI of src/ui connected to the engine: options, manager dialogs, a new
 // career initialised by the engine (app/career_session.hpp) and its desk.
 //
@@ -97,7 +98,7 @@ int main(int argc, char** argv) {
     fs::path data, save_directory;
     uint32_t seed = uint32_t(std::chrono::system_clock::now().time_since_epoch().count());
     bool muted = false, music_enabled = true;
-    int live_frame_ms = 10;
+    int live_frame_ms = 0;
     bool live_frame_ms_explicit = false;
     if (const char* configured = std::getenv("BMH_LIVE_FRAME_MS")) {
         live_frame_ms = std::clamp(std::atoi(configured), 0, 1000);
@@ -478,14 +479,8 @@ int main(int argc, char** argv) {
             }
         };
         auto wait_source_retraces = [&](unsigned count) {
-            // SDL has no VGA status-port equivalent. Approximate Source's
-            // retrace waits with the active display's reported refresh period;
-            // keep the previous frame visible and present the next frame once.
-            SDL_DisplayMode mode{};
-            const int display = SDL_GetWindowDisplayIndex(window);
-            int refresh_hz = display >= 0 && SDL_GetCurrentDisplayMode(display, &mode) == 0
-                ? mode.refresh_rate : 0;
-            if (refresh_hz <= 0) refresh_hz = 60; // explicit host fallback; not an Original VGA claim
+            // Keep the VGA cadence on 60/120/144-Hz host displays alike.
+            constexpr auto refresh_hz = ui::kOriginalRefreshHz;
             const Uint64 frequency = SDL_GetPerformanceFrequency();
             const Uint64 ticks_per_wait = (frequency + Uint64(refresh_hz) - 1) / Uint64(refresh_hz);
             for (unsigned i = 0; running && i < count; ++i) {
@@ -2158,7 +2153,8 @@ int main(int argc, char** argv) {
                             live_frame_shown = true;
                         }
                     }
-                    const int frame_delay = live_frame_ms_explicit ? live_frame_ms : std::max(live_frame_ms, 250);
+                    const int frame_delay = live_frame_ms_explicit ? live_frame_ms :
+                        int(ui::live_delay_milliseconds(state.memory.u8(::bmh::layout::Main_FormatError_ExecutableField)));
                     if (live_frame_shown && !live_skipped && frame_delay > 0)
                         SDL_Delay(Uint32(frame_delay));
                 },

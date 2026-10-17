@@ -308,9 +308,10 @@ This index includes registered and reserved names. `ListOptions` and `Help` from
 
 | Command | Parameters | Purpose |
 |---|---|---|
-| `ShowEnvironment` | – | staff levels and the youth academy |
+| `ShowEnvironment` | – | six monthly budgets and three youth tables |
 | `SetStaffLevel` | role:enum(AssistantCoach,Doctor,Physio), level:int(0..6) | click a staff tile: level 0..6, 5 000 a month each |
-| `SetYouthAcademy` | state:enum(On,Off) | start (July/August) or stop the youth academy |
+| `SetYouthLevel` | team:enum(Youngest,Academy,Oldest), level:int(0..6) | set a youth team’s monthly budget |
+| `SetYouthAcademy` | state:enum(On,Off) | compatibility alias: middle youth budget at level 6 or 0 |
 
 ### `Balance`
 

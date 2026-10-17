@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/environment.hpp"
 #include "game/matchday.hpp"
 
 #include <algorithm>
@@ -676,30 +677,6 @@ void manager_match_record(GameState& g, const MatchGroup& grp, int m, int home_g
 }
 
 
-// TicketPriceDraws: per human manager on a first league matchday. It once let the three
-// ticket prices drift; in this version its stores were turned into comparisons (CMP
-// instead of MOV), so only the random numbers remain.
-void ticket_price_draws(const GameState& g, int manager, WatcomRandom& rand) {
-    uint8_t step[0x2c];
-    int b = 4;
-    for (int i = 0; i < 0x2c; i++) {
-        step[i] = uint8_t(b);
-        if (b != 0 && rand.range(0, 8) == 0) b--;
-    }
-    (void)g;
-    (void)manager;
-    const int round = g.league_rounds.empty() ? 0 : g.league_rounds[0];
-    for (int i = 0; i < 3; i++) {
-        // the direction terms depend on the prices, but only as values, not as draw counts
-        if (rand.range(0, 4) == 0) rand.range(0, 2);
-        rand.range(0, 30);
-        rand.range(0, 2);
-        if (rand.range(0, 4) == 0) rand.range(0, 2);
-        if (rand.range(0, 3) != 0) rand.range(1, 18);
-        rand.range(1, step[round < 0x2c ? round : 0x2b]);
-    }
-}
-
 // ManagerOf(manager, 0, value): the manager's position of this season.
 static void store_season_position(GameState& g, int manager, int value) {
     int season = std::min(g.season, 0x31);
@@ -742,7 +719,7 @@ void advance_league_rounds(GameState& g, uint32_t competitions, WatcomRandom& ra
             for (int league = kFirst[c]; league < kFirst[c] + kCount[c]; league++) {
                 if (league == 0) {
                     for (size_t m = 0; m < g.manager_teams.size(); m++) {
-                        ticket_price_draws(g, int(m), rand);
+                        advance_youth_teams(g, int(m), rand);
                         const size_t rec = m * kManagerRecord;
                         if (g.league_rounds.at(0) == 0x10) wr32(g.manager_records, rec + 0x320, rd32(g.manager_records, rec + 0x308));
                         uint8_t& d = g.manager_records.at(rec + 0x220);  // point deduction countdown

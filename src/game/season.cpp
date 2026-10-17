@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/environment.hpp"
 #include "game/season.hpp"
 
 #include <algorithm>
@@ -641,25 +642,21 @@ namespace {
 
 }  // namespace
 
-// OpenBMH deviates from the original: uses the enhanced youth-academy season settlement and player-generation rules.
-// YouthAcademyPlayer(manager) with the supported rule profile patch (SeasonOperation2, SeasonOperation3, SeasonOperation4,
-// SeasonOperation5): the youth academy's player at the season accounts. Only when the academy
-// was paid in full this season (record +0x880 reached the league's price, TeamLeague3) and
-// the squad has at most 22 players (SquadCount(team, 3)). A computer club's young player
-// moves to the club: the slots 0x86f..0 of the big clubs are searched downwards (squads of
-// human managers skipped) for a player not on loan whose age (years after 16) is at most
-// G(t, t + 3), t starting at 15 and lowered by one for every pass that finds none. He leaves
-// his club (ReleasePlayer), gets new values around a level of the club's league
-// (GeneratePlayer with 0x3000: G(79, 95) first division, G(69, 85) second, G(49, 68) third,
-// G(29, 48) below), a place in the squad with a fresh board entry (PendingOfferAnswer with the
-// player id | 0xf000), mood 0x69 and an age of W(0, 4) (16..20). Returns whether a player
-// came. The original's G(0, 0) before the search is kept.
+// OpenBMH deviates from the original: retains the enhanced academy player-generation strength bands with monthly youth budgets.
+// The middle youth budget enables the existing enhanced academy recruitment.
+// Old lump-sum contracts remain eligible after their saved season payment.
+// Player search, strength bands, age and board setup retain the shared rules.
 bool youth_academy_player(GameState& g, int m, GameRandom& game, WatcomRandom& rand, MinuteReport& report) {
     const int team = g.manager_teams.at(size_t(m));
     const int league = club_league(team);
-    const uint32_t price = league == 0 ? 1500000 : league == 1 ? 1000000 : league <= 3 ? 580000 : 280000;
-    if (uint32_t(rec32(g, m, 0x880)) < price) return false;
+    if (!environment_academy_active(g, m)) return false;
     if (squad_count(g, team, 3) > 0x16) return false;
+    const auto budget = g.memory.u32(::bmh::layout::Spending + uint32_t(m) * 0x24 + kYouthAcademy * 4);
+    if (budget <= uint32_t(kEnvironmentStep[kYouthAcademy] * 6) &&
+        g.memory.u8(::bmh::layout::CareerDuration) != 1 &&
+        int(g.memory.u8(::bmh::layout::EnvironmentYouthTeams + uint32_t(m) * 0x24 + 2)) <
+            team_average(g, team, 0xf3).value - 25)
+        return false;
     const SquadRange own = squad_range(team);
     if (game.range(0, 0) != 0) return false;
     for (int t = 0xf;; --t) {
@@ -708,6 +705,7 @@ namespace {
 void season_accounts(GameState& g, int m, GameRandom& game, WatcomRandom& rand, MinuteReport& report,
                      const SeasonTaxHooks& tax_hooks, SeasonTaxState& tax_state) {
     for (size_t i = 0; i < 0xc; i++) rec8(g, m, 0x754 + i) = 0;
+    finish_youth_season(g, m);
     if (!g.memory.has(::bmh::layout::Season_SeasonAccounts_RuntimeField)) g.memory.add_block(::bmh::layout::Season_SeasonAccounts_RuntimeField, 4);  // (runtime only, not saved)
     g.memory.set8(::bmh::layout::Season_SeasonAccounts_RuntimeField + uint32_t(m), 0);
     season_event(g, m, game, rand, report);
@@ -720,8 +718,8 @@ void season_accounts(GameState& g, int m, GameRandom& game, WatcomRandom& rand, 
     const SquadRange range = squad_range(team);
     for (size_t s = 0; s < 24; s++)
         if (g.squad_slots.at(range.first + s) != 0x0FFF) season_bonus(g, m, int(s), uint8_t(pos), true);
-    // OpenBMH deviates from the original: uses the enhanced youth-academy season settlement and player-generation rules.
-// YouthAcademyPlayer: the youth academy's player (supported rule profile), posted as Season_SeasonAccounts_TextPointer
+    // OpenBMH deviates from the original: retains the enhanced academy player-generation strength bands with monthly youth budgets.
+    // Academy recruitment is posted after the youth season has settled.
     if (youth_academy_player(g, m, game, rand, report)) post_text(g, m, text_id(::bmh::layout::Season_SeasonAccounts_TextPointer));
     if (report.unsupported) return;
     if (league == 0 && pos < 100) rec8(g, m, 0x21c) = 1;  // the best human club of the first division

@@ -1045,6 +1045,11 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `Environment_FormatError_RuntimeField` | `0xa50f0` | German-compatible image / runtime field |
 | `Environment_FormatError_RuntimeField2` | `0xa50f6` | German-compatible image / runtime field |
 | `Environment_Render_TextPointer` | `0xaeb74` | German-compatible image / runtime field |
+| `EnvironmentYouthTeams` | `0xbd4bc` | German-compatible image / runtime field |
+| `EnvironmentYouthPositionSuffix` | `0xa1698` | German-compatible image / runtime field |
+| `EnvironmentCostSuffix` | `0xa169d` | German-compatible image / runtime field |
+| `EnvironmentYouthLeagueTextPointer` | `0xaeb78` | German-compatible image / runtime field |
+| `EnvironmentYouthColors` | `0xa50fc` | German-compatible image / runtime field |
 | `Environment_SetEnvironment_ExecutableField` | `0xaf394` | German-compatible image / runtime field |
 | `EuropeNameTable` | `0xae710` | German-compatible image / runtime field |
 | `EventPasses` | `0xa2ba1` | German-compatible image / runtime field |

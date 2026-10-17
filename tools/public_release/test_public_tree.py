@@ -20,6 +20,12 @@ class BlobChecks(unittest.TestCase):
     def rules(self, name, text):
         return {finding.rule for finding in guard.scan_blob(name, text.encode())}
 
+    def test_resolution_asset_names_are_not_personal_emails(self):
+        for filename in ["crest@128.png", "icon@64.svg", "photo@1024.webp"]:
+            self.assertNotIn("personal-email", self.rules("docs/formats/EXAMPLE.md", filename))
+        for address in ["person@" + "128.example.org", "person@" + "abc.png", "person@" + "example.org"]:
+            self.assertIn("personal-email", self.rules("README.md", address))
+
     def test_legacy_names_without_english_word_false_positives(self):
         self.assertIn("legacy-address-symbol", self.rules("src/a.cpp", "FUN" + "_00012345();"))
         self.assertIn("legacy-address-symbol", self.rules("src/a.cpp", "raw_" + "ba384"))

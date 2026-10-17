@@ -33,7 +33,7 @@ Version 0.1 establishes the playable engine and development interfaces. Later mi
 
 ## Build from source
 
-The following recipes target v0.1.1. They require Git, CMake 3.24 or newer and a C++20 compiler. The first configure fetches pinned open-source dependencies. Native build and package results are documented for each release; these instructions do not claim an untested platform result.
+The following recipes target v0.1.2. They require Git, CMake 3.24 or newer and a C++20 compiler. The first configure fetches pinned open-source dependencies. Native build and package results are documented for each release; these instructions do not claim an untested platform result.
 
 Clone the public repository, then run the commands for your system:
 
@@ -103,6 +103,6 @@ The implementation grew from study of file formats and behaviour of a legally ob
 
 OpenBMH's own code and documentation are licensed under **GNU GPL version 3 only**, SPDX **GPL-3.0-only**. [LICENSE](LICENSE) contains the unchanged GPLv3 text; the example wording in its appendix does not change this project's version choice. Game content has separate ownership and is not covered by this license.
 
-Release source is identified by the matching version tag: [v0.1.1](https://github.com/Weyoune/openbmh/tree/v0.1.1) for this version. Binary releases must accompany or offer the corresponding source and build/relinking materials required by the applicable licenses. The tag identifies application source; it does not replace required materials for linked third-party components.
+Release source is identified by the matching version tag: [v0.1.2](https://github.com/Weyoune/openbmh/tree/v0.1.2) for this version. Binary releases must accompany or offer the corresponding source and build/relinking materials required by the applicable licenses. The tag identifies application source; it does not replace required materials for linked third-party components.
 
 Bundled components retain their own licenses, including Nuked OPL3 under LGPL-2.1-or-later. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md).

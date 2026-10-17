@@ -1,47 +1,31 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #pragma once
-// OpenBMH deviates from the original: enables the supported youth academy and represents staff levels in monthly increments of five thousand.
-// The club environment ("Umfeld", desk menu 24, H2 p. 93; supported rule profile manual p. 107, 111):
-// the screen Image with the supported rule profile patch (SizeT7 / EnvironmentOperation /
-// YouthPrice / YouthOpen). Six monthly running costs per manager live at
-// Spending + manager * 0x24 (u32 each); the month change books them
-// (month.cpp monthly_expenses) and the staff values steer training, injuries and healing.
-//
-//   item 0, 2  the original's two other youth age groups: the patch always sets 0
-//   item 1     the youth academy (supported rule profile): on or off. On it is the league's season price
-//              (TeamLeague3: 1.5 M, 1 M, 580 000, 280 000), paid in full at the next month
-//              change while record +0x880 (youth expenses this season) is below it. It can
-//              be switched on in July and August only ("Zu spät für diese Saison...") and
-//              not switched off once paid ("Der Vertrag läuft bis zum Saisonende.").
-//   item 3..5  co-trainer, doctor, physio: level 0..6 times 5 000 a month (EnvironmentRuntimeField)
-//
-// A click on a tile sets the level from the mouse position (supported rule profile: one click per value).
-
 #include <array>
 #include <cstdint>
 #include <string>
-
+#include "game/random.hpp"
 #include "game/state.hpp"
 
 namespace bmh {
-
 constexpr int kEnvironmentItems = 6;
-enum EnvironmentItem : int { kYouthAcademy = 1, kCoTrainer = 3, kDoctor = 4, kPhysio = 5 };
-
+enum EnvironmentItem : int { kYouthYoungest = 0, kYouthAcademy = 1, kYouthOldest = 2,
+                            kCoTrainer = 3, kDoctor = 4, kPhysio = 5 };
+// OpenBMH deviates from the original: uses six monthly environment budgets across data editions while retaining the shared staff prices and academy player-generation strength bands.
+inline constexpr std::array<int32_t, kEnvironmentItems> kEnvironmentStep = {2000, 4000, 5000, 5000, 5000, 5000};
 struct EnvironmentState {
-    std::array<int32_t, kEnvironmentItems> monthly{};  // Spending values
-    std::array<int, kEnvironmentItems> level{};         // the stars the screen draws (0..6)
-    int32_t youth_price = 0;    // the season price of the academy for the club's league
-    bool youth_paid = false;    // record +0x880 reached the price: cannot be switched off
-    bool youth_open = false;    // July/August: the academy can still be switched on
+    std::array<int32_t, kEnvironmentItems> monthly{};
+    std::array<int, kEnvironmentItems> level{};
+    std::array<uint8_t, 3> youth_strength{}, youth_position{}, youth_league{};
 };
-
 EnvironmentState environment_state(const GameState& g, int manager);
-
-enum class EnvironmentResult : uint8_t { changed, unchanged, too_late, contract_runs, invalid };
-
-// A click on `item` at `level` (0..6; for the academy any level > 0 means "on" and a click on
-// an active academy switches it off). `message` gets the original's message box text, if any.
+// Preserve already saved lump-sum academy contracts until the user edits them.
+int32_t environment_monthly_cost(const GameState& g, int manager, int item);
+bool environment_academy_active(const GameState& g, int manager);
+enum class EnvironmentResult : uint8_t { changed, unchanged, invalid };
+// Set a monthly budget to level 0..6, without an immediate debit or random draw.
 EnvironmentResult set_environment(GameState& g, int manager, int item, int level, std::string* message = nullptr);
-
+// Youth results advance with first-division matchdays. Promotion/relegation and
+// the handover to the next age group happen before annual accounts.
+void advance_youth_teams(GameState& g, int manager, WatcomRandom& rand);
+void finish_youth_season(GameState& g, int manager);
 }  // namespace bmh

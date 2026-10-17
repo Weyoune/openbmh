@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/environment.hpp"
 #include "ui/advertising.hpp"
 #include "ui/game_end.hpp"
 
@@ -182,10 +183,9 @@ AdvertisingFinancePreview original_finance_preview_impl(const GameState& game, i
         std::array<int, 13>{0,31,28,31,30,31,30,31,31,30,31,30,31}[size_t(month)];
     income = wrap_add(income, wrap_neg(wrap_mul(original_finance_adjustment(game, manager), month_factor)));
 
-    // OpenBMH deviates from the original: uses the supported youth-academy cap and its saved cost fields.
-// OriginalFinancePreview(0): pure amount of BMHExeXa, record +0x854/+0x858,
+    // OriginalFinancePreview(0): pure amount of BMHExeXa, record +0x854/+0x858,
     // MonthlyPay flags 0x0a (salary+bonus without statistic writes), and six
-    // saved supported rule profile cost words. The cap for index 1 comes from TeamLeague3.
+    // saved monthly environment budgets.
     int32_t expenses = 0;
     for (int i = 0; i < 14; ++i) expenses = wrap_add(expenses, kFacilityCost[size_t(i)]);
     for (int i = 14; i < 22; ++i)
@@ -202,18 +202,8 @@ AdvertisingFinancePreview original_finance_preview_impl(const GameState& game, i
         expenses = wrap_add(expenses, signed32(u32(game.tactics, board + 0x50)));
         expenses = wrap_add(expenses, int32_t(bonus));
     }
-    const int team = int(u32(game.manager_records, rec + 0x290) & 0xffff);
-    const int league = team > 0x164 ? 0 : team_league(team); // TeamLeague2
-    const int32_t youth_cap = league == 0 ? 1500000 : league == 1 ? 1000000 :
-                              league <= 3 ? 580000 : 280000;
     for (int k = 0; k < 6; ++k) {
-        int32_t item = mem_i32(game, ::bmh::layout::Spending + uint32_t(manager) * 0x24 + uint32_t(k) * 4);
-        if (k == 0 || k == 2) {
-            // MonthlyExpenses clears these indexes unconditionally (CMP AX,3 / CMP AX,1).
-            item = 0;
-        } else if (k == 1 && item != 0) {
-            item = u32(game.manager_records, rec + 0x880) < uint32_t(youth_cap) ? youth_cap : 0;
-        }
+        const int32_t item = environment_monthly_cost(game, manager, k);
         expenses = wrap_add(expenses, item);
     }
     expenses = wrap_add(expenses, wrap_neg(original_share_adjustment(game, manager, false)));

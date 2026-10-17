@@ -26,6 +26,7 @@ struct EnvironmentView {
     std::string club_name;
     uint16_t badge_sprite = 0;
     std::array<std::string, 6> cost_text{};
+    std::array<std::string, 3> youth_position_text{}, youth_league_text{};
     bool decorated_background = true;
     bool gradient_text = true;
     bool solid_panel_background = false;

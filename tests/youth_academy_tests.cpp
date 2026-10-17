@@ -39,7 +39,20 @@ void youth_test(GameState g) {
     GameRandom game(4711);
     WatcomRandom rand(815);
     MinuteReport report;
+    auto monthly = g;
+    monthly.memory.set32(::bmh::layout::Spending + 4, 8000);
+    monthly.memory.set8(::bmh::layout::CareerDuration, 0);
+    monthly.memory.set8(::bmh::layout::EnvironmentYouthTeams + 2, 10);
+    check(team_average(monthly, team, 0xf3).value > 35, "fixture has a stronger senior squad");
+    check(!youth_academy_player(monthly, 0, game, rand, report) && game.calls() == 0 && rand.calls() == 0,
+          "monthly recruitment requires the oldest youth team's strength without consuming RNG on refusal");
+    monthly.memory.set8(::bmh::layout::EnvironmentYouthTeams + 2, 85);
+    GameRandom monthly_game(4711);
+    WatcomRandom monthly_rand(815);
+    check(youth_academy_player(monthly, 0, monthly_game, monthly_rand, report) && !report.unsupported,
+          "an active monthly budget and sufficiently strong youth team recruit without a season lump sum");
     // unpaid: nothing happens, nothing is drawn
+    g.memory.set32(::bmh::layout::Spending + 4, price);
     set_rec32(g, 0x880, price - 1);
     check(!youth_academy_player(g, 0, game, rand, report) && game.calls() == 0 && rand.calls() == 0, "unpaid academy");
     // paid

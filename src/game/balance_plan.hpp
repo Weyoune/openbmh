@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #pragma once
-// OpenBMH deviates from the original: uses the supported staff and youth-academy cost categories.
+// All three youth budgets and staff costs share the monthly environment model.
 // The balance plan ("Bilanz", desk menu 28, mode III; H2 p. 26-27; BMH.exe V2.24 + supported rule profile
 // patch): the screen BalanceFromGame2 projects the club's income and expenses for the business
 // year and lets the manager change every item. When he leaves the screen the resulting

@@ -72,6 +72,11 @@ EnvironmentView environment_from_game(const bmh::GameState& game, uint64_t revis
     view.values = bmh::environment_state(game, manager);
     for (int i = 0; i < kEnvironmentItems; ++i)
         view.cost_text[size_t(i)] = bmh::format_number(game, view.values.monthly[size_t(i)], 0x185);
+    for (size_t i = 0; i < 3; ++i) {
+        view.youth_position_text[i] = format_number(game, view.values.youth_position[i] + 1, 0x81);
+        view.youth_league_text[i] = format_number(game, view.values.youth_league[i] + 1, 2) +
+            message_text(game, ::bmh::layout::EnvironmentYouthLeagueTextPointer);
+    }
     view.decorated_background = !game.memory.has(::bmh::layout::PlainBackground) || game.memory.u8(::bmh::layout::PlainBackground) == 0;
     view.gradient_text = (!game.memory.has(::bmh::layout::TextGradientDisabled) || game.memory.u8(::bmh::layout::TextGradientDisabled) == 0);
     view.solid_panel_background = game.memory.has(::bmh::layout::SolidPanelBackground) && game.memory.u8(::bmh::layout::SolidPanelBackground) != 0;
@@ -117,9 +122,14 @@ std::string environment_view_json(const EnvironmentView& s) {
     for (size_t i = 0; i < s.values.monthly.size(); ++i) { if (i) out << ','; out << s.values.monthly[i]; }
     out << "],\"level\":[";
     for (size_t i = 0; i < s.values.level.size(); ++i) { if (i) out << ','; out << s.values.level[i]; }
-    out << "],\"youth_price\":" << s.values.youth_price << ",\"youth_paid\":"
-        << (s.values.youth_paid ? "true" : "false") << ",\"youth_open\":"
-        << (s.values.youth_open ? "true" : "false") << '}';
+    out << "],\"youth_teams\":[";
+    for (size_t i = 0; i < 3; ++i) {
+        if (i) out << ',';
+        out << "{\"strength\":" << int(s.values.youth_strength[i])
+            << ",\"position\":" << int(s.values.youth_position[i])
+            << ",\"league\":" << int(s.values.youth_league[i]) << '}';
+    }
+    out << "]}";
     return out.str();
 }
 
@@ -194,9 +204,6 @@ Image EnvironmentScreen::render() const {
         throw FormatError("environment: Original badge crop outside atlas");
     crop(out, badge_atlas_, badge_x, 0, 0x8c, 0x61, 0x26, 0x26);
     for (int item = 0; item < kEnvironmentItems; ++item) {
-        // OpenBMH deviates from the original: omits the two discontinued youth groups from the environment screen.
-// supported rule profile BypassesTwoDiscontinuedYouthGroups bypasses the two discontinued youth groups.
-        if (item < 3 && item != kYouthAcademy) continue;
         const int x = exe_.u8(::bmh::layout::Environment_FormatError_RuntimeField + item), y = exe_.u8(::bmh::layout::Environment_FormatError_RuntimeField2 + item);
         crop(out, tiles_, item * 0x33, 0x46, x, y, 0x33, 0x29);
         // CallsTwiceForUpperLowerCaptionStrips calls LoadGameEndTaxAnimationAssets twice for the upper and lower caption strips.
@@ -215,25 +222,29 @@ Image EnvironmentScreen::render() const {
             for (int yy = top; yy <= bottom; ++yy) out.at(right, yy) = 0x40;
         };
         panel(x - 4, y - 10, x + 0x36, y - 1);
-        panel(x - 4, y + 0x29, x + 0x36, y + 0x31);
-        const int unit = item == kYouthAcademy ? 1 : item >= 3 ? 5000 : 1;
-        const int count = item == kYouthAcademy ? (state_.values.monthly[size_t(item)] != 0 ? 6 : 0)
-                                                : std::clamp(state_.values.monthly[size_t(item)] / unit, 0, 6);
+        panel(x - 4, y + 0x29, x + 0x36, y + 0x31 + (item < 3 ? 6 : 0));
+        const int count = state_.values.level[size_t(item)];
         for (int star = 0; star < count; ++star)
             crop(out, tiles_, 0x1e, 0x1e, x + star * 9, y - 8, 7, 6, 0);
         // The tile artwork already contains its Source caption. CallsTwiceForUpperLowerCaptionStrips draws
         // the dynamic expense in the lower strip at baseline y+0x30; a second
         // invented TEXTD caption here overwrote the baked-in names and shifted
         // the cost down into the hit area.
-        const auto& cost = state_.cost_text[size_t(item)];
+        const auto cost = state_.cost_text[size_t(item)] + exe_.cstring(::bmh::layout::EnvironmentCostSuffix);
         text(out, x + 0x32 / 2 - font_.text_width(cost) / 2, y + 0x30, cost, 0x6b);
+        if (item < 3) {
+            const auto caption = state_.youth_position_text[size_t(item)] +
+                exe_.cstring(::bmh::layout::EnvironmentYouthPositionSuffix) + state_.youth_league_text[size_t(item)];
+            text(out, x + 0x32 / 2 - font_.text_width(caption) / 2, y + 0x36,
+                caption, exe_.u8(::bmh::layout::EnvironmentYouthColors + item));
+        }
     }
     return out;
 }
 
 bool EnvironmentScreen::pointer_down(int x, int y, bool right) {
+    if (pending_) return false;
     press_seen_ = true;
-    pending_.reset();
     pressed_item_ = pressed_level_ = -1;
     pressed_right_ = right;
     if (right) return true;
@@ -241,7 +252,7 @@ bool EnvironmentScreen::pointer_down(int x, int y, bool right) {
         const int left = exe_.u8(::bmh::layout::Environment_FormatError_RuntimeField + item), top = exe_.u8(::bmh::layout::Environment_FormatError_RuntimeField2 + item);
         if (x >= left - 9 && x <= left + 0x36 && y >= top - 10 && y <= top + 0x29) {
             pressed_item_ = item;
-            pressed_level_ = std::clamp((x - left + 4) / 9, 0, 6);
+            pressed_level_ = std::clamp((x - left + 9) / 9, 0, 6);
             return true;
         }
     }

@@ -167,17 +167,17 @@ int main(int argc, char** argv) {
         cap_fixture.memory.set32(::bmh::layout::Spending + 4, 99);
         cap_fixture.memory.set32(::bmh::layout::Spending, 111);
         cap_fixture.memory.set32(::bmh::layout::Spending + 8, 222);
-        check(advertising_from_game(cap_fixture, 0).finance_preview.expenses == 1543400,
-              "costs 0/2 stay zero while the youth-cost item uses the source league cap");
+        check(advertising_from_game(cap_fixture, 0).finance_preview.expenses == 43832,
+              "all three youth budgets enter the monthly finance preview");
         put32(cap_fixture.manager_records, 0x880, 1500000);
         const auto no_cap_preview = advertising_from_game(cap_fixture, 0).finance_preview;
-        check(no_cap_preview.expenses == 43400,
-              "the youth-cost item is suppressed once funds reach the strict source threshold");
+        check(no_cap_preview.expenses == 43832,
+              "ordinary monthly youth budgets continue after the former academy threshold");
         GameState ignored_cost_fixture = finance_fixture;
         ignored_cost_fixture.memory.set32(::bmh::layout::Spending, 111);
         ignored_cost_fixture.memory.set32(::bmh::layout::Spending + 8, 222);
-        check(advertising_from_game(ignored_cost_fixture, 0).finance_preview.expenses == 43400,
-              "legacy routine clears cost items zero and two regardless of their saved values");
+        check(advertising_from_game(ignored_cost_fixture, 0).finance_preview.expenses == 43733,
+              "the youngest and oldest youth budgets both enter expenses");
         GameState loan_fixture = finance_fixture;
         loan_fixture.memory.set32(::bmh::layout::Loans + 8, 100);
         const auto loan_preview = advertising_from_game(loan_fixture, 0).finance_preview;

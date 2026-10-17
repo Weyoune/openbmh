@@ -65,6 +65,8 @@ SECRET_PATTERNS = (
     re.compile(r"(?m)^(?:export\s+)?[A-Z_]*(?:TOKEN|PASSWORD|SECRET|API_KEY)\s*=\s*[A-Za-z0-9_./+-]{20,}(?:\s|$)"),
 )
 EMAIL = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
+# Resolution-qualified artwork names are filenames, including in older commits.
+SIZED_ASSET_NAME = re.compile(r"[A-Z0-9._+-]+@[1-9][0-9]{0,4}\.(?:png|jpe?g|webp|svg|gif|avif)", re.IGNORECASE)
 # Project bot identities and the co-author trailer address are not personal data.
 BOT_EMAILS = {"codex@openbmh.invalid", "claude@openbmh.invalid", "noreply@anthropic.com"}
 HEX_NUMBER = re.compile(r"\b0x(?P<digits>[0-9a-f]{5,8})(?:u(?:ll?|z)?|ll?u?|z)?\b", re.IGNORECASE)
@@ -187,7 +189,7 @@ def scan_blob(name: str, blob: bytes) -> list[Finding]:
         for match in pattern.finditer(text):
             result.append(Finding(name, line_at(text, match.start()), rule))
     for match in EMAIL.finditer(text):
-        if match.group().lower() not in BOT_EMAILS:
+        if match.group().lower() not in BOT_EMAILS and not SIZED_ASSET_NAME.fullmatch(match.group()):
             result.append(Finding(name, line_at(text, match.start()), "personal-email"))
     if PurePosixPath(name).suffix.lower() in SOURCE_SUFFIXES:
         result.extend(layout_findings(name, text))

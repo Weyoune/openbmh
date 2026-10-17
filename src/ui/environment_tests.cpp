@@ -33,9 +33,11 @@ void original_pixels(const std::filesystem::path& data, const LeImage& exe,
     const auto panel = load_vga(asset_path(data / "KB", "56.VGA"));
     const auto body = load_font(asset_path(data / "F", "BMH3.FNT"));
     SpriteFont sprite(data);
-    // All four visible groups exercise an empty and an occupied star rail.
-    state.values.monthly[1] = 0;
-    for (int item = 3; item < 6; ++item) state.values.monthly[size_t(item)] = 10000;
+    // All six visible groups exercise an empty and an occupied star rail.
+    for (int item = 0; item < 6; ++item) {
+        state.values.level[size_t(item)] = item < 3 ? 0 : 2;
+        state.values.monthly[size_t(item)] = state.values.level[size_t(item)] * kEnvironmentStep[size_t(item)];
+    }
     for (int mode = 0; mode < 3; ++mode) {
         state.decorated_background = mode != 1;
         state.plain_background = mode == 2;
@@ -56,9 +58,9 @@ void original_pixels(const std::filesystem::path& data, const LeImage& exe,
         sprite.draw(base, 5, 235, original_to_utf8(state.club_name), 5);
         for (int y = 0; y < 240; ++y) for (int x = 0; x < 320; ++x) {
             bool foreground = x >= 125 && x <= 195 && y >= 82 && y <= 151;
-            for (int item : {1, 3, 4, 5}) {
+            for (int item : {0, 1, 2, 3, 4, 5}) {
                 const int tx = exe.u8(::bmh::layout::Environment_FormatError_RuntimeField + item), ty = exe.u8(::bmh::layout::Environment_FormatError_RuntimeField2 + item);
-                foreground |= x >= tx - 4 && x <= tx + 54 && y >= ty - 10 && y <= ty + 49;
+                foreground |= x >= tx - 4 && x <= tx + 54 && y >= ty - 10 && y <= ty + 49 + (item < 3 ? 6 : 0);
             }
             if (!foreground) check(pixel(actual, x, y) == pixel(base, x, y),
                 "Source KB129/flat background, centered title and active club footer");
@@ -76,14 +78,14 @@ void original_pixels(const std::filesystem::path& data, const LeImage& exe,
         check(transparent_center > 0 && center_ink > 0, "central crop oracle covers transparent and ink pixels");
         check(actual.at(139, 96) == 0x46 && actual.at(178, 96) == 0x40 &&
               actual.at(139, 135) == 0x40, "Source badge frame and corner overwrite order");
-        for (int item : {1, 3, 4, 5}) {
+        for (int item : {0, 1, 2, 3, 4, 5}) {
             const int tx = exe.u8(::bmh::layout::Environment_FormatError_RuntimeField + item), ty = exe.u8(::bmh::layout::Environment_FormatError_RuntimeField2 + item);
             for (int y = 0; y < 41; ++y) for (int x = 0; x < 51; ++x)
                 check(pixel(actual, tx + x, ty + y) == pixel(art, item * 51 + x, 70 + y),
                     "legacy routine tile is opaque, without a fabricated c0 comparekey");
             // The Source upper panel is copied first; each nonzero star pixel
             // replaces it. A zero in the star bitmap exposes that panel.
-            const int stars = item == 1 ? 0 : 2;
+            const int stars = state.values.level[size_t(item)];
             for (int y = ty - 9; y <= ty - 2; ++y) for (int x = tx - 3; x <= tx + 53; ++x) {
                 uint8_t expected = state.solid_panel_background ? 0x42 : pixel(panel, x - 1, y - 20);
                 for (int n = 0; n < stars; ++n)
@@ -93,7 +95,7 @@ void original_pixels(const std::filesystem::path& data, const LeImage& exe,
                     }
                 check(pixel(actual, x, y) == expected, "Source star zero pixels expose the opaque KB56/flat rail");
             }
-            const auto& cost = state.cost_text[size_t(item)];
+            const auto cost = state.cost_text[size_t(item)] + exe.cstring(::bmh::layout::EnvironmentCostSuffix);
             const int width = body.text_width(cost), left = tx + 25 - width / 2;
             Image mask(width, body.height);
             body.draw(mask, 0, 0, cost, 1);
@@ -171,7 +173,7 @@ int main(int argc, char** argv) {
         check(screen.key("ESC").kind == EnvironmentRequestKind::none && !screen.close_requested() &&
               screen.state_json() == held, "back cannot steal a held staff control before its release");
         const auto request = screen.release(x + 31, y + 5);
-        check(request.kind == EnvironmentRequestKind::set_item && request.item == 3 && request.level == 3 &&
+        check(request.kind == EnvironmentRequestKind::set_item && request.item == 3 && request.level == 4 &&
               request.manager_slot == state.manager_slot && request.runtime_club == state.runtime_club &&
               request.revision == 17 && request.owner == owner,
               "tile release emits a typed, manager/revision-owned level request");
@@ -182,13 +184,13 @@ int main(int argc, char** argv) {
 
         auto updated = state;
         updated.revision = 18;
-        updated.values.level[3] = 3;
-        updated.values.monthly[3] = 15000;
-        updated.cost_text[3] = format_number(game, 15000, 0x185);
+        updated.values.level[3] = 4;
+        updated.values.monthly[3] = 20000;
+        updated.cost_text[3] = format_number(game, 20000, 0x185);
         updated.owner.revision = 18;
         screen.acknowledge(updated);
         check(!screen.pending() && screen.state().revision == 18 &&
-              screen.state().values.monthly[3] == 15000,
+              screen.state().values.monthly[3] == 20000,
               "valid source mutation ACK refreshes the screen and clears the pending action");
 
         const auto notice = environment_notice_dialog(game, state.manager_slot,

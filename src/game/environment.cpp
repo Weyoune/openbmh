@@ -1,103 +1,113 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "game/environment.hpp"
-
 #include <algorithm>
-
-#include "game/messages.hpp"
-#include "game/schedule.hpp"
-#include "game/week.hpp"
+#include <cstdlib>
 
 namespace bmh {
-
 namespace {
-
-constexpr uint32_t kSpending = ::bmh::layout::Spending;  // + manager * 0x24 + item * 4
-constexpr size_t kRecordSize = 0xb0c;
-constexpr size_t kYouthPaid = 0x880;     // youth expenses booked this season
-// EnvironmentRuntimeField: the step of each item in thousands (items 3..5: 5 000 per level)
-constexpr int kUnit[kEnvironmentItems] = {2, 4, 5, 5, 5, 5};
-
-uint32_t spending_at(int manager, int item) { return kSpending + uint32_t(manager) * 0x24 + uint32_t(item) * 4; }
-
-// TeamLeague3: the academy's season price by the club's league
-int32_t youth_price(const GameState& g, int manager) {
-    const int league = team_league(g.manager_teams.at(size_t(manager)));
-    return league == 0 ? 1500000 : league == 1 ? 1000000 : league <= 3 ? 580000 : 280000;
+uint32_t youth_at(int manager) { return layout::EnvironmentYouthTeams + uint32_t(manager) * 0x24; }
+uint32_t spending_at(int manager, int item) {
+    return layout::Spending + uint32_t(manager) * 0x24 + uint32_t(item) * 4;
 }
-
-// YouthOpen: July (unless the Bundesliga is past its 17th round) or August
-bool youth_open(const GameState& g) {
-    const int month = month_code(g.date);
-    if (month == 7) return !(g.league_rounds.at(0) > 0x11);
-    return month == 8;
+void validate_manager(const GameState& g, int manager) {
+    if (manager < 0 || size_t(manager) >= g.manager_teams.size() ||
+        !g.memory.has(youth_at(manager) + 8) || !g.memory.has(spending_at(manager, 5) + 3))
+        throw FormatError("environment: invalid manager or truncated budgets");
 }
-
-bool youth_paid(const GameState& g, int manager) {
-    const size_t at = size_t(manager) * kRecordSize + kYouthPaid;
-    const uint32_t paid = uint32_t(g.manager_records.at(at)) | uint32_t(g.manager_records.at(at + 1)) << 8 |
-                          uint32_t(g.manager_records.at(at + 2)) << 16 | uint32_t(g.manager_records.at(at + 3)) << 24;
-    return paid >= uint32_t(youth_price(g, manager));
+int direction(int value) { return (value > 0) - (value < 0); }
+int signed_clamp(int value, int low, int high) {
+    return std::clamp(int(int8_t(uint8_t(value))), low, high);
 }
-
-}  // namespace
-
+bool legacy_academy(const GameState& g, int manager) {
+    const auto value = g.memory.u32(spending_at(manager, kYouthAcademy));
+    return value == 1500000 || value == 1000000 || value == 580000 || value == 280000;
+}
+uint32_t academy_paid(const GameState& g, int manager) {
+    const auto at = size_t(manager) * 0xb0c + 0x880;
+    return uint32_t(g.manager_records.at(at)) | uint32_t(g.manager_records.at(at + 1)) << 8 |
+        uint32_t(g.manager_records.at(at + 2)) << 16 | uint32_t(g.manager_records.at(at + 3)) << 24;
+}
+}
+int32_t environment_monthly_cost(const GameState& g, int manager, int item) {
+    const auto value = g.memory.u32(spending_at(manager, item));
+    if (item == kYouthAcademy && legacy_academy(g, manager) && academy_paid(g, manager) >= value) return 0;
+    return int32_t(value);
+}
+bool environment_academy_active(const GameState& g, int manager) {
+    const auto value = g.memory.u32(spending_at(manager, kYouthAcademy));
+    return value != 0 && (!legacy_academy(g, manager) || academy_paid(g, manager) >= value);
+}
 EnvironmentState environment_state(const GameState& g, int manager) {
-    EnvironmentState s;
-    for (int i = 0; i < kEnvironmentItems; i++) {
-        s.monthly[size_t(i)] = int32_t(g.memory.u32(spending_at(manager, i)));
-        // the stars (SizeT7): staff value / step, the academy 6 when on, 0/2 none
-        if (i >= 3) s.level[size_t(i)] = std::clamp(s.monthly[size_t(i)] / (kUnit[i] * 1000), 0, 6);
-        else if (i == kYouthAcademy) s.level[size_t(i)] = s.monthly[size_t(i)] != 0 ? 6 : 0;
+    validate_manager(g, manager);
+    EnvironmentState result;
+    for (int i = 0; i < kEnvironmentItems; ++i) {
+        result.monthly[size_t(i)] = int32_t(g.memory.u32(spending_at(manager, i)));
+        result.level[size_t(i)] = std::clamp(result.monthly[size_t(i)] / kEnvironmentStep[size_t(i)], 0, 6);
     }
-    s.youth_price = youth_price(g, manager);
-    s.youth_paid = youth_paid(g, manager);
-    s.youth_open = youth_open(g);
-    return s;
-}
-
-EnvironmentResult set_environment(GameState& g, int manager, int item, int level, std::string* message) {
-    if (manager < 0 || size_t(manager) >= g.manager_teams.size() || item < 0 || item >= kEnvironmentItems || level < 0 ||
-        level > 6 || !g.memory.has(spending_at(manager, item) + 3))
-        return EnvironmentResult::invalid;
-    const uint32_t at = spending_at(manager, item);
-    const int32_t before = int32_t(g.memory.u32(at));
-    int32_t value = 0;
-    EnvironmentResult result = EnvironmentResult::changed;
-    if (item >= 3) {
-        value = level * kUnit[item] * 1000;
-    } else if (item == kYouthAcademy) {
-        // YouthPrice: a click on an active academy means "off"
-        int wanted = level;
-        if (before != 0 && wanted != 0) wanted = 0;
-        const int32_t price = youth_price(g, manager);
-        if (!youth_paid(g, manager)) {
-            if (wanted == 0) {
-                value = 0;
-            } else if (!youth_open(g)) {
-                value = 0;
-                result = EnvironmentResult::too_late;
-                if (message) *message = message_text(g, ::bmh::layout::Environment_SetEnvironment_ExecutableField);  // "Zu spät für diese Saison..."
-            } else {
-                value = price;
-            }
-        } else {
-            // paid this season: stays on; a click meant as "off" brings the second string of
-            // the same text block (*Environment_SetEnvironment_ExecutableField + 0x42)
-            value = price;
-            if (wanted == 0) {
-                result = EnvironmentResult::contract_runs;
-                if (message) {
-                    *message = message_text_following(g, ::bmh::layout::Environment_SetEnvironment_ExecutableField);
-                    // OpenBMH-authored notice when an edition has no academy tail text.
-                    if (message->empty()) *message = "This academy contract stays active until the season ends.";
-                }
-            }
-        }
+    for (uint32_t i = 0; i < 3; ++i) {
+        result.youth_strength[i] = g.memory.u8(youth_at(manager) + i);
+        result.youth_position[i] = g.memory.u8(youth_at(manager) + 3 + i);
+        result.youth_league[i] = g.memory.u8(youth_at(manager) + 6 + i);
+        if (result.youth_position[i] > 11 || result.youth_league[i] > 2)
+            throw FormatError("environment: invalid youth table");
     }
-    g.memory.set32(at, uint32_t(value));
-    if (result == EnvironmentResult::changed && value == before) result = EnvironmentResult::unchanged;
     return result;
 }
-
+EnvironmentResult set_environment(GameState& g, int manager, int item, int level, std::string* message) {
+    if (message) message->clear();
+    if (manager < 0 || size_t(manager) >= g.manager_teams.size() || item < 0 || item >= kEnvironmentItems ||
+        level < 0 || level > 6 || !g.memory.has(spending_at(manager, item) + 3))
+        return EnvironmentResult::invalid;
+    const auto at = spending_at(manager, item);
+    const auto value = uint32_t(level * kEnvironmentStep[size_t(item)]);
+    if (g.memory.u32(at) == value) return EnvironmentResult::unchanged;
+    g.memory.set32(at, value);
+    return EnvironmentResult::changed;
+}
+void advance_youth_teams(GameState& g, int manager, WatcomRandom& rand) {
+    const auto observed = environment_state(g, manager);
+    std::array<uint8_t, 44> movement{};
+    uint8_t step = 4;
+    for (auto& value : movement) {
+        value = step;
+        if (step != 0 && rand.range(0, 8) == 0) --step;
+    }
+    const auto round = g.league_rounds.at(0);
+    if (round >= movement.size()) throw FormatError("environment: youth round outside season");
+    constexpr int division_strength[] = {85, 70, 57};
+    for (size_t i = 0; i < 3; ++i) {
+        int strength = observed.youth_strength[i];
+        int position = observed.youth_position[i];
+        const int opponent = uint8_t(division_strength[observed.youth_league[i]] - position);
+        const int ratio = strength == 0 ? 100 :
+            int((((int64_t(observed.monthly[i]) * 100 / ((1 << i) * 10000)) >> 1) + 40) * 100 / strength);
+        int change = direction(ratio - 100);
+        if (rand.range(0, 4) == 0) change = rand.range(0, 2) - 1;
+        if (std::abs(ratio - 100) <= rand.range(0, 30)) change = 0;
+        if (rand.range(0, 2) == 0) strength = uint8_t(strength + change);
+        strength = signed_clamp(strength, 10, 85);
+        g.memory.set8(youth_at(manager) + uint32_t(i), uint8_t(strength));
+        const int difference = strength - opponent;
+        change = direction(difference);
+        if (rand.range(0, 4) == 0) change = rand.range(0, 2) - 1;
+        if (rand.range(0, 3) != 0 && std::abs(difference) * 2 < rand.range(1, 18)) change = 0;
+        position = signed_clamp(uint8_t(position - change * rand.range(1, movement[round])), 0, 11);
+        g.memory.set8(youth_at(manager) + 3 + uint32_t(i), uint8_t(position));
+    }
+}
+void finish_youth_season(GameState& g, int manager) {
+    const auto observed = environment_state(g, manager);
+    for (int i = 2; i >= 0; --i) {
+        auto division = observed.youth_league[size_t(i)];
+        const int position = observed.youth_position[size_t(i)];
+        int next_position = 5;
+        if (position < 2 && division != 0) { --division; next_position = position + 10; }
+        if (position > 10 && division < 2) { ++division; next_position = position - 10; }
+        if (i != 0) g.memory.set8(youth_at(manager) + uint32_t(i),
+            uint8_t((int(observed.youth_strength[size_t(i - 1)]) + observed.youth_strength[size_t(i)] * 2) / 3));
+        g.memory.set8(youth_at(manager) + 3 + uint32_t(i), uint8_t(next_position));
+        g.memory.set8(youth_at(manager) + 6 + uint32_t(i), division);
+    }
+}
 }  // namespace bmh

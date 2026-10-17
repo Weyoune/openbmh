@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/environment.hpp"
 #include "game/month.hpp"
 #include "game/trace.hpp"
 
@@ -482,11 +483,9 @@ void return_loans(GameState& g, WatcomRandom& rand, GameRandom* game, MinuteRepo
     }
 }
 
-// OpenBMH deviates from the original: omits the two discontinued youth-group cost categories from monthly accounts.
 // OriginalFinancePreview(1): the month's expenses of a human manager: facility maintenance
 // (BMHExeXa), record +0x854/+0x858, the wages of the squad (MonthlyPay with flags
-// 14), the six running costs of Spending (the youth work capped per league by the
-// supported rule profile patch MonthlyExpenses, which also drops the youth groups 0 and 2) and the debt
+// 14), all six monthly environment budgets and the debt
 // service (+0x179 x 1000); each booked in the statistics.
 int32_t monthly_expenses(GameState& g, int m) {
     std::vector<uint8_t>& r = g.manager_records;
@@ -514,18 +513,7 @@ int32_t monthly_expenses(GameState& g, int m) {
     }
     sum += wages;
     for (int k = 0; k < 6; k++) {
-        int32_t v = int32_t(g.memory.u32(::bmh::layout::Spending + uint32_t(m) * 0x24 + uint32_t(k) * 4));
-        // OpenBMH deviates from the original: omits the two discontinued youth-group cost categories from monthly accounts.
-// MonthlyExpenses (supported rule profile patch): the two other youth groups (items 0 and 2) cost
-        // nothing any more, whatever the saved value
-        if (k == 0 || k == 2) v = 0;
-        if (k == 1 && v != 0) {
-            // TeamLeague3: the limit of the league (1.5 M, 1 M, 580000, 280000); the full
-            // limit is paid while +0x880 is below it, nothing after
-            const int league = team_league(g.manager_teams.at(size_t(m)));
-            const uint32_t limit = league == 0 ? 1500000 : league == 1 ? 1000000 : league <= 3 ? 580000 : 280000;
-            v = rd32(r, rec + 0x880) < limit ? int32_t(limit) : 0;
-        }
+        const int32_t v = environment_monthly_cost(g, m, k);
         if (k >= 3 && k <= 5) add32(r, rec + 0x878 + size_t(k) * 4, v);
         else add32(r, rec + 0x880, v);
         sum += v;

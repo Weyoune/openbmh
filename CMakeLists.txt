@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 cmake_minimum_required(VERSION 3.24)
-project(OpenBMH VERSION 0.1.1 LANGUAGES CXX C)
+project(OpenBMH VERSION 0.1.2 LANGUAGES CXX C)
 # the one place of the version: --version of both programs and the window title (src/version.hpp)
 add_compile_definitions(OPENBMH_VERSION="${PROJECT_VERSION}")
 
@@ -39,7 +39,7 @@ function(bmh_add_data_test)
         set(T_DATA_DIR "${BMH_DATA}")
     endif()
     set(reason "")
-    set(external_text_tests season_transition_tests environment_tests cli_console_tests
+    set(external_text_tests season_transition_tests cli_console_tests
         ui_desktop_tests ui_lineup_tests format_tests app_controller_tests bank_app_tests
         cli_soak ui_cup_draw_tests league_pairings_tests ui_pending_offer_tests
         reality_reporter_layout_tests season_cup_draw_app_tests
@@ -62,7 +62,7 @@ function(bmh_add_data_test)
         message(FATAL_ERROR "Invalid game data directory for ${T_NAME}: ${T_DATA_DIR}")
     endif()
     foreach(option IN LISTS T_REQUIRED_OPTIONS)
-        if(NOT "${${option}}" OR NOT EXISTS "${${option}}")
+        if("${${option}}" STREQUAL "" OR NOT EXISTS "${${option}}")
             set(reason "External test input not supplied: ${option}")
         endif()
     endforeach()
@@ -365,9 +365,7 @@ bmh_add_data_test(NAME reschedule_tests REQUIRED_OPTIONS BMH_TEST_RESCHEDULE_TES
 
 add_executable(environment_tests tests/environment_tests.cpp)
 target_link_libraries(environment_tests PRIVATE bmhcore)
-set(BMH_TEST_ENVIRONMENT_TESTS_INPUT_1 "" CACHE PATH "External input 1 for environment_tests; not distributed")
-bmh_add_data_test(NAME environment_tests REQUIRED_OPTIONS BMH_TEST_ENVIRONMENT_TESTS_INPUT_1 COMMAND environment_tests "${BMH_DATA}"
-    "${BMH_TEST_ENVIRONMENT_TESTS_INPUT_1}")
+add_test(NAME environment_tests COMMAND environment_tests)
 
 add_executable(youth_academy_tests tests/youth_academy_tests.cpp)
 target_link_libraries(youth_academy_tests PRIVATE bmhcore)
@@ -482,6 +480,7 @@ if(MSVC)
 endif()
 bmh_add_data_test(NAME app_controller_tests COMMAND app_controller_tests "${BMH_DATA}")
 set(BMH_TEST_APP_DELAY_SETTINGS_TESTS_INPUT_1 "" CACHE PATH "External input 1 for app_delay_settings_tests; not distributed")
+bmh_add_data_test(NAME app_environment_tests COMMAND app_controller_tests "${BMH_DATA}" --environment-only)
 bmh_add_data_test(NAME app_delay_settings_tests REQUIRED_OPTIONS BMH_TEST_APP_DELAY_SETTINGS_TESTS_INPUT_1 COMMAND app_controller_tests "${BMH_DATA}"
     --delay-settings-only "${BMH_TEST_APP_DELAY_SETTINGS_TESTS_INPUT_1}")
 

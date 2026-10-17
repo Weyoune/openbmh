@@ -4558,9 +4558,9 @@ bool CareerSession::dispatch_settings(const ui::SettingsWriteRequest& request, u
         const bool consumed = (request.column == 7 &&
              ((request.row <= 6) || request.row == 7 || request.row == 9 || request.row == 10 ||
              (scoped_settings && request.row == 8))) ||
-             // B9:C9 chance result; D9:E9 bookings; F9:G9 rolling ball;
+             // A9 match minutes; B9:C9 chance result; D9:E9 bookings; F9:G9 rolling ball;
              // I9 cup draw; K9 Reality report; M9 preview/shootout; P9 shot.
-             (request.column == 8 && ((request.row >= 1 && request.row <= 6) ||
+             (request.column == 8 && ((request.row >= 0 && request.row <= 6) ||
                  request.row == 7 || request.row == 8 || request.row == 10 || request.row == 12 || request.row == 15));
         if (!consumed || old >= 200) {
             error = "Diese Einstellung ist noch nicht verfügbar.";
