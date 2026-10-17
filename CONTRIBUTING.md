@@ -1,6 +1,6 @@
 # Contributing to OpenBMH
 
-Use [issues](https://github.com/rezmer/openbmh/issues) for reproducible bugs and proposals. For a bug, include the OpenBMH version, platform, game edition, expected behaviour and the smallest sequence of actions that shows the problem. Remove personal paths and account information from diagnostic text.
+Use [issues](https://github.com/Weyoune/openbmh/issues) for reproducible bugs and proposals. For a bug, include the OpenBMH version, platform, game edition, expected behaviour and the smallest sequence of actions that shows the problem. Remove personal paths and account information from diagnostic text.
 
 Keep proprietary game files out of public submissions: no executables, databases, manuals, extracted text, artwork, recordings or saved games. Prefer synthetic inputs and a short description. If an investigation requires privately owned data, coordinate an appropriate process with the maintainers instead of attaching it publicly.
 

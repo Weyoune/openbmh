@@ -4,10 +4,10 @@ OpenBMH reconstructs the Bundesliga Manager Hattrick engine in C++20. The graphi
 
 ## Changes in 0.1.1
 
-- Live lineup navigation preserves the saved pitch view and allows repeated switches between the team list and pitch. Right-click can leave the dialog even when the pointer moves between press and release ([#1](https://github.com/rezmer/openbmh/issues/1)).
-- The instruction panel restores original control symbols, substitute information, red coverage on player hover and pitch-position hints ([#2](https://github.com/rezmer/openbmh/issues/2)).
-- Right-click cancels load/save dialogs, including settings and desktop-layout files ([#3](https://github.com/rezmer/openbmh/issues/3)).
-- Save filenames accept typing immediately, replace a selected existing name and support Ctrl+A/Cmd+A. This also applies to desktop layouts saved as MEN files ([#4](https://github.com/rezmer/openbmh/issues/4)).
+- Live lineup navigation preserves the saved pitch view and allows repeated switches between the team list and pitch. Right-click can leave the dialog even when the pointer moves between press and release ([#1](https://github.com/Weyoune/openbmh/issues/1)).
+- The instruction panel restores original control symbols, substitute information, red coverage on player hover and pitch-position hints ([#2](https://github.com/Weyoune/openbmh/issues/2)).
+- Right-click cancels load/save dialogs, including settings and desktop-layout files ([#3](https://github.com/Weyoune/openbmh/issues/3)).
+- Save filenames accept typing immediately, replace a selected existing name and support Ctrl+A/Cmd+A. This also applies to desktop layouts saved as MEN files ([#4](https://github.com/Weyoune/openbmh/issues/4)).
 
 These corrections passed targeted UI/controller checks and Linux SDL input replays, including normal and Reality matches, substitutions, file writing and a fresh-process reload. Physical macOS window verification remains human QA. Use the new 0.1.1 packages to test these fixes; older 0.1.0 builds do not include them.
 
@@ -34,7 +34,7 @@ Version 0.1 ships binary packages for Windows x64, macOS on Apple silicon (arm64
 
 ## License
 
-The matching application source tag is [v0.1.1](https://github.com/rezmer/openbmh/tree/v0.1.1). Source/build and relinking materials for linked components must also accompany or be offered with binary releases under their licenses.
+The matching application source tag is [v0.1.1](https://github.com/Weyoune/openbmh/tree/v0.1.1). Source/build and relinking materials for linked components must also accompany or be offered with binary releases under their licenses.
 
 OpenBMH-owned code and documentation use GPL-3.0-only. Third-party components retain their licenses; the full texts accompany the package. Read [LICENSE](../../../LICENSE) and [THIRD_PARTY_NOTICES](../../../THIRD_PARTY_NOTICES.md). These licenses do not grant rights to original game content.
 
