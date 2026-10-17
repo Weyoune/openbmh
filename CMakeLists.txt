@@ -1070,6 +1070,17 @@ if(MSVC)
 endif()
 add_test(NAME launch_unit_tests COMMAND launch_unit_tests)
 
+add_executable(fltd_translation_unit_tests tests/fltd_translation_unit_tests.cpp)
+target_link_libraries(fltd_translation_unit_tests PRIVATE bmhlaunch)
+add_test(NAME fltd_translation_unit_tests COMMAND fltd_translation_unit_tests)
+
+add_executable(host_path_display_unit_tests tests/host_path_display_unit_tests.cpp)
+target_include_directories(host_path_display_unit_tests PRIVATE src)
+if(MSVC)
+    target_compile_options(host_path_display_unit_tests PRIVATE /utf-8)
+endif()
+add_test(NAME host_path_display_unit_tests COMMAND host_path_display_unit_tests)
+
 add_executable(fixture_table_tests tests/fixture_table_tests.cpp)
 target_link_libraries(fixture_table_tests PRIVATE bmhcore)
 add_test(NAME fixture_table_unit_tests COMMAND fixture_table_tests)

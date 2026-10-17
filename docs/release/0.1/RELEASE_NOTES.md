@@ -2,6 +2,26 @@
 
 OpenBMH reconstructs the Bundesliga Manager Hattrick engine in C++20. The graphical client uses SDL2; the console provides command batches and local manager-client transports over the same career session. This release needs a supported game installation supplied by the player. No original executable, artwork, music, text database, manual or saved game is included.
 
+## Unreleased corrections
+
+- Football Limited uses the correct enabled/disabled setup sprites, positive
+  balance colour and outside controls of the desktop shortcut bar ([#7](https://github.com/Weyoune/openbmh/issues/7)).
+  Its cached data is regenerated automatically for the corrected mapping.
+- Filename dialogs reacquire the native SDL text editor on entry and window
+  focus, including the live settings dialog. macOS acceptance remains human QA
+  ([#8](https://github.com/Weyoune/openbmh/issues/8)).
+- Save-directory labels use portable `/` separators, avoiding the German bitmap
+  font's `Ö` glyph at the backslash position on Windows ([#9](https://github.com/Weyoune/openbmh/issues/9)).
+- Setup ignores mouse releases without a matching press on that screen, so
+  window activation cannot toggle the initial league/national-team selection
+  through that input path ([#10](https://github.com/Weyoune/openbmh/issues/10)).
+- Source builds include the standalone [OBW installation converter](../../formats/obw/import.md).
+  It produces intermediate database conversions; game integration remains
+  planned for 0.2.
+
+These changes require a build from the updated source. The tagged 0.1.2 package
+does not contain these subsequent corrections.
+
 ## Changes in 0.1.2
 
 - The environment menu shows all six original artwork panels: three youth teams,
