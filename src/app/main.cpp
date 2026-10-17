@@ -10,6 +10,7 @@
 #include <SDL.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -72,6 +73,18 @@ using namespace bmh;
 static void show_start_error(const std::string& text) {
     std::fprintf(stderr, "%s\n", text.c_str());
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "OpenBMH", text.c_str(), nullptr);
+}
+
+// Reattach the native editor when an in-game filename field takes focus. Cocoa
+// owns a field-editor responder in addition to SDL's TEXTINPUT enable flag.
+static void focus_filename_input(SDL_Renderer* renderer) {
+    int left, top, right, bottom;
+    SDL_RenderLogicalToWindow(renderer, 106, 209, &left, &top);
+    SDL_RenderLogicalToWindow(renderer, 262, 219, &right, &bottom);
+    const SDL_Rect field{left, top, std::max(1, right - left), std::max(1, bottom - top)};
+    SDL_StopTextInput();
+    SDL_SetTextInputRect(&field);
+    SDL_StartTextInput();
 }
 
 #ifdef _WIN32
@@ -2614,6 +2627,7 @@ int main(int argc, char** argv) {
                                 SDL_RenderPresent(renderer);
                             };
                             render_file();
+                            focus_filename_input(renderer);
                             bool finished = false;
                             while (running && !finished) {
                                 SDL_Event file_input;
@@ -3575,7 +3589,12 @@ int main(int argc, char** argv) {
             }
         };
         SDL_StartTextInput();
+        bool filename_input_active = false;
+        std::array<bool, 2> setup_button_down{};
         while (running) {
+            const bool filename_open = flow.screen_name() == "save_load";
+            if (filename_open && !filename_input_active) focus_filename_input(renderer);
+            filename_input_active = filename_open;
             if(timed_notice_presented_at && flow.timed_notice_open() &&
                SDL_GetTicks64()-*timed_notice_presented_at>=70*3*20)
                 handle(flow.expire_timed_notice());
@@ -3586,6 +3605,25 @@ int main(int argc, char** argv) {
                 if (e.type == SDL_QUIT) {
                     running = false;
                     break;
+                }
+                if (e.type == SDL_WINDOWEVENT) {
+                    if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST) setup_button_down.fill(false);
+                    if (e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
+                        if (flow.screen_name() == "save_load") focus_filename_input(renderer);
+                        else SDL_StartTextInput();
+                    }
+                }
+                // A native picker/window activation can leave an unmatched UP.
+                // Only a press which began on setup may toggle its options.
+                if ((e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP) &&
+                    (e.button.button == SDL_BUTTON_LEFT || e.button.button == SDL_BUTTON_RIGHT)) {
+                    const size_t button = e.button.button == SDL_BUTTON_LEFT ? 0 : 1;
+                    if (e.type == SDL_MOUSEBUTTONDOWN) setup_button_down[button] = flow.screen_name() == "setup";
+                    else {
+                        const bool owned = setup_button_down[button];
+                        setup_button_down[button] = false;
+                        if (flow.screen_name() == "setup" && !owned) continue;
+                    }
                 }
                 if(e.type==SDL_MOUSEBUTTONUP&&timed_notice_release&&e.button.button==*timed_notice_release) {
                     timed_notice_release.reset();continue;

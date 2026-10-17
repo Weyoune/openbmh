@@ -8,6 +8,7 @@
 #include <system_error>
 
 #include "ui/manager.hpp"
+#include "ui/host_path.hpp"
 #include "ui/setup.hpp"
 #include "formats/fbm.hpp"
 
@@ -124,7 +125,10 @@ Image SaveLoadScreen::render() const {
     button(out, field_x, directory_y, field_width);
     button(out, field_x, filename_y, field_width);
 
-    const auto directory_label = original_to_utf8(text_at(texts_, ::bmh::layout::SaveLoad_Render_TextPointer3)) + path_to_utf8(directory_);
+    // ISO 646-DE uses the backslash code point for Ö. Generic separators retain
+    // a valid host path on Windows without displaying that unrelated glyph.
+    const auto directory_label = original_to_utf8(text_at(texts_, ::bmh::layout::SaveLoad_Render_TextPointer3)) +
+        save_directory_label(directory_);
     text(out, 55, 203, directory_label, 0x6c, 140, footer_font_, true);
     text(out, 55, 216, original_to_utf8(text_at(texts_, ::bmh::layout::SaveLoad_Render_TextPointer4)), 0x6c, 50, footer_font_, true);
     const std::string displayed_filename = mode_ == SaveLoadMode::load && selected_ >= 0 &&
