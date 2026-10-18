@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include <RmlUi/Core.h>
+#include "launch/rml_path.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -31,7 +32,7 @@ struct Renderer : Rml::RenderInterface {
         unsigned char header[18]{};
         input.read(reinterpret_cast<char *>(header), sizeof(header));
         if (!input || header[2] != 2 || header[16] != 24)
-            throw std::runtime_error("Stadium asset unavailable");
+            throw std::runtime_error("Stadium asset unavailable: " + name);
         dimensions = {header[12] + 256 * header[13], header[14] + 256 * header[15]};
         return 1;
     }
@@ -56,11 +57,11 @@ int main(int argc, char **argv) try {
     } shutdown;
     const std::filesystem::path assets(argv[1]);
     for (const auto *weight : {"Regular", "Bold"})
-        require(Rml::LoadFontFace((assets / (std::string("LatoLatin-") + weight + ".ttf")).string()),
+        require(Rml::LoadFontFace(bmh::rml::asset_path(assets / (std::string("LatoLatin-") + weight + ".ttf"))),
                 "font load");
     auto *context = Rml::CreateContext("test", {1100, 688});
     auto *document = context->LoadDocument(
-        (modern ? assets.parent_path() / "modern/modern.rml" : assets / "launcher.rml").string());
+        bmh::rml::asset_path(modern ? assets.parent_path() / "modern/modern.rml" : assets / "launcher.rml"));
     require(document != nullptr, "launcher document load");
     document->Show();
     const auto sizes = modern ? std::vector<Rml::Vector2i>{{1280, 800}, {1024, 640}, {2560, 1600}}

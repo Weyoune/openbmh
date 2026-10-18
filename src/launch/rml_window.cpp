@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "launch/rml_window.hpp"
+#include "launch/rml_path.hpp"
 #include "launch/archive.hpp"
 #include "launch/process.hpp"
 #include <cmath>
 namespace bmh::rml {
-using launch::path_to_utf8;
 std::string escape(std::string_view value) {
     std::string result;
     for (char c : value)
@@ -153,12 +153,12 @@ Window::Window(const std::string &document, const char *title, int width, int he
         const auto assets = launch::executable_path({}).parent_path() / "assets";
         for (const char *weight : {"Regular", "Bold"})
             if (!Rml::LoadFontFace(
-                    path_to_utf8(assets / "launcher" / (std::string("LatoLatin-") + weight + ".ttf"))))
+                    asset_path(assets / "launcher" / (std::string("LatoLatin-") + weight + ".ttf"))))
                 throw std::runtime_error("RmlUI font missing; extract the complete OpenBMH package");
         context_ = Rml::CreateContext("OpenBMH", {width, height});
         if (!context_)
             throw std::runtime_error("RmlUI context failed");
-        document_ = context_->LoadDocument(path_to_utf8(assets / document));
+        document_ = context_->LoadDocument(asset_path(assets / document));
         if (!document_)
             throw std::runtime_error("RmlUI layout missing; extract the complete OpenBMH package");
         resize();
