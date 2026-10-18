@@ -116,3 +116,6 @@ OpenBMH's own code and documentation are licensed under **GNU GPL version 3 only
 Release source is identified by the matching version tag: [v0.1.2](https://github.com/Weyoune/openbmh/tree/v0.1.2) for the published 0.1.2 version. This branch develops 0.2; it is not a published release. Binary releases must accompany or offer the corresponding source and build/relinking materials required by the applicable licenses. The tag identifies application source; it does not replace required materials for linked third-party components.
 
 Bundled components retain their own licenses, including Nuked OPL3 under LGPL-2.1-or-later. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md).
+
+The 0.2 development branch includes a [Modern UI preparation POC](docs/MODERN_UI_POC.md)
+for BMH and Football Limited imports, alongside the Classic interface.

@@ -13,7 +13,9 @@
 namespace bmh::content {
 // Immutable decoded Classic content. Logical aliases keep the existing UI geometry
 // independent of both storage layout and the legacy binary codecs.
+enum class ModType { Classic, Modern };
 struct Classic {
+    ModType mod_type = ModType::Classic;
     bool english = false;
     Database database;
     TextDb texts;

@@ -18,26 +18,17 @@ int run_launcher(const std::filesystem::path &executable, const SaveMigrator &mi
             if (action.action == LauncherAction::end)
                 return 0;
             if (action.action == LauncherAction::add) {
-                const auto source = ui->choose_folder("BMH-/Football-Limited-Installation wählen");
-                if (!source)
-                    continue;
-                const auto check = check_game_directory(*source);
-                // Raw English installations are importable before legacy directory
-                // normalisation, so their old runtime "playable" flag is irrelevant.
-                if ((check.family != GameFamily::german && check.family != GameFamily::english) ||
-                    !check.problems.empty()) {
-                    std::string reason = check.unsupported;
-                    for (const auto &problem : check.problems)
-                        reason += "\n" + problem;
-                    throw FormatError("Installation wird nicht unterstützt: " + reason);
-                }
-                AddMod initial;
-                initial.source = check.directory;
-                initial.saves = check.directory;
-                initial.name = check.family == GameFamily::english ? "FTDL-classic" : "BMH-classic";
-                const auto request = ui->configure_add(initial);
+                const auto request = ui->configure_add(AddMod{});
                 if (!request)
                     continue;
+                if (!request->from_classic) {
+                    const auto check=check_game_directory(request->source);
+                    if ((check.family!=GameFamily::german && check.family!=GameFamily::english) || !check.problems.empty()) {
+                        std::string reason=check.unsupported;
+                        for (const auto& problem:check.problems) reason+="\n"+problem;
+                        throw FormatError("Installation wird nicht unterstützt: "+reason);
+                    }
+                }
                 std::mutex mutex;
                 std::string text = "Import wird vorbereitet …";
                 std::atomic_bool cancelled = false;

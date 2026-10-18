@@ -3,15 +3,19 @@
 #include "content/package.hpp"
 #include <functional>
 namespace bmh::launch {
+using ModType = content::ModType;
 struct ModEntry {
     std::string name, type = "Classic", content_id, error;
     std::filesystem::path directory;
+    ModType kind = ModType::Classic;
 };
 struct AddMod {
     std::filesystem::path source, saves;
     std::string name;
     int start_year = 2026;
     bool migrate = true;
+    ModType type = ModType::Classic;
+    bool from_classic = false;
 };
 using SaveMigrator =
     std::function<void(const std::filesystem::path &content, const std::filesystem::path &source,

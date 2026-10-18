@@ -32,6 +32,10 @@ class PackageAllowlistTests(unittest.TestCase):
                 asset = root / 'assets' / 'launcher' / name
                 asset.parent.mkdir(parents=True, exist_ok=True)
                 asset.write_text('synthetic packaged UI asset')
+            for name in ['modern.rml', 'modern.rcss']:
+                asset = root / 'assets' / 'modern' / name
+                asset.parent.mkdir(parents=True, exist_ok=True)
+                asset.write_text('synthetic modern UI asset')
             licenses = Path(__file__).resolve().parents[1] / 'docs' / 'licenses'
             for source in licenses.iterdir():
                 if source.is_file():

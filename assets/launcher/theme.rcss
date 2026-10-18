@@ -72,3 +72,12 @@ input.checkbox:checked { background: #78edbf; border-color: #78edbf; }
 scrollbarvertical { width: 10dp; } scrollbarvertical sliderbar { background: #476077; border-radius: 4dp; }
 
 selection { color: #051711; background-color: #76edbe; }
+
+select { box-sizing: border-box; display: block; width: 100%; height: 40dp; color: #eef3fa; background: #0b1b2b; border: 1dp #567088; font-size: 17dp; padding: 6dp; tab-index: auto; }
+select selectbox { background: #102337; border: 1dp #567088; }
+select option { display: block; padding: 8dp; }
+select option:checked, select option:hover { background: #23504c; }
+
+select:focus { border-color: #85f3ca; }
+select:disabled { opacity: 0.6; }
+select selectarrow { width: 0dp; height: 0dp; border-left: 5dp transparent; border-right: 5dp transparent; border-top: 7dp #a9bfd7; margin-right: 4dp; }

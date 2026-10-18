@@ -447,16 +447,19 @@ target_link_libraries(init_check PRIVATE bmhcore)
 # The playable program: the shared UI library connected to the engine by src/app.
 add_executable(openbmh_play
     src/app/main.cpp
+    src/modern/model.cpp src/modern/view.cpp
     ${BMH_APP_CONTROLLER_SOURCE}
     ${BMH_APP_SESSION_SDL_SOURCE})
-target_link_libraries(openbmh_play PRIVATE bmhui bmh_launcher bmhlaunch_dialog openbmh_audio ${BMH_SDL_TARGET})
+target_link_libraries(openbmh_play PRIVATE bmhui bmh_launcher bmh_rmlui bmhlaunch_dialog openbmh_audio ${BMH_SDL_TARGET})
 # a game without a console window on double-click (SDL2main provides WinMain); started from a
 # console it attaches to that one for --version, --help and start errors (src/app/main.cpp)
 set_target_properties(openbmh_play PROPERTIES WIN32_EXECUTABLE TRUE OUTPUT_NAME OpenBMH)
 if(CMAKE_CONFIGURATION_TYPES)
     add_custom_command(TARGET openbmh_play POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_BINARY_DIR}/assets/launcher"
-                "$<TARGET_FILE_DIR:openbmh_play>/assets/launcher")
+                "$<TARGET_FILE_DIR:openbmh_play>/assets/launcher"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_BINARY_DIR}/assets/modern"
+                "$<TARGET_FILE_DIR:openbmh_play>/assets/modern")
 endif()
 if(MSVC)
     target_compile_options(openbmh_play PRIVATE /utf-8)

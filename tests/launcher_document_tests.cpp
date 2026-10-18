@@ -44,7 +44,8 @@ void require(bool value, const std::string &error) {
 }
 } // namespace
 int main(int argc, char **argv) try {
-    require(argc == 2, "launcher asset directory required");
+    require(argc == 2 || argc == 3, "launcher asset directory required");
+    const bool modern = argc == 3 && std::string(argv[2]) == "modern";
     System system;
     Renderer renderer;
     Rml::SetSystemInterface(&system);
@@ -58,15 +59,21 @@ int main(int argc, char **argv) try {
         require(Rml::LoadFontFace((assets / (std::string("LatoLatin-") + weight + ".ttf")).string()),
                 "font load");
     auto *context = Rml::CreateContext("test", {1100, 688});
-    auto *document = context->LoadDocument((assets / "launcher.rml").string());
+    auto *document = context->LoadDocument(
+        (modern ? assets.parent_path() / "modern/modern.rml" : assets / "launcher.rml").string());
     require(document != nullptr, "launcher document load");
     document->Show();
-    for (const auto size : {Rml::Vector2i(1100, 688), Rml::Vector2i(800, 540), Rml::Vector2i(2200, 1376)}) {
+    const auto sizes = modern ? std::vector<Rml::Vector2i>{{1280, 800}, {1024, 640}, {2560, 1600}}
+                              : std::vector<Rml::Vector2i>{{1100, 688}, {800, 540}, {2200, 1376}};
+    for (const auto size : sizes) {
         context->SetDimensions(size);
-        context->SetDensityIndependentPixelRatio(float(size.x) / 1100);
+        context->SetDensityIndependentPixelRatio(float(size.x) /
+                                                 (modern ? (size.x == 2560 ? 1280 : size.x) : 1100));
         context->Update();
         context->Render();
-        for (const auto *id : {"start", "add", "delete", "rename", "end"}) {
+        const auto actions = modern ? std::vector<const char *>{"new", "load", "save", "quit"}
+                                    : std::vector<const char *>{"start", "add", "delete", "rename", "end"};
+        for (const auto *id : actions) {
             auto *button = document->GetElementById(id);
             require(button != nullptr, "missing launcher action");
             const auto origin = button->GetAbsoluteOffset(Rml::BoxArea::Border);
@@ -74,13 +81,14 @@ int main(int argc, char **argv) try {
             require(origin.x >= 0 && origin.y >= 0 && origin.x + dimensions.x <= size.x + 1 &&
                         origin.y + dimensions.y <= size.y + 1 && dimensions.y >= 30,
                     "action outside viewport or too small");
-            require(button->GetNumChildren() >= 2, "action lost its visible text label");
+            require(button->GetNumChildren() >= (modern ? 1 : 2), "action lost its visible text label");
         }
         require(!document->GetElementById("overlay")->IsVisible(), "modal unexpectedly visible");
     }
     require(renderer.rendered_vertices > 100, "launcher did not render");
     require(system.errors.empty(), system.errors);
-    std::cout << "Launcher RML/RCSS, fonts, background, visible labels and responsive layout passed\n";
+    std::cout << "Launcher RML/RCSS, fonts, background, visible labels and "
+                 "responsive layout passed\n";
     return 0;
 } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';

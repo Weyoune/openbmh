@@ -1,0 +1,65 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+body { font-size: 16dp; }
+.modern-shade { position: absolute; width: 100%; height: 100%; background: #04101bdd; }
+.topbar { position: absolute; left: 24dp; right: 24dp; top: 19dp; height: 55dp; display: flex; align-items: center; justify-content: space-between; }
+.modern-brand { font-size: 30dp; font-weight: bold; } .modern-brand span { color: #76efc1; } .modern-brand .edition { font-size: 11dp; margin-left: 17dp; letter-spacing: 2dp; color: #a3b7ce; }
+.top-actions { display: flex; } .top-actions button { margin-left: 9dp; font-size: 14dp; padding: 9dp 13dp; }
+.shell { position: absolute; top: 92dp; left: 24dp; right: 24dp; bottom: 34dp; display: flex; }
+.sidebar { width: 185dp; padding: 19dp 12dp; display: flex; flex-direction: column; }
+.nav-label { font-size: 11dp; color: #91a9c2; letter-spacing: 1dp; margin: 0 8dp 17dp; }
+.nav { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 7dp; padding: 13dp 12dp; font-size: 16dp; text-align: left; border-color: transparent; background: transparent; }
+.nav.selected { background: #1b4946; color: #a3ffe0; border-color: #5f9d91; }
+.nav:disabled { opacity: 0.5; } .later { font-size: 11dp; color: #9eb5c8; }
+.sidebar-note { margin: auto 8dp 0; font-size: 12dp; color: #91a9c2; line-height: 1.5; }
+.main { flex: 1; min-width: 0; margin-left: 18dp; display: flex; flex-direction: column; }
+.club-header { display: flex; align-items: center; padding: 15dp 19dp; min-height: 83dp; }
+.crest { width: 48dp; height: 48dp; margin-right: 15dp; image-color: white; }
+.club-name { font-size: 23dp; font-weight: bold; } .muted { color: #a2b8ce; font-size: 14dp; }
+.club-meta { flex: 1; } .header-right { text-align: right; line-height: 1.5; }
+.money { color: #86f2c6; font-weight: bold; font-size: 20dp; }
+.page-heading { display: flex; align-items: center; justify-content: space-between; padding: 23dp 1dp 5dp; }
+h1 { font-size: 27dp; } .subtitle { font-size: 14dp; margin: 5dp 0 12dp; }
+.career-status { color: #a0b7c8; font-size: 12dp; }
+.content { flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; }
+.cards { display: flex; margin-bottom: 18dp; }
+.card { flex: 1; min-width: 0; padding: 20dp; margin-right: 12dp; }
+.card:last-child { margin-right: 0; } .card-label { font-size: 12dp; color: #a9c0d4; margin-bottom: 13dp; }
+.card-value { font-size: 27dp; font-weight: bold; margin-bottom: 8dp; color: #e9fff6; }
+.card-value.small { font-size: 21dp; } .card .muted { font-size: 13dp; }
+.section { padding: 20dp; margin-bottom: 16dp; } h2 { font-size: 20dp; margin-bottom: 14dp; }
+.section p { display: block; line-height: 1.6; color: #adc2d7; margin: 9dp 0 18dp; }
+.section button { font-size: 15dp; margin-right: 9dp; }
+.badge { font-size: 11dp; color: #9ff5d1; padding: 5dp 9dp; border: 1dp #397b6a; border-radius: 4dp; }
+.lineup-layout { display: flex; min-width: 740dp; }
+.roster { flex: 1; min-width: 420dp; margin-right: 14dp; padding: 14dp; }
+.pitch-panel { width: 280dp; padding: 15dp; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12dp; }
+.toolbar button { font-size: 13dp; padding: 8dp 12dp; }
+.sheet-head, .player-row, .league-row { display: flex; align-items: center; width: 100%; }
+.sheet-head { color: #99b0c6; font-size: 12dp; padding: 10dp 8dp; background: #102234; }
+.player-row { background: transparent; border: 0dp; border-bottom: 1dp #223b4f; border-radius: 0dp; padding: 9dp 8dp; font-size: 14dp; text-align: left; }
+.player-row.selected { background: #24534e; color: #a9ffdf; }
+.num { width: 28dp; } .player-name { flex: 1; min-width: 110dp; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pos { width: 39dp; } .stat { width: 38dp; text-align: right; }
+.pitch-board { position: relative; width: 100%; height: 290dp; border: 2dp #65a78f; border-radius: 3dp; background: #123f36; }
+.pitch-half { position: absolute; top: 50%; width: 100%; border-top: 1dp #6aa48e; }
+.pitch-circle { position: absolute; left: 37%; top: 39%; width: 26%; height: 22%; border: 1dp #6aa48e; border-radius: 35dp; }
+.pitch-box { position: absolute; left: 23%; width: 54%; height: 15%; border: 1dp #6aa48e; }
+.pitch-box.top { top: 0; } .pitch-box.bottom { bottom: 0; }
+.pitch-player { position: absolute; width: 25dp; height: 25dp; padding: 3dp 0; border-radius: 13dp; border: 1dp #bbffe2; background: #80edc1; color: #092419; text-align: center; font-size: 12dp; font-weight: bold; transform: translate(-50%, -50%); }
+.pitch-player.selected { background: #f5c77e; border-color: #fff1ce; }
+.player-detail { margin-top: 19dp; } .portrait { float: left; width: 65dp; height: 65dp; margin: 0 12dp 10dp 0; }
+.player-detail .club-name { font-size: 17dp; } .player-detail .muted { font-size: 12dp; line-height: 1.6; }
+.league-tabs { display: flex; flex-wrap: wrap; margin-bottom: 11dp; }
+.league-tabs button { font-size: 13dp; padding: 8dp 12dp; margin: 0 7dp 7dp 0; } .league-tabs button.selected { color: #a3ffdc; border-color: #75d9b5; background: #194338; }
+.league-sheet { padding: 13dp; min-width: 690dp; }
+.league-row { padding: 9dp 8dp; border-bottom: 1dp #233c50; font-size: 14dp; }
+.league-row.own { background: #204e47; color: #a4fbd8; }
+.league-row .crest { width: 22dp; height: 22dp; margin-right: 10dp; }
+.league-row .player-name { min-width: 190dp; }
+.league-row .stat, .league-head .stat { width: 47dp; }
+.league-head { min-width: 660dp; }
+.welcome { padding: 35dp; } .welcome h1 { margin-bottom: 15dp; } .welcome p { font-size: 17dp; max-width: 650dp; }
+.welcome button { margin-top: 10dp; }
+#modal { width: 610dp; } #modal-body { max-height: 380dp; }
+#modal-body select { width: 100%; } .form-note { color: #9db5cb; font-size: 13dp; margin-top: 14dp; line-height: 1.5; }

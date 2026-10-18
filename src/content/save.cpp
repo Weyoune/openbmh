@@ -183,7 +183,7 @@ void save_career(const std::filesystem::path &path, const Classic &content, cons
         driver.stage != TurnDriver::Stage::SeasonEndDesk)
         fail("save unavailable outside a manager desk");
     Documents docs = content.documents;
-    if (verify(docs) != content.content_id)
+    if (verify(docs, content.mod_type) != content.content_id)
         fail("invalid content identity");
     docs["state/world-manifest.json"] = docs.at("manifest.json");
     auto manifest = parse(docs, "manifest.json");
@@ -222,7 +222,7 @@ SavedCareer load_career(const std::filesystem::path &path, const Classic &conten
     if (cli::dump_json(get(integrity, "entries")) != cli::dump_json(checks))
         fail("damaged native save");
     const auto world = world_of(docs);
-    if (verify(world) != content.content_id)
+    if (verify(world, content.mod_type) != content.content_id)
         fail("save world contents changed");
     SavedCareer out;
     out.state = decode_native_state(parse(docs, "state/career.json"));

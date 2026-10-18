@@ -19,6 +19,7 @@ def validate(directory, windows):
                 'FreeType.txt', 'FreeType-FTL.txt', 'FreeType-BDF.txt', 'FreeType-PCF.txt', 'FreeType-zlib.txt'}
     launcher_assets = {'assets/launcher/' + name for name in
                        ('launcher.rml', 'theme.rcss', 'stadium.tga', 'LatoLatin-Regular.ttf', 'LatoLatin-Bold.ttf')}
+    launcher_assets |= {'assets/modern/modern.rml', 'assets/modern/modern.rcss'}
     present = set()
     for file in directory.rglob('*'):
         if not file.is_file():

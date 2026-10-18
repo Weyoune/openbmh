@@ -397,7 +397,7 @@ static ClassicData decode_classic(const Documents& out) {
     return data;
 }
 
-void validate_classic(const Documents &out) {
+void validate_classic(const Documents &out, bool check_inventory) {
     using namespace detail;
     const auto manifest = parse(out, "manifest.json");
     const auto &imported = get(manifest, "x-import");
@@ -416,6 +416,7 @@ void validate_classic(const Documents &out) {
         cli::dump_json(get(startup, "initializers")) != cli::dump_json(initializers) ||
         cli::dump_json(get(startup, "runtime_inputs")) != cli::dump_json(runtime_inputs))
         fail("unsupported classic initialization contract");
+    if (check_inventory) {
     std::set<std::string> seen;
     const auto inventory = parse(out, "x-classic/inventory.json");
     for (const auto& entry : arr(get(inventory, "entries"))) {
@@ -430,6 +431,17 @@ void validate_classic(const Documents &out) {
     }
     if (seen.size() + 1 + size_t(out.contains("x-classic/seal.json")) != out.size())
         fail("unlisted archive entries");
+    }
+    // Editable worlds still obey the installation-only boundary. Inspect actual entries,
+    // rather than trusting an optional, stale importer inventory.
+    for (const auto& [path, bytes] : out) {
+        (void)bytes;
+        auto suffix = fs::path(path).extension().string();
+        for (char& c : suffix) c = char(std::tolower(static_cast<unsigned char>(c)));
+        if (path.starts_with("state/") || suffix == ".exe" || suffix == ".fbm" ||
+            suffix == ".obs" || suffix == ".ein" || suffix == ".cfg")
+            fail("non-content file in world");
+    }
     auto data = decode_classic(out);
     if (data.english != (std::string(expected) == "FLTD-classic")) fail("startup edition mismatch");
     // Every fixture pointer must remain readable from the exported DATA view.
@@ -524,8 +536,8 @@ void validate_classic(const Documents &out) {
     }
 }
 
-ClassicData load_classic(const Documents& out) {
-    validate(out);
+ClassicData load_classic(const Documents& out, bool check_inventory) {
+    validate(out, check_inventory);
     return decode_classic(out);
 }
 } // namespace bmh::obw

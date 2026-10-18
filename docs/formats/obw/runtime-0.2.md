@@ -13,7 +13,9 @@ installation; original assets never belong in a distribution.
 ```
 OpenBMH[.exe]
 assets/launcher/*
+assets/modern/*
 mods/<name>/content.obw
+mods/<name>/mod.json          optional presentation descriptor
 userdata/<content-id>/*.obs
 userdata/<content-id>/*.obsettings
 userdata/<content-id>/*.oblayout
@@ -23,7 +25,8 @@ userdata/<content-id>/highscore-<signature>.obscore
 The directory name is the launcher name, separate from `manifest.mod` (`BMH-classic`
 or `FLTD-classic`). `FTDL-classic` is the requested English directory-name default.
 Names must be portable single path components; duplicates are case-insensitive.
-Classic files are sealed, not editable world overlays. Modern gameplay is not implemented.
+Classic files are sealed. A Modern presentation POC can use the same imported world and
+native careers, with the existing Classic rules. See [the Modern POC](../../MODERN_UI_POC.md).
 
 Rename changes the directory only. Delete removes mod content after confirmation and
 retains user data. Reimporting the same content and start year reconnects it. The content

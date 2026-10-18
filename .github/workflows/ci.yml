@@ -3,7 +3,7 @@ name: Build without game data
 
 on:
   push:
-    branches: [main, assist/codex-0.2-launcher]
+    branches: [main, assist/codex-0.2-launcher, assist/codex-0.2-modern-poc]
   pull_request:
   workflow_dispatch:
   workflow_call:

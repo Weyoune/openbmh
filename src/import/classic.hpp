@@ -11,8 +11,8 @@ using ClassicData = content::Classic;
 void complete_classic(Documents& out, const std::filesystem::path& root,
                       const Database& database, const LeImage& executable,
                       const LeImage& source_tables, bool english, const Options& options);
-void validate_classic(const Documents& out);
+void validate_classic(const Documents& out, bool check_inventory = true);
 // For an editor after deliberate changes. CRC32 detects damage, not authenticity.
 void refresh_classic_inventory(Documents& out);
-ClassicData load_classic(const Documents& out);
+ClassicData load_classic(const Documents& out, bool check_inventory = true);
 } // namespace bmh::obw

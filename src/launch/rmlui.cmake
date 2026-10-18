@@ -20,12 +20,19 @@ FetchContent_Declare(rmlui
     GIT_REPOSITORY https://github.com/mikke89/RmlUi.git
     GIT_TAG 6.3 GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(rmlui)
+add_library(bmh_process STATIC ${CMAKE_SOURCE_DIR}/src/launch/process.cpp)
+target_include_directories(bmh_process PUBLIC ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(bmh_process PUBLIC bmhlaunch)
+if(MSVC)
+    target_compile_options(bmh_process PRIVATE /W4 /utf-8)
+endif()
 add_library(bmh_rmlui STATIC
+    ${CMAKE_SOURCE_DIR}/src/launch/rml_window.cpp
     ${rmlui_SOURCE_DIR}/Backends/RmlUi_Platform_SDL.cpp
     ${rmlui_SOURCE_DIR}/Backends/RmlUi_Renderer_GL3.cpp)
-target_include_directories(bmh_rmlui PUBLIC ${rmlui_SOURCE_DIR}/Backends)
+target_include_directories(bmh_rmlui PUBLIC ${CMAKE_SOURCE_DIR}/src ${rmlui_SOURCE_DIR}/Backends)
 target_compile_definitions(bmh_rmlui PUBLIC RMLUI_SDL_VERSION_MAJOR=2 RMLUI_NUM_MSAA_SAMPLES=0)
-target_link_libraries(bmh_rmlui PUBLIC RmlUi::Core ${BMH_SDL_TARGET} PRIVATE ${CMAKE_DL_LIBS})
+target_link_libraries(bmh_rmlui PUBLIC RmlUi::Core ${BMH_SDL_TARGET} PRIVATE bmh_process ${CMAKE_DL_LIBS})
 
 # The background is project artwork, and the unmodified fonts come from the
 # pinned dependency. All assets are located relative to the executable at runtime.
@@ -39,3 +46,10 @@ foreach(weight IN ITEMS Regular Bold)
                    "${launcher_assets}/LatoLatin-${weight}.ttf" COPYONLY)
 endforeach()
 install(DIRECTORY "${launcher_assets}/" DESTINATION assets/launcher COMPONENT Runtime)
+
+set(modern_assets "${CMAKE_BINARY_DIR}/assets/modern")
+file(MAKE_DIRECTORY "${modern_assets}")
+foreach(asset IN ITEMS modern.rml modern.rcss)
+    configure_file("${CMAKE_SOURCE_DIR}/assets/modern/${asset}" "${modern_assets}/${asset}" COPYONLY)
+endforeach()
+install(DIRECTORY "${modern_assets}/" DESTINATION assets/modern COMPONENT Runtime)

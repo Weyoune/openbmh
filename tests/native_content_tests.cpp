@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "content/package.hpp"
 #include "content/save.hpp"
-#include "launch/mods.hpp"
-#include "launch/process.hpp"
-#include "launch/archive.hpp"
 #include "formats/content.hpp"
 #include "formats/native_state.hpp"
 #include "formats/vga.hpp"
+#include "launch/archive.hpp"
+#include "launch/mods.hpp"
+#include "launch/process.hpp"
 #include <chrono>
 #include <iostream>
 using namespace bmh;
@@ -33,11 +33,12 @@ int main(int argc, char **argv) try {
                    : 43;
     }
     const auto executable = launch::executable_path("not-the-executable");
-    check(fs::is_regular_file(executable),
-          "portable root uses the actual process path rather than argv or current directory");
+    check(fs::is_regular_file(executable), "portable root uses the actual process path rather than argv or "
+                                           "current directory");
     check(launch::run_child(executable, {"--child-check", "Grüße with spaces", "quote\" and trailing\\", ""},
                             {}) == 42,
-          "child startup preserves Unicode, spaces, quotes, trailing slashes and empty arguments");
+          "child startup preserves Unicode, spaces, quotes, trailing slashes and "
+          "empty arguments");
     check(content::sha256("") == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
           "SHA256 empty vector");
     check(content::sha256("abc") == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
@@ -131,6 +132,17 @@ int main(int argc, char **argv) try {
           "native settings retain availability bits");
     rejects([&] { content::load_preferences(root / "test.obsettings", "layout", 180); },
             "preferences kinds cannot be confused");
+    const auto descriptor = root / "descriptor";
+    fs::create_directory(descriptor);
+    check(content::mod_type(descriptor) == content::ModType::Classic,
+          "absent descriptor keeps Classic policy");
+    content::write_mod_type(descriptor, content::ModType::Modern);
+    check(content::mod_type(descriptor / "content.obw") == content::ModType::Modern,
+          "file and directory resolve the same Modern policy");
+    content::write_atomic(descriptor / "mod.json", R"({"schema":"openbmh-mod@1.0","type":"Unknown"})", true);
+    rejects([&] { content::mod_type(descriptor); }, "unknown presentation cannot weaken validation");
+    content::write_atomic(descriptor / "mod.json", R"({"schema":"openbmh-mod@99.0","type":"Modern"})", true);
+    rejects([&] { content::mod_type(descriptor); }, "unknown descriptor version rejected");
     launch::ModLibrary library(root);
     check(library.list().empty(), "first launch has no implicit installation");
     for (const char *name : {"../escape", "CON", "lpt1.txt", "trailing.", "bad/name", ""})

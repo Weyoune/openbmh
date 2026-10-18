@@ -494,7 +494,7 @@ Documents import_installation(const fs::path& source, const Options& options) {
     return out;
 }
 
-void validate(const Documents& documents) {
+void validate(const Documents& documents, bool check_inventory) {
     const auto parse = [&](const std::string& path) {
         const auto found = documents.find(path);
         if (found == documents.end()) fail(path + ": missing document");
@@ -515,7 +515,7 @@ void validate(const Documents& documents) {
     const auto& features = field(manifest, "requires", "manifest.json");
     const auto& profile = field(manifest, "x-import", "manifest.json");
     const bool classic = string_field(profile, "profile", "manifest.json:x-import") == "classic-installation-v1";
-    if (classic) validate_classic(documents);
+    if (classic) validate_classic(documents, check_inventory);
     else {
         if (!features.array() || features.array()->size() != 1 || !features.array()->front().string() ||
             *features.array()->front().string() != "import:legacy-database-v1") fail("manifest.json: missing conversion-only feature guard");

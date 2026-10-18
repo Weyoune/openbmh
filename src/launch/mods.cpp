@@ -57,8 +57,10 @@ std::vector<ModEntry> ModLibrary::list() const {
             validate_name(name);
             if (entry.is_symlink())
                 throw FormatError("Linked mod directories are not supported");
+            mod.kind = content::mod_type(entry.path());
+            mod.type = mod.kind == ModType::Modern ? "Modern" : "Classic";
             for (const auto &child : fs::directory_iterator(entry.path()))
-                if (child.path().filename() != "content.obw")
+                if (child.path().filename() != "content.obw" && child.path().filename() != "mod.json")
                     throw FormatError("Unexpected files in sealed Classic mod");
             const auto content = content::open(entry.path() / "content.obw");
             mod.content_id = content->content_id;
@@ -110,7 +112,12 @@ ImportReport ModLibrary::add(const AddMod &request, const SaveMigrator &migrate,
     obw::Options options;
     options.start_date = std::to_string(request.start_year) + "-07-01";
     options.title = "Classic installation";
-    auto docs = obw::import_installation(request.source, options);
+    content::Documents docs;
+    if (request.from_classic) {
+        if (request.type != ModType::Modern) throw FormatError("Classic copies require Modern presentation");
+        const auto source = content::open(request.source, ModType::Classic);
+        docs = source->documents;
+    } else docs = obw::import_installation(request.source, options);
     const auto identity = content::seal(docs);
     update("Konvertierte Inhalte werden geprüft …");
     const auto staging =
@@ -129,9 +136,12 @@ ImportReport ModLibrary::add(const AddMod &request, const SaveMigrator &migrate,
     (void)content::open(staging / "content.obw");
     ImportReport report;
     report.mod = {request.name, "Classic", identity, {}, root_ / "mods" / path_from_utf8(request.name)};
+    report.mod.kind = request.type;
+    report.mod.type = request.type == ModType::Modern ? "Modern" : "Classic";
+    if (request.type == ModType::Modern) content::write_mod_type(staging, request.type);
     const auto userdata = user_directory(report.mod);
     // User data is retained separately, and never overwrites a previous migration.
-    if (request.migrate) {
+    if (request.migrate && !request.from_classic) {
         const auto source = request.saves.empty() ? request.source : request.saves;
         if (!fs::is_directory(source))
             report.errors.push_back("Spielstandsordner ist nicht verfügbar");

@@ -33,6 +33,7 @@
 #include "launch/launcher.hpp"
 #include "content/package.hpp"
 #include "version.hpp"
+#include "modern/model.hpp"
 #include "app/live_matchday_events.hpp"
 #include "audio/playback.hpp"
 #include "app/audio.hpp"
@@ -210,6 +211,8 @@ int main(int argc, char** argv) {
         return 1;
     }
     try {
+        if (contents->mod_type == content::ModType::Modern)
+            return modern::run(data, save_directory, contents, seed);
         const Palette palette = load_palette(ui::asset_path(data, "M3PC.COL"));
         ui::StartupFlow flow(data, save_directory);
         std::unique_ptr<app::CareerSession> session;

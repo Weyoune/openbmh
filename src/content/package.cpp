@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "content/package.hpp"
-#include "import/detail.hpp"
 #include "formats/executable_layout.hpp"
+#include "import/detail.hpp"
 #include <chrono>
 #include <fstream>
 namespace bmh::content {
@@ -33,7 +33,12 @@ Documents read_archive(const fs::path &file) {
     if (fs::is_symlink(fs::symlink_status(file)) || !fs::is_regular_file(file) ||
         fs::file_size(file) > 128ull * 1024 * 1024)
         fail("invalid native archive");
-    const auto input = read_file(file);
+    // Archives are real containers, even when their path is also a mounted
+    // resource root.
+    std::ifstream stream(file, std::ios::binary);
+    std::string input(size_t(fs::file_size(file)), '\0');
+    if (!stream.read(input.data(), std::streamsize(input.size())))
+        fail("cannot read native archive");
     mz_zip_archive zip{};
     if (!mz_zip_reader_init_mem(&zip, input.data(), input.size(), 0))
         fail("invalid ZIP archive");
@@ -100,7 +105,11 @@ std::string seal(Documents &docs) {
         O{{"schema", "classic-seal@1.0"}, {"content_id", id}, {"entries", std::move(entries)}});
     return id;
 }
-std::string verify(const Documents &docs) {
+std::string verify(const Documents &docs, ModType type) {
+    if (type == ModType::Modern) {
+        obw::validate(docs, false);
+        return identity(docs);
+    }
     const auto stored = parse(docs, inventory);
     if (str(get(stored, "schema")) != "classic-seal@1.0")
         fail("unsupported Classic seal");
@@ -110,16 +119,45 @@ std::string verify(const Documents &docs) {
         fail("Classic contents were changed; import the installation again");
     return identity(docs);
 }
-std::shared_ptr<const Classic> open(const fs::path &path) {
+ModType mod_type(const fs::path &path) {
+    const auto folder = fs::is_directory(path) ? path : path.parent_path();
+    const auto descriptor = folder / "mod.json";
+    const auto status = fs::symlink_status(descriptor);
+    if (!fs::exists(status))
+        return ModType::Classic;
+    if (fs::is_symlink(status) || !fs::is_regular_file(status) || fs::file_size(descriptor) > 4096)
+        fail("invalid mod descriptor");
+    const auto bytes = read_file(descriptor);
+    const auto info = cli::parse_json(std::string(bytes.begin(), bytes.end()));
+    if (str(get(info, "schema")) != "openbmh-mod@1.0")
+        fail("unsupported mod descriptor");
+    const auto type = str(get(info, "type"));
+    if (type == "Modern")
+        return ModType::Modern;
+    if (type == "Classic")
+        return ModType::Classic;
+    fail("unsupported mod type");
+}
+void write_mod_type(const fs::path &directory, ModType type) {
+    write_atomic(directory / "mod.json",
+                 cli::dump_json(O{{"schema", "openbmh-mod@1.0"},
+                                  {"type", type == ModType::Modern ? "Modern" : "Classic"}}),
+                 false);
+}
+std::shared_ptr<const Classic> open(const fs::path &path) { return open(path, mod_type(path)); }
+std::shared_ptr<const Classic> open(const fs::path &input, ModType type) {
+    const auto path = fs::is_directory(input) ? input / "content.obw" : input;
     auto docs = read_archive(path);
-    const auto id = verify(docs);
-    auto value = std::make_shared<Classic>(obw::load_classic(docs));
+    const auto id = verify(docs, type);
+    auto value = std::make_shared<Classic>(obw::load_classic(docs, type == ModType::Classic));
+    value->mod_type = type;
     constexpr std::array<uint8_t, 9> german{18, 18, 18, 18, 18, 12, 12, 12, 12};
     constexpr std::array<uint8_t, 9> english{20, 20, 20, 20, 10, 12, 12, 12, 12};
     const auto &leagues = value->english ? english : german;
     for (size_t i = 0; i < leagues.size(); ++i)
         if (value->executable.u8(layout::LeagueSizes + uint32_t(i)) != leagues[i])
-            fail("Classic supports only the original BMH and Football Limited league structures");
+            fail("Classic supports only the original BMH and Football Limited league "
+                 "structures");
     value->content_id = id;
     const auto manifest = parse(docs, "manifest.json");
     value->start_year = std::stoi(str(get(manifest, "start_date")).substr(0, 4));

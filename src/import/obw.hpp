@@ -31,7 +31,7 @@ Documents import_installation(const std::filesystem::path& source, const Options
 
 // Checks the declared import profile, references and (for Classic) complete payload.
 // This is not a generic competition engine or a JSON Schema implementation.
-void validate(const Documents& documents);
+void validate(const Documents& documents, bool check_inventory = true);
 Documents read(const std::filesystem::path& source);
 
 // Refuses existing destinations. Publishes a complete sibling staging path by rename.
