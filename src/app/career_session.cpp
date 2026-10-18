@@ -614,6 +614,20 @@ CareerSession::CareerSession(const std::filesystem::path &data, uint32_t watcom_
                               exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField4)};
         const auto stream = original_english_save ? obw::normalize_english_save(file, counts) : file.stream;
         const SaveState save(stream, counts);
+        const auto manager_count = save.data(::bmh::layout::ManagerCount)[0];
+        if (manager_count < 1 || manager_count > 4)
+            throw FormatError("Invalid legacy manager count");
+        if (importing_legacy) {
+            size_t english_blocks = 0;
+            for (const auto &[address, size] : kEnglishCompetitionBlocks)
+                for (const auto &block : save.extension())
+                    if (block.address == address && block.bytes.size() == size)
+                        ++english_blocks;
+            if ((kEnglishCompetitions && english_blocks != std::size(kEnglishCompetitionBlocks)) ||
+                (!kEnglishCompetitions && english_blocks != 0))
+                throw FormatError(
+                    "Spielstand und Mod-Ausgabe passen nicht zusammen oder englische Pokaldaten fehlen.");
+        }
         g_ = GameState::from_save(save, counts);
         if (importing_legacy && file.plain_header.size() >= 11) {
             const std::string year(file.plain_header.begin() + 7, file.plain_header.begin() + 11);

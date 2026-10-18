@@ -8,8 +8,9 @@ aliases and written as `FLTD-classic`.
 The output is an `.obw` ZIP, or an equivalent directory. It contains the complete
 **Classic installation content**, including graphics, portrait parts, fonts,
 audio and the original data tables. It contains no running career or executable.
-The existing 0.1 game does not read OBW. The new 0.2 adapter must implement the
-versioned [Classic contract](classic-v1.md); this is deliberately separate from
+The existing 0.1 game does not read OBW. The 0.2 development branch implements the
+versioned [Classic contract](classic-v1.md) through its
+[native runtime and launcher](runtime-0.2.md). This remains separate from
 migrating every engine rule to the future generic model.
 
 ## Build and use
@@ -117,7 +118,9 @@ same initialization phase as in the Classic engine.
 `--validate` checks the profile, versions, safe paths, unique entity/asset IDs,
 core references, squad/stage counts, complete cup bindings, contract ownership,
 initialization contract, media shapes, portrait indices, resource files and the
-inventory before accepting a world. ZIP and directory readers enforce size
+inventory before accepting a world. Complete imports also carry a SHA-256 seal,
+verified by this tool when present and required by the 0.2 Classic runtime.
+ZIP and directory readers enforce size
 limits; directory symlinks and injected `state/` content are rejected. CRC32
 catches accidental damage; it is not a signature or proof of trustworthy content.
 This is the Classic profile validator, not a general competition engine or a full
@@ -146,7 +149,10 @@ All imported content remains local and retains its original ownership. Do not
 publish generated worlds or assets without appropriate rights. Public tests and
 schemas contain only independently authored implementation and synthetic data.
 
-There is **no savegame converter**. `.FBM`, personal `.EIN`, `SOUND.CFG`, high
-scores, backups, editor/program executables and manuals are not imported.
-Manager choices and career RNG state belong to a new game or later `.obs` save,
-not to this installation conversion.
+The standalone installation converter does not migrate careers or personal
+settings. The 0.2 launcher separately migrates supported `.FBM`, `.EIN` and `.MEN`
+files into native personal files; see its [migration contract](runtime-0.2.md).
+`SOUND.CFG`, high scores, backups, editor/program executables and external manuals
+are not imported. In-game readme content is retained when available. Manager
+choices and career RNG state belong to a new game or `.obs` save, not to this
+installation conversion.

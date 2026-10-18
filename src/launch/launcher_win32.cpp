@@ -81,6 +81,9 @@ struct Form {
         if (!window)
             throw std::runtime_error("Cannot create native launcher window");
         command = [this](int id) {
+            // Edit controls also emit WM_COMMAND while the user types.
+            if (id != IDOK && id != IDCANCEL)
+                return;
             response = id;
             done = true;
         };

@@ -22,8 +22,15 @@ int run_launcher(const std::filesystem::path &executable, const SaveMigrator &mi
                 if (!source)
                     continue;
                 const auto check = check_game_directory(*source);
-                if (!check.playable)
-                    throw FormatError("Installation wird nicht unterstützt: " + check.unsupported);
+                // Raw English installations are importable before legacy directory
+                // normalisation, so their old runtime "playable" flag is irrelevant.
+                if ((check.family != GameFamily::german && check.family != GameFamily::english) ||
+                    !check.problems.empty()) {
+                    std::string reason = check.unsupported;
+                    for (const auto &problem : check.problems)
+                        reason += "\n" + problem;
+                    throw FormatError("Installation wird nicht unterstützt: " + reason);
+                }
                 AddMod initial;
                 initial.source = check.directory;
                 initial.saves = check.directory;

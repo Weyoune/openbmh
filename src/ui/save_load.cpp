@@ -16,7 +16,7 @@
 namespace bmh::ui {
 namespace {
 constexpr uint32_t kTextBase = ::bmh::layout::TextPointerTable;
-constexpr size_t kFilenameBytes = 251; // Host filename limit, including the four-byte .FBM suffix.
+constexpr size_t kHostFilenameBytes = 255; // Includes the selected native or legacy extension.
 std::string path_to_utf8(const std::filesystem::path& path) {
     const auto value = path.u8string();
     return std::string(value.begin(), value.end());
@@ -24,11 +24,10 @@ std::string path_to_utf8(const std::filesystem::path& path) {
 std::filesystem::path path_from_utf8(std::string_view value) {
     return std::filesystem::path(std::u8string(value.begin(), value.end()));
 }
-bool valid_filename(std::string_view value) {
-    return !value.empty() && value.size() <= kFilenameBytes && value != "." && value != ".." &&
-        std::all_of(value.begin(), value.end(), [](unsigned char c) {
-            return c >= 32 && c != 127 && c != '/' && c != '\\';
-        });
+bool valid_filename(std::string_view value, size_t maximum) {
+    return !value.empty() && value.size() <= maximum && value != "." && value != ".." &&
+           std::all_of(value.begin(), value.end(),
+                       [](unsigned char c) { return c >= 32 && c != 127 && c != '/' && c != '\\'; });
 }
 std::string_view text_at(const TextDb& texts, uint32_t address) {
     if (address < kTextBase || ((address - kTextBase) & 3u) != 0)
@@ -319,7 +318,7 @@ void SaveLoadScreen::request_action() {
                                    entries_[size_t(selected_)].path, false, file_kind_, origin_item_id_};
         return;
     }
-    if (!valid_filename(filename_)) {
+    if (!valid_filename(filename_, kHostFilenameBytes - file_kind_extension(file_kind_, native_).size())) {
         feedback_ = "UNGUELTIGER DATEINAME"; return;
     }
     auto path =
@@ -397,7 +396,8 @@ bool SaveLoadScreen::key(std::string_view value) {
 bool SaveLoadScreen::text(std::string_view value) {
     if (info_ || mode_ != SaveLoadMode::save || !filename_focus_ || pending_ || value.empty()) return false;
     const std::string next = (filename_selected_ ? std::string{} : filename_) + std::string(value);
-    if (!valid_filename(next)) return false;
+    if (!valid_filename(next, kHostFilenameBytes - file_kind_extension(file_kind_, native_).size()))
+        return false;
     filename_ = next; filename_selected_ = false;
     overwrite_armed_ = false; feedback_.clear(); return true;
 }

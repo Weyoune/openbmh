@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "app/career_session.hpp"
+#include "app/controller.hpp"
 #include "content/save.hpp"
 #include "launch/mods.hpp"
 #include "launch/game_data.hpp"
 #include "ui/setup.hpp"
 #include "ui/sportschau.hpp"
 #include "game/save.hpp"
+#include "audio/original.hpp"
+#include <algorithm>
 #include <chrono>
 #include <iostream>
 using namespace bmh;
@@ -32,17 +35,44 @@ int main(int argc, char **argv) try {
     launch::AddMod request;
     request.source = argv[1];
     request.name = "Test Classic";
+    request.start_year = 1994;
     request.migrate = false;
     const auto result = library.add(request, {});
     const auto package = result.mod.directory / "content.obw";
     auto content = content::open(package);
     content::Mount mount(package, content);
+    openbmh::audio::OriginalAssets sound;
+    for (size_t i = 0; i < 4; ++i)
+        sound.containers[i] = read_file(mount.root() / "S" / std::to_string(2000 + i));
+    for (size_t i = 0; i < 96; ++i)
+        sound.tables.frequencies[i] =
+            content->executable.u16(layout::Audio_OriginalAudioAssets_RuntimeField2 + uint32_t(i) * 2);
+    for (size_t i = 0; i < 9; ++i)
+        sound.tables.operators[i] =
+            content->executable.u8(layout::Audio_OriginalAudioAssets_RuntimeField + uint32_t(i) * 16);
+    openbmh::audio::OriginalSynth synth;
+    std::string sound_error;
+    check(synth.load(std::move(sound), 22050, sound_error), sound_error);
+
     // Exercise renderers through aliases while the mod contains only content.obw.
     check(ui::SetupScreen(mount.root()).render().pixels.size() == 320 * 240, "OBW-only setup renderer");
     (void)ui::SportschauIntro(mount.root()).render_frame(0);
     const auto resolved = launch::resolve_game(request.source, root / "legacy-test-cache");
     check(resolved.error.empty(), resolved.error);
-    app::CareerSession old(resolved.check.directory, 12345);
+    auto legacy_directory = resolved.check.directory;
+    if (!fs::exists(legacy_directory / "BMH.exe")) {
+        // The legacy oracle uses fixed filename casing. Only its private test
+        // copy needs aliases on case-sensitive filesystems; OBW does not.
+        const auto aliases = root / "legacy-case-reference";
+        fs::create_directory(aliases);
+        for (const char *name : {"BMH.exe", "M3D.MAN", "TEXTD.BLK", "M3.MEN", "M3.DAT"}) {
+            const auto source = launch::find_file(legacy_directory, name);
+            check(bool(source), "legacy reference file missing");
+            fs::copy_file(*source, aliases / name);
+        }
+        legacy_directory = aliases;
+    }
+    app::CareerSession old(legacy_directory, 12345);
     app::CareerSession session(mount.root(), 12345);
     check(save_stream(old.state()) == save_stream(session.state()) &&
               old.rand().seed() == session.rand().seed() && old.game().seed() == session.game().seed(),
@@ -63,6 +93,8 @@ int main(int argc, char **argv) try {
     session.state().memory.set8(layout::Desk_EnterDesk_RuntimeField, 1);
     ui::CareerInitializationResult initial;
     check(session.finish(initial, error), error);
+    check(initial.desktop.date.year == 1994 && initial.desktop.date.weekday == 2,
+          "selected start year changes the year display while retaining the Classic Wednesday epoch");
     const auto before = cli::dump_json(encode_native_state(session.state()));
     const auto random = session.rand();
     const auto game = session.game();
@@ -79,6 +111,44 @@ int main(int argc, char **argv) try {
     check(cli::dump_json(content::driver_checkpoint(session.manager_join_checkpoint().driver)) ==
               cli::dump_json(content::driver_checkpoint(loaded.manager_join_checkpoint().driver)),
           "native turn cursor round-trip");
+    {
+        ui::StartupFlow flow(mount.root(), personal);
+        check(flow.click(215, 220).request == ui::FlowRequest::submenu_opened,
+              "GUI opens native load browser from setup");
+        const auto request = flow.send_key("ENTER");
+        check(request.request == ui::FlowRequest::file_action && request.file_action.path == save,
+              "GUI selects native save from personal directory");
+        std::unique_ptr<app::CareerSession> gui_session;
+        uint64_t gui_revision = 0;
+        openbmh::audio::Playback playback;
+        std::optional<uint64_t> audio_session;
+        check(app::serve_flow_request(flow, request, gui_session, mount.root(), personal, 999, gui_revision,
+                                      playback, audio_session, false)
+                  .empty(),
+              "GUI controller accepts native save path");
+        check(gui_session && flow.screen_name() == "desktop" && gui_revision == 1,
+              "GUI controller attaches loaded native desktop: " + flow.state_json());
+        const auto save_item =
+            std::find_if(flow.desktop()->state().items.begin(), flow.desktop()->state().items.end(),
+                         [](const ui::DeskItem &item) { return item.kind == 11 && !item.disabled; });
+        check(save_item != flow.desktop()->state().items.end(), "native desktop exposes Save");
+        const auto serve = [&](const ui::FlowResult &event) {
+            check(app::serve_flow_request(flow, event, gui_session, mount.root(), personal, 999, gui_revision,
+                                          playback, audio_session, false)
+                      .empty(),
+                  "native GUI file action dispatch");
+        };
+        serve(flow.click(save_item->x + save_item->width / 2, save_item->y + save_item->height / 2));
+        check(flow.screen_name() == "save_load" && flow.text("GUI Roundtrip"),
+              "native GUI Save accepts a new filename");
+        const auto gui_random = gui_session->rand();
+        serve(flow.send_key("ENTER"));
+        check(flow.screen_name() == "desktop" && fs::exists(personal / "GUI Roundtrip.obs"),
+              "native GUI Save publishes OBS and returns to desktop: " + flow.state_json());
+        check(gui_session->rand().seed() == gui_random.seed() &&
+                  gui_session->rand().calls() == gui_random.calls(),
+              "GUI saving preserves random state");
+    }
     session.state().memory.set8(layout::Desk_EnterDesk_RuntimeField, 1);
     loaded.state().memory.set8(layout::Desk_EnterDesk_RuntimeField, 1);
     session.state().autosave_month = 0;

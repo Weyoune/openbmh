@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "content/package.hpp"
 #include "import/detail.hpp"
+#include "formats/executable_layout.hpp"
 #include <chrono>
 #include <fstream>
 namespace bmh::content {
@@ -113,6 +114,12 @@ std::shared_ptr<const Classic> open(const fs::path &path) {
     auto docs = read_archive(path);
     const auto id = verify(docs);
     auto value = std::make_shared<Classic>(obw::load_classic(docs));
+    constexpr std::array<uint8_t, 9> german{18, 18, 18, 18, 18, 12, 12, 12, 12};
+    constexpr std::array<uint8_t, 9> english{20, 20, 20, 20, 10, 12, 12, 12, 12};
+    const auto &leagues = value->english ? english : german;
+    for (size_t i = 0; i < leagues.size(); ++i)
+        if (value->executable.u8(layout::LeagueSizes + uint32_t(i)) != leagues[i])
+            fail("Classic supports only the original BMH and Football Limited league structures");
     value->content_id = id;
     const auto manifest = parse(docs, "manifest.json");
     value->start_year = std::stoi(str(get(manifest, "start_date")).substr(0, 4));

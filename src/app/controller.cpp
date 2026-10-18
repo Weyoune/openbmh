@@ -352,8 +352,8 @@ void start_original_desk_audio(openbmh::audio::Playback& playback, const GameSta
     original_audio_command(playback, 1); // SavePathInDirectory / CareerFirstSteps2, resume the same song.
 }
 
-bool save_path_in_directory(const fs::path& path, const fs::path& directory,
-                            std::string_view expected_extension = ".fbm") {
+bool save_path_in_directory(const fs::path &path, const fs::path &directory,
+                            std::string_view expected_extension) {
     if (path.filename().empty()) return false;
     std::string ext = path.extension().string();
     std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return char(std::tolower(c)); });
@@ -1878,7 +1878,8 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             result.settings_owner_sequence == flow.settings_owner_sequence() &&
             request.origin_item_id == desk_owner.item_id && request.manager_slot == desk_owner.manager_slot;
         if (!session || !same_pending || request.revision != revision ||
-            !save_path_in_directory(request.path, save_directory, ".ein")) {
+            !save_path_in_directory(request.path, save_directory,
+                                    content::find(data) ? ".obsettings" : ".ein")) {
             flow.reject_settings_file("stale_request_or_invalid_settings_path");
             return {};
         }
@@ -1909,7 +1910,8 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return {};
         }
         if (request.revision != revision ||
-            !save_path_in_directory(request.path, save_directory, ".men")) {
+            !save_path_in_directory(request.path, save_directory,
+                                    content::find(data) ? ".oblayout" : ".men")) {
             flow.reject_file_action("stale_request_or_invalid_menu_layout_path");
             return {};
         }
@@ -1927,7 +1929,8 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         }
     } else if (result.request == ui::FlowRequest::file_action) {
         const auto& request = result.file_action;
-        if (request.revision != revision || !save_path_in_directory(request.path, save_directory)) {
+        if (request.revision != revision ||
+            !save_path_in_directory(request.path, save_directory, content::find(data) ? ".obs" : ".fbm")) {
             flow.reject_file_action("stale_request_or_invalid_save_path");
             return {};
         }
