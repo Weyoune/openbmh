@@ -126,8 +126,8 @@ class GtkLauncher final : public LauncherUI {
         auto *dialog = gtk_file_chooser_dialog_new(
             title.c_str(), GTK_WINDOW(window_), GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, "Abbrechen",
             GTK_RESPONSE_CANCEL, "Auswählen", GTK_RESPONSE_ACCEPT, nullptr);
-        if (!initial.empty())
-            gtk_file_chooser_set_filename(GTK_FILE_CHOOSER(dialog), path_to_utf8(initial).c_str());
+        const auto folder=initial.empty()?path_from_utf8(g_get_home_dir()):initial;
+        gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog),path_to_utf8(folder).c_str());
         std::optional<std::filesystem::path> result;
         if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
             char *file = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));

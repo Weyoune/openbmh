@@ -92,8 +92,9 @@ MatchGroup group_json(const J &in) {
     g.ended = uint32_t(ended);
     g.kickoff_void_mask = uint32_t(mask);
     if ((g.desc.size() != 0xc0 && g.desc.size() != 0xd0) || g.fixtures.size() % 2 || g.matches() > 32 ||
-        g.records.size() != size_t(g.matches()) * 18 || g.end_minute.size() != size_t(g.matches()) ||
-        g.spectators.size() != size_t(g.matches()))
+        (!g.records.empty() && g.records.size() != size_t(g.matches()) * 18) ||
+        (!g.end_minute.empty() && g.end_minute.size() != size_t(g.matches())) ||
+        (!g.spectators.empty() && g.spectators.size() != size_t(g.matches())))
         fail("invalid match dimensions");
     return g;
 }

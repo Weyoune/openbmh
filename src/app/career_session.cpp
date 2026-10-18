@@ -422,16 +422,14 @@ void restore_saved_turn_cursor(TurnDriver& driver, GameState& state, const Datab
     if (!unsupported_continuation.empty()) return;
 
     std::vector<int> active_leagues;
-    // DayCompetitions2's competition bits expand to group leagues in this original order;
-    // bit 2 owns both league 2 and 3. The stale descriptors after the active group count
-    // are intentionally ignored.
-    static constexpr int first_league[8] = {0, 1, 2, 4, 5, 6, 7, 8};
-    static constexpr int league_count[8] = {1, 1, 2, 1, 1, 1, 1, 1};
+    // Expand the selected edition's groups. Only the German third divisions
+    // share bit 2; the English divisions each have their own calendar group.
+    // Stale descriptors beyond the active group count are ignored.
     for (int bit = 0; bit < 5; ++bit) {
         if (!((competitions >> bit) & 1u)) continue;
         const int first = bit, last = bit < 4 ? bit + 1 : 8;
         for (int k = first; k < last; ++k)
-            for (int league = first_league[k]; league < first_league[k] + league_count[k]; ++league)
+            for (int league = kGroupLeague[k]; league < kGroupLeague[k] + kGroupLeagues[k]; ++league)
                 active_leagues.push_back(league);
     }
     if (active_leagues.size() > 6)

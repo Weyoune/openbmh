@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.24)
 project(OpenBMH VERSION 0.2.0 LANGUAGES CXX C)
 if(APPLE)
-    enable_language(OBJCXX)
+    enable_language(OBJC OBJCXX)
     set(CMAKE_OBJCXX_STANDARD 20)
     set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
 endif()
