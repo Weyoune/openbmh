@@ -120,6 +120,11 @@ int main(int argc, char **argv) try {
     const auto archive = root / "sample.obs";
     content::write_archive(docs, archive);
     check(content::read_archive(archive) == docs, "binary native archive round-trip");
+    {
+        content::Mount mount(archive, std::make_shared<content::Classic>());
+        check(content::read_archive(archive) == docs,
+              "archive reads bypass the mounted virtual resource namespace");
+    }
     rejects([&] { content::write_archive({{"../outside", "x"}}, root / "unsafe.obs"); },
             "archive traversal rejected");
     rejects([&] { content::write_archive({}, archive); }, "existing saves require explicit overwrite");

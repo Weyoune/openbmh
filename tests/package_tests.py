@@ -25,7 +25,7 @@ class PackageAllowlistTests(unittest.TestCase):
             for name in ['OpenBMH', 'openbmh_cli', 'openbmh_import', 'README.md', 'LICENSE',
                          'THIRD_PARTY_NOTICES.md', 'ACKNOWLEDGEMENTS.md', 'CONTRIBUTING.md']:
                 (root / name).write_text('synthetic')
-            notes = root / 'docs/release/0.1/RELEASE_NOTES.md'
+            notes = root / 'docs/release/0.2/RELEASE_NOTES.md'
             notes.parent.mkdir(parents=True)
             notes.write_text('synthetic release notes')
             for name in ['launcher.rml', 'theme.rcss', 'stadium.tga', 'LatoLatin-Regular.ttf', 'LatoLatin-Bold.ttf']:

@@ -41,7 +41,7 @@ def validate(directory, windows):
         if not allowed:
             raise RuntimeError('Unexpected package entry: ' + relative.as_posix())
     required = products | documents | launcher_assets | {'docs/licenses/' + name for name in licenses}
-    required.add('docs/release/0.1/RELEASE_NOTES.md')
+    required.add('docs/release/0.2/RELEASE_NOTES.md')
     if required - present:
         raise RuntimeError('Missing package entries: ' + ', '.join(sorted(required - present)))
     if windows and not {'vcruntime140.dll', 'msvcp140.dll'} <= present:

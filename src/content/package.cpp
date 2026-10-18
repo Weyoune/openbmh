@@ -33,7 +33,11 @@ Documents read_archive(const fs::path &file) {
     if (fs::is_symlink(fs::symlink_status(file)) || !fs::is_regular_file(file) ||
         fs::file_size(file) > 128ull * 1024 * 1024)
         fail("invalid native archive");
-    const auto input = read_file(file);
+    // The archive itself remains a real file when its path is a mounted asset root.
+    std::ifstream stream(file, std::ios::binary);
+    std::string input(size_t(fs::file_size(file)), '\0');
+    if (!stream.read(input.data(), std::streamsize(input.size())))
+        fail("cannot read native archive");
     mz_zip_archive zip{};
     if (!mz_zip_reader_init_mem(&zip, input.data(), input.size(), 0))
         fail("invalid ZIP archive");

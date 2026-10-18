@@ -41,6 +41,8 @@ int main(int argc, char **argv) try {
     const auto package = result.mod.directory / "content.obw";
     auto content = content::open(package);
     content::Mount mount(package, content);
+    check(content::open(package)->content_id == content->content_id,
+          "mounted container can be reopened without resolving it as an asset");
     openbmh::audio::OriginalAssets sound;
     for (size_t i = 0; i < 4; ++i)
         sound.containers[i] = read_file(mount.root() / "S" / std::to_string(2000 + i));

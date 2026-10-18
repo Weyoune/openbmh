@@ -4,7 +4,7 @@ A modern and faithful open source rebuild of the *Bundesliga Manager Hattrick* e
 
 OpenBMH is a standalone C++20 engine with an SDL2 interface for *Bundesliga Manager Hattrick* (1994/95) and its English edition, *Football Limited*. The project develops a playable reconstruction alongside a platform for new rules, content and interfaces. Keeping the familiar game enjoyable and making it easier to extend are equally important goals.
 
-The 0.2 development branch imports a game installation supplied by the player into a portable Classic mod. The running game reads the converted OBW content. Game data, artwork, music, manuals and the original executable are not distributed with OpenBMH. Its aim is recognisable behaviour and plausible results; documented compatibility decisions and safety fixes take precedence over reproducing every original fault.
+Version 0.2 imports a game installation supplied by the player into a portable Classic mod. The running game reads the converted OBW content. Game data, artwork, music, manuals and the original executable are not distributed with OpenBMH. Its aim is recognisable behaviour and plausible results; documented compatibility decisions and safety fixes take precedence over reproducing every original fault.
 
 This is an independent community project, with no affiliation with or endorsement by the original rights holders, the DFL or the Bundesliga. It is an engine implementation, not an official source release or a remaster.
 
@@ -12,7 +12,7 @@ This is an independent community project, with no affiliation with or endorsemen
 
 Check the [releases page](https://github.com/Weyoune/openbmh/releases) for available packages and their platform notes. A Windows package uses the name `OpenBMH-<version>-windows-x64.zip`. Availability and native validation are stated for each release; source build instructions do not establish platform support on their own.
 
-These instructions describe the **0.2 development branch**, not the published 0.1.2 package.
+These instructions describe **0.2**, whose release packages are prepared separately from 0.1.2. See the [0.2 release notes](docs/release/0.2/RELEASE_NOTES.md).
 
 1. Extract OpenBMH into a writable directory.
 2. Start `OpenBMH.exe` on Windows, or `OpenBMH` on Linux/macOS. Its RmlUI launcher initially has an empty **Name | Art** list. The night-stadium design uses a small version label in the lower-right corner.
@@ -43,7 +43,7 @@ The standalone [`openbmh_import` tool](docs/formats/obw/import.md) produces the 
 
 ## Build from source
 
-The following recipes target this 0.2 development branch. They require Git, CMake 3.24 or newer and a C++20 compiler. The first configure fetches pinned open-source dependencies. Native build and package results are documented for each release; these instructions do not claim an untested platform result.
+The following recipes target version 0.2. They require Git, CMake 3.24 or newer and a C++20 compiler. The first configure fetches pinned open-source dependencies. Native build and package results are documented for each release; these instructions do not claim an untested platform result.
 
 Clone the public repository, then run the commands for your system:
 

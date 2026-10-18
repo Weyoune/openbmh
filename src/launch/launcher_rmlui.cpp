@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "launch/launcher_ui.hpp"
+#include "launch/rml_path.hpp"
 #include "launch/archive.hpp"
 #include "launch/process.hpp"
 #include "version.hpp"
@@ -117,6 +118,7 @@ struct Video {
 };
 class RmlLauncher final : public LauncherUI, public Rml::EventListener {
     Video video_;
+    rml::AssetFiles files_;
     SystemInterface_SDL system_{video_.window};
     RenderInterface_GL3 renderer_;
     TextInputMethodEditor_SDL ime_;
@@ -215,6 +217,7 @@ class RmlLauncher final : public LauncherUI, public Rml::EventListener {
         answered_ = accepted_ = false;
         display("overlay", true);
         modal_visible_ = true;
+        context_->Update();
         if (auto *input = document_->GetElementById("mod-name"))
             input->Focus(true);
         else
@@ -391,6 +394,7 @@ class RmlLauncher final : public LauncherUI, public Rml::EventListener {
             throw std::runtime_error("RmlUI could not create the OpenGL renderer");
         try {
             Rml::SetSystemInterface(&system_);
+            Rml::SetFileInterface(&files_);
             Rml::SetRenderInterface(&renderer_);
             Rml::SetTextInputHandler(&ime_);
             initialized_ = Rml::Initialise();
@@ -398,12 +402,12 @@ class RmlLauncher final : public LauncherUI, public Rml::EventListener {
                 throw std::runtime_error("RmlUI initialization failed");
             const auto assets = executable_path({}).parent_path() / "assets" / "launcher";
             for (const char *weight : {"Regular", "Bold"})
-                if (!Rml::LoadFontFace(path_to_utf8(assets / (std::string("LatoLatin-") + weight + ".ttf"))))
+                if (!Rml::LoadFontFace(rml::asset_path(assets / (std::string("LatoLatin-") + weight + ".ttf"))))
                     throw std::runtime_error("Launcher font missing; extract the complete OpenBMH package");
             context_ = Rml::CreateContext("launcher", {1100, 688});
             if (!context_)
                 throw std::runtime_error("RmlUI launcher context failed");
-            document_ = context_->LoadDocument(path_to_utf8(assets / "launcher.rml"));
+            document_ = context_->LoadDocument(rml::asset_path(assets / "launcher.rml"));
             if (!document_)
                 throw std::runtime_error("Launcher layout missing; extract the complete OpenBMH package");
             document_->AddEventListener("click", this);
