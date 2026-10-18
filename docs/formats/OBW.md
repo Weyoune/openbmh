@@ -175,6 +175,18 @@ Teams without a squad (`foreign`, or `national` in a world that does not simulat
 | `squad_number` | integer | O | |
 | `status` | object | O | Injury, suspension and card counters per competition (save only) |
 | `photo` | string | O | Default `asset:player/<key>/photo` |
+| `appearance` | object | O | Recipe of a composed portrait, see below |
+
+**Composed portraits.** The original game stores no picture per player: it seeds a small random generator from the player's name and picks one of four backgrounds and one part for each of five layers from a parts sheet of the installation. OBW stores the outcome as a recipe instead of an image:
+
+```json
+"appearance": {"set": "bmh-classic@1", "background": 2, "layers": [5, 0, 3, 7, 1]}
+```
+
+- `set` names a portrait part set; it defines the number of backgrounds, the layers, the number of parts per layer and their placement. `bmh-classic@1` is the set of the original game.
+- The importer computes the recipe once from the legacy name and **freezes** it. A later rename (for example by a name pack) keeps the face; the legacy name-derived generator is never re-run.
+- Players created in OpenBMH (youth, generated players) receive a random recipe of the world's default set.
+- The recipe holds indices only. The part graphics come from the user's installation or from a pack that provides the same set, possibly in higher resolution (§9.2), so a world contains no original artwork.
 
 An attribute set is declared once in `world/rules.json` with its fields, scales and meaning, so a later, finer model can sit next to the classic one without breaking the format:
 
@@ -402,6 +414,15 @@ A resolver looks a key up in the active packs by priority (§9.5), then in the w
 - **Pictures** (stadiums, backgrounds): PNG, JPEG or WebP, 16:9 reference 1920×1080.
 
 Asset metadata sits next to the files in `assets/index.json`: key, files per size, author, source and licence (required).
+
+**Player pictures** (`asset:player/<key>/photo`) resolve in this order:
+
+1. A photo from an active pack.
+2. The player's `appearance` recipe composed from a high-resolution part set (`assets/portrait-sets/<set>/` in a pack, same indices and layer order as the original set, with its own placement table for the larger size).
+3. The same recipe composed from the original parts of the installation, scaled up.
+4. A neutral silhouette.
+
+Composed pictures may be cached in the user's cache directory; they are never written into a world, save or pack.
 
 ### 9.3 Languages
 
