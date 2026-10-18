@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import re
@@ -40,6 +41,11 @@ PRIVATE_DOCUMENTS = {
 }
 SOURCE_SUFFIXES = {".cpp", ".hpp", ".h", ".c", ".inc"}
 SKIP_DIRECTORIES = {".git", "__pycache__", ".cache", "_deps", "node_modules"}
+# Exact independently generated launcher artwork, not imported game material.
+# Keep prior reviewed hashes if an asset is intentionally revised in history.
+PROJECT_ARTWORK = {
+    "assets/launcher/stadium.tga": {"08f82783a357d5b0722f3737de54844150bc14d98036845f1aaee3211608e1c8"},
+}
 
 LEGACY_SYMBOLS = re.compile(
     r"(?<![A-Za-z0-9])(?:" + "FUN" + r"_?[0-9a-f]{4,8}|" + "DAT" +
@@ -156,7 +162,7 @@ def path_findings(name: str) -> list[Finding]:
     result = []
     if path.is_absolute() or ".." in parts:
         result.append(Finding(name, 0, "unsafe-path"))
-    if path.suffix.lower() in ASSET_SUFFIXES:
+    if path.suffix.lower() in ASSET_SUFFIXES and name not in PROJECT_ARTWORK:
         result.append(Finding(name, 0, "binary-or-game-asset"))
     if path.name in PRIVATE_DOCUMENTS or any(parts[:len(p)] == p for p in PRIVATE_PREFIXES):
         result.append(Finding(name, 0, "private-material-path"))
@@ -167,6 +173,10 @@ def path_findings(name: str) -> list[Finding]:
 
 def scan_blob(name: str, blob: bytes) -> list[Finding]:
     result = path_findings(name)
+    if name in PROJECT_ARTWORK:
+        if hashlib.sha256(blob).hexdigest() not in PROJECT_ARTWORK[name]:
+            result.append(Finding(name, 0, "unreviewed-project-artwork"))
+        return result
     if len(blob) > 2_000_000:
         result.append(Finding(name, 0, "oversized-source-file"))
     if b"\0" in blob:

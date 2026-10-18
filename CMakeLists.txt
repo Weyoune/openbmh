@@ -453,6 +453,11 @@ target_link_libraries(openbmh_play PRIVATE bmhui bmh_launcher bmhlaunch_dialog o
 # a game without a console window on double-click (SDL2main provides WinMain); started from a
 # console it attaches to that one for --version, --help and start errors (src/app/main.cpp)
 set_target_properties(openbmh_play PROPERTIES WIN32_EXECUTABLE TRUE OUTPUT_NAME OpenBMH)
+if(CMAKE_CONFIGURATION_TYPES)
+    add_custom_command(TARGET openbmh_play POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_BINARY_DIR}/assets/launcher"
+                "$<TARGET_FILE_DIR:openbmh_play>/assets/launcher")
+endif()
 if(MSVC)
     target_compile_options(openbmh_play PRIVATE /utf-8)
     # App sources also compile in headless tests/helpers without target /utf-8.
@@ -1107,8 +1112,10 @@ bmh_add_data_test(NAME english_fixture_table_data_tests DATA_DIR "${BMH_ENGLISH_
     COMMAND fixture_table_tests "${BMH_ENGLISH_DATA}")
 
 # Private build paths are inputs to the source-package tool, never shipped in its manifest.
+FetchContent_GetProperties(rmlui)
+FetchContent_GetProperties(freetype)
 set(package_dependencies "{}")
-foreach(dependency IN ITEMS SDL2 miniz lzma_sdk nfd)
+foreach(dependency IN ITEMS SDL2 miniz lzma_sdk nfd rmlui freetype)
     string(REPLACE "\\" "/" dependency_path "${${dependency}_SOURCE_DIR}")
     if(dependency STREQUAL "SDL2" AND sdl2_SOURCE_DIR)
         set(dependency_path "${sdl2_SOURCE_DIR}")

@@ -15,7 +15,7 @@ Check the [releases page](https://github.com/Weyoune/openbmh/releases) for avail
 These instructions describe the **0.2 development branch**, not the published 0.1.2 package.
 
 1. Extract OpenBMH into a writable directory.
-2. Start `OpenBMH.exe` on Windows, or `OpenBMH` on Linux/macOS. Its native launcher initially has an empty **Name | Art** list.
+2. Start `OpenBMH.exe` on Windows, or `OpenBMH` on Linux/macOS. Its RmlUI launcher initially has an empty **Name | Art** list. The night-stadium design uses a small version label in the lower-right corner.
 3. Choose **Add**, select your own BMH or Football Limited installation, and enter a unique mod name and starting display year. The default names are `BMH-classic` and `FTDL-classic` (the English format identifier is `FLTD-classic`).
 4. Optionally transfer saved games and settings from the installation or another folder. The import reports files it could not migrate.
 5. Select the resulting Classic mod and choose **Start**. After import, its original installation is no longer needed for play.
@@ -31,7 +31,7 @@ For direct startup or the console:
 
 Both frontends use native content and saves. Use **Add** to migrate older files rather than passing an original executable or `.FBM` to the running game. The starting year changes the Classic year display; original weekday and scheduling rules are preserved. Modern worlds are reserved for a later version.
 
-See the [0.2 migration contract](docs/formats/obw/runtime-0.2.md) for compatibility and validation limits. Native Windows and macOS behaviour must be checked on their target platforms before a 0.2 release.
+The launcher uses SDL2, RmlUI and OpenGL 3.3 (macOS: OpenGL 4.1); keep its `assets` directory next to the executable. Folder selection uses the operating system's dialog. See the [0.2 migration contract](docs/formats/obw/runtime-0.2.md) for compatibility and validation limits. Interactive Windows and macOS behaviour must be checked on their target platforms before a 0.2 release.
 
 ## Features and direction
 

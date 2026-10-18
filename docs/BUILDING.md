@@ -1,6 +1,6 @@
 # Building OpenBMH
 
-Requirements: a C++20 compiler, CMake 3.24 or newer, Git and a supported build tool such as Ninja. The CMake project fetches pinned SDL2, miniz, 7-Zip C decoder and nativefiledialog-extended sources. Network access is needed on the first configure unless these dependencies are supplied locally. Nuked OPL3 is included in the source tree.
+Requirements: a C++20 compiler, CMake 3.24 or newer, Git and a supported build tool such as Ninja. The CMake project fetches pinned SDL2, miniz, 7-Zip C decoder, nativefiledialog-extended, RmlUi and FreeType sources. Network access is needed on the first configure unless these dependencies are supplied locally. Nuked OPL3 is included in the source tree.
 
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -26,7 +26,7 @@ With a Visual Studio generator, choose one actually provided by your installed C
 
 ## Linux
 
-Install a C++20 compiler, Git, CMake, Ninja, pkg-config and the development packages required by SDL2 and the dialog backend. The native Linux launcher uses GTK3. For example, Debian-family development packages include `build-essential`, `cmake`, `ninja-build`, `git`, `pkg-config` and `libgtk-3-dev`; SDL2's selected video/audio backends may need additional development libraries.
+Install a C++20 compiler, Git, CMake, Ninja, pkg-config and the development packages required by SDL2 and the folder-dialog backend. The RmlUI launcher uses SDL2/OpenGL; its native folder picker uses GTK3 on Linux. For example, Debian-family development packages include `build-essential`, `cmake`, `ninja-build`, `git`, `pkg-config`, `libgl1-mesa-dev` and `libgtk-3-dev`; SDL2's selected video/audio backends may need additional development libraries. RmlUI and FreeType are built from pinned sources without installing them separately. Keep the generated `assets/launcher` directory alongside OpenBMH when copying a development build.
 
 The common commands above build the bundled SDL2. To use an installed SDL2 CMake package instead, configure with `-DBMH_USE_SYSTEM_SDL2=ON`. Its version and backend configuration then come from the installed package.
 

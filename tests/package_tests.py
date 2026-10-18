@@ -28,6 +28,10 @@ class PackageAllowlistTests(unittest.TestCase):
             notes = root / 'docs/release/0.1/RELEASE_NOTES.md'
             notes.parent.mkdir(parents=True)
             notes.write_text('synthetic release notes')
+            for name in ['launcher.rml', 'theme.rcss', 'stadium.tga', 'LatoLatin-Regular.ttf', 'LatoLatin-Bold.ttf']:
+                asset = root / 'assets' / 'launcher' / name
+                asset.parent.mkdir(parents=True, exist_ok=True)
+                asset.write_text('synthetic packaged UI asset')
             licenses = Path(__file__).resolve().parents[1] / 'docs' / 'licenses'
             for source in licenses.iterdir():
                 if source.is_file():
@@ -35,6 +39,11 @@ class PackageAllowlistTests(unittest.TestCase):
                     target.parent.mkdir(parents=True, exist_ok=True)
                     target.write_text('synthetic license placeholder')
             package.validate(root, False)
+            missing = root / 'assets/launcher/LatoLatin-Bold.ttf'
+            missing.unlink()
+            with self.assertRaises(RuntimeError):
+                package.validate(root, False)
+            missing.write_text('synthetic font')
             schema = root / 'docs/formats/obw/schema/1.0/manifest.json'
             schema.parent.mkdir(parents=True)
             schema.write_text('{"type":"object"}')
@@ -55,6 +64,15 @@ class PackageAllowlistTests(unittest.TestCase):
 
 
 class SourceInventoryTests(unittest.TestCase):
+    def test_only_pinned_unused_freetype_logging_submodule_is_omitted(self):
+        record = b'160000 72dfcc858c040c54a6a0b88fcb7e70ee186d3167 0\tsubprojects/dlg\0'
+        self.assertEqual(source_package.unbuilt_submodules('freetype', record),
+                         {'subprojects/dlg': '72dfcc858c040c54a6a0b88fcb7e70ee186d3167'})
+        for component, entry in [('SDL2', record), ('freetype', record.replace(b'subprojects/dlg', b'other')),
+                                 ('freetype', record.replace(b'72df', b'0000'))]:
+            with self.assertRaises(RuntimeError):
+                source_package.unbuilt_submodules(component, entry)
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)

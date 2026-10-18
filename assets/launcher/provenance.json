@@ -1,0 +1,8 @@
+{
+  "asset": "stadium.tga",
+  "sha256": "08f82783a357d5b0722f3737de54844150bc14d98036845f1aaee3211608e1c8",
+  "origin": "Independently generated night-stadium artwork for OpenBMH. No original game assets.",
+  "method": "Built-in image_gen; exported as uncompressed 24-bit TGA without changing pixels.",
+  "distribution": "Project-supplied launcher artwork, distributed with OpenBMH under GPL-3.0-only.",
+  "prompt": "Use case: precise-object-edit / background extraction. The provided image is an AI-generated original football stadium at dusk, covered by a launcher UI. Produce the CLEAN BACKGROUND ART ONLY for that launcher. Completely remove ALL interface graphics, all panels, all buttons, text, logos, the pitch-symbol brand, table, selected row, outlines, version number, and any lettering on advertising boards. Seamlessly reconstruct the stadium scene in all removed regions. Preserve the overall identical camera viewpoint, sweeping stadium structure, dark navy dusk sky with warm twilight just at horizon, powerful white floodlights at upper corners, subtle crowd lights, blue-black grandstands, green football pitch at lower center with white field markings, and near black foreground rail. Keep the center and middle lower grandstands appropriately dark and subdued so future UI overlay remains readable. The result must be a single beautiful photorealistic stadium environment landscape background, approximately 16:10, without any lettering, logos, overlays or watermark anywhere. This is a clean background asset for the approved night-stadium OpenBMH design, not a revised UI mockup."
+}

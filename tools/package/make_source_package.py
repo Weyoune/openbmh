@@ -16,6 +16,8 @@ COMPONENTS = {
     'miniz': ('3.0.2', 'https://github.com/richgel999/miniz', ['miniz.c', 'miniz.h', 'LICENSE']),
     'lzma_sdk': ('24.09', 'https://github.com/ip7z/7zip', ['C/7zDec.c', 'C/7z.h', 'DOC/License.txt']),
     'nfd': ('v1.2.1', 'https://github.com/btzy/nativefiledialog-extended', ['CMakeLists.txt', 'src/nfd_cocoa.m', 'LICENSE']),
+    'rmlui': ('6.3', 'https://github.com/mikke89/RmlUi', ['CMakeLists.txt', 'Include/RmlUi/Core.h', 'LICENSE.txt']),
+    'freetype': ('VER-2-13-3', 'https://github.com/freetype/freetype', ['CMakeLists.txt', 'include/ft2build.h', 'LICENSE.TXT']),
 }
 # Verified against the archive SHA256 pinned in CMakeLists.txt. These are free
 # dependency source files, not game data. Refuse modified archive-cache inputs.
@@ -30,6 +32,26 @@ MINIZ_FILES = {
 
 def git(directory, *arguments):
     return subprocess.check_output(['git', '-C', str(directory), *arguments])
+
+
+def unbuilt_submodules(component, staged):
+    """Only FreeType's unused make/autotools logging dependency is omitted.
+
+    The pinned CMake font-engine target does not compile dlg. Every other
+    submodule, or a changed revision, still needs explicit source packaging.
+    """
+    excluded = {}
+    for record in staged.split(b'\0'):
+        if not record.startswith(b'160000 '):
+            continue
+        metadata, path = record.split(b'\t', 1)
+        commit = metadata.split()[1].decode()
+        name = path.decode()
+        if (component != 'freetype' or name != 'subprojects/dlg' or
+                commit != '72dfcc858c040c54a6a0b88fcb7e70ee186d3167'):
+            raise RuntimeError('Dependency submodules require explicit packaging: ' + component)
+        excluded[name] = commit
+    return excluded
 
 
 def copy_files(source, destination, files, required=False, materialized_links=None):
@@ -164,15 +186,16 @@ def main():
             if not dependencies.get(name) or not all((directory / marker).is_file() for marker in markers):
                 raise RuntimeError('Actual dependency source unavailable: ' + name)
             commit = None
+            excluded = {}
             if (directory / '.git').exists():
                 commit = git(directory, 'rev-parse', 'HEAD').decode().strip()
                 tag = git(directory, 'rev-parse', reference + '^{commit}').decode().strip()
                 if commit != tag or git(directory, 'status', '--porcelain', '--untracked-files=no').strip():
                     raise RuntimeError('Dependency differs from its pinned source: ' + name)
-                if git(directory, 'ls-files', '--stage').find(b'160000 ') != -1:
-                    raise RuntimeError('Dependency submodules require explicit packaging: ' + name)
+                excluded = unbuilt_submodules(name, git(directory, 'ls-files', '--stage', '-z'))
             if commit:
                 files = [Path(p.decode('utf-8')) for p in git(directory, 'ls-files', '-z').split(b'\0') if p]
+                files = [p for p in files if p.as_posix() not in excluded]
                 if name == 'lzma_sdk':
                     files = [p for p in files if p.parts[0] == 'C' or p == Path('DOC/License.txt')]
             else:
@@ -188,6 +211,7 @@ def main():
                                 materialized_links=dependency_links)
             manifest['dependencies'][name] = {'upstream': url, 'reference': reference,
                                               'commit': commit, 'files': hashes,
+                                              'unbuilt_submodules': excluded,
                                               'materialized_links': dependency_links}
             initial_cache.append('set(FETCHCONTENT_SOURCE_DIR_' + name.upper() +
                                  ' "${CMAKE_CURRENT_LIST_DIR}/dependencies/' + name + '" CACHE PATH "" FORCE)')

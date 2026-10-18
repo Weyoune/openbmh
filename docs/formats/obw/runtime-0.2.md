@@ -6,12 +6,13 @@ This contract is for the 0.2 development branch. It is not a release validation 
 ## Portable layout and lifecycle
 
 `OpenBMH.exe` (Windows) / `OpenBMH` (Linux and macOS) starts the operating system's
-native launcher: one selected row, **Name | Art**, and **Start, Add, Delete, Rename, End**.
+RmlUI launcher: one selected row, **Name | Art**, and **Start, Add, Delete, Rename, End**.
 No installation is auto-selected on first launch. Add converts an externally owned
 installation; original assets never belong in a distribution.
 
 ```
 OpenBMH[.exe]
+assets/launcher/*
 mods/<name>/content.obw
 userdata/<content-id>/*.obs
 userdata/<content-id>/*.obsettings
@@ -33,6 +34,12 @@ actually changes. User data cannot be silently associated with a different datab
 The launcher starts a child process of the same binary, with `--run-mod` and a separate
 save directory, and remains available after the child exits. `--mod <content.obw>` bypasses
 the launcher. A normal GUI/console invocation cannot fall back to original game files.
+
+RML/RCSS define the launcher and its import, rename, delete and progress dialogs.
+Only folder selection uses an OS dialog. The SDL2/OpenGL view keeps UI resources
+relative to the executable, supports resizing and HiDPI input, and sleeps between
+input or scheduled UI updates. The running child's match engine does not depend on
+RmlUI. OpenGL 3.3 is required for the launcher (4.1 on macOS).
 
 ## Integrity and content access
 

@@ -12,7 +12,7 @@ OpenBMH is a C++20 engine with graphical and console frontends. The implementati
 | `src/ui` | View projections, rendering and input interpretation for game screens |
 | `src/cli` | Command language, structured protocol, console windows and multi-client seat routing |
 | `src/audio` | Bank decoding, synthesis, playback and cues, without authority to change gameplay |
-| `src/launch` | Native launcher, portable mod library, child processes and legacy installation discovery |
+| `src/launch` | RmlUI launcher, portable mod library, child processes and legacy installation discovery |
 | `src/content` | Sealed OBW content, native career containers and personal preferences |
 | `src/import` | Legacy installation and save-layout conversion; original readers are used here |
 
@@ -50,6 +50,16 @@ The only mutable mount setting is the presentation year of the selected career. 
 streams, Reality residues and the manager-desk driver. No host object, pointer or callback
 is dumped. The session reconstructs content pointers and callbacks when loading.
 
-The native launcher remains the parent process. Each game starts in a fresh child process
+The RmlUI launcher remains the parent process. Each game starts in a fresh child process
 of `OpenBMH`, keeping edition-specific process globals isolated. Portable mod content and
 personal files have independent lifetimes. See [runtime-0.2](formats/obw/runtime-0.2.md).
+
+The launcher layout and theme live in `assets/launcher/launcher.rml` and `theme.rcss`.
+They share the same RmlUI core, FreeType font engine and upstream SDL2/OpenGL renderer
+on all desktop platforms. The C++ view translates events into the existing launcher
+interface; it does not own conversion rules or mod storage. This presentation layer
+can be reused by future modern screens. Classic game screens retain their current UI.
+The operating system supplies the folder picker through nativefiledialog-extended.
+Release packages contain the complete launcher asset directory and unmodified Lato
+fonts from the pinned RmlUI source. Background artwork is independently generated;
+its provenance and approved digest are recorded with the project assets.
