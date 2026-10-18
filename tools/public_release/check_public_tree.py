@@ -44,7 +44,10 @@ SKIP_DIRECTORIES = {".git", "__pycache__", ".cache", "_deps", "node_modules"}
 # Exact independently generated launcher artwork, not imported game material.
 # Keep prior reviewed hashes if an asset is intentionally revised in history.
 PROJECT_ARTWORK = {
-    "assets/launcher/stadium.tga": {"08f82783a357d5b0722f3737de54844150bc14d98036845f1aaee3211608e1c8"},
+    "assets/launcher/stadium.tga": {
+        "08f82783a357d5b0722f3737de54844150bc14d98036845f1aaee3211608e1c8",
+        "fb8e5f1f86afe60de87b70a2f533690d1ef470241fa24ee4384ff000149edaab",
+    },
 }
 
 LEGACY_SYMBOLS = re.compile(
