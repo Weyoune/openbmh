@@ -1,6 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-only
 cmake_minimum_required(VERSION 3.24)
 project(OpenBMH VERSION 0.2.0 LANGUAGES CXX C)
+if(APPLE)
+    enable_language(OBJCXX)
+    set(CMAKE_OBJCXX_STANDARD 20)
+    set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+endif()
 # the one place of the version: --version of both programs and the window title (src/version.hpp)
 add_compile_definitions(OPENBMH_VERSION="${PROJECT_VERSION}")
 

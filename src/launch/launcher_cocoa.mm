@@ -124,9 +124,9 @@ class CocoaLauncher final : public LauncherUI {
         [NSApp activateIgnoringOtherApps:YES];
     }
     ~CocoaLauncher() override {
+        finish_progress();
         bridge_->action = {};
         bridge_->selection = {};
-        finish_progress();
         window_.delegate = nil;
         [window_ orderOut:nil];
         [window_ close];

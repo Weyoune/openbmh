@@ -11,9 +11,40 @@
 #include <spawn.h>
 #include <sys/wait.h>
 #include <cerrno>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 extern char **environ;
 #endif
 namespace bmh::launch {
+std::filesystem::path executable_path(const std::filesystem::path &invocation) {
+#ifdef _WIN32
+    std::vector<wchar_t> buffer(1024);
+    for (;;) {
+        const auto length = GetModuleFileNameW(nullptr, buffer.data(), DWORD(buffer.size()));
+        if (!length)
+            throw std::runtime_error("Cannot locate OpenBMH executable");
+        if (length < buffer.size())
+            return std::filesystem::path(std::wstring(buffer.data(), length));
+        if (buffer.size() > 32768)
+            throw std::runtime_error("Executable path is too long");
+        buffer.resize(buffer.size() * 2);
+    }
+#elif defined(__APPLE__)
+    uint32_t size = 0;
+    _NSGetExecutablePath(nullptr, &size);
+    std::vector<char> buffer(size);
+    if (_NSGetExecutablePath(buffer.data(), &size) != 0)
+        throw std::runtime_error("Cannot locate OpenBMH executable");
+    return std::filesystem::canonical(path_from_utf8(buffer.data()));
+#else
+    std::error_code error;
+    const auto path = std::filesystem::read_symlink("/proc/self/exe", error);
+    if (!error)
+        return path;
+    return std::filesystem::absolute(invocation).lexically_normal();
+#endif
+}
 int run_child(const std::filesystem::path &executable, const std::vector<std::string> &args,
               const std::function<void()> &pump) {
 #ifdef _WIN32

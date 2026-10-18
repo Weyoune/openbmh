@@ -2,6 +2,8 @@
 #include "content/package.hpp"
 #include "content/save.hpp"
 #include "launch/mods.hpp"
+#include "launch/process.hpp"
+#include "launch/archive.hpp"
 #include "formats/content.hpp"
 #include "formats/native_state.hpp"
 #include "formats/vga.hpp"
@@ -22,7 +24,20 @@ template <class F> void rejects(F f, const char *message) {
     }
     check(failed, message);
 }
-int main() try {
+int main(int argc, char **argv) try {
+    const auto arguments = launch::utf8_arguments(argc, argv);
+    if (arguments.size() > 1 && arguments[1] == "--child-check") {
+        return arguments == std::vector<std::string>{arguments[0], "--child-check", "Grüße with spaces",
+                                                     "quote\" and trailing\\", ""}
+                   ? 42
+                   : 43;
+    }
+    const auto executable = launch::executable_path("not-the-executable");
+    check(fs::is_regular_file(executable),
+          "portable root uses the actual process path rather than argv or current directory");
+    check(launch::run_child(executable, {"--child-check", "Grüße with spaces", "quote\" and trailing\\", ""},
+                            {}) == 42,
+          "child startup preserves Unicode, spaces, quotes, trailing slashes and empty arguments");
     check(content::sha256("") == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
           "SHA256 empty vector");
     check(content::sha256("abc") == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",

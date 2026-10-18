@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 namespace bmh::launch {
+std::filesystem::path executable_path(const std::filesystem::path &invocation);
 int run_child(const std::filesystem::path &, const std::vector<std::string> &,
               const std::function<void()> &pump);
 } // namespace bmh::launch

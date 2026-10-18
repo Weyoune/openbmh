@@ -33,6 +33,7 @@
 #include "launch/archive.hpp"
 #include "launch/game_data.hpp"
 #include "content/package.hpp"
+#include "launch/process.hpp"
 #include "launch/mods.hpp"
 #include "version.hpp"
 
@@ -723,7 +724,7 @@ int main(int argc, char** argv) {
             args.data = mount->root();
             if (args.saves.empty()) {
                 bmh::launch::ModLibrary library(
-                    std::filesystem::absolute(bmh::launch::path_from_utf8(argv[0])).parent_path());
+                    bmh::launch::executable_path(bmh::launch::path_from_utf8(argv[0])).parent_path());
                 bmh::launch::ModEntry mod;
                 mod.content_id = contents->content_id;
                 args.saves = library.user_directory(mod);
