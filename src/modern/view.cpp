@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "launch/archive.hpp"
 #include "launch/mods.hpp"
-#include "modern/json.hpp"
 #include "modern/model.hpp"
 #include "version.hpp"
 #include <deque>
 #include <iomanip>
 #include <sstream>
 namespace bmh::modern {
-using namespace detail;
 namespace {
 using rml::escape;
 std::string button(const std::string &action, const std::string &label, const std::string &css = "",
@@ -29,7 +27,6 @@ std::string position(int value) {
 }
 class View final : public rml::Window, public Rml::EventListener {
     Model model_;
-    std::shared_ptr<const content::Classic> content_;
     std::optional<Snapshot> observed_;
     std::deque<std::string> commands_;
     std::string page_ = "office", modal_, deferred_, after_save_, save_name_;
@@ -416,15 +413,13 @@ class View final : public rml::Window, public Rml::EventListener {
         int identity = -1;
         if (d.manager_slot >= 0 && size_t(d.manager_slot) < d.managers.size())
             identity = d.managers[size_t(d.manager_slot)].club_identity_key;
-        const auto currency =
-            str(get(parse(content_->documents, "manifest.json"), "currency").object()->at("code"));
         element("club-header")
             ->SetInnerRML("<img class=\"crest\" src=\"" + model_.crest(identity) +
                           "\"/><div class=\"club-meta\"><div class=\"club-name\">" +
                           escape(ui::original_to_utf8(d.club_name)) + "</div><div class=\"muted\">" +
                           escape(ui::original_to_utf8(d.manager_name)) +
                           "</div></div><div class=\"header-right\"><div class=\"money\">" +
-                          amount(d.balance) + " " + escape(currency) + "</div><div class=\"muted\">" +
+                          amount(d.balance) + " " + escape(s.currency) + "</div><div class=\"muted\">" +
                           std::to_string(d.date.day) + ". " + std::to_string(d.date.month) + ". " +
                           std::to_string(d.date.year) + "</div></div>");
         text("page-title", page_ == "office" ? "Dein Büro" : page_ == "lineup" ? "Aufstellung" : "Tabelle");
@@ -445,7 +440,7 @@ class View final : public rml::Window, public Rml::EventListener {
          std::shared_ptr<const content::Classic> content, uint32_t seed)
         : Window("modern/modern.rml", "OpenBMH Modern", 1280, 800, 1024, 640, false,
                  [this](const std::string &key) { return model_.image(key); }),
-          model_(data, saves, content, seed), content_(std::move(content)) {
+          model_(data, saves, std::move(content), seed) {
         document_->AddEventListener("click", this);
         text("version", std::string("v") + bmh::kOpenBmhVersion);
         refresh();

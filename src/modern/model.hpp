@@ -14,6 +14,7 @@ struct PitchMarker {
     float depth, lane;
 };
 struct Snapshot {
+    std::string currency;
     ui::DeskState desk;
     ui::LineupState squad;
     std::vector<ui::LeagueTableState> tables;
@@ -23,6 +24,7 @@ class Model {
     std::filesystem::path data_, saves_;
     std::shared_ptr<const content::Classic> content_;
     uint32_t seed_;
+    std::string currency_;
     std::unique_ptr<app::CareerSession> session_, pending_;
     ui::SetupOptions options_;
     std::vector<ui::ManagerChoice> managers_;

@@ -64,6 +64,15 @@ int main(int argc, char **argv) try {
     content::Mount cmount(original.directory / "content.obw", classic),
         mmount(variant.directory / "content.obw", modern);
     modern::Model model(mmount.root(), library.user_directory(variant), modern, 12345);
+    auto malformed_metadata = std::make_shared<content::Classic>(*modern);
+    auto invalid_manifest = cli::parse_json(malformed_metadata->documents.at("manifest.json"));
+    invalid_manifest.object()->at("currency") = "not an object";
+    malformed_metadata->documents["manifest.json"] = cli::dump_json(invalid_manifest);
+    rejects(
+        [&] {
+            modern::Model invalid(mmount.root(), library.user_directory(variant), malformed_metadata, 12345);
+        },
+        "editable currency metadata is validated before displaying a career");
     model.begin_new(0, 1);
     const auto choices = model.clubs();
     check(!choices.empty(), "club choices from imported setup");

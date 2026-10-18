@@ -8,7 +8,11 @@ namespace bmh::modern {
 using namespace detail;
 Model::Model(std::filesystem::path data, std::filesystem::path saves,
              std::shared_ptr<const content::Classic> content, uint32_t seed)
-    : data_(std::move(data)), saves_(std::move(saves)), content_(std::move(content)), seed_(seed) {}
+    : data_(std::move(data)), saves_(std::move(saves)), content_(std::move(content)), seed_(seed) {
+    currency_ = str(get(get(parse(content_->documents, "manifest.json"), "currency"), "code"));
+    if (currency_.empty())
+        throw FormatError("Die Währungsangabe der Spielwelt fehlt.");
+}
 const app::CareerSession &Model::session() const {
     if (!session_)
         throw FormatError("Keine Karriere geöffnet.");
@@ -116,6 +120,7 @@ std::vector<std::filesystem::path> Model::saves() const {
 Snapshot Model::snapshot() const {
     const auto &current = session();
     Snapshot out;
+    out.currency = currency_;
     out.desk = current.desktop_projection(revision_);
     out.squad = ui::lineup_from_game(current.state(), content_->executable, revision_);
     out.squad.entry_prepared = prepared_;
