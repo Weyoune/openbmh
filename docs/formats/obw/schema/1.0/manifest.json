@@ -69,8 +69,17 @@
       "additionalProperties": true
     },
     "requires": {
-      "const": [
-        "import:legacy-database-v1"
+      "oneOf": [
+        {
+          "const": [
+            "import:legacy-database-v1"
+          ]
+        },
+        {
+          "const": [
+            "runtime:classic-v1"
+          ]
+        }
       ]
     },
     "extensions": {
@@ -93,27 +102,76 @@
       }
     },
     "x-import": {
-      "type": "object",
-      "properties": {
-        "profile": {
-          "const": "legacy-database-v1"
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "profile": {
+              "const": "legacy-database-v1"
+            },
+            "playable": {
+              "const": false
+            },
+            "rule_profile": {
+              "const": "openbmh-supported"
+            },
+            "default_attribute_set": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "profile",
+            "playable",
+            "rule_profile"
+          ],
+          "additionalProperties": true
         },
-        "playable": {
-          "const": false
-        },
-        "rule_profile": {
-          "const": "openbmh-supported"
-        },
-        "default_attribute_set": {
-          "type": "string"
+        {
+          "type": "object",
+          "properties": {
+            "profile": {
+              "const": "classic-installation-v1"
+            },
+            "content_complete": {
+              "const": true
+            },
+            "runtime": {
+              "const": "runtime:classic-v1"
+            },
+            "rule_profile": {
+              "const": "openbmh-supported@1"
+            },
+            "source_rules_preserved": {
+              "const": true
+            },
+            "default_attribute_set": {
+              "const": "bmh-classic@1"
+            },
+            "default_portrait_set": {
+              "const": "bmh-classic@1"
+            }
+          },
+          "required": [
+            "profile",
+            "content_complete",
+            "runtime",
+            "rule_profile",
+            "source_rules_preserved",
+            "default_attribute_set",
+            "default_portrait_set"
+          ],
+          "additionalProperties": true
         }
-      },
-      "required": [
-        "profile",
-        "playable",
-        "rule_profile"
-      ],
-      "additionalProperties": true
+      ]
+    },
+    "id": {
+      "type": "string"
+    },
+    "mod": {
+      "enum": [
+        "BMH-classic",
+        "FLTD-classic"
+      ]
     }
   },
   "required": [
@@ -134,5 +192,44 @@
     "x-import"
   ],
   "additionalProperties": true,
-  "$comment": "SPDX-License-Identifier: GPL-3.0-only; initial legacy-database-v1 conversion profile."
+  "$comment": "SPDX-License-Identifier: GPL-3.0-only; legacy database and Classic installation profiles.",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "requires": {
+            "const": [
+              "runtime:classic-v1"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "id",
+          "mod"
+        ],
+        "properties": {
+          "x-import": {
+            "properties": {
+              "profile": {
+                "const": "classic-installation-v1"
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "x-import": {
+            "properties": {
+              "profile": {
+                "const": "legacy-database-v1"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

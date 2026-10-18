@@ -1,143 +1,152 @@
-# Legacy installation importer (first version)
+# BMH and Football Limited installation converter
 
-`openbmh_import` converts a locally supplied German BMH installation or English
-Football Limited installation into an OBW ZIP, or an unpacked OBW directory.
-It is a separate tool: neither game frontend nor the engine reads OBW yet.
-Integration into the game belongs to version 0.2.
+`openbmh_import` imports the content of a supported, locally supplied installation
+as **BMH-classic** or **FLTD-classic**. Football Limited's executable is named
+`FLTD.EXE`; the spellings `FTDL-classic` and `FTLD-classic` are accepted as CLI
+aliases and written as `FLTD-classic`.
+
+The output is an `.obw` ZIP, or an equivalent directory. It contains the complete
+**Classic installation content**, including graphics, portrait parts, fonts,
+audio and the original data tables. It contains no running career or executable.
+The existing 0.1 game does not read OBW. The new 0.2 adapter must implement the
+versioned [Classic contract](classic-v1.md); this is deliberately separate from
+migrating every engine rule to the future generic model.
 
 ## Build and use
 
-Configure the project as described in [BUILDING](../../BUILDING.md), then build
-the additional target:
+Configure as described in [BUILDING](../../BUILDING.md), then:
 
 ```sh
 cmake --build build --config Release --target openbmh_import
-./build/openbmh_import --data "path/to/game" --output "season.obw" \
-    --start-date 2026-07-01 --title "My imported season"
+./build/openbmh_import --data "path/to/BMH" --output "BMH-classic.obw" \
+    --start-date 2026-07-01 --mod BMH-classic
+./build/openbmh_import --data "path/to/FLTD.EXE" --output "FLTD-classic.obw" \
+    --start-date 1995-07-01 --mod FLTD-classic
+./build/openbmh_import --validate "BMH-classic.obw"
 ```
 
-With a Visual Studio multi-configuration build, use
-`build\Release\openbmh_import.exe`. On Linux and macOS, the executable is in
-`build/openbmh_import`. To inspect or edit the JSON directly:
+On a Visual Studio multi-configuration build use
+`build\Release\openbmh_import.exe`. `--mod` is optional: the tool detects the
+edition. A mismatching explicit mod is an error. `--title TEXT` changes the
+world's display title. `--directory` writes an unpacked world, which `--validate`
+can read too. The source may be an installation directory, its executable, or a
+parent with exactly one installation. File discovery ignores case. If both game
+executables exist, select the intended executable explicitly.
 
-```sh
-./build/openbmh_import --data "path/to/FLTD.EXE" --output "season-directory" \
-    --start-date 1995-07-01 --directory
-```
+A full import requires the same installation resources as the current launcher:
+master database, text database, executable, `M3.MEN`, `M3.DAT`, palette, required
+`KB`/`W` pictures, two fonts and four sound banks. A missing resource is an error.
+Supported inputs are the German CD-family editions and Football Limited; the
+1994 floppy `M3.EXE`/`M3PC.MAN` family and Amiga installations are not supported.
+Source ZIP/7z and `.FBM` files are not input formats for this tool.
 
-`--data` accepts an installation directory, a parent containing exactly one
-installation, or its `BMH.EXE`/`FLTD.EXE`. File discovery ignores case. An
-installation containing both executables requires naming the executable.
-Only the executable, master database and text database are required; absent
-graphics, audio or desktop files do not prevent conversion. Source ZIP/7z
-archives and individual `.FBM` saves are not input formats for this first tool.
+The date must be July 1 of an explicit year (1900–9998). Master data contain
+ages without an unambiguous season year; the converter never uses today's date
+or invents birth dates. Player age is recorded as `age_at_start`. Calendar setup
+remains a Classic runtime operation using the selected season/options.
 
-The reference date is explicit because a master database records ages without
-an unambiguous season year. It must be July 1, from 1900 through 9998. The tool
-does not use the computer's current date. It refuses existing output paths,
-including symlinks. Output is assembled in a sibling staging directory and
-published after validation; the output parent must already exist.
-Do not run competing writers against the same destination.
+Existing destinations, including symlinks, are refused. The parent directory
+must exist. The tool stages and validates output before publishing by rename;
+source files are read only. Do not run competing writers for one destination.
 
-Runtime packages for 0.1 retain their existing products. The source build has
-the extra importer; `cmake --install build --component ImportTools` installs it
-separately. Installing it does not enable OBW in the game.
+## What a Classic world contains
 
-## Conversion profile and coverage
+The manifest names `mod: BMH-classic` or `FLTD-classic`, profile
+`classic-installation-v1`, `requires: ["runtime:classic-v1"]` and
+`content_license: local-import-only`. `content_complete: true` means all inputs
+for that **specific Classic runtime** are present. It does not claim that the
+0.1 client can load OBW or that every rule has already been migrated to a generic
+0.2/0.4 schema. A reader without `runtime:classic-v1` must refuse the world.
 
-The manifest declares format `1.0`, `kind: world`, provenance `import:bmh-de`
-or `import:fltd`, and `content_license: local-import-only`. Crucially,
-`requires: ["import:legacy-database-v1"]` and `x-import.playable: false`
-identify an **intermediate conversion**, not a fully initialized playable world.
-A reader which does not support this profile must refuse it. Future conversion
-passes can complete its mappings without needing to reopen the original database.
-
-Every core table uses the `schema`/`items` envelope, including `rules` and
-`calendar`. The schemas under [schema/1.0](schema/1.0) describe this first
-conversion profile; complete save/pack/theme schemas and engine playability
-validation remain future work.
-
-| Source | Exported data |
+| Area | Contents |
 |---|---|
-| `M3D.MAN` / `M3E.MAN` | Named clubs, national teams, nations, all 2,574 players, master squad assignments, stadium name pool |
-| Player words and bonus bytes | Position, age, nationality including the high bonus bit, form/technique/condition, seven skills, bonus and derived display strength |
-| Executable, through existing loaders | Nine league sizes/tiers/participants, original fixture pairings, promotion-ladder inputs, 366 source calendar words, training-camp prices/quality and credit factors |
-| `TEXTD.BLK` / `TEXTE.BLK` | Local `de-original` / `en-original` gettext layer and an indexed text table with raw bytes |
-| Unmapped master fields | Named hexadecimal tables, original name pools, original player words, badge/kit selectors, squad words and flags |
-| Source master database | Exact file bytes in `x-legacy/source-database.json`, hexadecimal, for lossless later re-mapping |
+| Nations and teams | All named clubs/national teams, nine leagues, amateur pool, foreign nation blocks, encoded strength band/style, crest and kit selectors |
+| Players | All 2,574 identities, squads, raw words/flags, attributes, age reference, nationality and frozen portrait recipe |
+| Staff | Referee names, properties and strictness; human/computer manager setup is a runtime initializer |
+| Contracts and finance | Contract seeds per assigned player and finance policies for all 138 league clubs; actual values are created by the same manager/season initialization as today |
+| Stadiums | Entire name pool and stadium initializer, with all building, capacity, price and facility tables retained in Classic data regions |
+| Competitions | Nine league definitions and fixture generators, plus every configured cup-table stage with links, flags, group/qualifying information and runtime participant resolvers |
+| Calendar and rules | Day table, league bindings, cup series, ladder, training camps, credit factors, initialization sequence and all remaining data-region content |
+| Text | UTF-8 original gettext layer, indexed strings, raw text blob and embedded executable-data texts |
+| Artwork | Every numeric `KB/*.VGA` and `W/*.VGA` decoded as indexed PNG plus exact pixel indices; crest crops, original palette, portrait parts, bitmap fonts |
+| Audio and optional art | Four original audio containers with chunk descriptors; optional FLI/FLC animation and WAPPEN.LBM when present |
+| Preservation | Exact master-database bytes, named auxiliary tables/pools, original and effective data regions, resource metadata and CRC32 inventory |
 
-`x-legacy/import-report.json` records warnings and outstanding mappings. Staff,
-contracts and finance tables are empty: their initialized values are created
-by career setup, rather than supplied as complete records by the master database.
-Stadium names are exported without invented owners or capacities. Squad rows are
-preserved as legacy rows, not claimed to be shirt numbers. A source player name
-is kept whole in `name.last`; the importer does not guess first/last-name splits.
+A source database does **not** contain ready-made human-manager finances,
+contracts or stadium capacities. Those depend on the selected club, game level,
+mode and random seeds. The world specifies their initialization rather than
+inventing a balance, contract term or stadium owner. Imported player attributes
+are the master seeds; the existing Classic initialization changes ratings and
+ages and can shuffle club draw positions. This consumes no RNG during import.
 
-Exact birth dates are unknown. A player instead carries
-`age_at_start: {"years": 22, "on": "2026-07-01"}`. This is an explicit alternative
-to `born`, not an assumed birthday. Attribute scales are the stored scales:
-form, technique, condition and bonus 0–127; skills 0–3; display strength 0–99.
-`bmh-classic@1` in `world/rules.json` declares those scales and marks strength as
-derived. These are master seeds, before career initialization varies ratings,
-rewrites nationality fields or shuffles league participants. No career is
-started and no random stream is consumed during import.
+Player `appearance` is computed from the **raw legacy byte name**, before Unicode
+conversion. It freezes the background and five layer indices once. Name overlays
+must retain this field. The imported set stores individual transparent parts and
+placement metadata; composed player faces are never stored. Packed atlas parts
+which cross a source row boundary retain their original pixels.
 
-### Identifiers and edition mappings
+The effective data use OpenBMH's existing supported rule profile. Unpatched
+source data are preserved separately, including Football Limited's native data
+segment. Neither copy includes a DOS header, executable code or relocation
+instructions. `x-classic` is a documented compatibility bridge, not a claim that
+the current address-based engine has already been replaced.
 
-Ids derive from source identity slots, not names: `club:00000`, `player:00000`,
-`stadium:00000`. National teams use `nt:<nation key>`. Recognized geographic
-aliases get ISO nation keys (England/Scotland/Wales/Northern Ireland use private
-football-association keys). Unrecognized or duplicate labels get
-`nation:x-legacy-<index>` with confederation `other` and a warning. Foreign clubs
-whose nation has not been decoded refer to `nation:x-legacy-unassigned`.
-The source index always remains in `x-legacy`.
+## Stable identities and original encodings
 
-| Source leagues | German | Football Limited |
-|---|---|---|
-| 0, 1 | Tiers 1, 2; 18 clubs each | Tiers 1, 2; 20 clubs each |
-| 2, 3 | Parallel tier 3, ids ending `-3-a` / `-3-b`; 18 each | Tiers 3, 4; 20 each |
-| 4 | Tier 4; 18 clubs | Tier 5; 10 clubs, `played: false`, no fixture generator |
-| 5–8 | Four 12-club leagues, using nation slots 1–4 | Same, with the English database's nation-slot order |
-| 138–167 | Named amateur-pool slots | Only named slots become entities; unnamed slots remain in the source data |
-| 168–356 | Foreign teams without squads | Same |
-| 357–418 | National teams / nationality labels | Same |
+IDs derive from master identity slots: `club:00000`, `player:00000`,
+`stadium:00000`; national teams use `nt:<nation-key>`. Recognized countries get
+ISO keys, with private association keys for England/Scotland/Wales/Northern
+Ireland. Unrecognized/duplicate country labels retain `nation:x-legacy-<index>`
+and a report warning, preserving modded or historical identities.
 
-Foreign strength bytes encode a band and style flags, not a 0–255 rating. They
-stay in `x-legacy.strength_code` until a typed interpretation is implemented.
-Fixture tables store home/away **draw-position pairs**, not final shuffled
-career fixtures. Calendar words remain source day offsets; competition options
-and weekday alignment have not run. Promotion and European-place bytes are
-retained as inputs, without pretending that cup qualifications have been mapped.
+Foreign club indices 168–356 form 27 blocks of seven teams corresponding to
+nation slots 5–31. The nine league ranges retain their edition-specific sizes:
+German 18/18/18/18/18 and four 12-team leagues; English 20/20/20/20/10 and four
+12-team leagues. The English fifth division is an unplayed pool; no ten-team
+fixture generator is invented. Unnamed English amateur slots remain in the
+preserved source rather than becoming fabricated clubs.
 
-The existing executable loaders apply OpenBMH's supported rule profile, and the
-English loader translates FLTD data into the common address space. The manifest
-records `rule_profile: openbmh-supported`; this tool does **not** claim an
-unmodified dump of every original edition's rules. No executable is included in
-the OBW file.
+Text follows ISO 646-DE substitutions and preserves extended bytes as Latin-1
+Unicode code points; raw bytes remain available. Player names are kept whole in
+`name.last`, without guessing first/last-name splits. Fixture tables describe
+draw positions; qualified participants and final fixtures are resolved at the
+same initialization phase as in the Classic engine.
 
-### Text and rights
+## Validation and verification
 
-Text follows the existing ISO 646-DE substitutions. Extended bytes are preserved
-as Latin-1 Unicode code points and original hexadecimal bytes; control/layout
-codes remain available in the legacy text table. The local gettext catalogue
-uses stable `legacy.text.<index>` message ids with `legacy-text` context. It is
-a preservation layer, not a completed translation of the modern interface.
+`--validate` checks the profile, versions, safe paths, unique entity/asset IDs,
+core references, squad/stage counts, complete cup bindings, contract ownership,
+initialization contract, media shapes, portrait indices, resource files and the
+inventory before accepting a world. ZIP and directory readers enforce size
+limits; directory symlinks and injected `state/` content are rejected. CRC32
+catches accidental damage; it is not a signature or proof of trustworthy content.
+This is the Classic profile validator, not a general competition engine or a full
+JSON Schema implementation. Draft 2020-12 schemas are provided for external tools.
 
-Imported names and texts retain their original ownership. Keep the resulting
-world on your machine; the importer does not grant permission to distribute it.
-The public repository contains only implementation, schemas and synthetic tests.
+`obw_import_tests` uses synthetic data to cover both editions, binary round trips,
+frozen appearances, malformed input and damaged payloads. With `BMH_DATA`,
+`obw_classic_installation_tests` imports an installation, writes/reopens its ZIP,
+reconstructs the startup inputs without reading the source again, and compares
+first-season initialization bytes and both RNG streams. It also compares data
+regions, atlas pixels, palette, fonts and audio against the source. The same test
+can be run with a Football Limited directory as its argument. It does not test
+OBW integration in a released client or a complete played season.
 
-## Validation and remaining work
+## Partial development export
 
-The tool checks required documents, table versions, duplicate identities,
-cross-table team/nation references, stage participant counts, fixture rows,
-source squad ownership and supported edition sizes before publishing output.
-Malformed/truncated input is an error; it does not substitute synthetic game
-content. `obw_import_tests` covers synthetic German/English mappings, legacy
-reader input, archive/directory round trips and rejected inputs.
+`--database-only` deliberately retains the previous `legacy-database-v1` export
+for database investigations without media. Its manifest remains
+`playable: false`, requires `import:legacy-database-v1`, and its report lists gaps.
+It is **not** one of the completed Classic mods. Default imports never silently
+fall back to this mode.
 
-Still to implement: full cup definitions/qualification and dated calendars,
-complete rule mappings, initialized finances/contracts/staff/stadiums, asset
-conversion, `.FBM` to `.obs`, a general OBW reader/validator and the 0.2 engine
-adapter. First-season equivalence and save continuation regressions only become
-possible when that adapter exists; the first converter does not claim them.
+## Rights and excluded data
+
+All imported content remains local and retains its original ownership. Do not
+publish generated worlds or assets without appropriate rights. Public tests and
+schemas contain only independently authored implementation and synthetic data.
+
+There is **no savegame converter**. `.FBM`, personal `.EIN`, `SOUND.CFG`, high
+scores, backups, editor/program executables and manuals are not imported.
+Manager choices and career RNG state belong to a new game or later `.obs` save,
+not to this installation conversion.

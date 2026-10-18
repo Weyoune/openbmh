@@ -35,7 +35,10 @@ std::string pool_string(const Bytes& pool, size_t offset) {
 }  // namespace
 
 Database load_database(const std::filesystem::path& path, const DbCounts& c) {
-    Bytes d = read_file(path);
+    return decode_database(read_file(path), c);
+}
+
+Database decode_database(const Bytes& d, const DbCounts& c) {
     Reader r{d};
     Bytes lens = r.take(8);
     size_t len_clubs = le16(lens, 0), len_players = le16(lens, 2), len_refs = le16(lens, 4), len_stadiums = le16(lens, 6);

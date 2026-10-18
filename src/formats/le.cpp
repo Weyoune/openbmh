@@ -36,14 +36,14 @@ void save_image(const LeImage& image, const std::filesystem::path& path) {
     if (!file) throw FormatError("cannot write the OpenBMH image");
 }
 
-LeImage load_le(const std::filesystem::path& path) {
+LeImage load_le(const std::filesystem::path& path, bool apply_supported_rules) {
     const Bytes raw = read_file(path);
     if (raw.size() >= sizeof kImageMagic + 8 && std::equal(kImageMagic, kImageMagic + sizeof kImageMagic, raw.begin())) {
         const auto word = [&](size_t at) { return uint32_t(raw[at] | raw[at + 1] << 8 | raw[at + 2] << 16) | uint32_t(raw[at + 3]) << 24; };
         const uint32_t base = word(sizeof kImageMagic), size = word(sizeof kImageMagic + 4);
         if (raw.size() != sizeof kImageMagic + 8 + size_t(size)) throw FormatError("OpenBMH image: wrong size");
         LeImage img = LeImage::from_bytes(base, Bytes(raw.begin() + sizeof kImageMagic + 8, raw.end()));
-        apply_rule_base(img);
+        if (apply_supported_rules) apply_rule_base(img);
         return img;
     }
     auto u8 = [&](size_t o) -> uint32_t {
@@ -133,7 +133,7 @@ LeImage load_le(const std::filesystem::path& path) {
             }
         }
     }
-    apply_rule_base(img);
+    if (apply_supported_rules) apply_rule_base(img);
     return img;
 }
 

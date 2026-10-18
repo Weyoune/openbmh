@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": true,
+  "$comment": "SPDX-License-Identifier: GPL-3.0-only; Classic installation content.",
+  "$id": "https://raw.githubusercontent.com/Weyoune/openbmh/main/docs/formats/obw/schema/1.0/classic-palette.json",
+  "properties": {
+    "schema": {
+      "const": "classic-palette@1.0"
+    },
+    "argb": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 4294967295
+      },
+      "minItems": 256,
+      "maxItems": 256
+    }
+  },
+  "required": [
+    "schema",
+    "argb"
+  ]
+}

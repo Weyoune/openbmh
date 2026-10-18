@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "import/obw.hpp"
+#include "import/classic.hpp"
+#include "import/detail.hpp"
 
 #include <algorithm>
 #include <array>
@@ -165,10 +167,10 @@ std::string po_quote(const std::string& value) {
     return result + '"';
 }
 
-const J& field(const J& value, const std::string& key, const std::string& path) {
+const J& field(const J& value, std::string_view key, std::string_view path) {
     const auto* object = value.object();
-    if (!object || !object->contains(key)) fail(path + ": missing " + key);
-    return object->at(key);
+    if (!object || !object->contains(key)) fail(std::string(path) + ": missing " + std::string(key));
+    return object->find(key)->second;
 }
 std::string string_field(const J& value, const std::string& key, const std::string& path) {
     const auto* result = field(value, key, path).string();
@@ -466,6 +468,16 @@ Documents import_installation(const fs::path& source, const Options& options) {
         return *file;
     };
     const auto exe = english ? launch::translate_fltd(*english_exe) : load_le(*german);
+    const std::string expected_mod = english ? "FLTD-classic" : "BMH-classic";
+    if (!options.mod.empty() && options.mod != expected_mod) fail("--mod must be " + expected_mod + " for this installation");
+    if (!options.database_only) {
+        const auto checked = launch::check_game_directory(english ? *english_exe : *german);
+        if (!checked.problems.empty()) {
+            std::string problem = "incomplete installation";
+            for (const auto& message : checked.problems) problem += "\n- " + message;
+            fail(problem + "\nUse --database-only only for an explicitly partial development export.");
+        }
+    }
     const auto db_path = required(english ? "M3E.MAN" : "M3D.MAN");
     const auto text_path = required(english ? "TEXTE.BLK" : "TEXTD.BLK");
     const auto database = load_database(db_path);
@@ -474,6 +486,11 @@ Documents import_installation(const fs::path& source, const Options& options) {
     // runnable legacy installation. No absolute developer paths enter the archive.
     put(out, "x-legacy/source-database.json", O{{"schema", "legacy-source@1.0"},
         {"name", english ? "M3E.MAN" : "M3D.MAN"}, {"encoding", "hex"}, {"bytes", hex(read_file(db_path))}});
+    if (!options.database_only) {
+        const auto source_tables = english ? launch::translate_fltd(*english_exe, false) : load_le(*german, false);
+        complete_classic(out, root, database, exe, source_tables, english, options);
+    }
+    validate(out);
     return out;
 }
 
@@ -488,13 +505,24 @@ void validate(const Documents& documents) {
         {"format", "openbmh-world"}, {"format_version", "1.0"}, {"kind", "world"}, {"content_license", "local-import-only"}})
         if (string_field(manifest, key, "manifest.json") != expected) fail("manifest.json: unsupported " + key);
     start_year(string_field(manifest, "start_date", "manifest.json"));
+    uint64_t total = 0;
+    if (documents.size() > 8192) fail("world has too many entries");
+    for (const auto& [path, contents] : documents) {
+        total += contents.size();
+        if (contents.size() > 32 * 1024 * 1024 || total > 128ull * 1024 * 1024) fail("world exceeds import size limits");
+        if (!detail::safe_path(path)) fail("unsafe archive path: " + path);
+    }
     const auto& features = field(manifest, "requires", "manifest.json");
-    if (!features.array() || features.array()->size() != 1 || !features.array()->front().string() ||
-        *features.array()->front().string() != "import:legacy-database-v1") fail("manifest.json: missing conversion-only feature guard");
     const auto& profile = field(manifest, "x-import", "manifest.json");
-    const auto* playable = field(profile, "playable", "manifest.json:x-import").boolean();
-    if (!playable || *playable || string_field(profile, "profile", "manifest.json:x-import") != "legacy-database-v1")
-        fail("manifest.json: conversion profile must remain non-playable");
+    const bool classic = string_field(profile, "profile", "manifest.json:x-import") == "classic-installation-v1";
+    if (classic) validate_classic(documents);
+    else {
+        if (!features.array() || features.array()->size() != 1 || !features.array()->front().string() ||
+            *features.array()->front().string() != "import:legacy-database-v1") fail("manifest.json: missing conversion-only feature guard");
+        const auto* playable = field(profile, "playable", "manifest.json:x-import").boolean();
+        if (!playable || *playable || string_field(profile, "profile", "manifest.json:x-import") != "legacy-database-v1")
+            fail("manifest.json: conversion profile must remain non-playable");
+    }
 
     std::map<std::string, std::string> ids;
     struct Reference { std::string value, prefix, path; };
@@ -521,6 +549,7 @@ void validate(const Documents& documents) {
                 if (item.object()->contains(key)) references.push_back({string_field(item, key, at), prefix, at + '.' + key});
             };
             ref("nation", "nation:"); ref("team", "club:"); ref("stadium", "stadium:"); ref("national_team", "nt:");
+            if (std::string(name) == "contracts") ref("person", "player:");
             if (std::string(name) == "players") {
                 const auto* nats = field(item, "nationalities", at).array();
                 if (!nats || nats->empty()) fail(at + ": nationalities must not be empty");
@@ -547,6 +576,13 @@ void validate(const Documents& documents) {
                     size_t participants = 0;
                     std::set<std::string> unique_teams;
                     for (const auto& slot : *slots) {
+                        if (classic && slot.object() && slot.object()->contains("resolver")) {
+                            if (string_field(slot, "resolver", at) != "classic-entry@1") fail(at + ": unknown slot resolver");
+                            const auto* count = field(slot, "count", at).integer();
+                            if (!count || *count < 0 || *count > 255) fail(at + ": invalid classic slot count");
+                            participants += size_t(*count);
+                            continue;
+                        }
                         const auto* teams = field(slot, "teams", at).array();
                         if (!teams) fail(at + ": slot teams must be an array");
                         for (const auto& team : *teams) {
@@ -564,6 +600,37 @@ void validate(const Documents& documents) {
     }
     for (const auto& ref : references)
         if (!ids.contains(ref.value) || !ref.value.starts_with(ref.prefix)) fail(ref.path + ": unknown or wrong-type id " + ref.value);
+}
+
+Documents read(const fs::path& source) {
+    Documents result;
+    uint64_t total = 0;
+    const auto add = [&](const std::string& name, const Bytes& bytes) {
+        if (!detail::safe_path(name)) fail("unsafe archive entry: " + name);
+        total += bytes.size();
+        if (total > 128ull * 1024 * 1024 || result.size() >= 8192) fail("world exceeds import size limits");
+        if (!result.emplace(name, detail::binary(bytes)).second) fail("duplicate archive entry: " + name);
+    };
+    if (fs::is_directory(source)) {
+        for (const auto& entry : fs::recursive_directory_iterator(source)) {
+            if (entry.is_symlink()) fail("symlinks are forbidden in an unpacked world");
+            if (!entry.is_regular_file()) continue;
+            if (entry.file_size() > 32 * 1024 * 1024 || total + entry.file_size() > 128ull * 1024 * 1024) fail("world exceeds import size limits");
+            const auto name = entry.path().lexically_relative(source).generic_u8string();
+            add(std::string(name.begin(), name.end()), read_file(entry.path()));
+        }
+    } else {
+        if (fs::file_size(source) > 128ull * 1024 * 1024) fail("world archive is too large");
+        auto archive = launch::Archive::open(source);
+        for (size_t i = 0; i < archive.entries().size(); ++i) {
+            const auto& entry = archive.entries()[i];
+            if (entry.directory) continue;
+            if (entry.size > 32 * 1024 * 1024 || total + entry.size > 128ull * 1024 * 1024) fail("world exceeds import size limits");
+            add(entry.name, archive.read(i));
+        }
+    }
+    validate(result);
+    return result;
 }
 
 void write(const Documents& documents, const fs::path& destination, bool directory) {

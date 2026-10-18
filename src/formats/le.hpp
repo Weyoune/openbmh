@@ -44,7 +44,7 @@ public:
     }
     const Bytes& bytes() const { return bytes_; }
 
-    friend LeImage load_le(const std::filesystem::path& path);
+    friend LeImage load_le(const std::filesystem::path& path, bool apply_supported_rules);
 
 private:
     uint32_t base_ = 0;
@@ -55,7 +55,9 @@ private:
 // Throws FormatError for files that are not LE executables or use external fixups.
 // A German BMH.EXE is loaded with the OpenBMH rule base applied (formats/rule_base.hpp):
 // every edition plays by the supported rule profile rule values.
-LeImage load_le(const std::filesystem::path& path);
+// The installation importer passes false to preserve source tables separately;
+// ordinary engine callers retain the default behavior.
+LeImage load_le(const std::filesystem::path& path, bool apply_supported_rules = true);
 
 // The OpenBMH image format: "OPENBMH-IMAGE" NUL, u32 base, u32 size, the bytes. load_le()
 // reads it as well, so a translated image can stand in for BMH.exe in a data directory.

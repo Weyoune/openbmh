@@ -19,7 +19,14 @@
             "$ref": "common.json#/$defs/localized"
           },
           "type": {
-            "const": "league"
+            "enum": [
+              "league",
+              "cup",
+              "club_international",
+              "national_team",
+              "friendly",
+              "indoor"
+            ]
           },
           "nation": {
             "$ref": "common.json#/$defs/nation_id"
@@ -40,12 +47,18 @@
                   "type": "string"
                 },
                 "format": {
-                  "const": "league"
+                  "enum": [
+                    "league",
+                    "groups",
+                    "knockout",
+                    "final",
+                    "playoff"
+                  ]
                 },
                 "teams": {
                   "type": "integer",
-                  "minimum": 4,
-                  "maximum": 24
+                  "minimum": 0,
+                  "maximum": 255
                 },
                 "legs": {
                   "type": "integer",
@@ -60,20 +73,46 @@
                 "slots": {
                   "type": "array",
                   "items": {
-                    "type": "object",
-                    "properties": {
-                      "teams": {
-                        "type": "array",
-                        "items": {
-                          "$ref": "common.json#/$defs/team_id"
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "teams": {
+                            "type": "array",
+                            "items": {
+                              "$ref": "common.json#/$defs/team_id"
+                            },
+                            "uniqueItems": true
+                          }
                         },
-                        "uniqueItems": true
+                        "required": [
+                          "teams"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "resolver": {
+                            "const": "classic-entry@1"
+                          },
+                          "entry": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 35
+                          },
+                          "count": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 255
+                          }
+                        },
+                        "required": [
+                          "resolver",
+                          "entry",
+                          "count"
+                        ]
                       }
-                    },
-                    "required": [
-                      "teams"
-                    ],
-                    "additionalProperties": true
+                    ]
                   },
                   "minItems": 1
                 }
@@ -94,12 +133,27 @@
           "id",
           "name",
           "type",
-          "nation",
-          "tier",
           "played",
           "stages"
         ],
-        "additionalProperties": true
+        "additionalProperties": true,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "league"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "nation",
+                "tier"
+              ]
+            }
+          }
+        ]
       }
     }
   },
@@ -108,5 +162,5 @@
     "items"
   ],
   "additionalProperties": true,
-  "$comment": "SPDX-License-Identifier: GPL-3.0-only; initial legacy-database-v1 conversion profile."
+  "$comment": "SPDX-License-Identifier: GPL-3.0-only; legacy database and Classic installation profiles."
 }

@@ -71,7 +71,7 @@ const OwnText kOwnTexts[] = {
 
 }  // namespace
 
-LeImage translate_fltd(const fs::path& fltd_exe) {
+LeImage translate_fltd(const fs::path& fltd_exe, bool apply_supported_rules) {
     const Bytes raw = read_file(fltd_exe);
     if (raw.size() != kFltdSize || raw[0] != 'M' || raw[1] != 'Z')
         throw std::runtime_error(path_to_utf8(fltd_exe) + " is not the Football Limited FLTD.EXE");
@@ -120,7 +120,7 @@ LeImage translate_fltd(const fs::path& fltd_exe) {
         }
     }
     LeImage out = LeImage::from_bytes(kDeBase, std::move(image));
-    apply_rule_base(out);
+    if (apply_supported_rules) apply_rule_base(out);
     return out;
 }
 

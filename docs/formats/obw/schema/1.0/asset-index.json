@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": true,
+  "$id": "https://raw.githubusercontent.com/Weyoune/openbmh/main/docs/formats/obw/schema/1.0/asset-index.json",
+  "properties": {
+    "schema": {
+      "const": "asset-index@1.0"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^asset:"
+          },
+          "files": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "source": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "license": {
+            "const": "local-import-only"
+          },
+          "kind": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "files",
+          "source",
+          "author",
+          "license",
+          "kind"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "items"
+  ],
+  "$comment": "SPDX-License-Identifier: GPL-3.0-only; legacy database and Classic installation profiles."
+}

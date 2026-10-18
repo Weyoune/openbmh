@@ -1,6 +1,6 @@
 # OBW: OpenBMH world, save and pack format (concept, format version 1.0)
 
-Status: **concept with an initial standalone converter** for roadmap 0.2 (open data and typed state), with preparation for 0.4 (scalable interface, content packs). `openbmh_import` implements the guarded `legacy-database-v1` conversion profile described in [import.md](obw/import.md). Its intermediate files cannot yet start a career. The legacy formats remain authoritative for the current engine; an OBW engine adapter and save conversion are not implemented.
+Status: **format concept with a complete Classic installation-content converter** for roadmap 0.2, with preparation for 0.4. `openbmh_import` produces `BMH-classic` and `FLTD-classic` worlds under the guarded [`runtime:classic-v1` contract](obw/classic-v1.md), including all startup inputs and media. The [import guide](obw/import.md) distinguishes this from the explicitly partial `legacy-database-v1` development export. The 0.1 engine still reads legacy installations; OBW runtime integration and savegame conversion are separate work.
 
 ## 1. Goals and non-goals
 
@@ -23,7 +23,7 @@ Non-goals of version 1.0:
 
 ### 2.1 Container
 
-Every OBW file is a ZIP archive (deflate or stored) containing UTF-8 JSON documents. The project already links miniz (`bmh_miniz`) and has a JSON reader/writer (`src/cli/json.cpp`), so the format needs no new dependency. JSON keeps worlds diffable and editable by hand or by script.
+Every OBW file is a ZIP archive (deflate or stored) containing UTF-8 JSON documents and referenced binary assets. The versioned Classic extension additionally permits data-only compatibility regions and startup input records; it does not permit executable code or save state in a world. The project already links miniz (`bmh_miniz`) and has a JSON reader/writer (`src/cli/json.cpp`), so the format needs no new dependency. JSON keeps worlds diffable and editable by hand or by script.
 
 | Extension | `kind` | Contents |
 |---|---|---|
@@ -50,7 +50,7 @@ world/calendar.json      season calendar, §7
 world/rules.json         rule values (training camps, interest rates, ...)
 state/...                save only, §5.9
 locale/<lang>/*.po       texts, §9.3
-assets/...               packs and themes only, §9
+assets/...               local Classic worlds, packs and themes, §9
 x-<name>/...             extensions, §3.3
 ```
 
@@ -112,7 +112,7 @@ Fields and directories whose name starts with `x-` belong to extensions (`x-matc
 
 Each format version is published as JSON Schema (draft 2020-12) under `docs/formats/obw/schema/<major>.<minor>/`, one file per table. The schemas are the machine-readable specification and the basis of the validator (§10).
 
-The initial schemas describe the `legacy-database-v1` intermediate conversion profile only; save, pack, theme and complete playable-world schemas are still planned. This profile uses `requires` to prevent a partial conversion being mistaken for a complete world. Optional fields and unknown extensions remain allowed.
+The schemas describe the intermediate `legacy-database-v1` profile and the completed `classic-installation-v1` content profile. The latter requires `runtime:classic-v1`: it contains initialization policies and data-region compatibility fields in addition to typed projections. A generic OBW reader cannot execute those fields without the Classic adapter. Save, pack, theme and fully generic playable-world schemas remain future work. Optional fields and unknown extensions remain allowed.
 
 ## 4. Identifiers and names
 
@@ -186,7 +186,7 @@ Teams without a squad (`foreign`, or `national` in a world that does not simulat
 - `set` names a portrait part set; it defines the number of backgrounds, the layers, the number of parts per layer and their placement. `bmh-classic@1` is the set of the original game.
 - The importer computes the recipe once from the legacy name and **freezes** it. A later rename (for example by a name pack) keeps the face; the legacy name-derived generator is never re-run.
 - Players created in OpenBMH (youth, generated players) receive a random recipe of the world's default set.
-- The recipe holds indices only. The part graphics come from the user's installation or from a pack that provides the same set, possibly in higher resolution (§9.2), so a world contains no original artwork.
+- The recipe holds indices only. The part graphics come from the user's installation or from a pack that provides the same set, possibly in higher resolution (§9.2), so a recipe does not embed a composed face. A local Classic import may include the original part set as local-only assets; distributable worlds need separately licensed artwork.
 
 An attribute set is declared once in `world/rules.json` with its fields, scales and meaning, so a later, finer model can sit next to the classic one without breaking the format:
 
@@ -363,7 +363,7 @@ Edition detection is the one the launcher already performs (`src/launch/game_dat
 
 ### 8.2 Mapping per edition
 
-The first standalone converter and its coverage are documented in [the edition mapping](obw/import.md). The full intended mapping is:
+The standalone converter and its Classic contract are documented in [the edition mapping](obw/import.md) and [Classic v1](obw/classic-v1.md). The core league mapping is:
 
 | Legacy league | German editions | Football Limited | OBW |
 |---|---|---|---|
@@ -378,7 +378,7 @@ Cups, European cups, the indoor tournament, the English FA Cup with its qualifyi
 
 ### 8.3 Fidelity
 
-The initial `legacy-database-v1` converter preserves database seeds and source tables without starting a career. It does not yet satisfy the engine equivalence criteria below; those require the 0.2 adapter. Its manifest explicitly marks it non-playable, and its import report lists unresolved areas. Unmapped world data lives in `x-legacy/`; `state/x-legacy.json` is reserved for converted saves.
+The complete `classic-installation-v1` importer preserves all installation content without starting a career. Typed projections are complemented by the versioned `x-classic` startup contract and data-only regions, including original and effective rules. Installation tests reconstruct from OBW and compare first-season initialization bytes and both RNG streams with the existing loader. They do not establish a released OBW frontend or save continuation. The optional `--database-only` intermediate profile remains explicitly non-playable. `state/x-legacy.json` is reserved for converted saves.
 
 - A new career imported from an installation must produce the same first season in the engine as the legacy start (same fixtures, same participants), verified by the regression runs.
 - A converted `.FBM` must continue with the same results as the legacy save for a fixed number of turns.

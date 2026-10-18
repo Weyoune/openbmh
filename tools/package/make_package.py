@@ -10,7 +10,7 @@ import zipfile
 
 
 def validate(directory, windows):
-    products = {'openbmh_play.exe', 'openbmh_cli.exe'} if windows else {'openbmh_play', 'openbmh_cli'}
+    products = {name + ('.exe' if windows else '') for name in ('openbmh_play', 'openbmh_cli', 'openbmh_import')}
     documents = {'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'ACKNOWLEDGEMENTS.md', 'CONTRIBUTING.md'}
     licenses = {'README.md', 'LGPL-2.1.txt', 'Nuked-OPL3-notices.txt', 'LZMA-SDK.txt', 'SDL2-HIDAPI-BSD.txt',
                 'SDL2-HIDAPI-options.txt', 'SDL2-HIDAPI-original.txt', 'SDL2-yuv2rgb.txt',

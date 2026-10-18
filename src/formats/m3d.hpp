@@ -74,5 +74,6 @@ struct Database {
 };
 
 Database load_database(const std::filesystem::path& path, const DbCounts& counts = {});
+Database decode_database(const Bytes& data, const DbCounts& counts = {});
 
 }  // namespace bmh

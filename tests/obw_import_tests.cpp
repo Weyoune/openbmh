@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "import/obw.hpp"
+#include "import/classic.hpp"
+#include "import/assets.hpp"
 #include "formats/executable_layout.hpp"
 #include "launch/archive.hpp"
 
@@ -102,7 +104,7 @@ LeImage executable(bool english) {
         std::vector<std::pair<int, uint32_t>>{{4, layout::CareerSession_RuntimeError_RuntimeField}, {6, layout::CareerSession_RuntimeError_RuntimeField2},
             {12, layout::CareerSession_RuntimeError_RuntimeField3}, {16, layout::CareerSession_RuntimeError_ExecutableField3},
             {18, layout::CareerSession_RuntimeError_ExecutableField}, {20, layout::CareerSession_RuntimeError_ExecutableField2}};
-    uint32_t cursor = base + 400000; // synthetic string storage, outside pointer tables
+    uint32_t cursor = layout::GermanImageEnd - 4096; // synthetic data storage, outside pointer tables
     for (const auto& [teams, address] : bindings) {
         put(address, cursor, 4); ++cursor;
         std::vector<int> order;
@@ -118,6 +120,18 @@ LeImage executable(bool english) {
         }
     }
     put(layout::Career_BuildStadium_RuntimeField4 - 1, 2);
+    put(base, 0xdeadbeef, 4); // an executable instruction region must never be exported
+    for (uint32_t i = 0; i < 5; ++i) {
+        put(layout::ClubPlayerDetail_ClubPlayerDetailRedraw_RuntimeField2 + i, 4);
+        put(layout::ClubPlayerDetail_DrawPortrait_RuntimeField + i, 2 + i);
+        put(layout::ClubPlayerDetail_DrawPortrait_RuntimeField2 + i, 3 + i);
+        put(layout::ClubPlayerDetail_DrawPortrait_RuntimeField3 + i, 3);
+        put(layout::ClubPlayerDetail_DrawPortrait_RuntimeField4 + i, 2);
+        put(layout::ClubPlayerDetail_DrawPortrait_RuntimeField7 + i * 2, 20, 2);
+    }
+    put(layout::ClubPlayerDetail_DrawPortrait_RuntimeField, 253);
+    put(layout::ClubPlayerDetail_DrawPortrait_RuntimeField3, 70);
+    put(layout::ClubPlayerDetail_DrawPortrait_RuntimeField7, 319, 2);
     const std::string suffix = english ? " &" : " DM";
     for (size_t i = 0; i < suffix.size(); ++i) put(layout::CurrencySuffixText + uint32_t(i), uint8_t(suffix[i]));
     return LeImage::from_bytes(base, std::move(bytes));
@@ -225,10 +239,70 @@ int main() {
         Bytes raw_texts(7);
         for (const auto& value : texts.strings) { raw_texts.insert(raw_texts.end(), value.begin(), value.end()); raw_texts.push_back(0); }
         save(input / "textd.blk", raw_texts);
-        const auto converted = obw::import_installation(input, options);
+        auto partial_options = options;
+        partial_options.database_only = true;
+        const auto converted = obw::import_installation(input, partial_options);
         check(converted.contains("x-legacy/source-database.json"), "retain exact database for future mappings");
         check(read_file(input / "m3d.man") == raw_database, "source database unchanged");
-        check(obw::import_installation(root, options) == converted, "follow one nested installation");
+        check(obw::import_installation(root, partial_options) == converted, "follow one nested installation");
+        rejects([&] { obw::import_installation(input, options); }, "full mod requires its media and startup data");
+
+        // Complete synthetic content profile, including embedded NULs and media.
+        for (const auto* dir : {"KB", "W", "F", "S"}) fs::create_directory(input / dir);
+        save(input / "M3.MEN", Bytes(864, 7)); save(input / "M3.DAT", Bytes(1408, 9));
+        save(input / "M3PC.COL", Bytes(768, 31));
+        Bytes font(37, 0);
+        word(font, 0, 1); font[3] = 2; word(font, 4, 1); font[8] = font[9] = 'A'; word(font, 16, 1);
+        font[28] = 0x80; word(font, 31, 1); word(font, 35, 1);
+        save(input / "F/BMH2.FNT", font); save(input / "F/BMH3.FNT", font);
+        Bytes bank{'F','O','R','M',8,0,0,0,'A','L','P','T','R','A','U','M'};
+        for (const char* name : {"2000", "2001", "2002", "2003"}) save(input / "S" / name, bank);
+        const auto image = [&](const fs::path& path) {
+            Bytes vga(8, 0), rle;
+            constexpr int width = 320, height = 240;
+            for (int i = 0; i < width * height; i += 128) {
+                rle.push_back(127);
+                for (int k = 0; k < 128; ++k) rle.push_back(uint8_t((i + k) % 251));
+            }
+            rle.push_back(0); word(vga, 0, width); word(vga, 2, height); word(vga, 4, uint32_t(rle.size()), 4);
+            vga.insert(vga.end(), rle.begin(), rle.end()); save(path, vga);
+        };
+        image(input / "KB/0.VGA"); image(input / "KB/29.VGA"); image(input / "W/0.VGA");
+        auto classic = converted;
+        obw::complete_classic(classic, input, db, exe, exe, false, options);
+        obw::validate(classic);
+        const auto loaded = obw::load_classic(classic);
+        check(loaded.desktops == Bytes(864, 7) && loaded.formations == Bytes(1408, 9), "all startup seed bytes survive");
+        check(loaded.database.players[0].name == db.players[0].name && loaded.texts.blob == Bytes(raw_texts.begin() + 7, raw_texts.end()), "source records and text blob survive");
+        check(loaded.images.at("kb/29").pixels.at(12 * 320 + 17) == uint8_t((12 * 320 + 17) % 251), "indexed media round trip");
+        check(loaded.images.at("portraits/layer-0-0").pixels.at(67) == uint8_t((3 * 320 + 320) % 251), "portrait feature preserves packed row wrap");
+        check(loaded.fonts.at("bmh2.fnt").glyph('A').bit_width == 1 && loaded.audio.at("2000") == bank, "font and audio round trip");
+        check(loaded.executable.u32(0x10000) == 0, "no executable code in compatibility image");
+        const auto portrait = obw::portrait_recipe("ABC", exe);
+        check(*f(portrait, "background").integer() >= 0 && f(portrait, "layers").array()->size() == 5, "frozen part recipe");
+        const auto classic_zip = root / "classic.obw";
+        obw::write(classic, classic_zip, false);
+        check(obw::read(classic_zip) == classic, "binary Classic ZIP round trip");
+        auto damaged = classic;
+        damaged.at("x-classic/desktop-seed.bin")[0] ^= 1;
+        rejects([&] { obw::validate(damaged); }, "inventory catches binary corruption");
+        damaged = classic; damaged["state/rng.json"] = "{}";
+        rejects([&] { obw::validate(damaged); }, "reject injected save state");
+        damaged = classic;
+        auto renamed = document(damaged, "world/players.json");
+        auto& renamed_rows = std::get<J::Array>(renamed.object()->at("items").value);
+        const auto appearance = f(renamed_rows[0], "appearance");
+        renamed_rows[0].object()->at("name").object()->at("last") = "Renamed";
+        damaged["world/players.json"] = cli::dump_json(renamed);
+        obw::refresh_classic_inventory(damaged);
+        obw::validate(damaged);
+        check(cli::dump_json(f(renamed_rows[0], "appearance")) == cli::dump_json(appearance), "rename keeps frozen face");
+        renamed_rows[0].object()->at("appearance").object()->at("background") = 4;
+        damaged["world/players.json"] = cli::dump_json(renamed);
+        obw::refresh_classic_inventory(damaged);
+        rejects([&] { obw::validate(damaged); }, "reject invalid appearance even with updated inventory");
+        auto wrong_options = options; wrong_options.mod = "FLTD-classic";
+        rejects([&] { obw::complete_classic(damaged, input, db, exe, exe, false, wrong_options); }, "mod/edition mismatch rejected");
         save(input / "m3d.man", Bytes{0, 1});
         rejects([&] { obw::import_installation(input, options); }, "reject truncated legacy database");
         fs::remove_all(root);

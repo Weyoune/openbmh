@@ -31,7 +31,7 @@ The graphical client and console share career management, matches, transfers, co
 
 Version 0.1 establishes the playable engine and development interfaces. Later milestones introduce an open data format and typed model, configurable rules, a scalable interface and independently distributable content. These are goals rather than delivery dates; the [roadmap](docs/ROADMAP.md) describes their dependencies.
 
-The source tree also provides an initial standalone [`openbmh_import` tool](docs/formats/obw/import.md) to convert BMH and Football Limited installation data into the planned OBW format. These intermediate worlds are for conversion/development only; the game will gain OBW support in a later version.
+The standalone [`openbmh_import` tool](docs/formats/obw/import.md) converts BMH and Football Limited installations into **BMH-classic** / **FLTD-classic** OBW worlds, including media and frozen player portrait recipes. The content targets the versioned Classic adapter planned for 0.2; the 0.1 game does not load OBW. Savegame conversion is separate future work. The importer is built from current source and included in subsequent CI packages; it is absent from the already published 0.1.2 packages.
 
 ## Build from source
 

@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": true,
+  "$id": "https://raw.githubusercontent.com/Weyoune/openbmh/main/docs/formats/obw/schema/1.0/classic-startup.json",
+  "properties": {
+    "schema": {
+      "const": "classic-startup@1.0"
+    },
+    "layout": {
+      "const": "openbmh-classic-layout@1"
+    },
+    "mod": {
+      "enum": [
+        "BMH-classic",
+        "FLTD-classic"
+      ]
+    },
+    "english": {
+      "type": "boolean"
+    },
+    "rule_profile": {
+      "const": "openbmh-supported@1"
+    },
+    "data_regions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "base": {
+            "type": "integer"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "base",
+          "size",
+          "path"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 2
+    },
+    "source_regions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "base": {
+            "type": "integer"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "base",
+          "size",
+          "path"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 2
+    },
+    "desktop_seed": {
+      "type": "string"
+    },
+    "formation_seed": {
+      "type": "string"
+    },
+    "text_blob": {
+      "type": "string"
+    },
+    "initializers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 8,
+      "maxItems": 8
+    },
+    "runtime_inputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "rng": {
+      "type": "object"
+    },
+    "embedded_literals": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "integer"
+          },
+          "bytes_hex": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-f]{2})+$"
+          }
+        },
+        "required": [
+          "name",
+          "address",
+          "bytes_hex"
+        ]
+      }
+    },
+    "source_literals": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "integer"
+          },
+          "bytes_hex": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-f]{2})+$"
+          }
+        },
+        "required": [
+          "name",
+          "address",
+          "bytes_hex"
+        ]
+      }
+    },
+    "text_header": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 255
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "layout",
+    "mod",
+    "english",
+    "rule_profile",
+    "data_regions",
+    "source_regions",
+    "desktop_seed",
+    "formation_seed",
+    "text_blob",
+    "initializers",
+    "runtime_inputs",
+    "rng",
+    "embedded_literals",
+    "source_literals",
+    "text_header"
+  ],
+  "$comment": "SPDX-License-Identifier: GPL-3.0-only; legacy database and Classic installation profiles."
+}

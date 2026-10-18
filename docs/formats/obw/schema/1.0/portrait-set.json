@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": true,
+  "$id": "https://raw.githubusercontent.com/Weyoune/openbmh/main/docs/formats/obw/schema/1.0/portrait-set.json",
+  "properties": {
+    "schema": {
+      "const": "portrait-set@1.0"
+    },
+    "id": {
+      "const": "bmh-classic@1"
+    },
+    "width": {
+      "const": 38
+    },
+    "height": {
+      "const": 38
+    },
+    "transparent_index": {
+      "const": 0
+    },
+    "backgrounds": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "properties": {
+          "asset": {
+            "type": "string"
+          },
+          "x": {
+            "type": "integer"
+          },
+          "y": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "asset",
+          "x",
+          "y"
+        ]
+      }
+    },
+    "layers": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "properties": {
+          "x": {
+            "type": "integer"
+          },
+          "y": {
+            "type": "integer"
+          },
+          "parts": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "x",
+          "y",
+          "parts"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "id",
+    "width",
+    "height",
+    "backgrounds",
+    "layers",
+    "transparent_index"
+  ],
+  "$comment": "SPDX-License-Identifier: GPL-3.0-only; legacy database and Classic installation profiles."
+}

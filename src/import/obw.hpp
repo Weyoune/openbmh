@@ -12,22 +12,27 @@
 
 namespace bmh::obw {
 
-// A conversion document, deliberately independent of GameState and CareerSession.
-// Keys are relative, authored archive paths; values are UTF-8 text.
+// An archive entry, deliberately independent of GameState and CareerSession.
+// Keys are relative, authored paths; strings are binary-safe (including NUL).
 using Documents = std::map<std::string, std::string>;
 
 struct Options {
     std::string start_date; // Required: legacy databases have ages, not birth dates.
     std::string title = "Imported legacy world";
+    // Empty selects BMH-classic / FLTD-classic from the installation.
+    std::string mod;
+    // Explicit developer-only partial export; the default requires a complete installation.
+    bool database_only = false;
 };
 
 Documents convert_database(const Database& database, const TextDb& texts,
                            const LeImage& executable, bool english, const Options& options);
 Documents import_installation(const std::filesystem::path& source, const Options& options);
 
-// Checks the conversion profile and its cross-table references before any output.
-// This is not the future engine's competition/playability validator.
+// Checks the declared import profile, references and (for Classic) complete payload.
+// This is not a generic competition engine or a JSON Schema implementation.
 void validate(const Documents& documents);
+Documents read(const std::filesystem::path& source);
 
 // Refuses existing destinations. Publishes a complete sibling staging path by rename.
 // No files in the installation are changed, copied back or executed.

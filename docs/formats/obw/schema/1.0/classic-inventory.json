@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": true,
+  "$id": "https://raw.githubusercontent.com/Weyoune/openbmh/main/docs/formats/obw/schema/1.0/classic-inventory.json",
+  "properties": {
+    "schema": {
+      "const": "classic-inventory@1.0"
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "crc32": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          }
+        },
+        "required": [
+          "path",
+          "bytes",
+          "crc32"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schema",
+    "entries"
+  ],
+  "$comment": "SPDX-License-Identifier: GPL-3.0-only; legacy database and Classic installation profiles."
+}
