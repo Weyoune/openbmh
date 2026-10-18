@@ -4,12 +4,12 @@ The console is a local control interface for one running career. Human clients, 
 
 ## Choose a transport
 
-For a single process, start `openbmh_cli --console --data "path/to/game" --saves "path/to/saves"`. Send command lines on stdin and finish each block with `go.`. `--json` provides structured output records.
+For a single process, start `openbmh_cli --console --mod "mods/BMH-classic/content.obw" --saves "path/to/saves"`. Send command lines on stdin and finish each block with `go.`. `--json` provides structured output records.
 
 For separate manager processes, start a local mailbox server:
 
 ```sh
-openbmh_cli --console --data "path/to/game" --saves "path/to/saves" --serve mailbox --seats 4 --seed 1
+openbmh_cli --console --mod "mods/BMH-classic/content.obw" --saves "path/to/saves" --serve mailbox --seats 4 --seed 1
 ```
 
 A client sends one block on stdin to:

@@ -12,8 +12,9 @@ OpenBMH is a C++20 engine with graphical and console frontends. The implementati
 | `src/ui` | View projections, rendering and input interpretation for game screens |
 | `src/cli` | Command language, structured protocol, console windows and multi-client seat routing |
 | `src/audio` | Bank decoding, synthesis, playback and cues, without authority to change gameplay |
-| `src/launch` | Locating user data, archive extraction, edition normalisation and file selection |
-| `src/import` | Standalone legacy-to-OBW conversion; no game-state ownership or OBW engine integration |
+| `src/launch` | Native launcher, portable mod library, child processes and legacy installation discovery |
+| `src/content` | Sealed OBW content, native career containers and personal preferences |
+| `src/import` | Legacy installation and save-layout conversion; original readers are used here |
 
 `bmhcore` contains the format and game layers. `bmhui`, `openbmh_audio` and the application session provide reusable pieces above it. Frontends should translate actions and display results; they should not introduce independent transfer, calendar or financial rules.
 
@@ -38,3 +39,17 @@ Legacy saves serialize blocks in a fixed order and store name pools separately. 
 The [console reference](CLI_CONCEPT/README.md) documents window commands. [protocol.md](protocol.md) describes structured requests, and [CONSOLE_CLIENTS.md](CONSOLE_CLIENTS.md) explains safe client ownership and batching. Prefer shared projections/actions when adding another frontend.
 
 Use synthetic data for public tests and locally supplied installations only for data-dependent checks. Renderer tests, simulation tests and target-platform runtime checks answer different questions; document what each validates. See [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+## 0.2 content boundary
+
+Normal GUI and console entrypoints accept sealed Classic OBW packages. `content::Mount`
+owns a shared immutable decoded store; existing path-shaped UI aliases identify resources
+inside it, without creating VGA/FNT/EXE files or falling back to an installation on disk.
+The only mutable mount setting is the presentation year of the selected career. Native
+`.obs` checkpoints serialize named fields, compatibility memory blocks, both random
+streams, Reality residues and the manager-desk driver. No host object, pointer or callback
+is dumped. The session reconstructs content pointers and callbacks when loading.
+
+The native launcher remains the parent process. Each game starts in a fresh child process
+of `OpenBMH`, keeping edition-specific process globals isolated. Portable mod content and
+personal files have independent lifetimes. See [runtime-0.2](formats/obw/runtime-0.2.md).

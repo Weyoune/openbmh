@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/content.hpp"
 #include "formats/font.hpp"
 
 namespace bmh {
 
 Font load_font(const std::filesystem::path& path) {
+    if (const auto r = content::find(path)) {
+        const auto found = r->content->fonts.find(std::filesystem::path(r->key).filename().string());
+        if (found == r->content->fonts.end())
+            throw FormatError("content: missing font: " + r->key);
+        return found->second;
+    }
     Bytes d = read_file(path);
     if (d.size() < 28) throw FormatError("FNT: file too short");
     Font f;

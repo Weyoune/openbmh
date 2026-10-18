@@ -32,6 +32,8 @@
 
 #include "launch/archive.hpp"
 #include "launch/game_data.hpp"
+#include "content/package.hpp"
+#include "launch/mods.hpp"
 #include "version.hpp"
 
 namespace {
@@ -83,7 +85,8 @@ Arguments parse_args(int argc, char** argv) {
             std::exit(0);
         }
         if (arg == "--help" || arg == "-h") args.help = true;
-        else if (arg == "--data") args.data = bmh::launch::path_from_utf8(next(arg));
+        else if (arg == "--data" || arg == "--mod")
+            args.data = bmh::launch::path_from_utf8(next(arg));
         else if (arg == "--seed") { args.seed = parse_seed(next(arg)); args.seed_set = true; }
         else if (arg == "--text") args.json = false;
         else if (arg == "--json") args.json = true;
@@ -710,14 +713,24 @@ int main(int argc, char** argv) {
         Arguments args = parse_args(argc, argv);
         if (args.help) { print_usage(); return 0; }
         if (!args.send.empty()) return run_send(args);
-        // --data may also name BMH.EXE or a ZIP/7z archive with one game (src/launch); an
-        // archive is unpacked into the per-user cache and its copy is used
+        std::shared_ptr<const bmh::content::Classic> contents;
+        std::unique_ptr<bmh::content::Mount> mount;
         if (!args.data.empty()) {
-            const auto game = bmh::launch::resolve_game(args.data, bmh::launch::default_cache_directory());
-            if (!game.error.empty() || !game.check.playable)
-                throw std::runtime_error("the game cannot be used:\n" + bmh::launch::describe(game));
-            args.data = game.check.directory;
-        }
+            if (std::filesystem::is_directory(args.data))
+                args.data /= "content.obw";
+            contents = bmh::content::open(args.data);
+            mount = std::make_unique<bmh::content::Mount>(args.data, contents);
+            args.data = mount->root();
+            if (args.saves.empty()) {
+                bmh::launch::ModLibrary library(
+                    std::filesystem::absolute(bmh::launch::path_from_utf8(argv[0])).parent_path());
+                bmh::launch::ModEntry mod;
+                mod.content_id = contents->content_id;
+                args.saves = library.user_directory(mod);
+            }
+        } else
+            throw std::runtime_error(
+                "0.2 requires --mod <content.obw>; import installations in OpenBMH first");
         if (args.console) {
             if (!args.log.empty() && !args.replay.empty()) throw std::runtime_error("--log and --replay cannot be combined");
             if (args.listen_port) return run_console_listen(args);

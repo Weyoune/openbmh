@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/content.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/live_timing.hpp"
 // openbmh_play - the UI of src/ui connected to the engine: options, manager dialogs, a new
@@ -29,6 +30,8 @@
 #include "launch/archive.hpp"
 #include "launch/file_dialog.hpp"
 #include "launch/game_data.hpp"
+#include "launch/launcher.hpp"
+#include "content/package.hpp"
 #include "version.hpp"
 #include "app/live_matchday_events.hpp"
 #include "audio/playback.hpp"
@@ -131,7 +134,7 @@ int main(int argc, char** argv) {
         } else if (is("--live-frame-ms") && value) {
             live_frame_ms = std::clamp(std::atoi(args[++i].c_str()), 0, 1000);
             live_frame_ms_explicit = true;
-        } else if (is("--data") && value) {
+        } else if ((is("--run-mod") || is("--mod") || is("--data")) && value) {
             data = launch::path_from_utf8(args[++i]);
         } else if (is("--seed") && value) {
             seed = uint32_t(std::strtoul(args[++i].c_str(), nullptr, 0));
@@ -143,51 +146,69 @@ int main(int argc, char** argv) {
             std::printf("OpenBMH %s\n", bmh::kOpenBmhVersion);
             return 0;
         } else if (is("--help") || is("-h")) {
-            std::printf("usage: openbmh_play [<game directory | BMH.EXE | game.zip | game.7z>] [--seed <Watcom seed>] "
-                        "[--save-directory <directory>] [--mute] [--volume <0..1>] [--no-music] [--live-frame-ms <0..1000>]\n");
+            std::printf("usage: OpenBMH [--mod <mods/name/content.obw>] [--seed <Watcom seed>] "
+                        "[--save-directory <directory>] [--mute] [--volume <0..1>] [--no-music] "
+                        "[--live-frame-ms <0..1000>]\n");
             return 0;
         } else if (args[i].rfind("--", 0) != 0 && data.empty()) {
             data = launch::path_from_utf8(args[i]);
+        } else {
+            show_start_error("Unknown option or missing argument: " + args[i]);
+            return 1;
         }
     }
-    // the game: as given (directory, EXE or archive); else the directory OpenBMH itself lies in,
-    // when it holds a playable game (the simplest install: openbmh next to BMH.EXE); else
-    // chosen in the file dialog
-    if (data.empty()) {
-        if (char* base = SDL_GetBasePath()) {
-            const fs::path here = launch::path_from_utf8(base);
-            SDL_free(base);
-            try {
-                const launch::ResolvedGame game = launch::resolve_game(here, launch::default_cache_directory());
-                if (game.error.empty() && game.check.playable) data = here;
-            } catch (const std::exception&) {
-                // (not a game directory: fall through to the file dialog)
-            }
-        }
-    }
+    std::filesystem::path executable;
+    if (char *base = SDL_GetBasePath()) {
+        executable = launch::path_from_utf8(base);
+        SDL_free(base);
+#ifdef _WIN32
+        executable /= "OpenBMH.exe";
+#else
+        executable /= "OpenBMH";
+#endif
+    } else
+        executable = fs::absolute(launch::path_from_utf8(args.front()));
     if (data.empty()) {
         try {
-            const auto chosen = launch::choose_game_file("OpenBMH");
-            if (!chosen) return 0;  // cancelled
-            data = *chosen;
-        } catch (const std::exception& e) {
-            show_start_error(std::string(e.what()) +
-                             "\nStart OpenBMH with the game as argument: openbmh_play <game directory | BMH.EXE | game.zip>");
+            return launch::run_launcher(executable, [](const fs::path &package, const fs::path &source,
+                                                       const fs::path &destination) {
+                const auto content = content::open(package);
+                content::Mount mount(package, content);
+                const auto source_bytes = read_file(source);
+                const auto digest = content::sha256(std::string(source_bytes.begin(), source_bytes.end()));
+                const auto seed = uint32_t(std::stoul(digest.substr(0, 8), nullptr, 16));
+                app::CareerSession migrated(mount.root(), seed, source, true);
+                std::string error;
+                if (!migrated.save_game(destination, migrated.state().memory.u8(::bmh::layout::ActiveManager),
+                                        false, error))
+                    throw FormatError("Spielstand konnte nicht übernommen werden: " + error);
+            });
+        } catch (const std::exception &e) {
+            show_start_error(e.what());
             return 1;
         }
     }
-    bool english_game = false;  // (the window title marks the English version as experimental)
-    {
-        const launch::ResolvedGame game = launch::resolve_game(data, launch::default_cache_directory());
-        if (!game.error.empty() || !game.check.playable) {
-            show_start_error("The game cannot be started:\n" + launch::describe(game));
-            return 1;
+    std::shared_ptr<const content::Classic> contents;
+    std::unique_ptr<content::Mount> mount;
+    bool english_game = false;
+    try {
+        if (fs::is_directory(data))
+            data /= "content.obw";
+        contents = content::open(data);
+        mount = std::make_unique<content::Mount>(data, contents);
+        data = mount->root();
+        english_game = contents->english;
+        if (save_directory.empty()) {
+            const auto root = executable.parent_path();
+            launch::ModLibrary library(root);
+            launch::ModEntry mod;
+            mod.content_id = contents->content_id;
+            save_directory = library.user_directory(mod);
         }
-        english_game = game.check.family == launch::GameFamily::english;
-        // (from an archive: its unpacked copy in the cache, which then also keeps the saves)
-        data = game.check.directory;
+    } catch (const std::exception &e) {
+        show_start_error(e.what());
+        return 1;
     }
-    if (save_directory.empty()) save_directory = data;
     try {
         const Palette palette = load_palette(ui::asset_path(data, "M3PC.COL"));
         ui::StartupFlow flow(data, save_directory);
@@ -1676,7 +1697,8 @@ int main(int argc, char** argv) {
                     wait_season_ack();
                 }
             } else {
-                const auto file = highscore_file(save_directory, signature, season_texts[889]);
+                const auto file =
+                    highscore_file(save_directory, signature, season_texts[889], bool(content::find(data)));
                 auto scores = make_highscore_projection(state, load_highscore_table(file), HighscoreContext::SeasonBoundary);
                 // The Original stores this table outside the native FBM. Use the
                 // configured writable save base rather than a working-directory path.

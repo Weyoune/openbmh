@@ -808,7 +808,8 @@ public:
     bool dispatch_menu_layout(const ui::SaveLoadRequest&, uint64_t& revision, std::string& error);
 
     // Load an existing V2.24 save without applying new-career options or startup RNG.
-    CareerSession(const std::filesystem::path& data, uint32_t watcom_seed, const std::filesystem::path& save_path);
+    CareerSession(const std::filesystem::path &data, uint32_t watcom_seed,
+                  const std::filesystem::path &save_path, bool importing_legacy = false);
 
     const GameState& state() const { return g_; }
     GameState& state() { return g_; }
@@ -883,6 +884,10 @@ private:
     std::optional<std::filesystem::path> autosave_directory_;
     std::string autosave_error_;
     void write_desk_autosave(const GameState&, WatcomRandom&);
+    bool native_autosave_pending_ = false;
+    void flush_native_autosave();
+    cli::Json native_session_context() const;
+    void restore_native_session_context(const cli::Json &);
     bool live_source_identity(const ui::StrengthsIdentity&) const;
     bool validate_desk_setting_owner(const DeskSettingIdentity&, uint64_t revision, std::string& error,
                                     bool require_desk_phase = true) const;

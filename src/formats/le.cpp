@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/content.hpp"
 #include "formats/le.hpp"
 #include "formats/rule_base.hpp"
 
@@ -37,6 +38,13 @@ void save_image(const LeImage& image, const std::filesystem::path& path) {
 }
 
 LeImage load_le(const std::filesystem::path& path, bool apply_supported_rules) {
+    if (const auto r = content::find(path)) {
+        if (r->key != "bmh.exe")
+            throw FormatError("content: unknown Classic table set");
+        auto tables = apply_supported_rules ? r->content->executable : r->content->source_tables;
+        tables.set_display_start_year(r->display_start_year);
+        return tables;
+    }
     const Bytes raw = read_file(path);
     if (raw.size() >= sizeof kImageMagic + 8 && std::equal(kImageMagic, kImageMagic + sizeof kImageMagic, raw.begin())) {
         const auto word = [&](size_t at) { return uint32_t(raw[at] | raw[at + 1] << 8 | raw[at + 2] << 16) | uint32_t(raw[at + 3]) << 24; };

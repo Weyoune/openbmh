@@ -11,6 +11,7 @@
 #include "ui/host_path.hpp"
 #include "ui/setup.hpp"
 #include "formats/fbm.hpp"
+#include "content/save.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -38,13 +39,21 @@ void rect(Image& image, int x, int y, int w, int h, uint8_t color) {
     for (int yy = std::max(0, y); yy < std::min(image.height, y + h); ++yy)
         for (int xx = std::max(0, x); xx < std::min(image.width, x + w); ++xx) image.at(xx, yy) = color;
 }
-bool has_file_kind_extension(const std::filesystem::path& path, SaveLoadFileKind kind) {
+bool has_file_kind_extension(const std::filesystem::path &path, SaveLoadFileKind kind, bool native) {
     std::string ext = path_to_utf8(path.extension());
     std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return char(std::tolower(c)); });
+    if (native)
+        return ext == (kind == SaveLoadFileKind::menu_layout ? ".oblayout"
+                       : kind == SaveLoadFileKind::settings  ? ".obsettings"
+                                                             : ".obs");
     return ext == (kind == SaveLoadFileKind::menu_layout ? ".men" :
                    kind == SaveLoadFileKind::settings ? ".ein" : ".fbm");
 }
-std::string_view file_kind_extension(SaveLoadFileKind kind) {
+std::string_view file_kind_extension(SaveLoadFileKind kind, bool native) {
+    if (native)
+        return kind == SaveLoadFileKind::menu_layout ? ".oblayout"
+               : kind == SaveLoadFileKind::settings  ? ".obsettings"
+                                                     : ".obs";
     return kind == SaveLoadFileKind::menu_layout ? ".MEN" :
            kind == SaveLoadFileKind::settings ? ".EIN" : ".FBM";
 }
@@ -85,13 +94,14 @@ SaveLoadScreen::SaveLoadScreen(const std::filesystem::path& data, std::filesyste
         throw FormatError("save/load: unsupported state");
     if (widgets_.width != 77 || widgets_.height != 112 || font_.height != 8 || footer_font_.height != 6)
         throw FormatError("save/load: unsupported Original font or widget atlas");
+    native_ = bool(content::find(data));
     std::error_code ec;
     if (std::filesystem::is_directory(directory_, ec)) {
         for (std::filesystem::directory_iterator it(directory_, ec), end; !ec && it != end; it.increment(ec)) {
             std::error_code file_error;
             const auto status = it->symlink_status(file_error);
             if (!file_error && std::filesystem::is_regular_file(status) &&
-                has_file_kind_extension(it->path(), file_kind_))
+                has_file_kind_extension(it->path(), file_kind_, native_))
                 entries_.push_back({it->path()});
         }
         std::sort(entries_.begin(), entries_.end(), [](const auto& a, const auto& b) {
@@ -183,7 +193,13 @@ bool SaveLoadScreen::info_press(int x, int y) {
     if (file_kind_ != SaveLoadFileKind::game || pending_ || info_ || x <= 52 || x >= 200 || y <= 40 ||
         y >= 192 || !select_row(y)) return false;
     try {
-        const auto saved = load_savegame(entries_.at(size_t(selected_)).path);
+        Savegame saved;
+        if (native_) {
+            saved.plain_header = content::save_information(entries_.at(size_t(selected_)).path);
+            saved.version = "V2.24";
+            saved.checksum_ok = true;
+        } else
+            saved = load_savegame(entries_.at(size_t(selected_)).path);
         const auto& h = saved.plain_header;
         if (!saved.checksum_ok || saved.version != "V2.24" || h.size() < 172 || h[0] < 1 || h[0] > 4)
             throw FormatError("save/load: invalid native information header");
@@ -306,7 +322,8 @@ void SaveLoadScreen::request_action() {
     if (!valid_filename(filename_)) {
         feedback_ = "UNGUELTIGER DATEINAME"; return;
     }
-    auto path = directory_ / path_from_utf8(filename_ + std::string(file_kind_extension(file_kind_)));
+    auto path =
+        directory_ / path_from_utf8(filename_ + std::string(file_kind_extension(file_kind_, native_)));
     // Selecting an existing mixed-case extension must overwrite that same file.
     if (selected_ >= 0 && size_t(selected_) < entries_.size() &&
         path_to_utf8(entries_[size_t(selected_)].path.stem()) == filename_)

@@ -22,7 +22,7 @@ class PackageAllowlistTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             # Empty authored placeholders test names/structure, not executable behavior.
-            for name in ['openbmh_play', 'openbmh_cli', 'openbmh_import', 'README.md', 'LICENSE',
+            for name in ['OpenBMH', 'openbmh_cli', 'openbmh_import', 'README.md', 'LICENSE',
                          'THIRD_PARTY_NOTICES.md', 'ACKNOWLEDGEMENTS.md', 'CONTRIBUTING.md']:
                 (root / name).write_text('synthetic')
             notes = root / 'docs/release/0.1/RELEASE_NOTES.md'

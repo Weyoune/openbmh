@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/content.hpp"
 #include "formats/executable_layout.hpp"
 #include "app/controller.hpp"
 #include "app/window_actions.hpp"
@@ -979,7 +980,8 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
                 page.highscore.rows={};
                 if(page.highscore.ranked) {
                     auto texts=load_textd(ui::asset_path(data,"TEXTD.BLK"));
-                    const auto file=highscore_file(save_directory,page.highscore.signature,texts.strings.at(889));
+                    const auto file = highscore_file(save_directory, page.highscore.signature,
+                                                     texts.strings.at(889), bool(content::find(data)));
                     HighscoreTable rows{};
                     if(fs::exists(file))rows=load_highscore_table(file);
                     page.highscore=make_highscore_projection(game,std::move(rows),HighscoreContext::ActiveManager);
