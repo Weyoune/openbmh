@@ -8,6 +8,7 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -74,7 +75,10 @@ def main():
     source, build = args.source.resolve(), args.build.resolve()
     args.out.mkdir(parents=True, exist_ok=True)
     commit = git(source, 'rev-parse', 'HEAD').decode().strip()
-    name = 'OpenBMHEditor-poc-' + args.platform
+    version = json.loads((build / 'editor-version.json').read_text())['version']
+    if not re.fullmatch(r'\d+\.\d+\.\d+', version):
+        raise RuntimeError('Invalid editor version')
+    name = 'OpenBMHEditor-' + version + '-' + args.platform
     with tempfile.TemporaryDirectory(prefix='editor-package-') as td:
         stage = Path(td) / name; stage.mkdir()
         exe = 'OpenBMHEditor.exe' if args.platform.startswith('windows') else 'OpenBMHEditor'
@@ -84,13 +88,14 @@ def main():
         for file in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
             shutil.copy2(source / file, stage / file)
         shutil.copy2(source / 'docs/EDITOR.md', stage / 'EDITOR.md')
+        shutil.copy2(source / 'docs/release/editor-0.5/RELEASE_NOTES.md', stage / 'RELEASE_NOTES.md')
         if args.platform.startswith('windows'):
             # Uses the same app-local CRT/UCRT installation as the main game.
             # A successful runner launch alone does not prove deployability.
             for dll in ('vcruntime140.dll', 'msvcp140.dll'):
                 if not (stage / dll).is_file():
                     raise RuntimeError('Required Windows runtime missing: ' + dll)
-        (stage / 'BUILD.json').write_text(json.dumps({'commit': commit, 'platform': args.platform,
+        (stage / 'BUILD.json').write_text(json.dumps({'commit': commit, 'platform': args.platform, 'version': version,
             'editor_profile': 'editor-world-v1', 'game_data_included': False}, indent=2) + '\n')
         zip_tree(stage, args.out / (name + '.zip'))
         print(args.out / (name + '.zip'))
@@ -99,9 +104,10 @@ def main():
                 **json.loads((build / 'editor-dependencies.json').read_text())}
         components = {**{n: (v[0], v[1]) for n, v in COMPONENTS.items()}, **EXTRA}
         with tempfile.TemporaryDirectory(prefix='editor-source-') as td:
-            stage = Path(td) / 'OpenBMHEditor-poc-source'; stage.mkdir()
+            source_name = 'OpenBMHEditor-' + version + '-source'
+            stage = Path(td) / source_name; stage.mkdir()
             project = [Path(f.decode()) for f in git(source, 'ls-files', '-z').split(b'\0') if f]
-            manifest = {'project_commit': commit, 'project_files': copy_files(source, stage / 'project', project, required=True), 'dependencies': {}}
+            manifest = {'project_commit': commit, 'editor_version': version, 'project_files': copy_files(source, stage / 'project', project, required=True), 'dependencies': {}}
             cache = ['set(OPENBMH_BUILD_EDITOR ON CACHE BOOL "" FORCE)']
             for name, (ref, url) in components.items():
                 result = copy_dependency(Path(deps[name]), stage / 'dependencies' / name, name, ref)
@@ -111,10 +117,10 @@ def main():
             (stage / 'SOURCE_MANIFEST.json').write_text(json.dumps(manifest, indent=2) + '\n')
             (stage / 'BUILD_SOURCE.txt').write_text('cmake -S project -B build -C dependencies.cmake -G Ninja -DCMAKE_BUILD_TYPE=Release\n'
                 'cmake --build build --target openbmh_editor editor_core_tests\n'
-                'ctest --test-dir build -R ^editor_core_tests$ --output-on-failure\n'
+                'ctest --test-dir build -R "^editor_(core_tests|version)$" --output-on-failure\n'
                 'Native compiler, CMake and OS development libraries: see project/docs/EDITOR.md.\n')
-            zip_tree(stage, args.out / 'OpenBMHEditor-poc-source.zip')
-            print(args.out / 'OpenBMHEditor-poc-source.zip')
+            zip_tree(stage, args.out / (source_name + '.zip'))
+            print(args.out / (source_name + '.zip'))
 
 
 if __name__ == '__main__':

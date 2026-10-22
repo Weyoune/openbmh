@@ -2,6 +2,7 @@
 #include "editor/world.hpp"
 #include "content/digest.hpp"
 #include "content/package.hpp"
+#include "editor/version.hpp"
 #include "import/obw.hpp"
 #include "launch/game_data.hpp"
 #include <algorithm>
@@ -82,7 +83,7 @@ World World::blank(const std::string &title_value) {
                   {"min_reader", "1.1"},
                   {"kind", "world"},
                   {"title", {{"default", title_value}}},
-                  {"generator", "OpenBMH Editor POC"},
+                  {"generator", editor_product()},
                   {"provenance", "native"},
                   {"content_license", "user-supplied"},
                   {"start_date", "2026-07-01"},
@@ -170,7 +171,7 @@ void World::editor_profile() {
     manifest["format_version"] = "1.1";
     manifest["min_reader"] = "1.1";
     manifest["requires"] = Json::array({"editor:world-v1"});
-    manifest["generator"] = "OpenBMH Editor POC";
+    manifest["generator"] = editor_product();
     // The historical seal remains original evidence only. The editor profile
     // deliberately cannot be passed to the Classic runtime as sealed content.
     for (auto &comp : rows("competitions")) {

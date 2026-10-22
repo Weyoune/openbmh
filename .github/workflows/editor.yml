@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
-name: OBW Editor POC
+name: OBW Editor
 on:
   push:
-    branches: [feat/obw-editor-poc]
+    branches: [main, feat/obw-editor-poc]
+    tags: ['editor-v*']
   workflow_dispatch:
 permissions:
   contents: read
@@ -50,7 +51,7 @@ jobs:
       - name: Build editor and synthetic tests
         run: cmake --build build --target openbmh_editor editor_core_tests --parallel 2
       - name: Native editor core and MCP tests
-        run: ctest --test-dir build -C Release -R ^editor_core_tests$ --output-on-failure --output-junit editor-tests.xml
+        run: ctest --test-dir build -C Release -R "^editor_(core_tests|version)$" --output-on-failure --output-junit editor-tests.xml
       - name: Linux native GUI smoke
         if: runner.os == 'Linux'
         run: |
@@ -74,3 +75,39 @@ jobs:
           path: |
             build/editor-tests.xml
             build/editor.png
+  release:
+    if: startsWith(github.ref, 'refs/tags/editor-v')
+    needs: editor
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: OpenBMHEditor-*
+          path: dist
+          merge-multiple: true
+      - name: Prepare editor release for review
+        shell: python
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          import os, pathlib, re, subprocess
+          tag = os.environ['RELEASE_TAG']
+          match = re.fullmatch(r'editor-v([0-9]+)\.([0-9]+)\.[0-9]+', tag)
+          if not match:
+              raise SystemExit('Invalid editor release tag')
+          version = tag.removeprefix('editor-v')
+          notes = pathlib.Path('docs/release') / ('editor-' + match[1] + '.' + match[2]) / 'RELEASE_NOTES.md'
+          packages = sorted(pathlib.Path('dist').glob('*.zip'))
+          expected = {'OpenBMHEditor-' + version + '-' + kind + '.zip'
+                      for kind in ('windows-x64', 'linux-x64', 'macos-arm64', 'source')}
+          if {p.name for p in packages} != expected or not notes.is_file():
+              raise SystemExit('Missing or mismatched editor release files')
+          subprocess.run(['gh', 'release', 'create', tag, *map(str, packages), '--draft',
+                          '--verify-tag', '--title', 'OpenBMH Editor ' + version,
+                          '--notes-file', str(notes)], check=True)

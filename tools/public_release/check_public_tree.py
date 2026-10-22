@@ -48,6 +48,7 @@ PROJECT_ARTWORK = {
     "docs/qa/editor-poc/clubs-midnight-de.png": {
         "2921aa67a870633c96f46328a82bc3022e5489b38d551c5314f13c7e59446070",
         "aa53e9cdd9ac8f6bf18b514862ac704ff9003bd1b62466cad2ebc329b09703dc",
+        "ace9a5d491994592d4e87e8e1bce10af648a9c307645ace2f188c11d2b4f2fea",
     },
     "docs/qa/editor-poc/gui-search.png": {
         "48dc00d03c01d5bbec35683ff65672c12af4be6aecc8a84e5fece243c56643f4",
@@ -74,6 +75,7 @@ PROJECT_ARTWORK = {
         "fb8e5f1f86afe60de87b70a2f533690d1ef470241fa24ee4384ff000149edaab",
     },
     "docs/qa/editor-poc/clubs-silver-de.png": {
+        "3e557f68bf8d0e8186dc237f9e92f6b9c7743d7df79fd29c3a5838ba01c116f2",
         "4f5dbe76b86097d306d2c982ce48093cce0fc95e9f35853493779b3116399239",
     },
     "docs/qa/editor-poc/options-silver-de.png": {
@@ -83,6 +85,7 @@ PROJECT_ARTWORK = {
         "8d6ead6fd0e2fddc8e23de0a71abe519fa4f19ede0676823892d2568481bf68c",
     },
     "docs/qa/editor-poc/clubs-matchday-de.png": {
+        "ddc5461068bdff4c0e3b468315cf03ef7cd203354941c586c030d3f3e80ae6ef",
         "e74d0b9acd07f6a48537616c28d74e53b8f69e20bb15fc3f6fcd0c10484b4f58",
     },
     "docs/qa/editor-poc/options-matchday-de.png": {

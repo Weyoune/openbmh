@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "editor/ui.hpp"
 #include "editor/images.hpp"
+#include "editor/version.hpp"
 #include "launch/rml_path.hpp"
 #include <RmlUi/Core.h>
 #include <RmlUi/Core/Elements/ElementFormControl.h>
@@ -183,6 +184,8 @@ class EditorUi final : public Rml::EventListener {
         if (name.is_object() && name.contains(options_.language) && name[options_.language].is_string())
             return name[options_.language];
         auto result = text(name);
+        if (result.empty() && row.contains("name"))
+            return t("unknown");
         return result.empty() ? str(row, "key", str(row, "id")) : result;
     }
     std::string ref(const Json &row, const std::string &key) const {
@@ -383,7 +386,7 @@ class EditorUi final : public Rml::EventListener {
     }
     void chrome() {
         doc_->SetClassNames(options_.theme);
-        label("tagline", t("poc"));
+        label("tagline", t("editor_tagline") + " · " + std::string(kEditorVersion));
         label("nav-label", t("data_areas"));
         label("profile-note", t("not_playable"));
         label("world-caption", info_.value("loaded", false) ? str(info_, "title") : "");

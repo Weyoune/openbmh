@@ -1,10 +1,10 @@
-# OpenBMH Editor POC
+# OpenBMH Editor 0.5.0
 
-Der eigenständige, native Editor verwendet **RmlUI, SDL2 und OpenGL**. Er bearbeitet Startdatenbanken, keine laufenden Spielstände. Das Spiel und seine Classic-Prüfung bleiben unverändert.
+Der eigenständige, native Editor verwendet **RmlUI, SDL2 und OpenGL**. Er bearbeitet Startdatenbanken, keine laufenden Spielstände. Das Spiel und seine Classic-Prüfung bleiben unverändert. Editor 0.5.0 hat eine eigene Versionsreihe und den Release-Tag `editor-v0.5.0`; die Spielversion ist 0.2.0.
 
 ## Starten und Daten öffnen
 
-Das vollständige Editor-Paket entpacken und `OpenBMHEditor.exe` (Windows) beziehungsweise `OpenBMHEditor` (Linux/macOS) starten. `assets/editor` muss beim Programm bleiben. Auf macOS kann die unsignierte Testanwendung über **Rechtsklick → Öffnen** gestartet werden. Eine Signatur/Notarisierung ist nicht Bestandteil dieses POC.
+Das vollständige Paket `OpenBMHEditor-0.5.0-<plattform>.zip` entpacken und `OpenBMHEditor.exe` (Windows) beziehungsweise `OpenBMHEditor` (Linux/macOS) starten. `assets/editor` muss beim Programm bleiben. Auf macOS kann die unsignierte Anwendung über **Rechtsklick → Öffnen** gestartet werden. Eine Signatur/Notarisierung ist nicht Bestandteil dieser Version. `OpenBMHEditor --version` zeigt die Editorversion ohne Grafikstart.
 
 **Öffnen** bietet OBW-Dateien und entpackte Welten an. **BMH / FLTD importieren** liest einen Ordner mit einer unterstützten BMH- oder Football-Limited-Installation durch den bestehenden Konverter. Das Original wird nicht überschrieben. Eine bestehende Classic-OBW wird zunächst überprüft und dann in eine bearbeitbare Editorwelt übernommen.
 
@@ -50,7 +50,7 @@ Voraussetzungen entsprechen dem Hauptprojekt: C++20-Compiler, Git, CMake ≥ 3.2
 ```sh
 cmake -S . -B build-editor -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENBMH_BUILD_EDITOR=ON
 cmake --build build-editor --target openbmh_editor editor_core_tests --parallel 2
-ctest --test-dir build-editor -C Release -R '^editor_core_tests$' --output-on-failure
+ctest --test-dir build-editor -C Release -R '^editor_(core_tests|version)$' --output-on-failure
 ```
 
 macOS ARM zusätzlich bei der Konfiguration: `-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0`. Unter Windows das Argument nach `-R` ohne einfache Shell-Anführungszeichen verwenden. Der Editor wird beim normalen Spiel-Build standardmäßig nicht mitgebaut.
@@ -65,7 +65,7 @@ build-editor/OpenBMHEditor --stdio-mcp --open world.obw
 
 Weitere Argumente: `--settings datei.json`, `--assets verzeichnis`, `--commands script.json`, `--print-mcp-config`. Ein Command-Script ist ein Array aus `{"command":"…","args":{…}}`, mit denselben Kommandos wie die gemeinsame Session (z. B. `get`, `apply`, `save`). `--headless` startet kein Fenster. `--stdio-mcp` bietet dieselben Werkzeuge über newline-delimited JSON-RPC; stdout enthält dabei ausschließlich Protokollnachrichten. Testaufnahmen: `--screenshot bild.png --quit-after-ms 1800 --page clubs` (unter Linux mit Xvfb möglich).
 
-Pakete baut `tools/package/make_editor_package.py --build build-editor --out dist --platform linux-x64` (oder `windows-x64`, `macos-arm64`). `--source-package` ergänzt den zugehörigen Quellcode mit den tatsächlich verwendeten, gepinnten Abhängigkeiten. Die CI **OBW Editor POC** baut und prüft alle drei Plattformen. Die nativen Tests unterscheiden sich von einem späteren menschlichen GUI-Test auf Windows/macOS.
+Pakete baut `tools/package/make_editor_package.py --build build-editor --out dist --platform linux-x64` (oder `windows-x64`, `macos-arm64`). `--source-package` ergänzt den zugehörigen Quellcode mit den tatsächlich verwendeten, gepinnten Abhängigkeiten. Die CI **OBW Editor** baut und prüft alle drei Plattformen. Tags `editor-v<version>` erzeugen nach erfolgreicher Prüfung einen Release-Entwurf. Die nativen Tests unterscheiden sich von einem späteren menschlichen GUI-Test auf Windows/macOS.
 
 ## English quick start
 
@@ -75,4 +75,4 @@ The editor retains full squads, original image data, source claims and unknown e
 
 In **Options**, switch the interface to **English**, choose one of the three themes, and enable/disable the integrated local MCP server. **Copy connection** provides the authenticated configuration. The server defaults to loopback port 8765; use port 0 for a free port. GUI and MCP share the same world, validation and undo history. It supports MCP Streamable HTTP 2025-11-25/2025-06-18 and optional stdio mode. Use `expected_revision` for concurrent edits.
 
-Build with the three commands above, including `-DOPENBMH_BUILD_EDITOR=ON`. The native application requires OpenGL 3.3 (macOS 4.1) and the platform development dependencies documented in the main README. The proof of concept is unsigned and does not bundle any real-world dataset or proprietary game assets.
+Build with the three commands above, including `-DOPENBMH_BUILD_EDITOR=ON`. The native application requires OpenGL 3.3 (macOS 4.1) and the platform development dependencies documented in the main README. Editor 0.5.0 is unsigned and does not bundle any real-world dataset or proprietary game assets.

@@ -2,6 +2,8 @@
 
 This additive profile is a native editing interchange. It does **not** change
 `classic-installation-v1`, its seals, the Classic runtime or save files.
+It is implemented by OpenBMH Editor 0.5.0, whose application version is separate
+from the OBW format version and the OpenBMH 0.2.0 game version.
 
 ## Identification
 
@@ -22,6 +24,7 @@ This additive profile is a native editing interchange. It does **not** change
 
 The required editor capability is deliberately different from
 `runtime:classic-v1`. An edited world must not be resealed as a Classic world.
+The display title and a label such as Modern do not grant a runtime capability.
 On import the editor keeps the original manifest under
 `x-editor.original_manifest`, leaves compatibility/source regions intact, and
 requires Save As. An original Classic seal is historical evidence only in this

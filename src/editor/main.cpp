@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "editor/ui.hpp"
+#include "editor/version.hpp"
 #include <SDL.h>
 #include <atomic>
 #include <chrono>
@@ -27,7 +28,10 @@ int main(int argc, char **argv) {
                     throw Error("invalid_change", {{"argument", arg}});
                 return argv[i];
             };
-            if (arg == "--headless")
+            if (arg == "--version") {
+                std::cout << editor_product() << '\n';
+                return 0;
+            } else if (arg == "--headless")
                 headless = true;
             else if (arg == "--serve")
                 serve = headless = true;
@@ -60,13 +64,14 @@ int main(int argc, char **argv) {
             else if (arg == "--quit-after-ms")
                 ui.quit_after_ms = std::stoi(next());
             else if (arg == "--help") {
-                std::cout << "OpenBMHEditor [--open world.obw|installation] [--demo|--new]\n"
+                std::cout << editor_product() << '\n'
+                          << "OpenBMHEditor [--open world.obw|installation] [--demo|--new]\n"
                              "  [--settings file] [--assets directory] [--page "
                              "clubs|players|...]\n"
                              "  [--headless --validate] [--output world.obw] [--commands "
                              "script.json]\n"
                              "  [--serve --mcp-port 8765] [--stdio-mcp] "
-                             "[--print-mcp-config]\n";
+                             "[--print-mcp-config] [--version]\n";
                 return 0;
             } else if (!arg.starts_with('-') && input.empty())
                 input = path(arg);

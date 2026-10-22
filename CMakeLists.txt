@@ -326,7 +326,7 @@ endif()
 
 add_subdirectory(src/ui)
 add_subdirectory(src/import)
-option(OPENBMH_BUILD_EDITOR "Build the standalone OBW editor proof of concept" OFF)
+option(OPENBMH_BUILD_EDITOR "Build the standalone OBW editor" OFF)
 if(OPENBMH_BUILD_EDITOR)
     add_subdirectory(src/editor)
 endif()

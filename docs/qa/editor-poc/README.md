@@ -22,6 +22,8 @@ surfaces and petrol accents, and Matchday graphite surfaces and coral accents.
 All components consume the inherited palette, including dropdown popups,
 validation/error text, scrollbars, image stages and crop outlines. The comparison
 uses the same German `World::demo()` view in each theme.
+The three Clubs captures were refreshed for Editor 0.5.0. The remaining
+captures document the preceding theme/image-editing checks with the same layout.
 
 | Theme | Clubs | Options | Image editor |
 |---|---|---|---|

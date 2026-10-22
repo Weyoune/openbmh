@@ -56,6 +56,13 @@ The launcher requires OpenGL 3.3 (macOS: 4.1). Linux requires the platform libra
 described in [BUILDING](../../BUILDING.md), including GTK3 for its folder picker.
 The macOS executable is unsigned and is not a notarised application bundle.
 
+Platform-specific human confirmation remains open for
+[macOS filename entry](https://github.com/Weyoune/openbmh/issues/8),
+[Windows path display](https://github.com/Weyoune/openbmh/issues/9) and
+[Windows initial national-team selection](https://github.com/Weyoune/openbmh/issues/10).
+Their fixes are included and covered by automated/Linux checks; an HQA label
+does not claim that the original platform report has been verified on that OS.
+
 No original executables, graphics, sound, databases or saved games are distributed.
 Supply a supported CD/later German or Football Limited installation; the original
 German floppy edition is unsupported. OpenBMH is GPL-3.0-only; bundled components

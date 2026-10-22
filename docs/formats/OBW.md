@@ -1,10 +1,31 @@
-# OBW: OpenBMH world, save and pack format (concept, format version 1.0)
+# OBW: OpenBMH world, save and pack format
 
-The standalone editor additionally implements the non-playable
-[OBW 1.1 `editor-world-v1` profile](obw/editor-v1.md). This does not relax the
-Classic 1.0 content contract or seals. See [the editor guide](../EDITOR.md).
+## Implemented profiles
 
-Status: **format concept with a complete Classic installation-content converter** for roadmap 0.2, with preparation for 0.4. `openbmh_import` produces `BMH-classic` and `FLTD-classic` worlds under the guarded [`runtime:classic-v1` contract](obw/classic-v1.md), including all startup inputs and media. The [import guide](obw/import.md) distinguishes this from the explicitly partial `legacy-database-v1` development export. The 0.2 development branch adds a sealed Classic runtime, portable launcher and native career checkpoints; see [the runtime contract](obw/runtime-0.2.md). The released 0.1 engine still reads legacy installations.
+| Profile | Format | Reader/writer | Playable |
+|---|---|---|---|
+| `classic-installation-v1` | OBW 1.0, `runtime:classic-v1` | Complete BMH/FLTD converter; OpenBMH 0.2 launcher, GUI and console | Yes, sealed Classic content |
+| `editor-world-v1` | OBW 1.1, `editor:world-v1` | OpenBMH Editor 0.5: OBW/unpacked worlds and legacy import, OBW-only saving | No; editable start database |
+| `legacy-database-v1` | OBW 1.0 development export | Converter's explicit `--database-only` option | No; partial legacy export |
+
+`openbmh_import` produces `BMH-classic` and `FLTD-classic` worlds including
+startup inputs, media and frozen portrait recipes. The
+[import guide](obw/import.md) distinguishes them from the partial development
+export. OpenBMH 0.2 reads the sealed content without the original installation
+and writes separate native career checkpoints; see the
+[runtime contract](obw/runtime-0.2.md).
+
+The [1.1 editor profile](obw/editor-v1.md) adds editable worlds without relaxing
+Classic seals. Opening Classic content in the editor preserves its sources;
+saving creates an editor world rather than a newly sealed Classic world.
+Names such as “Modern” are display names, not proof of runtime compatibility.
+A modern-season data package can be structurally valid and fully editable while
+its competition/season engine is still pending. See [the editor guide](../EDITOR.md).
+
+The sections below define the general format and distinguish implemented
+profiles from future capabilities. Generic calendar/rule authoring, modern
+season simulation, network play and generic world-to-career generation are
+not implemented merely because their data structures are documented here.
 
 ## 1. Goals and non-goals
 
@@ -20,14 +41,15 @@ Goals:
 Non-goals of version 1.0:
 
 - The match engine and its parameters (reserved namespace `x-matchengine`, see §3.3).
-- Network play, an editor application and a binary encoding (reserved, see §2.4).
+- Network play and a binary encoding (reserved, see §2.4). The separate editor
+  uses the additive 1.1 profile described above.
 - Layout or screen data. Interfaces are themes (§9.6), not part of a world.
 
 ## 2. Container and files
 
 ### 2.1 Container
 
-Every OBW file is a ZIP archive (deflate or stored) containing UTF-8 JSON documents and referenced binary assets. The versioned Classic extension additionally permits data-only compatibility regions and startup input records; it does not permit executable code or save state in a world. The project already links miniz (`bmh_miniz`) and has a JSON reader/writer (`src/cli/json.cpp`), so the format needs no new dependency. JSON keeps worlds diffable and editable by hand or by script.
+Every OBW file is a ZIP archive (deflate or stored) containing UTF-8 JSON documents and referenced binary assets. The 1.1 editor reader also supports ZIP64, with its own documented size limits. The versioned Classic extension additionally permits data-only compatibility regions and startup input records; it does not permit executable code or save state in a world. The readers use miniz for the container; the editor additionally uses its declared JSON/image dependencies. Generic editor JSON remains editable by hand or script; sealed Classic packages must retain their original bytes and seals.
 
 | Extension | `kind` | Contents |
 |---|---|---|

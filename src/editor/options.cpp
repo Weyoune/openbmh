@@ -144,7 +144,7 @@ std::string tr(const std::string &language, const std::string &key) {
         {"dialog_failed", {"Der Dateidialog konnte nicht geöffnet werden.", "The file dialog could not be opened."}},
         {"invalid_attributes", {"Ungültige Spielwerte.", "Invalid player attributes."}},
         {"app", {"OpenBMH Editor", "OpenBMH Editor"}},
-        {"poc", {"Dateneditor · Vorschau", "World editor · Preview"}},
+        {"editor_tagline", {"OBW-Dateneditor", "OBW world editor"}},
         {"overview", {"Übersicht", "Overview"}},
         {"nations", {"Länder", "Countries"}},
         {"competitions", {"Ligen & Pokale", "Leagues & cups"}},

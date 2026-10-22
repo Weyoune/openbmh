@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "editor/mcp.hpp"
+#include "editor/version.hpp"
 #include <atomic>
 #include <httplib.h>
 #include <thread>
@@ -233,7 +234,7 @@ Json McpServer::dispatch(const Json &request) {
             version = "2025-11-25";
         result = {{"protocolVersion", version},
                   {"capabilities", {{"tools", {{"listChanged", false}}}}},
-                  {"serverInfo", {{"name", "OpenBMH Editor"}, {"version", "0.1.0-poc"}}},
+                  {"serverInfo", {{"name", "OpenBMH Editor"}, {"version", std::string(kEditorVersion)}}},
                   {"instructions", "Edits share the native editor's undo history. Read rules for real "
                                    "attribute ranges. Save only OBW editor worlds. These are not Classic "
                                    "0.2 playable packages."}};
