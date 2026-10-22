@@ -250,11 +250,12 @@ def scan_tree(root: Path):
     return findings, len(names)
 
 
-def scan_history(root: Path):
+def scan_history(root: Path, revision=None):
     findings = []
     references = subprocess.check_output(["git", "-C", str(root), "for-each-ref", "--format=%(refname)"])
     findings.extend(scan_blob("ref-names", references))
-    refs = subprocess.check_output(["git", "-C", str(root), "rev-list", "--all"], text=True).splitlines()
+    selection = [revision] if revision else ["--all"]
+    refs = subprocess.check_output(["git", "-C", str(root), "rev-list", *selection], text=True).splitlines()
     seen = set()
     checked = 0
     for revision in refs:
@@ -286,15 +287,18 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--history", action="store_true", help="also check all reachable commits and their blobs")
+    parser.add_argument("--revision", help="with --history, inspect this revision's ancestry instead of unrelated refs")
     parser.add_argument("--json", type=Path, help="write a report containing rule names and locations only")
     args = parser.parse_args(argv)
+    if args.revision and (not args.history or args.revision.startswith('-')):
+        parser.error("--revision requires --history and a revision, not an option")
     if args.history and shutil.which("git") is None:
         parser.error("Git is required for history checks")
     root = args.root.resolve(strict=True)
     findings, files = scan_tree(root)
     commits = blobs = 0
     if args.history:
-        extra, commits, blobs = scan_history(root)
+        extra, commits, blobs = scan_history(root, args.revision)
         findings.extend(extra)
     findings = sorted(set(findings))
     def display_path(name):
