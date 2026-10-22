@@ -78,19 +78,18 @@ def main():
     with tempfile.TemporaryDirectory(prefix='editor-package-') as td:
         stage = Path(td) / name; stage.mkdir()
         exe = 'OpenBMHEditor.exe' if args.platform.startswith('windows') else 'OpenBMHEditor'
-        executable = build / exe
-        if not executable.exists():
-            executable = build / 'Release' / exe
-        shutil.copy2(executable, stage / exe)
-        shutil.copytree(build / 'assets/editor', stage / 'assets/editor')
+        subprocess.run(['cmake', '--install', str(build), '--component', 'Editor', '--config', 'Release',
+                        '--prefix', str(stage)], check=True)
         shutil.copytree(source / 'docs/licenses', stage / 'licenses')
         for file in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
             shutil.copy2(source / file, stage / file)
         shutil.copy2(source / 'docs/EDITOR.md', stage / 'EDITOR.md')
         if args.platform.startswith('windows'):
-            # Only runtime DLLs produced beside this editor are eligible.
-            for dll in executable.parent.glob('*.dll'):
-                shutil.copy2(dll, stage / dll.name)
+            # Uses the same app-local CRT/UCRT installation as the main game.
+            # A successful runner launch alone does not prove deployability.
+            for dll in ('vcruntime140.dll', 'msvcp140.dll'):
+                if not (stage / dll).is_file():
+                    raise RuntimeError('Required Windows runtime missing: ' + dll)
         (stage / 'BUILD.json').write_text(json.dumps({'commit': commit, 'platform': args.platform,
             'editor_profile': 'editor-world-v1', 'game_data_included': False}, indent=2) + '\n')
         zip_tree(stage, args.out / (name + '.zip'))
