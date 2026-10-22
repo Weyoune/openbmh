@@ -6,6 +6,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: obw-editor-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   editor:
     strategy:
@@ -27,6 +30,9 @@ jobs:
           persist-credentials: false
       - name: Check public sources
         run: python3 tools/public_release/check_public_tree.py --root . --history --revision HEAD
+      - name: Existing package boundaries
+        if: runner.os == 'Linux'
+        run: python3 tests/package_tests.py
       - name: Linux dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ninja-build pkg-config libgtk-3-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libgl1-mesa-dev xvfb xauth xdotool
