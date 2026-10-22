@@ -41,13 +41,55 @@ PRIVATE_DOCUMENTS = {
 }
 SOURCE_SUFFIXES = {".cpp", ".hpp", ".h", ".c", ".inc"}
 SKIP_DIRECTORIES = {".git", "__pycache__", ".cache", "_deps", "node_modules"}
-# Independently generated launcher artwork already published on the launcher
-# branch, with provenance in its assets/launcher/provenance.json. History checks
-# include those branches too. Approve only these exact reviewed bytes and path.
+# Exact independently generated artwork and synthetic native-editor captures.
+# The latter are reviewed against docs/qa/editor-poc/README.md; no game material.
+# Keep prior reviewed hashes if an asset is intentionally revised in history.
 PROJECT_ARTWORK = {
+    "docs/qa/editor-poc/clubs-midnight-de.png": {
+        "2921aa67a870633c96f46328a82bc3022e5489b38d551c5314f13c7e59446070",
+        "aa53e9cdd9ac8f6bf18b514862ac704ff9003bd1b62466cad2ebc329b09703dc",
+    },
+    "docs/qa/editor-poc/gui-search.png": {
+        "48dc00d03c01d5bbec35683ff65672c12af4be6aecc8a84e5fece243c56643f4",
+        "ef1780e91034dab96a7b23c638cdc8476f09be701b892f77e94e2fc2874cbd19",
+    },
+    "docs/qa/editor-poc/image-editor-midnight-de.png": {
+        "44a89dfd84d7ee5b2acb54ae749e69051ae71ce192885dbe1a9311aba778c8ca",
+        "eb01bd8fd8eaadfbc8e2b3f634bcdafbbb084dc4592d849e102a6f8c70ab0ad4",
+    },
+    "docs/qa/editor-poc/options-midnight-de.png": {
+        "7075957db2d5f5a166bb71adb97d8208cb051a72b555202c212fae4f7e5c402c",
+        "be483ad35a8912766611fd63dcc7cde6f820ed9a78441ad49554102a096633ab",
+    },
+    "docs/qa/editor-poc/players-silver-en.png": {
+        "0d463d74a78072dda5b830c1d8c5e12d7e4588f6a743a95cc2ca4a327278928c",
+        "d965a904663f3a30e5410f5d33539f6247737293625039fb9e3028337bbc088c",
+    },
+    "docs/qa/editor-poc/roster-matchday-de.png": {
+        "547acb1b03ee68a3cee217fc5c96f4b960c64a5e48d1074e4f19045d98559647",
+        "937829bb31b7452aa15d4a54cd03ad5de6a42d630b83cce279f22da09dfe180b",
+    },
     "assets/launcher/stadium.tga": {
         "08f82783a357d5b0722f3737de54844150bc14d98036845f1aaee3211608e1c8",
         "fb8e5f1f86afe60de87b70a2f533690d1ef470241fa24ee4384ff000149edaab",
+    },
+    "docs/qa/editor-poc/clubs-silver-de.png": {
+        "4f5dbe76b86097d306d2c982ce48093cce0fc95e9f35853493779b3116399239",
+    },
+    "docs/qa/editor-poc/options-silver-de.png": {
+        "e406dca9058569f91fb314f0ff548ff349190c13ef1ed90c0051e44899634493",
+    },
+    "docs/qa/editor-poc/image-editor-silver-de.png": {
+        "8d6ead6fd0e2fddc8e23de0a71abe519fa4f19ede0676823892d2568481bf68c",
+    },
+    "docs/qa/editor-poc/clubs-matchday-de.png": {
+        "e74d0b9acd07f6a48537616c28d74e53b8f69e20bb15fc3f6fcd0c10484b4f58",
+    },
+    "docs/qa/editor-poc/options-matchday-de.png": {
+        "c0b2a8b936dccdcbac72169e2985ca91221ec605dd4ad96a624be23f225b608a",
+    },
+    "docs/qa/editor-poc/image-editor-matchday-de.png": {
+        "e0f5fb9f986d01c27ce04da8bd8ac7623ee3b2afcbf8a8677c3580dcb0465c36",
     },
 }
 
@@ -244,11 +286,12 @@ def scan_tree(root: Path):
     return findings, len(names)
 
 
-def scan_history(root: Path):
+def scan_history(root: Path, revision=None):
     findings = []
     references = subprocess.check_output(["git", "-C", str(root), "for-each-ref", "--format=%(refname)"])
     findings.extend(scan_blob("ref-names", references))
-    refs = subprocess.check_output(["git", "-C", str(root), "rev-list", "--all"], text=True).splitlines()
+    selection = [revision] if revision else ["--all"]
+    refs = subprocess.check_output(["git", "-C", str(root), "rev-list", *selection], text=True).splitlines()
     seen = set()
     checked = 0
     for revision in refs:
@@ -280,15 +323,18 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--history", action="store_true", help="also check all reachable commits and their blobs")
+    parser.add_argument("--revision", help="with --history, inspect this revision's ancestry instead of unrelated refs")
     parser.add_argument("--json", type=Path, help="write a report containing rule names and locations only")
     args = parser.parse_args(argv)
+    if args.revision and (not args.history or args.revision.startswith('-')):
+        parser.error("--revision requires --history and a revision, not an option")
     if args.history and shutil.which("git") is None:
         parser.error("Git is required for history checks")
     root = args.root.resolve(strict=True)
     findings, files = scan_tree(root)
     commits = blobs = 0
     if args.history:
-        extra, commits, blobs = scan_history(root)
+        extra, commits, blobs = scan_history(root, args.revision)
         findings.extend(extra)
     findings = sorted(set(findings))
     def display_path(name):

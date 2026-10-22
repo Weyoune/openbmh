@@ -16,7 +16,9 @@ def validate(directory, windows):
                 'SDL2-HIDAPI-options.txt', 'SDL2-HIDAPI-original.txt', 'SDL2-yuv2rgb.txt',
                 'SDL2.txt', 'miniz-source-notices.txt', 'miniz.txt', 'nativefiledialog-extended.txt',
                 'RmlUi.txt', 'RmlUi-containers.txt', 'RmlUi-fonts.txt', 'RmlUi-Khronos.txt',
-                'FreeType.txt', 'FreeType-FTL.txt', 'FreeType-BDF.txt', 'FreeType-PCF.txt', 'FreeType-zlib.txt'}
+                'FreeType.txt', 'FreeType-FTL.txt', 'FreeType-BDF.txt', 'FreeType-PCF.txt', 'FreeType-zlib.txt',
+                'nlohmann-json.txt', 'cpp-httplib.txt', 'SDL2_image.txt', 'stb-image.txt',
+                'libwebp.txt', 'libwebp-PATENTS.txt', 'LunaSVG.txt', 'PlutoVG.txt', 'pugixml.txt'}
     launcher_assets = {'assets/launcher/' + name for name in
                        ('launcher.rml', 'theme.rcss', 'stadium.tga', 'LatoLatin-Regular.ttf', 'LatoLatin-Bold.ttf')}
     present = set()
