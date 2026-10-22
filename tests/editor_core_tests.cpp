@@ -5,6 +5,10 @@
 #include <httplib.h>
 #include <iostream>
 #include <thread>
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#endif
 
 using namespace bmh::editor;
 namespace {
@@ -175,6 +179,22 @@ int main() {
         options.apply({{"language", "en"}, {"theme", "silver"}, {"mcp_port", 0}});
         options.save();
         check(Options::load(root / "settings.json").language == "en", "persistent language");
+#ifdef _WIN32
+        {
+            wchar_t old_value[32768]{};
+            const auto length = GetEnvironmentVariableW(L"APPDATA", old_value, 32768);
+            struct Restore {
+                std::wstring value;
+                bool present;
+                ~Restore() { SetEnvironmentVariableW(L"APPDATA", present ? value.c_str() : nullptr); }
+            } restore{old_value, length > 0};
+            const auto profile = root / L"Profil-ÄÖÜ";
+            SetEnvironmentVariableW(L"APPDATA", profile.c_str());
+            const auto native_options = Options::load();
+            check(native_options.settings_file == profile / "OpenBMH/editor.json", "Unicode Windows profile path");
+            check(fs::is_regular_file(native_options.settings_file), "Unicode Windows settings saved");
+        }
+#endif
         check(tr("de", "clubs") != tr("en", "clubs"), "bilingual labels");
         McpServer mcp(s);
         mcp.start(options);

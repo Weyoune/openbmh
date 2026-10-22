@@ -24,6 +24,7 @@ Validation performed:
   references, dates/scales, roster moves/swaps/order, shared undo/redo/save
   checkpoint, atomic OBW overwrite, exact image originals, arbitrary SVG/raster
   transforms, unknown-extension preservation and authenticated MCP HTTP.
+  Windows additionally checks a profile directory containing non-ASCII letters.
 - `tests/editor_gui_smoke.py`: real mouse/keyboard inspector edit; untouched
   JSON colour field retained; native search focus; shared MCP/native undo/redo;
   save to OBW. This check caught and fixed RmlUI textarea entity handling and

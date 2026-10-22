@@ -3,7 +3,10 @@
 #include <cstdlib>
 #include <map>
 #include <random>
-#ifndef _WIN32
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#else
 #include <sys/stat.h>
 #endif
 namespace bmh::editor {
@@ -11,8 +14,12 @@ Options Options::load(fs::path override_path) {
     Options result;
     if (override_path.empty()) {
 #ifdef _WIN32
-        auto base = std::getenv("APPDATA");
-        override_path = (base ? path(base) : fs::temp_directory_path()) / "OpenBMH" / "editor.json";
+        // The narrow CRT environment is encoded in the active Windows code
+        // page, not UTF-8. Use the native path for names such as Müller.
+        wchar_t base[32768]{};
+        const auto count = GetEnvironmentVariableW(L"APPDATA", base, 32768);
+        override_path =
+            (count > 0 && count < 32768 ? fs::path(base) : fs::temp_directory_path()) / "OpenBMH" / "editor.json";
 #elif defined(__APPLE__)
         auto base = std::getenv("HOME");
         override_path =
