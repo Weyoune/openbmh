@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "import/obw.hpp"
 #include "import/classic.hpp"
+#include "content/package.hpp"
 #include "import/assets.hpp"
 #include "formats/executable_layout.hpp"
 #include "launch/archive.hpp"
@@ -304,6 +305,23 @@ int main() {
         const auto classic_zip = root / "classic.obw";
         obw::write(classic, classic_zip, false);
         check(obw::read(classic_zip) == classic, "binary Classic ZIP round trip");
+        auto sealed=classic;
+        const auto identity=content::seal(sealed);
+        const auto runtime_zip=root/"runtime.obw";
+        content::write_archive(sealed,runtime_zip);
+        const auto runtime=content::open(runtime_zip);
+        check(runtime->content_id==identity&&runtime->database.squad_list==db.squad_list,
+              "sealed native runtime reconstructs typed database without the source codec");
+        auto changed_title=sealed;
+        auto changed_manifest=cli::parse_json(changed_title.at("manifest.json"));
+        (*changed_manifest.object())["generator"]="new importer version";
+        (*changed_manifest.object())["title"]=J::Object{{"default","Renamed title"}};
+        changed_title["manifest.json"]=cli::dump_json(changed_manifest)+"\n";
+        obw::refresh_classic_inventory(changed_title);
+        check(content::seal(changed_title)==identity,"reimport identity ignores presentation title and generator version");
+        auto edited=sealed;edited.at("x-classic/desktop-seed.bin")[0]^=1;
+        obw::refresh_classic_inventory(edited);
+        rejects([&]{content::verify(edited);},"refreshing old CRC inventory cannot bypass the Classic seal");
         auto damaged = classic;
         damaged.at("x-classic/desktop-seed.bin")[0] ^= 1;
         rejects([&] { obw::validate(damaged); }, "inventory catches binary corruption");

@@ -166,3 +166,60 @@ std::pair<int,int> RealityGrid::position(int figure) const {
 }
 
 } // namespace bmh
+
+namespace bmh {
+cli::Json RealityGrid::checkpoint() const {
+    cli::Json::Array planes, positions;
+    for (const auto &plane : occupied_) {
+        cli::Json::Array cells;
+        for (auto b : plane)
+            cells.emplace_back(int(b));
+        planes.emplace_back(std::move(cells));
+    }
+    for (const auto &[x, y] : positions_)
+        positions.emplace_back(cli::Json::Array{x, y});
+    return cli::Json::Object{
+        {"planes", std::move(planes)},
+        {"positions", std::move(positions)},
+        {"ball", cli::Json::Array{ball_.first, ball_.second}},
+        {"previous_ball", cli::Json::Array{previous_ball_.first, previous_ball_.second}}};
+}
+void RealityGrid::restore_checkpoint(const cli::Json &value) {
+    const auto field = [&](const char *name) -> const cli::Json & {
+        if (!value.object() || !value.object()->contains(name))
+            throw FormatError("native Reality grid field missing");
+        return value.object()->at(name);
+    };
+    const auto array = [](const cli::Json &j, size_t size) -> const cli::Json::Array & {
+        if (!j.array() || j.array()->size() != size)
+            throw FormatError("invalid native Reality grid dimensions");
+        return *j.array();
+    };
+    const auto integer = [](const cli::Json &j) -> int {
+        if (!j.integer() || *j.integer() < INT32_MIN || *j.integer() > INT32_MAX)
+            throw FormatError("invalid native Reality coordinate");
+        return int(*j.integer());
+    };
+    RealityGrid restored;
+    const auto &planes = array(field("planes"), 2);
+    for (size_t p = 0; p < 2; ++p) {
+        const auto &cells = array(planes[p], 0x478);
+        for (size_t i = 0; i < cells.size(); ++i) {
+            const int n = integer(cells[i]);
+            if (n < 0 || n > 255)
+                throw FormatError("invalid native Reality cell");
+            restored.occupied_[p][i] = uint8_t(n);
+        }
+    }
+    const auto pair = [&](const cli::Json &j) {
+        const auto &xy = array(j, 2);
+        return std::pair<int, int>{integer(xy[0]), integer(xy[1])};
+    };
+    const auto &positions = array(field("positions"), 24);
+    for (size_t i = 0; i < 24; ++i)
+        restored.positions_[i] = pair(positions[i]);
+    restored.ball_ = pair(field("ball"));
+    restored.previous_ball_ = pair(field("previous_ball"));
+    *this = std::move(restored);
+}
+} // namespace bmh

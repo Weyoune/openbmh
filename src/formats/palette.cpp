@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/content.hpp"
 #include "formats/palette.hpp"
 
 #include "formats/binary.hpp"
@@ -6,6 +7,11 @@
 namespace bmh {
 
 Palette load_palette(const std::filesystem::path& path) {
+    if (const auto r = content::find(path)) {
+        if (r->key != "m3pc.col")
+            throw FormatError("content: unknown palette");
+        return r->content->palette;
+    }
     Bytes b = read_file(path);
     if (b.size() < 768) throw FormatError("palette too short: " + path.string());
     Palette p;

@@ -276,7 +276,7 @@ void refresh_classic_inventory(Documents& out) {
     using namespace detail;
     A inventory;
     for (const auto& [path, contents] : out)
-        if (path != "x-classic/inventory.json")
+        if (path != "x-classic/inventory.json" && path != "x-classic/seal.json")
             inventory.emplace_back(O{{"path", path}, {"bytes", int64_t(contents.size())}, {"crc32", int64_t(crc(contents))}});
     put(out, "x-classic/inventory.json", O{{"schema", "classic-inventory@1.0"}, {"entries", std::move(inventory)}});
 }
@@ -287,52 +287,136 @@ static ClassicData decode_classic(const Documents& out) {
     if (str(get(startup, "schema")) != "classic-startup@1.0" || str(get(startup, "layout")) != layout_id)
         fail("unsupported classic startup/layout version");
     ClassicData data;
-    const auto* en = get(startup, "english").boolean();
-    if (!en) fail("invalid edition flag");
+    const auto *en = get(startup, "english").boolean();
+    if (!en)
+        fail("invalid edition flag");
     data.english = *en;
-    data.executable = load_regions(out, get(startup, "data_regions"), get(startup, "embedded_literals"), data.english);
-    data.source_tables = load_regions(out, get(startup, "source_regions"), get(startup, "source_literals"), data.english);
-    const auto database = parse(out, "x-legacy/source-database.json");
-    data.database = decode_database(unhex(str(get(database, "bytes"))));
+    data.executable =
+        load_regions(out, get(startup, "data_regions"), get(startup, "embedded_literals"), data.english);
+    data.source_tables =
+        load_regions(out, get(startup, "source_regions"), get(startup, "source_literals"), data.english);
+    // Reconstruct the native Classic database fields directly. The original M3D
+    // byte stream is retained as import provenance only, never parsed at runtime.
+    const auto database = parse(out, "x-legacy/database.json");
+    const auto &counts = get(database, "counts");
+    if (num(get(counts, "clubs")) != 419 || num(get(counts, "players")) != 2574 ||
+        num(get(counts, "n42")) != 168 || num(get(counts, "n66")) != 3096)
+        fail("unsupported Classic database dimensions");
+    auto &db = data.database;
+    const auto &pools = arr(get(database, "pools"));
+    if (pools.size() != 4)
+        fail("invalid native name pools");
+    for (size_t i = 0; i < 4; ++i)
+        db.pools[i] = unhex(str(pools[i]));
+    const auto &tables = get(database, "tables");
+    const auto table = [&](const char *name, Bytes &target, size_t expected) {
+        target = unhex(str(get(tables, name)));
+        if (target.size() != expected)
+            fail(std::string("invalid Classic table size: ") + name);
+    };
+    table("player_bonus_values", db.raw_player_bonus_values, 3096 + 0x32);
+    table("database_metadata", db.raw_database_metadata, 100);
+    table("club_auxiliary_words", db.raw_club_auxiliary_words, 168 * 2);
+    table("club_badge_selectors", db.raw_club_badge_selectors, 419 * 2);
+    table("foreign_club_strength", db.raw_foreign_club_strength, 0xfb);
+    table("league_auxiliary_bytes", db.raw_league_auxiliary_bytes, 0xbd);
+    table("referee_properties", db.raw_referee_properties, 50);
+    table("club_kit_selectors", db.raw_club_kit_selectors, 419);
+    table("club_short_name_offsets", db.raw_club_short_name_offsets, 168);
+    table("club_name_offsets", db.raw_club_name_offsets, 419 * 2);
+    table("player_name_offsets", db.raw_player_name_offsets, 2574 * 2);
+    table("squad_list", db.squad_list, (3096 - 4) * 2 + 0x6c);
+    const auto name = [&](size_t pool, size_t offset) {
+        const auto &bytes = db.pools[pool];
+        if (offset >= bytes.size())
+            fail("native name offset outside pool");
+        const auto end = std::find(bytes.begin() + offset, bytes.end(), 0);
+        if (end == bytes.end())
+            fail("unterminated native name");
+        return std::string(bytes.begin() + offset, end);
+    };
+    for (size_t i = 0; i < 419; ++i)
+        db.club_names.push_back(name(0, le16(db.raw_club_name_offsets, i * 2)));
+    db.players.resize(2574);
+    std::set<size_t> player_ids;
+    for (const auto &player : items(out, "players")) {
+        const auto &raw = get(player, "x-legacy");
+        const auto id = num(get(raw, "player_index"));
+        if (id < 0 || id >= 2574 || !player_ids.insert(size_t(id)).second)
+            fail("invalid native player identity");
+        auto &value = db.players[size_t(id)];
+        value.name = name(1, le16(db.raw_player_name_offsets, size_t(id) * 2));
+        const auto word = [&](const char *key) {
+            const auto n = num(get(raw, key));
+            if (n < 0 || n > UINT32_MAX)
+                fail("invalid native player word");
+            return uint32_t(n);
+        };
+        value.w35c = word("condition_technique_form_word");
+        value.w368 = word("skill_word");
+        value.w364 = word("identity_word");
+    }
+    if (player_ids.size() != 2574)
+        fail("incomplete native player records");
+    const auto split = [&](size_t pool, std::vector<std::string> &values) {
+        size_t at = 0;
+        while (at < db.pools[pool].size()) {
+            auto value = name(pool, at);
+            at += value.size() + 1;
+            values.push_back(std::move(value));
+        }
+    };
+    split(2, db.referees);
+    split(3, db.stadiums);
     data.desktops = bytes(out.at(str(get(startup, "desktop_seed"))));
     data.formations = bytes(out.at(str(get(startup, "formation_seed"))));
-    if (data.desktops.size() != 864 || data.formations.size() != 1408) fail("invalid startup seed sizes");
+    if (data.desktops.size() != 864 || data.formations.size() != 1408)
+        fail("invalid startup seed sizes");
     data.texts.blob = bytes(out.at(str(get(startup, "text_blob"))));
-    const auto& header = arr(get(startup, "text_header"));
-    if (header.size() != 7) fail("invalid source text header");
-    for (const auto& byte : header) {
-        if (num(byte) < 0 || num(byte) > 255) fail("invalid source text header byte");
+    const auto &header = arr(get(startup, "text_header"));
+    if (header.size() != 7)
+        fail("invalid source text header");
+    for (const auto &byte : header) {
+        if (num(byte) < 0 || num(byte) > 255)
+            fail("invalid source text header byte");
         data.text_header.push_back(uint8_t(num(byte)));
     }
     size_t position = 0;
     while (data.texts.strings.size() < TEXT_COUNT && position < data.texts.blob.size()) {
         const auto begin = position;
-        while (position < data.texts.blob.size() && data.texts.blob[position]) ++position;
-        if (position == data.texts.blob.size()) fail("unterminated classic text");
+        while (position < data.texts.blob.size() && data.texts.blob[position])
+            ++position;
+        if (position == data.texts.blob.size())
+            fail("unterminated classic text");
         data.texts.offsets.push_back(begin);
         data.texts.strings.emplace_back(data.texts.blob.begin() + begin, data.texts.blob.begin() + position);
         ++position;
     }
-    if (data.texts.strings.size() != TEXT_COUNT) fail("incomplete classic texts");
+    if (data.texts.strings.size() != TEXT_COUNT)
+        fail("incomplete classic texts");
     load_assets(out, data);
     return data;
 }
 
-void validate_classic(const Documents& out) {
+void validate_classic(const Documents &out) {
     using namespace detail;
     const auto manifest = parse(out, "manifest.json");
-    const auto& imported = get(manifest, "x-import");
+    const auto &imported = get(manifest, "x-import");
     if (str(get(imported, "profile")) != profile || !get(imported, "content_complete").boolean() ||
-        !*get(imported, "content_complete").boolean()) fail("incomplete classic profile");
-    const auto& required_features = arr(get(manifest, "requires"));
-    if (required_features.size() != 1 || str(required_features[0]) != feature) fail("missing classic runtime requirement");
+        !*get(imported, "content_complete").boolean())
+        fail("incomplete classic profile");
+    const auto &required_features = arr(get(manifest, "requires"));
+    if (required_features.size() != 1 || str(required_features[0]) != feature)
+        fail("missing classic runtime requirement");
     const auto startup = parse(out, "x-classic/startup.json");
     const auto expected = str(get(manifest, "provenance")) == "import:fltd" ? "FLTD-classic" : "BMH-classic";
-    if (str(get(manifest, "mod")) != expected || str(get(startup, "mod")) != expected) fail("mod/edition mismatch");
+    if (str(get(manifest, "mod")) != expected || str(get(startup, "mod")) != expected)
+        fail("mod/edition mismatch");
     if (str(get(imported, "rule_profile")) != "openbmh-supported@1" ||
         str(get(startup, "rule_profile")) != "openbmh-supported@1" ||
         cli::dump_json(get(startup, "initializers")) != cli::dump_json(initializers) ||
-        cli::dump_json(get(startup, "runtime_inputs")) != cli::dump_json(runtime_inputs)) fail("unsupported classic initialization contract");
+        cli::dump_json(get(startup, "runtime_inputs")) != cli::dump_json(runtime_inputs))
+        fail("unsupported classic initialization contract");
     std::set<std::string> seen;
     const auto inventory = parse(out, "x-classic/inventory.json");
     for (const auto& entry : arr(get(inventory, "entries"))) {
@@ -345,7 +429,8 @@ void validate_classic(const Documents& out) {
         for (char& ch : suffix) ch = char(std::tolower(static_cast<unsigned char>(ch)));
         if (suffix == ".exe" || suffix == ".fbm" || suffix == ".obs" || suffix == ".ein" || suffix == ".cfg") fail("non-content file in classic world");
     }
-    if (seen.size() + 1 != out.size()) fail("unlisted archive entries");
+    if (seen.size() + 1 + size_t(out.contains("x-classic/seal.json")) != out.size())
+        fail("unlisted archive entries");
     auto data = decode_classic(out);
     if (data.english != (std::string(expected) == "FLTD-classic")) fail("startup edition mismatch");
     // Every fixture pointer must remain readable from the exported DATA view.

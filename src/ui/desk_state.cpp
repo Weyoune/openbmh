@@ -478,7 +478,7 @@ DeskDate desk_date(uint32_t counter, const LeImage& exe) {
         d.day -= month_days();
         if (++d.month == 13) { d.month = 1; ++years; }
     }
-    d.year = 2026 + years;
+    d.year = exe.display_start_year() + years;
     return d;
 }
 
@@ -518,6 +518,7 @@ DeskState desk_from_game(const GameState& g, const LeImage& exe, uint64_t revisi
     // runtime (0x165) suppresses this consumer while manual mailbox access remains valid.
     if (d.runtime_club != kNoTeam && d.manager_slot >= 0 && d.manager_slot < 32 && g.memory.has(::bmh::layout::MailboxRecipientMask))
         d.mailbox_notification_pending = (g.memory.u32(::bmh::layout::MailboxRecipientMask) & (uint32_t(1) << d.manager_slot)) != 0;
+    d.date.year += g.display_start_year - exe.display_start_year();
     project_table_position(d, g);
     if (!current_groups && g.date == 0 && g.season == 0 && g.season_day() == 0 && g.texts) {
         const size_t title = (::bmh::layout::DeskState_DeskFromGame_TextPointer - ::bmh::layout::TextPointerTable) / 4 + 33;

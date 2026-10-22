@@ -1,0 +1,542 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Weyoune/openbmh/main/docs/formats/obw/schema/1.0/classic-state.json",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "classic-state@1.0"
+    },
+    "indoor": {
+      "type": "boolean"
+    },
+    "level": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "chance_rain": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "chance_temperature": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "last_shooter": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "last_pick_quality": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "live_scene": {
+      "type": "boolean"
+    },
+    "sportschau_selection_available": {
+      "type": "boolean"
+    },
+    "sportschau_club_threshold": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "list_toggle": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "lineups_frozen": {
+      "type": "boolean"
+    },
+    "offer_answer": {
+      "type": "boolean"
+    },
+    "transfer_notice_suppressed": {
+      "type": "boolean"
+    },
+    "pools_open": {
+      "type": "boolean"
+    },
+    "autosave_months": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "autosave_month": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "display_start_year": {
+      "type": "integer",
+      "minimum": 1900,
+      "maximum": 9998
+    },
+    "date": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3000000
+    },
+    "season_start": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3000000
+    },
+    "development_balance": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "trend_rotation": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "season": {
+      "type": "integer",
+      "minimum": -2147483648,
+      "maximum": 2147483647
+    },
+    "team_morale": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "player_bonus": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "formations": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "manager_records": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "tactics": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "manager_options": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "club_table": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "club_heap_bc": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "club_heap_78": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "club_heap_b8": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "master_database_metadata": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "referee_names": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "stadium_names": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "tournament_name": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "manager_results": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "manager_ratings": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "position_history": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "league_rounds": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "results": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "stocks": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "foreign_strength": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "mailbox": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "club_names": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "player_names": {
+      "type": "string",
+      "pattern": "^(?:[0-9a-f]{2})*$",
+      "maxLength": 33554432
+    },
+    "squad_slots": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 65535
+      },
+      "minItems": 0,
+      "maxItems": 1000000
+    },
+    "team_flags": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 65535
+      },
+      "minItems": 0,
+      "maxItems": 1000000
+    },
+    "manager_teams": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": -1,
+        "maximum": 4095
+      },
+      "minItems": 0,
+      "maxItems": 4
+    },
+    "live_matches": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": -2147483648,
+        "maximum": 2147483647
+      },
+      "minItems": 0,
+      "maxItems": 1000000
+    },
+    "sportschau_homes": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 65535
+      },
+      "minItems": 10,
+      "maxItems": 10
+    },
+    "sportschau_priorities": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 255
+      },
+      "minItems": 10,
+      "maxItems": 10
+    },
+    "club_ids": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 65535
+      },
+      "minItems": 0,
+      "maxItems": 1000000
+    },
+    "player_cards": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 65535
+      },
+      "minItems": 0,
+      "maxItems": 1000000
+    },
+    "player_name_offsets": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 65535
+      },
+      "minItems": 0,
+      "maxItems": 1000000
+    },
+    "players": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name_hex": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-f]{2})*$",
+            "maxLength": 33554432
+          },
+          "form": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "skills": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "identity": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          }
+        },
+        "required": [
+          "name_hex",
+          "form",
+          "skills",
+          "identity"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 4095
+    },
+    "memory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "hex": {
+            "type": "string",
+            "pattern": "^(?:[0-9a-f]{2})*$",
+            "maxLength": 33554432
+          }
+        },
+        "required": [
+          "address",
+          "hex"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 8192
+    },
+    "reality": {
+      "type": "object",
+      "properties": {
+        "initialized": {
+          "type": "boolean"
+        },
+        "deflected": {
+          "type": "boolean"
+        },
+        "card_kind": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "distance": {
+          "type": "integer",
+          "minimum": -2147483648,
+          "maximum": 2147483647
+        },
+        "actors": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "minItems": 5,
+          "maxItems": 5
+        },
+        "grid": {
+          "type": "object",
+          "properties": {
+            "planes": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "minItems": 1144,
+                "maxItems": 1144
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "positions": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": -2147483648,
+                  "maximum": 2147483647
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "minItems": 24,
+              "maxItems": 24
+            },
+            "ball": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -2147483648,
+                "maximum": 2147483647
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "previous_ball": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": -2147483648,
+                "maximum": 2147483647
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "required": [
+            "planes",
+            "positions",
+            "ball",
+            "previous_ball"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "initialized",
+        "deflected",
+        "card_kind",
+        "distance",
+        "actors",
+        "grid"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema",
+    "indoor",
+    "level",
+    "chance_rain",
+    "chance_temperature",
+    "last_shooter",
+    "last_pick_quality",
+    "live_scene",
+    "sportschau_selection_available",
+    "sportschau_club_threshold",
+    "list_toggle",
+    "lineups_frozen",
+    "offer_answer",
+    "transfer_notice_suppressed",
+    "pools_open",
+    "autosave_months",
+    "autosave_month",
+    "display_start_year",
+    "date",
+    "season_start",
+    "development_balance",
+    "trend_rotation",
+    "season",
+    "team_morale",
+    "player_bonus",
+    "formations",
+    "manager_records",
+    "tactics",
+    "manager_options",
+    "club_table",
+    "club_heap_bc",
+    "club_heap_78",
+    "club_heap_b8",
+    "master_database_metadata",
+    "referee_names",
+    "stadium_names",
+    "tournament_name",
+    "manager_results",
+    "manager_ratings",
+    "position_history",
+    "league_rounds",
+    "results",
+    "stocks",
+    "foreign_strength",
+    "mailbox",
+    "club_names",
+    "player_names",
+    "squad_slots",
+    "team_flags",
+    "manager_teams",
+    "live_matches",
+    "sportschau_homes",
+    "sportschau_priorities",
+    "club_ids",
+    "player_cards",
+    "player_name_offsets",
+    "players",
+    "memory",
+    "reality"
+  ],
+  "additionalProperties": false
+}

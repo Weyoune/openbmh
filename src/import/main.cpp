@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "import/obw.hpp"
+#include "content/package.hpp"
 #include "launch/archive.hpp"
 #include "version.hpp"
 
@@ -53,6 +54,8 @@ int main(int argc, char** argv) {
             if (!source.empty() || !destination.empty() || !options.start_date.empty() || !options.mod.empty() || directory || options.database_only)
                 throw std::runtime_error("--validate cannot be combined with conversion options");
             const auto documents = bmh::obw::read(validate_path);
+            if (documents.contains("x-classic/seal.json"))
+                bmh::content::verify(documents);
             std::cout << "Valid OBW content: " << documents.size() << " entries; no engine runtime test implied.\n";
             return 0;
         }
@@ -60,13 +63,18 @@ int main(int argc, char** argv) {
             throw std::runtime_error("--data, --output and --start-date are required; see --help");
         if (!directory && destination.extension() != ".obw")
             throw std::runtime_error("archive output must use the .obw extension");
-        const auto documents = bmh::obw::import_installation(source, options);
+        auto documents = bmh::obw::import_installation(source, options);
+        if (!options.database_only)
+            bmh::content::seal(documents);
         bmh::obw::write(documents, destination, directory);
         std::cout << "Converted " << documents.size() << " documents to "
                   << bmh::launch::path_to_utf8(destination) << "\n"
-                  << "Profile: " << (options.database_only ? "legacy-database-v1 (partial)" : "classic-installation-v1 (complete Classic content)")
+                  << "Profile: "
+                  << (options.database_only ? "legacy-database-v1 (partial)"
+                                            : "classic-installation-v1 (complete Classic content)")
                   << "; content_license: local-import-only.\n"
-                  << "See manifest.json and x-legacy/import-report.json. 0.2 runtime integration is separate.\n";
+                  << "See manifest.json and x-legacy/import-report.json. Classic packages can be added to "
+                     "the 0.2 portable mods directory.\n";
         return 0;
     } catch (const std::exception& error) {
         std::cerr << "openbmh_import: " << error.what() << '\n';

@@ -1,0 +1,402 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Weyoune/openbmh/main/docs/formats/obw/schema/1.0/classic-driver.json",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "classic-driver@1.0"
+    },
+    "stage": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2
+    },
+    "calendar_entry": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 65535
+    },
+    "manager_position": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4
+    },
+    "next_event_id": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$",
+      "maxLength": 20
+    },
+    "loaded_matchday_resume": {
+      "type": "boolean"
+    },
+    "suppress_remaining_pre_match_offers": {
+      "type": "boolean"
+    },
+    "national_nomination_desk": {
+      "type": "boolean"
+    },
+    "enable_national_nomination_desks": {
+      "type": "boolean"
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "desc": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "minItems": 192,
+            "maxItems": 208
+          },
+          "fixtures": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": -1,
+              "maximum": 4095
+            },
+            "minItems": 0,
+            "maxItems": 64
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "minItems": 0,
+            "maxItems": 32
+          },
+          "cup_results": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "minItems": 0,
+            "maxItems": 32
+          },
+          "cup_other_leg": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "minItems": 0,
+            "maxItems": 32
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "minItems": 0,
+            "maxItems": 576
+          },
+          "end_minute": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            },
+            "minItems": 0,
+            "maxItems": 32
+          },
+          "spectators": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            "minItems": 0,
+            "maxItems": 32
+          },
+          "log": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 65535
+            },
+            "minItems": 0,
+            "maxItems": 1000000
+          },
+          "cup_addresses": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 4294967295
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "phase": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "ended": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "kickoff_void_mask": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          }
+        },
+        "required": [
+          "desc",
+          "fixtures",
+          "results",
+          "cup_results",
+          "cup_other_leg",
+          "records",
+          "end_minute",
+          "spectators",
+          "log",
+          "cup_addresses",
+          "phase",
+          "ended",
+          "kickoff_void_mask"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 6
+    },
+    "referee_source": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 255
+      },
+      "minItems": 0,
+      "maxItems": 255
+    },
+    "referees": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 255
+      },
+      "minItems": 0,
+      "maxItems": 255
+    },
+    "last_results": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean"
+        },
+        "date": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "calendar_entry": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "matchday": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "desc": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "minItems": 192,
+                "maxItems": 208
+              },
+              "fixtures": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": -1,
+                  "maximum": 4095
+                },
+                "minItems": 0,
+                "maxItems": 64
+              },
+              "results": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "minItems": 0,
+                "maxItems": 32
+              },
+              "cup_results": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 65535
+                },
+                "minItems": 0,
+                "maxItems": 32
+              },
+              "cup_other_leg": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 65535
+                },
+                "minItems": 0,
+                "maxItems": 32
+              },
+              "records": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "minItems": 0,
+                "maxItems": 576
+              },
+              "end_minute": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 255
+                },
+                "minItems": 0,
+                "maxItems": 32
+              },
+              "spectators": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                "minItems": 0,
+                "maxItems": 32
+              },
+              "log": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 65535
+                },
+                "minItems": 0,
+                "maxItems": 1000000
+              },
+              "cup_addresses": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 4294967295
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "phase": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "ended": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4294967295
+              },
+              "kickoff_void_mask": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4294967295
+              }
+            },
+            "required": [
+              "desc",
+              "fixtures",
+              "results",
+              "cup_results",
+              "cup_other_leg",
+              "records",
+              "end_minute",
+              "spectators",
+              "log",
+              "cup_addresses",
+              "phase",
+              "ended",
+              "kickoff_void_mask"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "maxItems": 6
+        },
+        "tournament_name": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "minItems": 0,
+          "maxItems": 1000000
+        }
+      },
+      "required": [
+        "valid",
+        "date",
+        "calendar_entry",
+        "matchday",
+        "groups",
+        "tournament_name"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema",
+    "stage",
+    "calendar_entry",
+    "manager_position",
+    "next_event_id",
+    "loaded_matchday_resume",
+    "suppress_remaining_pre_match_offers",
+    "national_nomination_desk",
+    "enable_national_nomination_desks",
+    "groups",
+    "referee_source",
+    "referees",
+    "last_results"
+  ],
+  "additionalProperties": false
+}

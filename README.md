@@ -4,7 +4,7 @@ A modern and faithful open source rebuild of the *Bundesliga Manager Hattrick* e
 
 OpenBMH is a standalone C++20 engine with an SDL2 interface for *Bundesliga Manager Hattrick* (1994/95) and its English edition, *Football Limited*. The project develops a playable reconstruction alongside a platform for new rules, content and interfaces. Keeping the familiar game enjoyable and making it easier to extend are equally important goals.
 
-The engine reads a game installation supplied by the player. Game data, artwork, music, manuals and the original executable are not distributed with OpenBMH. Its aim is recognisable behaviour and plausible results; documented compatibility decisions and safety fixes take precedence over reproducing every original fault.
+Version 0.2 imports a game installation supplied by the player into a portable Classic mod. The running game reads the converted OBW content. Game data, artwork, music, manuals and the original executable are not distributed with OpenBMH. Its aim is recognisable behaviour and plausible results; documented compatibility decisions and safety fixes take precedence over reproducing every original fault.
 
 This is an independent community project, with no affiliation with or endorsement by the original rights holders, the DFL or the Bundesliga. It is an engine implementation, not an official source release or a remaster.
 
@@ -12,18 +12,26 @@ This is an independent community project, with no affiliation with or endorsemen
 
 Check the [releases page](https://github.com/Weyoune/openbmh/releases) for available packages and their platform notes. A Windows package uses the name `OpenBMH-<version>-windows-x64.zip`. Availability and native validation are stated for each release; source build instructions do not establish platform support on their own.
 
-1. Have your own supported game installation available.
-2. Extract the OpenBMH package into a separate directory, or alongside the game files.
-3. Start `openbmh_play` (`openbmh_play.exe` on Windows). Select the game directory or executable when prompted. A ZIP or 7z containing one game installation can also be selected.
+These instructions describe **0.2**, whose release packages are prepared separately from 0.1.2. See the [0.2 release notes](docs/release/0.2/RELEASE_NOTES.md).
 
-From a terminal:
+1. Extract OpenBMH into a writable directory.
+2. Start `OpenBMH.exe` on Windows, or `OpenBMH` on Linux/macOS. Its RmlUI launcher initially has an empty **Name | Art** list. The night-stadium design uses a small version label in the lower-right corner.
+3. Choose **Add**, select your own BMH or Football Limited installation, and enter a unique mod name and starting display year. The default names are `BMH-classic` and `FTDL-classic` (the English format identifier is `FLTD-classic`).
+4. Optionally transfer saved games and settings from the installation or another folder. The import reports files it could not migrate.
+5. Select the resulting Classic mod and choose **Start**. After import, its original installation is no longer needed for play.
+
+Converted contents live in `mods/<name>/content.obw` next to the program. Saves (`.obs`), settings (`.obsettings`), desktop layouts (`.oblayout`) and high scores (`.obscore`) live separately in `userdata/<content-id>/`. **Delete** asks before removing a mod and retains personal data; importing identical contents reconnects them. **Rename** renames the mod directory. Externally modified Classic packages are rejected; import the installation again to repair them. Keep backups of the portable directory.
+
+For direct startup or the console:
 
 ```sh
-openbmh_play --data "path/to/game" --save-directory "path/to/saves"
-openbmh_cli --console --data "path/to/game" --saves "path/to/saves"
+./OpenBMH --mod "mods/BMH-classic/content.obw"
+./openbmh_cli --console --mod "mods/BMH-classic/content.obw"
 ```
 
-Use a writable save directory and keep backups of existing games. German editions are the primary compatibility target. **Football Limited / English data support is experimental**; original V2.20 save import and some edition-specific behaviour remain limited. See the [0.1 release notes](docs/release/0.1/RELEASE_NOTES.md).
+Both frontends use native content and saves. Use **Add** to migrate older files rather than passing an original executable or `.FBM` to the running game. The starting year changes the Classic year display; original weekday and scheduling rules are preserved. Modern worlds are reserved for a later version.
+
+The launcher uses SDL2, RmlUI and OpenGL 3.3 (macOS: OpenGL 4.1); keep its `assets` directory next to the executable. Folder selection uses the operating system's dialog. See the [0.2 migration contract](docs/formats/obw/runtime-0.2.md) for compatibility and validation limits. Interactive Windows and macOS behaviour must be checked on their target platforms before a 0.2 release.
 
 ## Features and direction
 
@@ -31,11 +39,11 @@ The graphical client and console share career management, matches, transfers, co
 
 Version 0.1 establishes the playable engine and development interfaces. Later milestones introduce an open data format and typed model, configurable rules, a scalable interface and independently distributable content. These are goals rather than delivery dates; the [roadmap](docs/ROADMAP.md) describes their dependencies.
 
-The standalone [`openbmh_import` tool](docs/formats/obw/import.md) converts BMH and Football Limited installations into **BMH-classic** / **FLTD-classic** OBW worlds, including media and frozen player portrait recipes. The content targets the versioned Classic adapter planned for 0.2; the 0.1 game does not load OBW. Savegame conversion is separate future work. The importer is built from current source and included in subsequent CI packages; it is absent from the already published 0.1.2 packages.
+The standalone [`openbmh_import` tool](docs/formats/obw/import.md) produces the same complete Classic content packages, including media and frozen player portrait recipes. A mod directory contains its sealed `content.obw`; legacy save migration is performed through the launcher.
 
 ## Build from source
 
-The following recipes target v0.1.2. They require Git, CMake 3.24 or newer and a C++20 compiler. The first configure fetches pinned open-source dependencies. Native build and package results are documented for each release; these instructions do not claim an untested platform result.
+The following recipes target version 0.2. They require Git, CMake 3.24 or newer and a C++20 compiler. The first configure fetches pinned open-source dependencies. Native build and package results are documented for each release; these instructions do not claim an untested platform result.
 
 Clone the public repository, then run the commands for your system:
 
@@ -52,7 +60,7 @@ Install Visual Studio 2022 or its Build Tools with **Desktop development with C+
 cmake -S . -B build-windows -G "Visual Studio 17 2022" -A x64
 cmake --build build-windows --config Release
 ctest --test-dir build-windows -C Release --output-on-failure
-.\build-windows\Release\openbmh_play.exe --data "path/to/game" --save-directory "path/to/saves"
+.\build-windows\Release\OpenBMH.exe
 ```
 
 ### Linux
@@ -64,7 +72,7 @@ sudo apt install build-essential git cmake ninja-build pkg-config libgtk-3-dev l
 cmake -S . -B build-linux -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build-linux
 ctest --test-dir build-linux --output-on-failure
-./build-linux/openbmh_play --data "path/to/game" --save-directory "path/to/saves"
+./build-linux/OpenBMH
 ```
 
 Use a newer CMake if your distribution ships a version older than 3.24. A Linux binary can still require system libraries such as GTK3; a ZIP is not a guarantee of portability across distributions.
@@ -79,7 +87,7 @@ brew install cmake ninja
 cmake -S . -B build-macos -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
 cmake --build build-macos
 ctest --test-dir build-macos --output-on-failure
-./build-macos/openbmh_play --data "path/to/game" --save-directory "path/to/saves"
+./build-macos/OpenBMH
 ```
 
 On Intel Macs omit the arm64 setting or select `x86_64`. These commands build terminal executables; they do not create a signed application bundle.
@@ -105,6 +113,6 @@ The implementation grew from study of file formats and behaviour of a legally ob
 
 OpenBMH's own code and documentation are licensed under **GNU GPL version 3 only**, SPDX **GPL-3.0-only**. [LICENSE](LICENSE) contains the unchanged GPLv3 text; the example wording in its appendix does not change this project's version choice. Game content has separate ownership and is not covered by this license.
 
-Release source is identified by the matching version tag: [v0.1.2](https://github.com/Weyoune/openbmh/tree/v0.1.2) for this version. Binary releases must accompany or offer the corresponding source and build/relinking materials required by the applicable licenses. The tag identifies application source; it does not replace required materials for linked third-party components.
+Release source is identified by the matching version tag: [v0.1.2](https://github.com/Weyoune/openbmh/tree/v0.1.2) for the published 0.1.2 version. This branch develops 0.2; it is not a published release. Binary releases must accompany or offer the corresponding source and build/relinking materials required by the applicable licenses. The tag identifies application source; it does not replace required materials for linked third-party components.
 
 Bundled components retain their own licenses, including Nuked OPL3 under LGPL-2.1-or-later. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md).

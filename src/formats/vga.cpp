@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/vga.hpp"
+#include "formats/content.hpp"
 
 namespace bmh {
 
@@ -40,6 +41,16 @@ Image decode_vga(const Bytes& d) {
     return img;
 }
 
-Image load_vga(const std::filesystem::path& path) { return decode_vga(read_file(path)); }
+Image load_vga(const std::filesystem::path &path) {
+    if (const auto r = content::find(path)) {
+        auto name = std::filesystem::path(r->key);
+        name.replace_extension();
+        const auto found = r->content->images.find(name.generic_string());
+        if (found == r->content->images.end())
+            throw FormatError("content: missing image: " + r->key);
+        return found->second;
+    }
+    return decode_vga(read_file(path));
+}
 
 }  // namespace bmh

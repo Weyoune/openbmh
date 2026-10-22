@@ -1,6 +1,6 @@
 # OBW: OpenBMH world, save and pack format (concept, format version 1.0)
 
-Status: **format concept with a complete Classic installation-content converter** for roadmap 0.2, with preparation for 0.4. `openbmh_import` produces `BMH-classic` and `FLTD-classic` worlds under the guarded [`runtime:classic-v1` contract](obw/classic-v1.md), including all startup inputs and media. The [import guide](obw/import.md) distinguishes this from the explicitly partial `legacy-database-v1` development export. The 0.1 engine still reads legacy installations; OBW runtime integration and savegame conversion are separate work.
+Status: **format concept with a complete Classic installation-content converter** for roadmap 0.2, with preparation for 0.4. `openbmh_import` produces `BMH-classic` and `FLTD-classic` worlds under the guarded [`runtime:classic-v1` contract](obw/classic-v1.md), including all startup inputs and media. The [import guide](obw/import.md) distinguishes this from the explicitly partial `legacy-database-v1` development export. The 0.2 development branch adds a sealed Classic runtime, portable launcher and native career checkpoints; see [the runtime contract](obw/runtime-0.2.md). The released 0.1 engine still reads legacy installations.
 
 ## 1. Goals and non-goals
 

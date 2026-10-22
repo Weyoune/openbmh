@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/content.hpp"
 #include "formats/m3d.hpp"
 
 #include <cstring>
@@ -35,6 +36,11 @@ std::string pool_string(const Bytes& pool, size_t offset) {
 }  // namespace
 
 Database load_database(const std::filesystem::path& path, const DbCounts& c) {
+    if (const auto r = content::find(path)) {
+        if (r->key != "m3d.man")
+            throw FormatError("content: unknown database");
+        return r->content->database;
+    }
     return decode_database(read_file(path), c);
 }
 

@@ -27,7 +27,7 @@ void put32(Bytes& d, size_t at, uint32_t x) {
 
 // DeskDate2(date, buffer, 0): "TT.MM.JJJJ" of a day counter (day 0 = 1 July 2026; a
 // four-year leap cycle that starts with the third year).
-std::string date_text(uint32_t counter) {
+std::string date_text(uint32_t counter, int start_year) {
     static const int kDays[13] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     int cycle = 3, years = 0, month = 7;
     while (counter > uint32_t(364 + (cycle == 4))) {
@@ -45,7 +45,7 @@ std::string date_text(uint32_t counter) {
         if (++month == 13) month = 1, ++years;
     }
     char buf[16];
-    std::snprintf(buf, sizeof buf, "%02d.%02d.%04d", day, month, 2026 + years);
+    std::snprintf(buf, sizeof buf, "%02d.%02d.%04d", day, month, start_year + years);
     return buf;
 }
 
@@ -133,7 +133,7 @@ Bytes save_header(const GameState& g) {
     const int managers = g.memory.u8(::bmh::layout::ManagerCount);
     Bytes h;
     h.push_back(uint8_t(managers));
-    const std::string date = date_text(g.date);
+    const std::string date = date_text(g.date, g.display_start_year);
     for (size_t i = 0; i < 11; i++) h.push_back(i < date.size() ? uint8_t(date[i]) : 0);
     Bytes list(0xa0, 0);
     for (int m = 0; m < managers && m < 4; m++) {

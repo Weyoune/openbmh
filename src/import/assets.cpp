@@ -109,7 +109,7 @@ cli::Json portrait_recipe(const std::string& legacy_name, const LeImage& exe) {
 void import_assets(Documents& out, const std::filesystem::path& root, const Database& db, const LeImage& exe) {
     using namespace detail;
     const auto palette = load_palette(required(root, "M3PC.COL"));
-    A colors, index, images, fonts, audio, animations;
+    A colors, index, images, fonts, audio, animations, palettes, supplemental;
     for (const auto color : palette.argb) colors.emplace_back(int64_t(color));
     put(out, "assets/classic/palette.json", O{{"schema", "classic-palette@1.0"}, {"argb", std::move(colors)}});
     std::map<std::string, Image> atlases;
@@ -129,7 +129,21 @@ void import_assets(Documents& out, const std::filesystem::path& root, const Data
             const auto name = lower(group) + '/' + launch::path_to_utf8(path.stem());
             if (atlases.contains(name)) fail("duplicate image resource: " + name);
             auto image = decode_vga(bytes);
-            image_entry(out, images, index, "asset:classic/" + name, name, image, palette);
+            const size_t end = 8 + size_t(le32(bytes, 4));
+            if (end > bytes.size())
+                fail("invalid indexed image stream length");
+            Palette effective = palette;
+            if (bytes.size() - end >= 768) {
+                A entries;
+                for (size_t i = 0; i < 256; ++i) {
+                    auto channel = [&](size_t c) { return uint32_t(vga_dac_rgb8(bytes[end + i * 3 + c])); };
+                    effective.argb[i] = 0xff000000u | channel(0) << 16 | channel(1) << 8 | channel(2);
+                    entries.emplace_back(int64_t(effective.argb[i]));
+                }
+                palettes.emplace_back(O{{"name", name}, {"argb", std::move(entries)}});
+            } else if (end != bytes.size())
+                fail("truncated embedded palette");
+            image_entry(out, images, index, "asset:classic/" + name, name, image, effective);
             atlases.emplace(name, std::move(image));
         }
     }
@@ -225,8 +239,29 @@ void import_assets(Documents& out, const std::filesystem::path& root, const Data
         animations.emplace_back(O{{"name", name}, {"path", path}});
         index.emplace_back(asset("asset:classic/optional/" + name, path, name, "legacy-artwork"));
     }
-    put(out, "assets/classic/resources.json", O{{"schema", "classic-resources@1.0"},
-        {"images", std::move(images)}, {"fonts", std::move(fonts)}, {"audio", std::move(audio)}, {"optional", std::move(animations)}});
+    // The in-game readme is content too; preserve its original byte encoding locally.
+    const bool english = str(get(parse(out, "manifest.json"), "provenance")) == "import:fltd";
+    const auto texts = load_textd(required(root, english ? "TEXTE.BLK" : "TEXTD.BLK"));
+    if (texts.strings.size() > 839) {
+        const auto name = texts[839];
+        if (!name.empty() && fs::path(name) == fs::path(name).filename()) {
+            if (const auto source = launch::find_file(root, name); source && fs::is_regular_file(*source)) {
+                if (fs::is_symlink(fs::symlink_status(*source)) || fs::file_size(*source) > 1024 * 1024)
+                    fail("unsafe readme input");
+                const auto path = "assets/classic/documents/readme.bytes";
+                out[path] = binary(read_file(*source));
+                supplemental.emplace_back(O{{"name", lower(name)}, {"path", path}});
+            }
+        }
+    }
+    put(out, "assets/classic/resources.json",
+        O{{"schema", "classic-resources@1.0"},
+          {"images", std::move(images)},
+          {"fonts", std::move(fonts)},
+          {"audio", std::move(audio)},
+          {"optional", std::move(animations)},
+          {"palettes", std::move(palettes)},
+          {"supplemental", std::move(supplemental)}});
     put(out, "assets/index.json", O{{"schema", "asset-index@1.0"}, {"items", std::move(index)}});
 }
 
@@ -274,6 +309,27 @@ void load_assets(const Documents& out, ClassicData& data) {
         if (!openbmh::audio::parse_container(bank, parsed, error)) fail("invalid audio container: " + error);
         if (!data.audio.emplace(str(get(row, "name")), std::move(bank)).second) fail("duplicate audio bank");
     }
+    if (resources.object()->contains("palettes"))
+        for (const auto &row : arr(get(resources, "palettes"))) {
+            const auto &colors = arr(get(row, "argb"));
+            if (colors.size() != 256)
+                fail("invalid embedded palette");
+            Palette palette;
+            for (size_t i = 0; i < 256; ++i) {
+                const auto n = num(colors[i]);
+                if (n < 0 || n > UINT32_MAX)
+                    fail("invalid color");
+                palette.argb[i] = uint32_t(n);
+            }
+            if (!data.image_palettes.emplace(str(get(row, "name")), palette).second)
+                fail("duplicate embedded palette");
+        }
+    if (resources.object()->contains("supplemental"))
+        for (const auto &row : arr(get(resources, "supplemental"))) {
+            if (!data.supplemental.emplace(str(get(row, "name")), bytes(out.at(str(get(row, "path")))))
+                     .second)
+                fail("duplicate supplemental content");
+        }
     if (!data.images.contains("kb/29") || data.fonts.size() != 2 || data.audio.size() != 4) fail("incomplete classic media");
 }
 } // namespace bmh::obw

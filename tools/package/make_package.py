@@ -10,11 +10,15 @@ import zipfile
 
 
 def validate(directory, windows):
-    products = {name + ('.exe' if windows else '') for name in ('openbmh_play', 'openbmh_cli', 'openbmh_import')}
+    products = {name + ('.exe' if windows else '') for name in ('OpenBMH', 'openbmh_cli', 'openbmh_import')}
     documents = {'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'ACKNOWLEDGEMENTS.md', 'CONTRIBUTING.md'}
     licenses = {'README.md', 'LGPL-2.1.txt', 'Nuked-OPL3-notices.txt', 'LZMA-SDK.txt', 'SDL2-HIDAPI-BSD.txt',
                 'SDL2-HIDAPI-options.txt', 'SDL2-HIDAPI-original.txt', 'SDL2-yuv2rgb.txt',
-                'SDL2.txt', 'miniz-source-notices.txt', 'miniz.txt', 'nativefiledialog-extended.txt'}
+                'SDL2.txt', 'miniz-source-notices.txt', 'miniz.txt', 'nativefiledialog-extended.txt',
+                'RmlUi.txt', 'RmlUi-containers.txt', 'RmlUi-fonts.txt', 'RmlUi-Khronos.txt',
+                'FreeType.txt', 'FreeType-FTL.txt', 'FreeType-BDF.txt', 'FreeType-PCF.txt', 'FreeType-zlib.txt'}
+    launcher_assets = {'assets/launcher/' + name for name in
+                       ('launcher.rml', 'theme.rcss', 'stadium.tga', 'LatoLatin-Regular.ttf', 'LatoLatin-Bold.ttf')}
     present = set()
     for file in directory.rglob('*'):
         if not file.is_file():
@@ -22,6 +26,7 @@ def validate(directory, windows):
         relative = file.relative_to(directory)
         present.add(relative.as_posix())
         allowed = (len(relative.parts) == 1 and file.name in products | documents)
+        allowed |= relative.as_posix() in launcher_assets
         allowed |= len(relative.parts) == 3 and relative.parts[:2] == ('docs', 'licenses') and file.name in licenses
         allowed |= (len(relative.parts) >= 2 and relative.parts[0] == 'docs' and
                     'licenses' not in relative.parts and file.suffix in {'.md', '.txt', '.csv'} and
@@ -35,8 +40,8 @@ def validate(directory, windows):
                                       r'concrt\d+|ucrtbase|api-ms-win-(?:crt|core)-[a-z0-9-]+)\.dll', file.name, re.I)))
         if not allowed:
             raise RuntimeError('Unexpected package entry: ' + relative.as_posix())
-    required = products | documents | {'docs/licenses/' + name for name in licenses}
-    required.add('docs/release/0.1/RELEASE_NOTES.md')
+    required = products | documents | launcher_assets | {'docs/licenses/' + name for name in licenses}
+    required.add('docs/release/0.2/RELEASE_NOTES.md')
     if required - present:
         raise RuntimeError('Missing package entries: ' + ', '.join(sorted(required - present)))
     if windows and not {'vcruntime140.dll', 'msvcp140.dll'} <= present:

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/content.hpp"
 #include "formats/executable_layout.hpp"
 // Information windows of docs/CLI_CONCEPT/05-information.md that the engine can already
 // project: TeamInfo (club information, from LeagueTable / Fixtures), HighScore (menu 26) and
@@ -186,7 +187,8 @@ void Console::register_info_commands() {
         const uint16_t signature = g.memory.has(::bmh::layout::CareerSession_FormatError_RuntimeField7) ? g.memory.u16(::bmh::layout::CareerSession_FormatError_RuntimeField7) : 0;
         if (signature != 0) {
             // the ranked list of this game's level, stored next to the saved games
-            const auto file = highscore_file(save_directory(), signature, texts_.strings.at(kHighscorePrefix));
+            const auto file = highscore_file(save_directory(), signature, texts_.strings.at(kHighscorePrefix),
+                                             bool(content::find(options_.data)));
             HighscoreTable rows{};
             std::error_code ec;
             if (std::filesystem::exists(file, ec)) rows = load_highscore_table(file);

@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Weyoune/openbmh/main/docs/formats/obw/schema/1.0/classic-settings.json",
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "classic-settings@1.0"
+    },
+    "payload": {
+      "type": "object",
+      "properties": {
+        "schema": {
+          "const": "classic-bytes@1.0"
+        },
+        "hex": {
+          "type": "string",
+          "pattern": "^(?:[0-9a-f]{2})*$",
+          "maxLength": 360,
+          "minLength": 360
+        }
+      },
+      "required": [
+        "schema",
+        "hex"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema",
+    "payload"
+  ],
+  "additionalProperties": false
+}

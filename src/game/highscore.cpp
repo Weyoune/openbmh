@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "game/highscore.hpp"
+#include "formats/native_state.hpp"
+#include "formats/native_file.hpp"
 
 #include <algorithm>
 #include <bit>
@@ -186,11 +188,25 @@ HighscoreTable decode_highscore_table(const HighscoreBytes& bytes) {
     }
     return rows;
 }
-std::filesystem::path highscore_file(const std::filesystem::path& base, uint16_t signature, const std::string& prefix) {
+std::filesystem::path highscore_file(const std::filesystem::path &base, uint16_t signature,
+                                     const std::string &prefix, bool native) {
     if (!signature) throw std::invalid_argument("highscore: signature0 has no ranked file");
+    if (native)
+        return base / ("highscore-" + std::to_string(signature) + ".obscore");
     return base / (prefix + std::to_string(signature));
 }
 HighscoreTable load_highscore_table(const std::filesystem::path& file) {
+    if (file.extension() == ".obscore") {
+        const auto data = read_file(file);
+        const auto j = cli::parse_json(std::string(data.begin(), data.end()));
+        if (!j.object() || !j.object()->contains("schema") || !j.object()->at("schema").string() ||
+            *j.object()->at("schema").string() != "classic-highscore@1.0" || !j.object()->contains("payload"))
+            throw FormatError("Invalid native highscore");
+        const auto raw = decode_native_bytes(j.object()->at("payload"), 360);
+        HighscoreBytes bytes;
+        std::copy(raw.begin(), raw.end(), bytes.begin());
+        return decode_highscore_table(bytes);
+    }
     std::ifstream in(file, std::ios::binary);
     if (!in) {
         HighscoreTable empty{};
@@ -203,6 +219,18 @@ HighscoreTable load_highscore_table(const std::filesystem::path& file) {
 }
 bool save_highscore_table(const std::filesystem::path& file, const HighscoreTable& rows) {
     const auto bytes = encode_highscore_table(rows);
+    if (file.extension() == ".obscore") {
+        try {
+            content::write_atomic(file,
+                                  cli::dump_json(cli::Json::Object{
+                                      {"schema", "classic-highscore@1.0"},
+                                      {"payload", encode_native_bytes(Bytes(bytes.begin(), bytes.end()))}}),
+                                  true);
+            return true;
+        } catch (const std::exception &) {
+            return false;
+        }
+    }
     std::ofstream out(file, std::ios::binary | std::ios::trunc);
     if (!out) return false;
     out.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());

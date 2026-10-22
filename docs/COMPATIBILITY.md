@@ -46,3 +46,20 @@ instead of an added fixed pause. A9 and the existing scene delays can be adjuste
 in Settings; loaded saves and EIN files retain their chosen speeds. VGA retrace
 animations use a 70-Hz reference instead of the host monitor's refresh rate.
 `--live-frame-ms` and `BMH_LIVE_FRAME_MS` remain explicit diagnostic overrides.
+
+## Native data and saves in 0.2
+
+Classic imports preserve the supported BMH and Football Limited structures in sealed OBW
+packages. The normal runtime no longer reads the original installation. Package integrity
+failures require reimport; Classic overlays and manual content editing are unsupported.
+
+Native saving and autosaving consume no random numbers. The FBM writer previously drew
+four Watcom values for its encryption envelope, so future results after a legacy save
+operation can differ. A native save/load pair preserves both generators and their draw
+counts exactly. Original saves lack the clock-seeded Watcom state; migration derives its
+initial value reproducibly from the source file and records the full state thereafter.
+
+The launcher start year affects displayed years only. Classic weekdays and season timing
+retain their existing cycle. Imported careers keep the valid year in their own save header.
+The launcher exits without confirmation; the running game's existing exit confirmation
+remains in effect and returns control to the launcher after a confirmed exit.
