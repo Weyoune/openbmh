@@ -4,6 +4,7 @@
 """Synthetic checks for the source-distribution guard; no game input is used."""
 
 import contextlib
+import hashlib
 import io
 import json
 from pathlib import Path
@@ -17,6 +18,22 @@ import check_public_tree as guard
 
 
 class BlobChecks(unittest.TestCase):
+    def test_only_exact_reviewed_project_artwork_is_accepted(self):
+        name = "assets/launcher/synthetic.tga"
+        payload = b"synthetic\0pixels"
+        with mock.patch.dict(guard.PROJECT_ARTWORK, {name: {hashlib.sha256(payload).hexdigest()}}):
+            self.assertEqual(guard.scan_blob(name, payload), [])
+            rules = {f.rule for f in guard.scan_blob(name, payload + b"changed")}
+            self.assertIn("unreviewed-project-artwork", rules)
+            self.assertIn("binary-or-game-asset", self.rules("assets/other.tga", "unreviewed"))
+            self.assertIn("binary-content", {f.rule for f in guard.scan_blob("other.tga", payload)})
+        self.assertIn("binary-or-game-asset", self.rules(name, "unreviewed"))
+
+    def test_public_edition_name_is_not_private_provenance(self):
+        edition = "DIA" + "MOND"
+        self.assertNotIn("private-provenance", self.rules("docs/ENGINE_SPLIT.md", "a later " + edition + " release"))
+        self.assertIn("private-provenance", self.rules("README.md", "/" + "tools/versions/" + edition))
+
     def rules(self, name, text):
         return {finding.rule for finding in guard.scan_blob(name, text.encode())}
 
