@@ -189,6 +189,27 @@ int main() {
         check(*f(leagues[3], "tier").integer() == 4, "English fourth tier");
         check(!*f(leagues[4], "played").boolean(), "English fifth league is not simulated");
         check(!f(leagues[4], "stages").array()->at(0).object()->contains("generator"), "no fabricated ten-team fixture table");
+        check(*f(leagues[0], "trophy").string() == "asset:comp/" +
+              f(leagues[0], "id").string()->substr(5) + "/trophy", "stable default trophy reference");
+        const auto with_trophy = [&](const J& value) {
+            auto copy = documents;
+            auto competitions = document(copy, "world/competitions.json");
+            std::get<J::Array>(competitions.object()->at("items").value)[0].object()->at("trophy") = value;
+            copy["world/competitions.json"] = cli::dump_json(competitions);
+            return copy;
+        };
+        // Artwork may be supplied by a future pack, including a shared generic key.
+        obw::validate(with_trophy(J("asset:comp/generic/trophy")));
+        obw::validate(with_trophy(J("asset:comp/future-international_42.v2/trophy")));
+        for (const auto& key : {"", "assets/cup.png", "https://example.invalid/cup.png",
+                               "asset:comp//trophy", "asset:comp/../trophy", "asset:comp/a/b/trophy"})
+            rejects([&] { obw::validate(with_trophy(J(key))); }, "reject invalid trophy reference");
+        rejects([&] { obw::validate(with_trophy(J(12))); }, "reject non-string trophy reference");
+        auto no_trophy = documents;
+        auto old_competitions = document(no_trophy, "world/competitions.json");
+        for (auto& row : std::get<J::Array>(old_competitions.object()->at("items").value)) row.object()->erase("trophy");
+        no_trophy["world/competitions.json"] = cli::dump_json(old_competitions);
+        obw::validate(no_trophy); // Existing 1.0 documents retain implicit trophy defaults.
         check(f(document(english, "world/clubs.json"), "items").array()->size() == 418, "ignore unnamed English slot");
 
         const auto zip = root / "test.obw";

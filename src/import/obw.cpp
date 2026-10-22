@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <set>
 #include <sstream>
+#include <string_view>
 #include <stdexcept>
 
 #include "formats/executable_layout.hpp"
@@ -338,6 +339,7 @@ Documents convert_database(const Database& db, const TextDb& texts, const LeImag
         const auto nation = league < 5 ? nation_ids[0] : nation_ids[league - 4];
         const int tier = league < 5 ? (english ? int(league + 1) : (league < 3 ? int(league + 1) : int(league))) : 1;
         competitions.emplace_back(O{{"id", comp_ids[league]}, {"name", localized(label)}, {"type", "league"},
+            {"trophy", "asset:comp/" + comp_ids[league].substr(5) + "/trophy"},
             {"nation", nation}, {"tier", tier}, {"played", played}, {"stages", A{std::move(stage)}},
             {"x-legacy", O{{"league_index", int(league)}, {"calendar_bit", int(bit)},
                 {"relegation_places", int(exe.u8(layout::CareerSession_InstallLeagueSizes_RuntimeField2 + uint32_t(league)))},
@@ -568,6 +570,19 @@ void validate(const Documents& documents) {
                 }
             }
             if (std::string(name) == "competitions") {
+                // Presentation references may be supplied by a later content pack.
+                // Missing assets use the documented generic trophy fallback.
+                if (item.object()->contains("trophy")) {
+                    const auto key = string_field(item, "trophy", at);
+                    constexpr std::string_view prefix = "asset:comp/", suffix = "/trophy";
+                    if (!key.starts_with(prefix) || !key.ends_with(suffix) ||
+                        key.size() <= prefix.size() + suffix.size()) fail(at + ": invalid trophy asset key");
+                    const auto name = key.substr(prefix.size(), key.size() - prefix.size() - suffix.size());
+                    if (!std::all_of(name.begin(), name.end(), [](unsigned char c) {
+                            return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                                   (c >= '0' && c <= '9') || c == '.' || c == '_' || c == '-';
+                        }) || name == "." || name == "..") fail(at + ": invalid trophy asset key");
+                }
                 const auto* stages = field(item, "stages", at).array();
                 if (!stages) fail(at + ": stages must be an array");
                 for (const auto& stage : *stages) {
