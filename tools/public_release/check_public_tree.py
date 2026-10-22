@@ -41,9 +41,16 @@ PRIVATE_DOCUMENTS = {
 }
 SOURCE_SUFFIXES = {".cpp", ".hpp", ".h", ".c", ".inc"}
 SKIP_DIRECTORIES = {".git", "__pycache__", ".cache", "_deps", "node_modules"}
-# Exact independently generated launcher artwork, not imported game material.
+# Exact independently generated artwork and synthetic native-editor captures.
+# The latter are reviewed against docs/qa/editor-poc/README.md; no game material.
 # Keep prior reviewed hashes if an asset is intentionally revised in history.
 PROJECT_ARTWORK = {
+    "docs/qa/editor-poc/clubs-midnight-de.png": {"aa53e9cdd9ac8f6bf18b514862ac704ff9003bd1b62466cad2ebc329b09703dc"},
+    "docs/qa/editor-poc/gui-search.png": {"48dc00d03c01d5bbec35683ff65672c12af4be6aecc8a84e5fece243c56643f4"},
+    "docs/qa/editor-poc/image-editor-midnight-de.png": {"eb01bd8fd8eaadfbc8e2b3f634bcdafbbb084dc4592d849e102a6f8c70ab0ad4"},
+    "docs/qa/editor-poc/options-midnight-de.png": {"7075957db2d5f5a166bb71adb97d8208cb051a72b555202c212fae4f7e5c402c"},
+    "docs/qa/editor-poc/players-silver-en.png": {"d965a904663f3a30e5410f5d33539f6247737293625039fb9e3028337bbc088c"},
+    "docs/qa/editor-poc/roster-matchday-de.png": {"937829bb31b7452aa15d4a54cd03ad5de6a42d630b83cce279f22da09dfe180b"},
     "assets/launcher/stadium.tga": {
         "08f82783a357d5b0722f3737de54844150bc14d98036845f1aaee3211608e1c8",
         "fb8e5f1f86afe60de87b70a2f533690d1ef470241fa24ee4384ff000149edaab",

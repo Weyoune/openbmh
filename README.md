@@ -1,5 +1,9 @@
 # OpenBMH
 
+The separate experimental [OBW Editor POC](docs/EDITOR.md) uses native RmlUI,
+supports German/English, image editing and a local MCP server. Enable it with
+`-DOPENBMH_BUILD_EDITOR=ON`; edited worlds are independent of the Classic runtime.
+
 A modern and faithful open source rebuild of the *Bundesliga Manager Hattrick* engine.
 
 OpenBMH is a standalone C++20 engine with an SDL2 interface for *Bundesliga Manager Hattrick* (1994/95) and its English edition, *Football Limited*. The project develops a playable reconstruction alongside a platform for new rules, content and interfaces. Keeping the familiar game enjoyable and making it easier to extend are equally important goals.

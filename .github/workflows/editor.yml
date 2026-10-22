@@ -1,0 +1,70 @@
+# SPDX-License-Identifier: GPL-3.0-only
+name: OBW Editor POC
+on:
+  push:
+    branches: [feat/obw-editor-poc]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  editor:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux-x64
+          - runner: windows-2022
+            platform: windows-x64
+          - runner: macos-14
+            platform: macos-arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check public sources
+        run: python3 tools/public_release/check_public_tree.py --root . --history
+      - name: Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build pkg-config libgtk-3-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libgl1-mesa-dev xvfb xauth xdotool
+      - name: MSVC x64
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@a102174a2b586eec2ea151a69e6fd14404a8ce7c
+        with:
+          arch: x64
+      - name: Configure
+        shell: bash
+        run: |
+          args=()
+          if [[ "$RUNNER_OS" == "macOS" ]]; then args+=(-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0); fi
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENBMH_BUILD_EDITOR=ON -DBMH_DATA= "${args[@]}"
+      - name: Build editor and synthetic tests
+        run: cmake --build build --target openbmh_editor editor_core_tests --parallel 2
+      - name: Native editor core and MCP tests
+        run: ctest --test-dir build -C Release -R ^editor_core_tests$ --output-on-failure --output-junit editor-tests.xml
+      - name: Linux native GUI smoke
+        if: runner.os == 'Linux'
+        run: |
+          xvfb-run -a -s '-screen 0 1600x1000x24' python3 tests/editor_gui_smoke.py build/OpenBMHEditor
+          xvfb-run -a -s '-screen 0 1600x1000x24' build/OpenBMHEditor --demo --page players --settings build/test-options.json --screenshot build/editor.png --quit-after-ms 1800
+      - name: Package editor
+        shell: bash
+        run: |
+          args=()
+          if [[ "$RUNNER_OS" == "Linux" ]]; then args+=(--source-package); fi
+          python3 tools/package/make_editor_package.py --build build --out dist --platform ${{ matrix.platform }} "${args[@]}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: OpenBMHEditor-${{ matrix.platform }}
+          path: dist/*.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: editor-checks-${{ matrix.platform }}
+          path: |
+            build/editor-tests.xml
+            build/editor.png

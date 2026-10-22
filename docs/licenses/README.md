@@ -13,5 +13,6 @@ These files preserve upstream license and attribution wording. They are not a gr
 - [Lato font notices](RmlUi-fonts.txt): unmodified Regular and Bold Latin fonts from RmlUi 6.3, under SIL OFL 1.1. The upstream sample-font notice is retained verbatim.
 - [Nuked OPL3 copyright and license notice](Nuked-OPL3-notices.txt): unchanged leading notice from its vendored implementation.
 - [LGPL version 2.1](LGPL-2.1.txt): full license supplied with Nuked OPL3. Its source notices permit version 2.1 or any later version.
+- Optional native editor: [nlohmann/json](nlohmann-json.txt), [cpp-httplib](cpp-httplib.txt), [SDL2_image](SDL2_image.txt), [stb_image](stb-image.txt), [libwebp](libwebp.txt) with its [patent grant](libwebp-PATENTS.txt), [LunaSVG](LunaSVG.txt), [PlutoVG](PlutoVG.txt), and [pugixml](pugixml.txt). These are verbatim upstream notices for the pinned versions listed in the root notices.
 
 [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md) identifies the upstream versions and distribution requirements. Include this directory, that notice file and the root LICENSE with release packages. Preserve upstream attribution within these verbatim texts.
