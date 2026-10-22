@@ -29,6 +29,14 @@ Shortcuts: Ctrl/Cmd+O, Ctrl/Cmd+S, Shift+Ctrl/Cmd+S, Ctrl/Cmd+Z und Shift+Ctrl/C
 
 **Optionen** bietet Deutsch/Englisch, Midnight Glass/Silver Glass/Matchday und den integrierten MCP-Server. Die Sprache ändert die Oberfläche; Namen und Quelldaten werden nicht übersetzt. Einstellungen werden im Benutzerprofil gespeichert.
 
+Unter **Darstellung** stehen die drei Farbwelten der modernen Untermenüs zur Auswahl:
+
+- **Midnight Glass:** Schiefergrau mit dezenten Mint-Akzenten.
+- **Silver Glass:** helle silbergraue Flächen mit Petrol-Akzenten.
+- **Matchday:** Graphit mit warmen Korall-Akzenten.
+
+**Anwenden** wechselt das Theme ohne Neustart. Die Farbwahl gilt auch für Tabellen, Eigenschaften, Dropdowns, Meldungen und die Bildbearbeitung. [Native Vergleichsbilder](qa/editor-poc/README.md#theme-comparison) zeigen alle drei mit denselben synthetischen Daten.
+
 Der MCP-Server ist standardmäßig aktiviert und bindet ausschließlich `127.0.0.1`, standardmäßig Port `8765`. Port `0` wählt einen freien Port. Status und tatsächlicher Port sind in Optionen sichtbar. **Verbindung kopieren** kopiert eine JSON-Konfiguration einschließlich Bearer-Token für HTTP-fähige MCP-Clients. Das Token bleibt lokal im Benutzerprofil und wird nur auf ausdrückliches Kopieren/CLI-Anfordern ausgegeben. Ein anderer bereits laufender Editor kann den Standardport belegen; dann einen anderen Port wählen.
 
 Implementiert ist [MCP Streamable HTTP 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), mit Aushandlung von 2025-06-18; JSON-Antworten, ohne optionale SSE-Sitzungen. Neuere MCP-Versionen werden nicht als unterstützt beworben. Der Server prüft Token, Host und gegebenenfalls Origin. Oberfläche und Agent bearbeiten dieselbe Welt, verwenden dieselbe Validierung und dieselbe Undo-Historie. Für konkurrierende Änderungen `expected_revision` aus `editor_info`/`editor_get` mitsenden.

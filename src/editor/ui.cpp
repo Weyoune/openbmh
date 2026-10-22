@@ -209,9 +209,13 @@ class EditorUi final : public Rml::EventListener {
             {"assets", "M3 3h18v18H3zM3 18l6-7 5 5 3-3 4 5M17 6v2"},
             {"review", "M12 2 1 21h22zM12 8v6M12 17v1"},
             {"changes", "M4 5v6h6M4 11a9 9 0 1 1 1 7"}};
-        const auto token = "icon-" + options_.theme + '-' + name + ".png";
+        const bool active = name == page_;
+        const auto token = "icon-" + options_.theme + '-' + name + (active ? "-active.png" : ".png");
         if (!renderer_.memory.contains(token)) {
-            auto color = options_.theme == "silver" ? "#537588" : options_.theme == "matchday" ? "#d3b3b0" : "#9cb9c8";
+            // Rasterized line art follows the same muted/accent colours as RCSS.
+            const auto color = options_.theme == "silver"     ? (active ? "#25617a" : "#526779")
+                               : options_.theme == "matchday" ? (active ? "#efb2aa" : "#b7b4b9")
+                                                              : (active ? "#a9dccb" : "#a8b8c8");
             renderer_.memory[token] = {"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" "
                                        "height=\"24\" viewBox=\"0 0 24 24\"><path d=\"" +
                                            paths.at(name) + "\" fill=\"none\" stroke=\"" + color +
