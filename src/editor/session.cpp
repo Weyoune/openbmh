@@ -259,17 +259,23 @@ Json Session::apply(const Json &args, std::vector<FileDelta> files, const std::s
 Json Session::import_image(const Json &args) {
     auto &w = world();
     std::string original, extension, original_name;
-    const auto *existing = w.find("assets", str(args, "key"));
+    const auto source_key = str(args, "source_key", str(args, "key"));
+    const auto *existing = w.find("assets", source_key);
     if (args.contains("file")) {
         original = read_file(path(str(args, "file")));
         extension = folded(utf8(path(str(args, "file")).extension()));
         original_name = utf8(path(str(args, "file")).filename());
+    } else if (source_key.starts_with("portrait:") && w.find("players", source_key.substr(9))) {
+        auto value = asset_bytes(source_key);
+        original = std::move(value.first);
+        extension = value.second;
+        original_name = w.title(*w.find("players", source_key.substr(9)));
     } else {
         if (!existing)
             throw Error("record_missing");
         auto source = str(existing->value("x-editor", Json::object()), "original");
         if (source.empty())
-            source = w.asset_file(str(args, "key"));
+            source = w.asset_file(source_key);
         original = w.store->read(source);
         extension = folded(utf8(path(source).extension()));
         original_name = text(existing->value("name", Json(str(args, "key"))));
@@ -280,13 +286,25 @@ Json Session::import_image(const Json &args) {
     auto result = images::transform(original, extension, args.value("transform", Json::object()));
     auto key = str(args, "key");
     const auto target = args.value("target", Json::object());
+    const auto target_table = str(target, "table");
+    const auto target_field = str(target, "field",
+                                  target_table == "players" || target_table == "staff" ? "photo"
+                                  : target_table == "competitions"                     ? "trophy"
+                                                                                       : "crest");
     if (key.empty()) {
         if (!target.empty()) {
             auto id = str(target, "id");
             auto table = str(target, "table");
-            key = "asset:" + table + '/' + id + '/' + str(target, "field", table == "players" ? "photo" : "crest");
+            key = "asset:" + table + '/' + id + '/' + target_field;
         } else
             key = new_id("asset:uploaded/");
+    }
+    if (!target.empty() && w.find("assets", key)) {
+        for (const auto &[table, id] : w.references(key))
+            if (table != str(target, "table") || id != str(target, "id")) {
+                key = "asset:editor/" + target_table + '/' + str(target, "id") + '/' + target_field;
+                break;
+            }
     }
     const auto original_hash = content::sha256(original), edited_hash = content::sha256(result.bytes);
     auto source_file = "x-editor/originals/" + original_hash + extension;
@@ -308,6 +326,8 @@ Json Session::import_image(const Json &args) {
         {"license", "user-supplied"},
         {"kind", result.extension == ".svg" ? "vector" : "raster"},
         {"x-editor", {{"original", source_file}, {"original_sha256", original_hash}, {"transform", result.recipe}}}};
+    if (!args.contains("file") && !source_key.empty() && source_key != key)
+        row["x-editor"]["source_asset"] = source_key;
     Json changes = Json::array();
     if (const auto *before = w.find("assets", key)) {
         auto after = *before;
@@ -323,7 +343,7 @@ Json Session::import_image(const Json &args) {
         changes.push_back({{"op", "update"},
                            {"table", str(target, "table")},
                            {"id", str(target, "id")},
-                           {"set", {{'/' + str(target, "field", "crest"), key}}}});
+                           {"set", {{'/' + target_field, key}}}});
     Json command{{"changes", changes}};
     if (args.contains("expected_revision"))
         command["expected_revision"] = args["expected_revision"];

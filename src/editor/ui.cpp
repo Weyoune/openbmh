@@ -152,7 +152,7 @@ class EditorUi final : public Rml::EventListener {
     std::future<Json> work_;
     std::function<void(const Json &)> completed_;
     std::function<void()> modal_accept_, discard_continuation_;
-    std::string image_bytes_, image_extension_, image_file_, image_key_;
+    std::string image_bytes_, image_extension_, image_file_, image_key_, image_source_key_;
     Json image_target_, image_recipe_;
     double drag_x_ = 0, drag_y_ = 0;
     bool dragging_ = false;
@@ -842,17 +842,22 @@ class EditorUi final : public Rml::EventListener {
     void edit_image(bool existing, bool fresh = false) {
         image_file_.clear();
         image_key_ = fresh ? "" : image_key(selected_);
+        image_source_key_ = image_key_;
         image_target_ = Json::object();
         image_recipe_ = {{"angle", 0},
                          {"flip_x", false},
                          {"flip_y", false},
                          {"crop", {{"x", 0}, {"y", 0}, {"width", 1}, {"height", 1}}}};
-        if (table() != "assets")
+        if (table() != "assets") {
             image_target_ = {{"table", table()},
                              {"id", selected_id_},
                              {"field", table() == "players"        ? "photo"
                                        : table() == "competitions" ? "trophy"
                                                                    : "crest"}};
+            // Editing one person/club must not overwrite a shared fallback or
+            // a template image also referenced by another record.
+            image_key_ = "asset:editor/" + table() + '/' + selected_id_ + '/' + str(image_target_, "field");
+        }
         if (!existing) {
             image_file_ = native_dialog("image");
             if (image_file_.empty())
@@ -862,10 +867,18 @@ class EditorUi final : public Rml::EventListener {
             if (table() == "assets" && selected_id_.empty())
                 image_key_.clear();
         } else {
-            auto row = session_.execute("get", {{"table", "assets"}, {"id", image_key_}})["record"];
+            Json row;
+            try {
+                row = session_.execute("get", {{"table", "assets"}, {"id", image_source_key_}})["record"];
+            } catch (const Error &error) {
+                if (error.code != "record_missing" || table() != "players" || !selected_.contains("appearance"))
+                    throw;
+                image_source_key_ = "portrait:" + selected_id_;
+                row = Json::object();
+            }
             auto metadata = row.value("x-editor", Json::object());
             auto source = str(metadata, "original");
-            auto pair = session_.asset_bytes(source.empty() ? image_key_ : source);
+            auto pair = session_.asset_bytes(source.empty() ? image_source_key_ : source);
             image_bytes_ = std::move(pair.first);
             image_extension_ = pair.second;
             if (metadata.contains("transform"))
@@ -906,6 +919,8 @@ class EditorUi final : public Rml::EventListener {
                 Json args{{"key", image_key_}, {"transform", image_recipe_}, {"expected_revision", revision_}};
                 if (!image_file_.empty())
                     args["file"] = image_file_;
+                else
+                    args["source_key"] = image_source_key_;
                 if (!image_target_.empty())
                     args["target"] = image_target_;
                 session_.execute(image_file_.empty() ? "asset.edit" : "asset.import", args);

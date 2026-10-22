@@ -199,8 +199,14 @@ Json McpServer::tools() {
         {"file"});
     add("editor_image_edit",
         "Re-edit an existing image using its preserved original. No repeated "
-        "resampling.",
-        {{"key", id}, {"transform", transform}, {"expected_revision", revision}}, {"key", "transform"});
+        "resampling. Optional source_key clones that source into key; target assigns it to one entity without changing "
+        "other users of a shared fallback.",
+        {{"key", id},
+         {"source_key", id},
+         {"target", field("object")},
+         {"transform", transform},
+         {"expected_revision", revision}},
+        {"key", "transform"});
     add("editor_image_preview", "Return a PNG preview as an MCP image content block.",
         {{"key", id}, {"transform", transform}}, {"key"}, true);
     add("editor_image_export", "Export an image as PNG to an explicit filesystem path.",

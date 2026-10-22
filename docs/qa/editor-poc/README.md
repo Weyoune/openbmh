@@ -20,10 +20,12 @@ These are native application captures, not HTML/browser mockups.
 
 Validation performed:
 
-- `editor_core_tests`: 55 assertions for edit/rollback, revision conflicts,
+- `editor_core_tests`: 59 assertions for edit/rollback, revision conflicts,
   references, dates/scales, roster moves/swaps/order, shared undo/redo/save
   checkpoint, atomic OBW overwrite, exact image originals, arbitrary SVG/raster
   transforms, unknown-extension preservation and authenticated MCP HTTP.
+  Individual image edits also verify that shared fallback images and other
+  records remain unchanged.
   Windows additionally checks a profile directory containing non-ASCII letters.
 - `tests/editor_gui_smoke.py`: real mouse/keyboard inspector edit; untouched
   JSON colour field retained; native search focus; shared MCP/native undo/redo;

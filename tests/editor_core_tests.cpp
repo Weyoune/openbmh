@@ -124,16 +124,33 @@ int main() {
                            "height=\"10\"><image href=\"file:///tmp/test.png\"/></svg>",
                            ".svg");
         });
-        auto imported = s.execute("asset.import",
-                                  {{"file", utf8(root / "input.png")},
-                                   {"key", "asset:test"},
-                                   {"target", {{"table", "players"}, {"id", "player:demo-0"}, {"field", "photo"}}}});
+        auto imported = s.execute("asset.import", {{"file", utf8(root / "input.png")},
+                                                   {"key", "asset:test"},
+                                                   {"target", {{"table", "players"}, {"id", "player:demo-0"}}}});
         check(row(s, "players", "player:demo-0")["photo"] == "asset:test", "image assigned");
         check(s.asset_bytes("asset:test").first == png, "source exact on import");
         rejects("record_referenced", [&] {
             s.execute("apply",
                       {{"changes", Json::array({{{"table", "assets"}, {"id", "asset:test"}, {"op", "delete"}}})}});
         });
+        s.execute("apply", update("players", "player:demo-1", {{"/photo", "asset:test"}}));
+        s.execute("asset.edit", {{"key", "asset:individual"},
+                                 {"source_key", "asset:test"},
+                                 {"transform", {{"angle", 18.0}}},
+                                 {"target", {{"table", "players"}, {"id", "player:demo-0"}, {"field", "photo"}}}});
+        check(row(s, "players", "player:demo-0")["photo"] == "asset:individual", "individual image assigned");
+        check(row(s, "players", "player:demo-1")["photo"] == "asset:test" && s.asset_bytes("asset:test").first == png,
+              "shared fallback and other person remain unchanged");
+        s.execute("undo");
+        check(row(s, "players", "player:demo-0")["photo"] == "asset:test", "image assignment undo atomic");
+        const auto isolated = s.execute(
+            "asset.import", {{"file", utf8(root / "input.png")},
+                             {"key", "asset:test"},
+                             {"transform", {{"flip_y", true}}},
+                             {"target", {{"table", "players"}, {"id", "player:demo-0"}, {"field", "photo"}}}});
+        check(isolated["key"] != "asset:test" && s.asset_bytes("asset:test").first == png,
+              "targeted import cannot overwrite another entity's shared image");
+        s.execute("undo");
         s.execute("asset.edit", {{"key", "asset:test"}, {"transform", {{"angle", 30.5}}}});
         auto metadata = row(s, "assets", "asset:test")["x-editor"];
         check(metadata["transform"]["angle"] == 30.5, "float angle metadata");
