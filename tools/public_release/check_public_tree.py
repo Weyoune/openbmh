@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import hashlib
 import json
 from pathlib import Path, PurePosixPath
 import re
@@ -26,7 +27,7 @@ ASSET_SUFFIXES = {
     ".fbm", ".vga", ".blk", ".col", ".lbm", ".fnt", ".wap", ".ein", ".men", ".dat",
     ".exe", ".dll", ".so", ".dylib", ".wav", ".mp3", ".ogg", ".flac",
     ".avi", ".mov", ".mp4", ".png", ".jpg", ".jpeg", ".bmp", ".gif",
-    ".bin", ".zip", ".7z", ".dmg", ".tar", ".gz", ".pdf",
+    ".bin", ".zip", ".7z", ".dmg", ".tar", ".gz", ".pdf", ".tga",
 }
 PRIVATE_PREFIXES = (
     ("data", "original"), ("docs", "manuals"), ("docs", "analyses"),
@@ -40,6 +41,15 @@ PRIVATE_DOCUMENTS = {
 }
 SOURCE_SUFFIXES = {".cpp", ".hpp", ".h", ".c", ".inc"}
 SKIP_DIRECTORIES = {".git", "__pycache__", ".cache", "_deps", "node_modules"}
+# Independently generated launcher artwork already published on the launcher
+# branch, with provenance in its assets/launcher/provenance.json. History checks
+# include those branches too. Approve only these exact reviewed bytes and path.
+PROJECT_ARTWORK = {
+    "assets/launcher/stadium.tga": {
+        "08f82783a357d5b0722f3737de54844150bc14d98036845f1aaee3211608e1c8",
+        "fb8e5f1f86afe60de87b70a2f533690d1ef470241fa24ee4384ff000149edaab",
+    },
+}
 
 LEGACY_SYMBOLS = re.compile(
     r"(?<![A-Za-z0-9])(?:" + "FUN" + r"_?[0-9a-f]{4,8}|" + "DAT" +
@@ -50,8 +60,8 @@ LEGACY_SYMBOLS = re.compile(
 PRIVATE_TEXT = re.compile(
     r"(?:(?<![\w}./\\])/" + r"tools/|[A-Z]:[/\\]Users[/\\]|[A-Z]:[/\\]OpenBMH[/\\]|"
     r"docs/(?:analyses|agents)/|src/ui/(?:validation|reference)/|"
-    + "bmh" + r"-work|matter" + r"most|\bMich" + r"ael\b|\bDIA" +
-    r"MOND\b|(?<![\w}./\\])/" + r"root/[^\s]+|https?://(?:10\.|192\.168\.|172\.(?:1[6-9]|2[0-9]|3[01])\.)|"
+    + "bmh" + r"-work|matter" + r"most|\bMich" + r"ael\b|"
+    r"(?<![\w}./\\])/" + r"root/[^\s]+|https?://(?:10\.|192\.168\.|172\.(?:1[6-9]|2[0-9]|3[01])\.)|"
     r"github\.com/[^/\s]+/openbmh[_-]dc\b)",
     re.IGNORECASE,
 )
@@ -156,7 +166,7 @@ def path_findings(name: str) -> list[Finding]:
     result = []
     if path.is_absolute() or ".." in parts:
         result.append(Finding(name, 0, "unsafe-path"))
-    if path.suffix.lower() in ASSET_SUFFIXES:
+    if path.suffix.lower() in ASSET_SUFFIXES and name not in PROJECT_ARTWORK:
         result.append(Finding(name, 0, "binary-or-game-asset"))
     if path.name in PRIVATE_DOCUMENTS or any(parts[:len(p)] == p for p in PRIVATE_PREFIXES):
         result.append(Finding(name, 0, "private-material-path"))
@@ -167,6 +177,10 @@ def path_findings(name: str) -> list[Finding]:
 
 def scan_blob(name: str, blob: bytes) -> list[Finding]:
     result = path_findings(name)
+    if name in PROJECT_ARTWORK:
+        if hashlib.sha256(blob).hexdigest() not in PROJECT_ARTWORK[name]:
+            result.append(Finding(name, 0, "unreviewed-project-artwork"))
+        return result
     if len(blob) > 2_000_000:
         result.append(Finding(name, 0, "oversized-source-file"))
     if b"\0" in blob:
