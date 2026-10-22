@@ -247,6 +247,7 @@ A competition is an ordered list of **stages**. Each stage takes teams from **sl
   "type": "league",
   "nation": "nation:de",
   "tier": 2,
+  "trophy": "asset:comp/de-2/trophy",
   "season_cycle": 1,
   "stages": [{
     "id": "regular",
@@ -405,6 +406,30 @@ Data never refers to file paths. It uses logical keys:
 | `asset:stadium/<key>/image` | Stadium picture |
 | `asset:icon/<name>` | Interface icon |
 
+**Competition trophies.** Every competition type may set the optional string
+`trophy` to a logical key `asset:comp/<key>/trophy`. The key is stable and opaque;
+it may be shared by several competitions, and never embeds a season, localized
+name, file path, URL or runtime index. `<key>` is a nonempty sequence of ASCII
+letters, digits, `.`, `_` or `-`, excluding `.` and `..`. A competition without
+the field uses `asset:comp/<competition key>/trophy`, where the competition key is
+its `id` without `comp:`. This also applies to additional foreign leagues and
+international competitions; a fixed competition list is not part of the format.
+
+Resolve that key from active packs by priority, then the world. If unavailable,
+resolve `asset:comp/generic/trophy` through the same sources, then use the
+client's built-in neutral trophy icon. The generic key is reserved for this
+fallback. A missing trophy never prevents a competition from being played.
+An invalid explicitly supplied key is an input error, not a request to guess a
+file path. File presence is not mandatory because a pack or theme may supply
+the image later. Asset-index metadata and rights requirements still apply.
+Trophies are presentation only; they do not identify competition rules, stages
+or historical winners.
+
+This optional-field clarification remains compatible with 1.0 worlds: old
+documents omit it, older readers ignore it, and no new `requires` feature is
+needed. Classic converters emit the conventional per-competition key without
+fabricating a trophy image or changing the original local media inventory.
+
 ### 9.2 Resolution and image formats
 
 A resolver looks a key up in the active packs by priority (§9.5), then in the world, then falls back: original low-resolution graphics of the installation where one exists, a crest generated from `colors`, a silhouette for photos, a neutral icon.
@@ -412,6 +437,9 @@ A resolver looks a key up in the active packs by priority (§9.5), then in the w
 - **Crests, logos, flags, icons:** SVG preferred (scales to every resolution). Otherwise PNG with alpha in size steps 64, 128, 256 and 512 px (`crest@128.png`). The resolver picks the smallest step not below the requested size.
 - **Photos:** PNG, JPEG or WebP, aspect 3:4, reference size 300×400 px, larger allowed. Faces centred; the interface crops, it never stretches.
 - **Pictures** (stadiums, backgrounds): PNG, JPEG or WebP, 16:9 reference 1920×1080.
+- **Trophies:** SVG or PNG/WebP with alpha, preserving the full object and native
+  aspect ratio. A transparent generic trophy may be provided under the reserved
+  fallback key. No real trophy artwork is bundled by the format specification.
 
 Asset metadata sits next to the files in `assets/index.json`: key, files per size, author, source and licence (required).
 

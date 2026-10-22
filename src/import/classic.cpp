@@ -122,6 +122,7 @@ void competitions(Documents& out, const LeImage& exe) {
         std::string type = cup == 0 ? "cup" : cup >= 1 && cup <= 3 ? "club_international" :
             cup >= 4 && cup <= 8 ? "national_team" : cup == 10 ? "friendly" : cup == 11 && !english ? "indoor" : "cup";
         comps.emplace_back(O{{"id", "comp:classic-cup-" + std::to_string(cup)}, {"name", O{{"default", label}}},
+            {"trophy", "asset:comp/classic-cup-" + std::to_string(cup) + "/trophy"},
             {"type", type}, {"played", true}, {"stages", std::move(stages)},
             {"classic", O{{"competition_id", cup}, {"calendar_bit", cup + 5},
                 {"qualification", "classic-season-entrants@1"}, {"runtime_participants", true}}}});

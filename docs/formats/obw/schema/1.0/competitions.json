@@ -127,6 +127,11 @@
               "additionalProperties": true
             },
             "minItems": 1
+          },
+          "trophy": {
+            "type": "string",
+            "pattern": "^asset:comp/(?!\\.{1,2}/)[a-zA-Z0-9._-]+/trophy$",
+            "description": "Optional presentation key; default is asset:comp/<competition key>/trophy. Missing artwork resolves to asset:comp/generic/trophy and then a built-in neutral trophy icon."
           }
         },
         "required": [
