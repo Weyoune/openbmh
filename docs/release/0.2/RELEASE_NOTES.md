@@ -1,5 +1,14 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
-# OpenBMH v0.2.0
+# OpenBMH v0.2.1
+
+Fixes the launcher startup on Windows Server / Remote Desktop and computers
+without an OpenGL 3.3 driver. The Windows RmlUI launcher uses Direct3D 11, with
+automatic WARP software fallback; Linux and macOS keep their existing OpenGL
+renderer. Launch errors use a native Windows dialog and a diagnostic log under
+`%LOCALAPPDATA%/OpenBMH/OpenBMH-startup.log`. Game rules, saves and OBW content
+remain compatible with 0.2.0.
+
+## Version 0.2.0
 
 Version 0.2 makes the original-style game independent of the original installation
 after import. It supports Bundesliga Manager Hattrick and Football Limited Classic
@@ -52,7 +61,8 @@ See the [runtime and migration contract](../../formats/obw/runtime-0.2.md).
 The build pipeline produces Windows x64, Linux x64 and macOS ARM64 ZIPs and a
 matching source ZIP with pinned dependency sources and build information.
 Builds and automated tests do not replace native interactive acceptance.
-The launcher requires OpenGL 3.3 (macOS: 4.1). Linux requires the platform libraries
+The launcher uses Direct3D 11 with WARP fallback on Windows, OpenGL 3.3 on Linux,
+and OpenGL 4.1 on macOS. Linux requires the platform libraries
 described in [BUILDING](../../BUILDING.md), including GTK3 for its folder picker.
 The macOS executable is unsigned and is not a notarised application bundle.
 

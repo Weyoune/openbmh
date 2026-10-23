@@ -45,6 +45,100 @@ SKIP_DIRECTORIES = {".git", "__pycache__", ".cache", "_deps", "node_modules"}
 # The latter are reviewed against docs/qa/editor-poc/README.md; no game material.
 # Keep prior reviewed hashes if an asset is intentionally revised in history.
 PROJECT_ARTWORK = {
+    "docs/qa/editor-dropdown-arrow/after-dropdown.png": {
+        "5c89970a44ee114e5cf65b38d7972493fbc3ed125ff7a0e83c86a05b8a66be06",
+    },
+    "docs/qa/editor-dropdown-arrow/after-matchday-1440x900.png": {
+        "c92fcdce42ea9b34e6e149e36ff49af57d15d863c0455fbd41dce0807d59d29b",
+    },
+    "docs/qa/editor-dropdown-arrow/after-midnight-1080x720.png": {
+        "b32c186f678a11c1f7da13cbaed22ebcadf12fa6f1bd41c248b2d63a73a5bd3e",
+    },
+    "docs/qa/editor-dropdown-arrow/after-midnight-1440x900.png": {
+        "ae8d8790e4c00ab09b98b1f1e3f1e22acd6a8103bf5104c4e0d690d6bf1cdcfd",
+    },
+    "docs/qa/editor-dropdown-arrow/after-midnight-2560x1600.png": {
+        "ae3fc896f391cbfa2443a9c896a734e98564d0e260e5f60bb8ad0b2e39a97f38",
+        "67283d8a4e9be4f779ef1482016059febbb6be7d94242b074bbafa6f1ce5e18f",
+    },
+    "docs/qa/editor-dropdown-arrow/after-silver-1440x900.png": {
+        "ea6ee3852468ff684362fcc65b06fff0a1bcccd0190673185620e36b03f8dc6e",
+    },
+    "docs/qa/editor-dropdown-arrow/after-toolbar.png": {
+        "ca1db2ddc6a4b764c9715f9f17c5d370906eb6668c7a0770f0d674efd5724a96",
+    },
+    "docs/qa/editor-dropdown-arrow/before-0.5.4.png": {
+        "d642c323a4601d167c4b8f5f24549332889215de1dc98ff929f2beb9f5d69eaa",
+    },
+    "docs/qa/editor-navigation/before-options-0.5.3.png": {
+        "493984e53b85c516a3a541ae879fdd18fdc7ec54a4d6478c571865bee15a9b44",
+    },
+    "docs/qa/editor-navigation/dropdown-matchday-de.png": {
+        "594bdce386a91e2ef24fbab72d4910eed0899d8c108087b1cf00f9750e949b58",
+    },
+    "docs/qa/editor-navigation/dropdown-midnight-de.png": {
+        "42cc11138163ce0a030c85fc5cb5c1204dbb7c05cfd7f8ef16cff8f6f6eeb422",
+    },
+    "docs/qa/editor-navigation/dropdown-silver-en.png": {
+        "4ec9bf9a7af979c1c72f5cc6cd1b8a969f579a9680d8afc00837fff71da87a22",
+    },
+    "docs/qa/editor-navigation/history-midnight-de.png": {
+        "7f141a6283ee946e17caa5d82a37503776133090fe86f82f0f9b2180b6444706",
+    },
+    "docs/qa/editor-navigation/options-midnight-de.png": {
+        "3facf3da00290e5d39f0eeb210f657ae1040fce54f3e48e81529875e5d6f3fc9",
+    },
+    'docs/qa/editor-images/before-club-image.png': {
+        'ac57bbbce2b8b7f71dad1d9e94d7b7baf182cb337d3800b5aac7a7f65db456bc',
+    },
+    'docs/qa/editor-images/linked-asset.png': {
+        '76717df021e0c6db9a4afcab283923a20c2bf47d43f7e111303dca66041d3bf8',
+    },
+    'docs/qa/editor-images/preview-matchday-de.png': {
+        'b7c0fad929fb28d25ef9e104e4ee90e62ab1d6e5ff8746bd0e8805bc2204d410',
+    },
+    'docs/qa/editor-images/preview-midnight-de.png': {
+        'cc0ba1b7a1e4ea21f06fa9eb254a8b523da79bfa495a5068e345651619ab0407',
+    },
+    'docs/qa/editor-images/preview-silver-en.png': {
+        '8704055293f58796b92057bc8a0c111b4db8bcaca297e45b7cb8d4bcacdd9a92',
+    },
+    "docs/qa/editor-regulations/before-competitions-0.5.1.png": {
+        "cffa594e4d5ee942e086ab24fe7744a53dab4d5083dc1659f5e4b3ebdaee1f0b",
+    },
+    "docs/qa/editor-regulations/game-rules-midnight-de.png": {
+        "b8778c35f4c94c327086198f765296698a401f4ef43029bb018e88c05fc7848f",
+    },
+    "docs/qa/editor-regulations/qualification-midnight-de.png": {
+        "c1fa59f416db2ee56ac661b1c21101da645bc6d00ca2c1656438455a48b55295",
+    },
+    "docs/qa/editor-regulations/rules-matchday-de.png": {
+        "45d09f05a7a4cf86bf465775f276c4f71790a053fa85a0e4bc42124d34702a34",
+    },
+    "docs/qa/editor-regulations/rules-midnight-de.png": {
+        "f067fe69dd08c6f849fba3bae518727cc1252702494d077d2b7561c9aee3ed01",
+    },
+    "docs/qa/editor-regulations/rules-silver-en.png": {
+        "e4e0f5269f23b4757b1bded384eb37857212236b626df7bc1352281f5eb5da1d",
+    },
+    "docs/qa/editor-comparison/before-players-0.5.0.png": {
+        "e061cf1fcbafffc2950037f2f4bf24f28c00fe835988b56b198d88bce33b97e2",
+    },
+    "docs/qa/editor-comparison/players-midnight-de.png": {
+        "ab1debb1e282d5462eab1a570137477884b2c773a900ec45a74783d50693367d",
+    },
+    "docs/qa/editor-comparison/teams-silver-en.png": {
+        "ad8e8274f21465686b8c499ad44344ea4705cbec520560b12f8d7dde878204ea",
+    },
+    "docs/qa/editor-comparison/leagues-matchday-de.png": {
+        "f24cd278b30ce3ccecc7320ae105ea5d0394e759c8045a76e75851259a487ada",
+    },
+    "docs/qa/editor-comparison/columns-midnight-de.png": {
+        "74d825609b862c7dc60dc5182a32c010df73177b10d849079b02a2b4dc2d1620",
+    },
+    "docs/qa/editor-comparison/players-scroll-midnight-de.png": {
+        "8e23a0fe6ea31ca6050fd5f157016948e0bad2f83093dcc3c53a3ba855c3bb40",
+    },
     "docs/qa/editor-poc/clubs-midnight-de.png": {
         "2921aa67a870633c96f46328a82bc3022e5489b38d551c5314f13c7e59446070",
         "aa53e9cdd9ac8f6bf18b514862ac704ff9003bd1b62466cad2ebc329b09703dc",
@@ -73,6 +167,7 @@ PROJECT_ARTWORK = {
     "assets/launcher/stadium.tga": {
         "08f82783a357d5b0722f3737de54844150bc14d98036845f1aaee3211608e1c8",
         "fb8e5f1f86afe60de87b70a2f533690d1ef470241fa24ee4384ff000149edaab",
+        "8bd89b7db8dbd0e92707240c5367cb92f8f32c2903e08157d0f278ac2599d6cf",
     },
     "docs/qa/editor-poc/clubs-silver-de.png": {
         "3e557f68bf8d0e8186dc237f9e92f6b9c7743d7df79fd29c3a5838ba01c116f2",

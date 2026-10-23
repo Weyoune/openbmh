@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "editor/session.hpp"
 #include "content/digest.hpp"
+#include "editor/comparison.hpp"
 #include "editor/images.hpp"
+#include "editor/regulations.hpp"
 #include <algorithm>
 #include <limits>
 
@@ -57,6 +59,7 @@ Json Session::info() const {
     Json result = world_ ? world_->statistics() : Json{{"title", ""}, {"counts", Json::object()}};
     result["loaded"] = bool(world_);
     result["revision"] = revision_;
+    result["world_generation"] = world_generation_;
     result["dirty"] = dirty();
     result["can_undo"] = cursor_ > 0;
     result["can_redo"] = cursor_ < history_.size();
@@ -65,6 +68,7 @@ Json Session::info() const {
 }
 void Session::replace(World value) {
     world_ = std::make_unique<World>(std::move(value));
+    ++world_generation_;
     history_.clear();
     cursor_ = 0;
     ++revision_;
@@ -435,6 +439,20 @@ Json Session::execute(const std::string &command, const Json &args) {
     auto &w = world();
     if (command == "list")
         return w.query(args);
+    if (command == "compare") {
+        const Json key{{"table", str(args, "table", "players")},
+                       {"attribute_set", str(args, "attribute_set")},
+                       {"language", str(args, "language", "de")}};
+        if (comparison_revision_ != revision_ || comparison_key_ != key.dump()) {
+            auto data = comparison_data(w, key);
+            comparison_cache_ = std::move(data);
+            comparison_key_ = key.dump();
+            comparison_revision_ = revision_;
+        }
+        auto result = query_comparison(comparison_cache_, args);
+        result["revision"] = revision_;
+        return result;
+    }
     if (command == "get") {
         auto name = str(args, "table"), id = str(args, "id");
         const auto *found = name == "manifest" ? &w.manifest : w.find(name, id);
@@ -444,6 +462,11 @@ Json Session::execute(const std::string &command, const Json &args) {
     }
     if (command == "rules")
         return w.rows("rules");
+    if (command == "regulations") {
+        auto result = regulation_view(w, args);
+        result["revision"] = revision_;
+        return result;
+    }
     if (command == "validate")
         return {{"diagnostics", w.validate()}, {"revision", revision_}};
     if (command == "history") {

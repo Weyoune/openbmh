@@ -36,7 +36,8 @@ struct Renderer : Rml::RenderInterface {
         unsigned char header[18]{};
         const auto read = files->Read(header, sizeof(header), input);
         files->Close(input);
-        if (read != sizeof(header) || header[2] != 2 || header[16] != 24)
+        // The pinned DX11 loader requires bottom-origin rows for 24-bit input.
+        if (read != sizeof(header) || header[2] != 2 || header[16] != 24 || (header[17] & 32))
             throw std::runtime_error("Invalid stadium asset: " + name);
         dimensions = {header[12] + 256 * header[13], header[14] + 256 * header[15]};
         return 1;

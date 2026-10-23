@@ -22,8 +22,16 @@ FetchContent_Declare(rmlui
 FetchContent_MakeAvailable(rmlui)
 add_library(bmh_rmlui STATIC
     ${rmlui_SOURCE_DIR}/Backends/RmlUi_Platform_SDL.cpp
-    ${rmlui_SOURCE_DIR}/Backends/RmlUi_Renderer_GL3.cpp)
-target_include_directories(bmh_rmlui PUBLIC ${rmlui_SOURCE_DIR}/Backends)
+    ${CMAKE_SOURCE_DIR}/src/launch/rml_video.cpp)
+if(WIN32)
+    target_sources(bmh_rmlui PRIVATE ${rmlui_SOURCE_DIR}/Backends/RmlUi_Renderer_DX11.cpp)
+    target_link_libraries(bmh_rmlui PUBLIC d3d11 dxgi d3dcompiler)
+    # Upstream resolves its multisampled UI layer into the swapchain every frame.
+    target_compile_definitions(bmh_rmlui PUBLIC NUM_MSAA_SAMPLES=2 NOMINMAX)
+else()
+    target_sources(bmh_rmlui PRIVATE ${rmlui_SOURCE_DIR}/Backends/RmlUi_Renderer_GL3.cpp)
+endif()
+target_include_directories(bmh_rmlui PUBLIC ${rmlui_SOURCE_DIR}/Backends ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(bmh_rmlui PUBLIC RMLUI_SDL_VERSION_MAJOR=2 RMLUI_NUM_MSAA_SAMPLES=0)
 target_link_libraries(bmh_rmlui PUBLIC RmlUi::Core ${BMH_SDL_TARGET} PRIVATE ${CMAKE_DL_LIBS})
 

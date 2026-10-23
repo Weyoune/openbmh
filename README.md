@@ -1,8 +1,8 @@
 # OpenBMH
 
-The separate [OpenBMH Editor 0.5.0](docs/EDITOR.md) uses native RmlUI,
+The separate [OpenBMH Editor 0.5.5](docs/EDITOR.md) uses native RmlUI,
 supports German/English, three themes, image editing and a local MCP server.
-Download its own `editor-v0.5.0` release or build with
+Download its own `editor-v0.5.5` release or build with
 `-DOPENBMH_BUILD_EDITOR=ON`. Edited worlds are independent of the Classic runtime.
 
 A modern and faithful open source rebuild of the *Bundesliga Manager Hattrick* engine.
@@ -17,7 +17,7 @@ This is an independent community project, with no affiliation with or endorsemen
 
 Check the [releases page](https://github.com/Weyoune/openbmh/releases) for available packages and their platform notes. A Windows package uses the name `OpenBMH-<version>-windows-x64.zip`. Availability and native validation are stated for each release; source build instructions do not establish platform support on their own.
 
-These instructions describe **0.2.0**, released separately from the editor. See the [0.2 release notes](docs/release/0.2/RELEASE_NOTES.md).
+These instructions describe **0.2.1**, released separately from the editor. See the [0.2 release notes](docs/release/0.2/RELEASE_NOTES.md).
 
 1. Extract OpenBMH into a writable directory.
 2. Start `OpenBMH.exe` on Windows, or `OpenBMH` on Linux/macOS. Its RmlUI launcher initially has an empty **Name | Art** list. The night-stadium design uses a small version label in the lower-right corner.
@@ -36,7 +36,7 @@ For direct startup or the console:
 
 Both frontends use native content and saves. Use **Add** to migrate older files rather than passing an original executable or `.FBM` to the running game. The starting year changes the Classic year display; original weekday and scheduling rules are preserved. Modern worlds are reserved for a later version.
 
-The launcher uses SDL2, RmlUI and OpenGL 3.3 (macOS: OpenGL 4.1); keep its `assets` directory next to the executable. Folder selection uses the operating system's dialog. See the [0.2 migration contract](docs/formats/obw/runtime-0.2.md) for compatibility and validation limits. Platform builds and automated tests are separate from human interactive acceptance on Windows and macOS.
+The launcher uses SDL2 and RmlUI, with Direct3D 11 and automatic WARP software fallback on Windows, OpenGL 3.3 on Linux and OpenGL 4.1 on macOS; keep its `assets` directory next to the executable. Folder selection uses the operating system's dialog. See the [0.2 migration contract](docs/formats/obw/runtime-0.2.md) for compatibility and validation limits. Platform builds and automated tests are separate from human interactive acceptance on Windows and macOS.
 
 ## Features and direction
 

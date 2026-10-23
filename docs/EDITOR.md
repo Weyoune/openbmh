@@ -1,10 +1,23 @@
-# OpenBMH Editor 0.5.0
+# OpenBMH Editor 0.5.5
 
-Der eigenständige, native Editor verwendet **RmlUI, SDL2 und OpenGL**. Er bearbeitet Startdatenbanken, keine laufenden Spielstände. Das Spiel und seine Classic-Prüfung bleiben unverändert. Editor 0.5.0 hat eine eigene Versionsreihe und den Release-Tag `editor-v0.5.0`; die Spielversion ist 0.2.0.
+Der eigenständige, native Editor verwendet **RmlUI und SDL2**, unter Windows mit Direct3D 11, unter Linux/macOS mit OpenGL. Er bearbeitet Startdatenbanken, keine laufenden Spielstände. Das Spiel und seine Classic-Prüfung bleiben unverändert. Editor 0.5.5 hat eine eigene Versionsreihe und den Release-Tag `editor-v0.5.5`; die Spielversion ist 0.2.1.
+
+## Windows-Start und Diagnose
+
+Windows verwendet Direct3D 11 und wechselt bei fehlender Hardware automatisch auf
+den integrierten WARP-Renderer. Der Editor und der Spiel-Launcher benötigen dort
+keinen OpenGL-Treiber. Dieser Start wird auch mit erzwungenem WARP auf Windows
+Server 2022 geprüft. Zum gezielten Testen lässt sich `OPENBMH_RML_DRIVER=warp`
+setzen; die normale Auswahl erfolgt automatisch.
+
+Startfehler erscheinen in einem nativen Dialog und werden zusätzlich unter
+`%LOCALAPPDATA%\OpenBMH\OpenBMHEditor-startup.log` protokolliert. Bei einem
+Aufruf aus PowerShell/CMD kann auch stderr umgeleitet werden. Headless- und
+MCP-Aufrufe zeigen keinen modalen Fehlerdialog und behalten ihre Prozesscodes.
 
 ## Starten und Daten öffnen
 
-Das vollständige Paket `OpenBMHEditor-0.5.0-<plattform>.zip` entpacken und `OpenBMHEditor.exe` (Windows) beziehungsweise `OpenBMHEditor` (Linux/macOS) starten. `assets/editor` muss beim Programm bleiben. Auf macOS kann die unsignierte Anwendung über **Rechtsklick → Öffnen** gestartet werden. Eine Signatur/Notarisierung ist nicht Bestandteil dieser Version. `OpenBMHEditor --version` zeigt die Editorversion ohne Grafikstart.
+Das vollständige Paket `OpenBMHEditor-0.5.5-<plattform>.zip` entpacken und `OpenBMHEditor.exe` (Windows) beziehungsweise `OpenBMHEditor` (Linux/macOS) starten. `assets/editor` muss beim Programm bleiben. Auf macOS kann die unsignierte Anwendung über **Rechtsklick → Öffnen** gestartet werden. Eine Signatur/Notarisierung ist nicht Bestandteil dieser Version. `OpenBMHEditor --version` zeigt die Editorversion ohne Grafikstart.
 
 **Öffnen** bietet OBW-Dateien und entpackte Welten an. **BMH / FLTD importieren** liest einen Ordner mit einer unterstützten BMH- oder Football-Limited-Installation durch den bestehenden Konverter. Das Original wird nicht überschrieben. Eine bestehende Classic-OBW wird zunächst überprüft und dann in eine bearbeitbare Editorwelt übernommen.
 
@@ -13,6 +26,7 @@ Das vollständige Paket `OpenBMHEditor-0.5.0-<plattform>.zip` entpacken und `Ope
 ## Bearbeiten
 
 - Links einen Datenbereich auswählen; die Liste lässt sich durchsuchen, filtern, sortieren und seitenweise durchgehen. Rechts Änderungen mit **Anwenden** übernehmen. **Speichern** übernimmt auch die aktuellen Eingaben.
+- **Doppelklick** auf ein Land zeigt seine Ligen, auf eine Liga ihre Vereine und auf einen Verein dessen Spieler. Land, Liga und Verein werden als Filter übernommen. Ein einfacher Klick wählt weiterhin den Datensatz zum Bearbeiten aus. Nicht übernommene Eingaben werden vor dem Wechsel abgefragt.
 - Länder, Wettbewerbe, Vereine, Spieler, Kader, Stadien und Schiedsrichter lassen sich anlegen und bearbeiten. Referenzierte Datensätze werden erst nach Änderung ihrer Verknüpfungen gelöscht. Vereinswechsel zwischen Ligen aktualisieren auch deren Mitgliederlisten.
 - Spielwerte behalten ihre **quellenspezifischen Wertebereiche**. Ein Classic-Wert wird nicht auf eine erfundene 1–10-Skala umgerechnet. Neue Spieler ohne belegte Werte bleiben zunächst unbewertet.
 - Kader bleiben vollständig erhalten. Die Schaltfläche **24** schaltet lediglich die Seitengröße um. Spieler lassen sich über das Vereinsfeld verschieben, zum Tausch merken und mit einem anderen Spieler tauschen; die Pfeile ändern ihre Reihenfolge.
@@ -20,10 +34,66 @@ Das vollständige Paket `OpenBMHEditor-0.5.0-<plattform>.zip` entpacken und `Ope
 - Rückgängig/Wiederholen gilt gemeinsam für native Oberfläche und MCP. Noch nicht angewendete Eingaben werden bei externen Änderungen nicht automatisch ersetzt; eine veraltete Änderung muss nach Aktualisierung erneut geprüft werden.
 - **Bilder** und die Bildaktionen am Datensatz unterstützen PNG, JPEG, WebP und eigenständige SVG. Vor dem Import: Ausschnitt ziehen oder Werte eingeben, frei drehen, spiegeln. Ein unveränderter Import behält seine Originalbytes. Bearbeitete Rasterbilder werden PNG, SVG bleibt Vektor. Das Original und die Transformationswerte bleiben für erneutes Bearbeiten im Paket. Classic-Porträts werden aus ihren eingefrorenen Rezepten angezeigt; eine Umbenennung ändert das Gesicht nicht.
 - Bildänderungen am Spieler, Verein oder Wettbewerb erhalten eine eigene Zuordnung. Gemeinsame Platzhalter und Bilder anderer Datensätze bleiben dabei erhalten. Im Bereich **Bilder** kann ein gemeinsam verwendetes Bild bewusst zentral bearbeitet werden.
+- Ein Klick auf ein Wappen, Porträt, einen Pokal oder ein Bild in der Liste öffnet eine große, schreibgeschützte **Bildvorschau**. **Zum Asset** öffnet den zugehörigen Eintrag im Bereich **Bilder**. Bei zusammengesetzten Classic-Porträts ohne einzelne Bilddatei führt die Schaltfläche zur allgemeinen Bildübersicht. Das Anschauen verändert keine Daten; beim Wechsel bleiben offene Eingaben durch die Übernehmen-/Verwerfen-Abfrage geschützt.
 
 **Speichern** erzeugt ausschließlich `.obw` im Profil **`editor-world-v1`, Format 1.1**. Editorwelten sind **noch nicht im Classic-Spiel startbar**. Die Bezeichnung ist im Editor sichtbar. Unbekannte Erweiterungen, nicht bearbeitete Dokumente, Quellnachweise und Bilder bleiben erhalten. Noch nicht im Formular angebotene Regeln, Kalender- und Finanzdaten werden erhalten, aber nicht als vollständig editierbare Bereiche ausgegeben.
 
 Shortcuts: Ctrl/Cmd+O, Ctrl/Cmd+S, Shift+Ctrl/Cmd+S, Ctrl/Cmd+Z und Shift+Ctrl/Cmd+Z. In Textfeldern gilt die lokale Text-Rückgängig-Funktion.
+
+## Zurück und Vorwärts
+
+Ein **Rechtsklick** an beliebiger Stelle öffnet **Zurück / Vorwärts**. Dieselbe
+Navigation funktioniert mit **Alt+Links / Alt+Rechts** und den beiden seitlichen
+Maustasten. Nicht verfügbare Richtungen sind ausgegraut. Escape oder ein Klick
+außerhalb schließt das Menü.
+
+Der Verlauf merkt Datenbereiche, Doppelklick-Absprünge, Vergleichsansichten und
+Asset-Verknüpfungen. Beim Zurückkehren werden Filter, Suche, Sortierung,
+Datensatzauswahl, Tabellenseite und Scrollpositionen wiederhergestellt.
+Filtereingaben und einfache Zeilenauswahl erzeugen keine einzelnen Verlaufsschritte.
+Offene Formulareingaben werden weiterhin vor dem Wechsel abgefragt; Abbrechen
+lässt die Position im Verlauf unverändert. Ein neuer Absprung nach Zurück ersetzt
+den bisherigen Vorwärtszweig. Das Öffnen einer anderen Welt, auch über MCP,
+setzt den Verlauf zurück. **Zurück** ist unabhängig von **Rückgängig** und ändert
+keine Daten.
+
+Die Dropdowns verwenden die Gestaltung der Modern-Desktop-Untermenüs:
+leichte Verläufe, runde Popup-Listen, ein Häkchen am gewählten Wert und dieselbe
+Schriftgröße in geschlossenem Feld und Auswahlliste. Escape schließt zuerst die
+offene Auswahlliste. [Native Vergleichsbilder](qa/editor-navigation/README.md)
+zeigen die Darstellung in allen drei Themes.
+
+## CPU im Leerlauf
+
+Ab 0.5.4 zeichnet der Editor nur bei Eingaben, sichtbaren Änderungen oder von
+RmlUI angeforderten Zeitereignissen. Ein unveränderter Bildschirm benötigt keine
+fortlaufenden Frames. Textcursor, Animationen, Scrollen und externe MCP-Änderungen
+bleiben aktiv; minimierte Fenster zeichnen nicht. Die vorherige Dauerschleife
+konnte insbesondere mit dem WARP-Softwarerenderer unter Remote Desktop einen
+erheblichen Teil der CPU belegen. Import, Bildverarbeitung und andere tatsächliche
+Datenarbeit benötigen weiterhin Rechenzeit.
+
+## Stärken und Gehälter vergleichen
+
+**Wertevergleich** in der Seitenleiste (oder die gleichnamige Schaltfläche bei Spielern, Vereinen und Wettbewerben) öffnet eine Übersicht mit drei Ansichten: **Spieler**, **Mannschaften**, **Ligen**. Spieler zeigen ihre einzelnen Spielwerte und das Gehalt je Saison; Mannschaften und Ligen zeigen Durchschnittswerte, Spielergehaltssummen, das Durchschnittsgehalt und die Anzahl bekannter Gehälter. Ein Klick auf eine Zeile öffnet ihren Datensatz zur Bearbeitung.
+
+- Auf einen Spaltenkopf klicken, um auf- oder absteigend zu sortieren. Sortiert wird der gesamte gefilterte Bestand vor der Aufteilung auf Seiten mit bis zu 200 Zeilen. Suche sowie Land-, Liga- und Vereinsfilter grenzen die Ansicht ein. Fehlende Zahlen stehen in beiden Sortierrichtungen hinten.
+- **Spalten auswählen** blendet beliebige vorhandene Spielwerte ein. Bei vielen Spalten horizontal scrollen; Tabellenkopf und Werte bewegen sich gemeinsam. Die Wertebereiche stehen im Spaltenkopf, Gruppenwerte sind spielergewichtete Durchschnitte über bekannte Werte. Der gesamte Kader einschließlich Reserve zählt; reine Quellenduplikate mit `x-simulation.squad_role: source-only-duplicate` werden ausgeschlossen und ihre Anzahl angezeigt.
+- Verschiedene Attributsysteme bleiben getrennt. Bei einem einzigen System werden dessen Spielwerte automatisch angezeigt. Bei mehreren ein **Attributsystem** wählen, um dessen Spieler und die daraus gebildeten Mannschafts-/Ligawerte zu vergleichen. Das FC-Attribut `strength` heißt in einem System mit `overall` **Körperkraft**; es wird nicht als Classic-Gesamtstärke interpretiert. Es wird keine neue Stärkeskala berechnet.
+- **Gehälter gelten je Saison**, in der Währung und kleinsten Einheit aus dem OBW-Manifest. Berücksichtigt werden zum Saisonstart gültige Verträge des Spielers mit seiner aktuellen Mannschaft. Personalverträge, abgelaufene und zukünftige Verträge zählen nicht. Mehrere gleichzeitig gültige Verträge derselben Zuordnung sind unklar und werden nicht addiert. Ohne Vertragsangabe steht **—**, ein ausdrücklich gespeichertes Nullgehalt bleibt **0**.
+- Unvollständige Gehaltssummen und Durchschnitte tragen ein **\***. Sie berücksichtigen nur bekannte Spielergehälter; die Spalte **Gehälter bekannt** zeigt die Abdeckung. Auch Spielwertdurchschnitte verwenden nur bekannte Werte (Anzahl per Tooltip). Classic-Grunddaten liefern häufig keine konkreten Verträge: Der Editor erfindet diese Gehälter nicht.
+
+[Native Vorher-/Nachher-Bilder](qa/editor-comparison/README.md) dokumentieren die Ansichten und Spaltenauswahl.
+
+Die Übersicht verändert weder Daten noch Undo-Historie. Änderungen und Rückgängig aktualisieren ihre Werte automatisch. Alle drei Themes und beide Sprachen werden unterstützt.
+
+Über MCP liefert **`editor_compare`** dieselbe schreibgeschützte Übersicht. Beispielargumente:
+
+```json
+{"table":"players","sort":"attributes.overall","descending":true,"limit":200}
+```
+
+`table` ist `players`, `clubs` oder `leagues`. Weitere Sortierschlüssel sind `name`, `salary` (Spieler), `salary_total`, `salary_average`, `salary_known`, `player_count`, `club_count` sowie `attributes.<feld>`. `attribute_set` grenzt das System ein, `search`, `nation`, `competition`, `team` filtern, `offset`/`limit` blättern. Die Antwort enthält Originalskalen, Stichtag, Währung und Abdeckung. Gehälter bleiben Integer in kleinster Währungseinheit; das Durchschnittsgehalt wird auf diese Einheit gerundet. Das entsprechende Session-Kommando für Command-Scripts heißt `compare`.
 
 ## Optionen und MCP
 
@@ -39,18 +109,35 @@ Unter **Darstellung** stehen die drei Farbwelten der modernen Untermenüs zur Au
 
 Der MCP-Server ist standardmäßig aktiviert und bindet ausschließlich `127.0.0.1`, standardmäßig Port `8765`. Port `0` wählt einen freien Port. Status und tatsächlicher Port sind in Optionen sichtbar. **Verbindung kopieren** kopiert eine JSON-Konfiguration einschließlich Bearer-Token für HTTP-fähige MCP-Clients. Das Token bleibt lokal im Benutzerprofil und wird nur auf ausdrückliches Kopieren/CLI-Anfordern ausgegeben. Ein anderer bereits laufender Editor kann den Standardport belegen; dann einen anderen Port wählen.
 
-Implementiert ist [MCP Streamable HTTP 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), mit Aushandlung von 2025-06-18; JSON-Antworten, ohne optionale SSE-Sitzungen. Neuere MCP-Versionen werden nicht als unterstützt beworben. Der Server prüft Token, Host und gegebenenfalls Origin. Oberfläche und Agent bearbeiten dieselbe Welt, verwenden dieselbe Validierung und dieselbe Undo-Historie. Für konkurrierende Änderungen `expected_revision` aus `editor_info`/`editor_get` mitsenden.
+Implementiert ist [MCP Streamable HTTP 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), mit Aushandlung von 2025-06-18; JSON-Antworten, ohne optionale SSE-Sitzungen. Neuere MCP-Versionen werden nicht als unterstützt beworben. Der Server prüft Token, Host und gegebenenfalls Origin. Oberfläche und Agent bearbeiten dieselbe Welt, verwenden dieselbe Validierung und dieselbe Undo-Historie. Für konkurrierende Änderungen `expected_revision` aus `editor_info`/`editor_get` mitsenden. `editor_info.world_generation` kennzeichnet die aktuell geladene Welt innerhalb der Sitzung: Öffnen/Neu erhöht den Wert, Bearbeiten, Speichern und Rückgängig behalten ihn bei. Er wird nicht im OBW gespeichert.
 
-Werkzeuge: `editor_info`, `editor_open`, `editor_new`, `editor_list`, `editor_get`, `editor_apply`, `editor_rules`, `editor_validate`, `editor_history`, `editor_save`, `editor_undo`, `editor_redo`, `editor_roster_move`, `editor_roster_swap`, `editor_roster_order`, `editor_review_resolve`, `editor_image_import`, `editor_image_edit`, `editor_image_preview`, `editor_image_export`. Die eingeblendeten Tools enthalten Parameterschemata und Beschreibungen. Öffnen einer anderen Welt verwirft ungespeicherte Änderungen nur mit `discard: true`.
+Werkzeuge: `editor_info`, `editor_open`, `editor_new`, `editor_list`, `editor_compare`, `editor_regulations`, `editor_get`, `editor_apply`, `editor_rules`, `editor_validate`, `editor_history`, `editor_save`, `editor_undo`, `editor_redo`, `editor_roster_move`, `editor_roster_swap`, `editor_roster_order`, `editor_review_resolve`, `editor_image_import`, `editor_image_edit`, `editor_image_preview`, `editor_image_export`. Die eingeblendeten Tools enthalten Parameterschemata und Beschreibungen. Öffnen einer anderen Welt verwirft ungespeicherte Änderungen nur mit `discard: true`.
+
+## Spiel- und Ligaregeln ansehen
+
+**Regelwerk** zeigt Auf- und Abstieg, Ziel-Ligen, Relegation und internationale
+Qualifikation. Wettbewerbe lassen sich durchsuchen und nach Land filtern.
+**Spielregeln** zeigt die übernommenen Einträge aus `world/rules.json`, etwa
+Wertebereiche, Kreditfaktoren, Trainingslager und Classic-Verfahren. Phasen und
+weitere Originalfelder sind ebenfalls einsehbar. Dieser Bereich ist vollständig
+schreibgeschützt; er verändert weder Welt noch Undo-Historie.
+
+Explizite OBW-Regeln werden direkt dargestellt. Bei Classic-Importen kennzeichnet
+die Ansicht die versionierten Classic-Verfahrensregeln. Parallel-Ligen behalten
+Meister plus bedingte Relegationsplätze; die unterste Liga nutzt den Nachrückerpool.
+Internationale Plätze folgen dem ursprünglichen Champions-League-/UEFA-/
+Pokalsieger-Cup-Verfahren. Nicht festgelegte Regeln bleiben als solche sichtbar.
+Das sind keine heutigen UEFA-Regeln und kein neuer Saison-Simulator.
+`editor_regulations` bietet dieselben Informationen schreibgeschützt über MCP.
 
 ## Kompilieren
 
-Voraussetzungen entsprechen dem Hauptprojekt: C++20-Compiler, Git, CMake ≥ 3.24 und Ninja. Windows: Visual Studio 2022 C++ Build Tools / x64 Native Tools Prompt; macOS ARM: Xcode Command Line Tools, CMake und Ninja; Linux: GTK3-, X11- und OpenGL-Entwicklungspakete wie im Haupt-README. Die Grafikausgabe benötigt OpenGL 3.3, auf macOS OpenGL 4.1.
+Voraussetzungen entsprechen dem Hauptprojekt: C++20-Compiler, Git, CMake ≥ 3.24 und Ninja. Windows: Visual Studio 2022 C++ Build Tools / x64 Native Tools Prompt; macOS ARM: Xcode Command Line Tools, CMake und Ninja; Linux: GTK3-, X11- und OpenGL-Entwicklungspakete wie im Haupt-README. Windows nutzt Direct3D 11 mit automatischem WARP-Software-Fallback; Linux benötigt OpenGL 3.3, macOS OpenGL 4.1.
 
 ```sh
 cmake -S . -B build-editor -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENBMH_BUILD_EDITOR=ON
-cmake --build build-editor --target openbmh_editor editor_core_tests --parallel 2
-ctest --test-dir build-editor -C Release -R '^editor_(core_tests|version)$' --output-on-failure
+cmake --build build-editor --target openbmh_editor editor_core_tests editor_comparison_tests editor_regulations_tests --parallel 2
+ctest --test-dir build-editor -C Release -R '^editor_(core_tests|comparison_tests|regulations_tests|version)$' --output-on-failure
 ```
 
 macOS ARM zusätzlich bei der Konfiguration: `-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0`. Unter Windows das Argument nach `-R` ohne einfache Shell-Anführungszeichen verwenden. Der Editor wird beim normalen Spiel-Build standardmäßig nicht mitgebaut.
@@ -71,8 +158,14 @@ Pakete baut `tools/package/make_editor_package.py --build build-editor --out dis
 
 Extract the complete package and run **OpenBMHEditor**. Open an OBW archive or an unpacked world, import a supported BMH/Football Limited installation, or open the synthetic demo. Use the sidebar, searchable/filterable list and property inspector; **Apply** records one shared, undoable transaction. **Save** writes only an **OBW 1.1 editor world**, not a playable Classic mod or a legacy installation.
 
+Use **Comparison** to inspect sortable player, team and league ratings and per-season salaries. Select attribute columns and filter by country, league, club or attribute system. Group ratings are player-weighted means; salary totals and means use known player contracts only and explicitly flag incomplete coverage. Missing values remain unknown. The read-only MCP tool `editor_compare` returns the same data.
+
+Use **Regulations** to inspect promotion, relegation, playoffs, international qualification and stored game rules. Explicit OBW declarations and versioned Classic policies are distinguished; missing rules stay unspecified. This page and `editor_regulations` are read only.
+
 The editor retains full squads, original image data, source claims and unknown extensions. Its 24-player view does not remove players. Image import offers normalized crop, arbitrary rotation and mirroring; re-editing uses the preserved source. Classic portraits keep their frozen appearance recipe. Unsupported editing areas are preserved rather than replaced.
+
+Click a crest, portrait, trophy or list thumbnail to open a large read-only image preview. **View asset** opens its linked asset record; composed Classic portraits without a single image file lead to the image library. Viewing preserves the world and pending property edits.
 
 In **Options**, switch the interface to **English**, choose one of the three themes, and enable/disable the integrated local MCP server. **Copy connection** provides the authenticated configuration. The server defaults to loopback port 8765; use port 0 for a free port. GUI and MCP share the same world, validation and undo history. It supports MCP Streamable HTTP 2025-11-25/2025-06-18 and optional stdio mode. Use `expected_revision` for concurrent edits.
 
-Build with the three commands above, including `-DOPENBMH_BUILD_EDITOR=ON`. The native application requires OpenGL 3.3 (macOS 4.1) and the platform development dependencies documented in the main README. Editor 0.5.0 is unsigned and does not bundle any real-world dataset or proprietary game assets.
+Build with the three commands above, including `-DOPENBMH_BUILD_EDITOR=ON`. Windows uses Direct3D 11 with automatic WARP software fallback. Linux requires OpenGL 3.3; macOS requires OpenGL 4.1, plus the documented platform development dependencies. Editor 0.5.5 is unsigned and does not bundle any real-world dataset or proprietary game assets.

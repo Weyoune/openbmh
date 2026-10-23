@@ -31,6 +31,7 @@
 #include "launch/file_dialog.hpp"
 #include "launch/game_data.hpp"
 #include "launch/launcher.hpp"
+#include "launch/startup_error.hpp"
 #include "content/package.hpp"
 #include "version.hpp"
 #include "app/live_matchday_events.hpp"
@@ -75,8 +76,7 @@ using namespace bmh;
 
 // Why the game cannot start: a message box, and the same text on stderr.
 static void show_start_error(const std::string& text) {
-    std::fprintf(stderr, "%s\n", text.c_str());
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "OpenBMH", text.c_str(), nullptr);
+    rml::report_start_error("OpenBMH", text);
 }
 
 // Reattach the native editor when an in-game filename field takes focus. Cocoa
@@ -91,26 +91,8 @@ static void focus_filename_input(SDL_Renderer* renderer) {
     SDL_StartTextInput();
 }
 
-#ifdef _WIN32
-// The game is a Windows GUI program (no console window on double-click). Started from a
-// console, it writes --version, --help and start errors there (kernel32 AttachConsole).
-extern "C" __declspec(dllimport) int __stdcall AttachConsole(unsigned long process_id);
-static void attach_parent_console() {
-    // (an output redirected to a file or pipe stays there; a GUI program without one has no
-    //  valid stream, fileno < 0)
-    const bool out_free = _fileno(stdout) < 0, err_free = _fileno(stderr) < 0;
-    if ((out_free || err_free) && AttachConsole(static_cast<unsigned long>(-1))) {  // ATTACH_PARENT_PROCESS
-        std::FILE* f = nullptr;
-        if (out_free) freopen_s(&f, "CONOUT$", "w", stdout);
-        if (err_free) freopen_s(&f, "CONOUT$", "w", stderr);
-    }
-}
-#else
-static void attach_parent_console() {}
-#endif
-
 int main(int argc, char** argv) {
-    attach_parent_console();
+    rml::attach_parent_console();
     const std::vector<std::string> args = launch::utf8_arguments(argc, argv);  // (file names beyond the code page)
     fs::path data, save_directory;
     uint32_t seed = uint32_t(std::chrono::system_clock::now().time_since_epoch().count());

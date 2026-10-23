@@ -469,6 +469,22 @@ A resolver looks a key up in the active packs by priority (§9.5), then in the w
 
 Asset metadata sits next to the files in `assets/index.json`: key, files per size, author, source and licence (required).
 
+**Optional visual defaults (1.1).** A world may set
+`manifest.presentation: "assets/presentation.json"`. The referenced document has
+`schema: "asset-presentation@1"`, an optional `player_photo_fallback` asset key,
+`trophy_fallback` (normally `asset:comp/generic/trophy`), and
+`youth_photos: {assets: [<photo keys>], selection: "random-on-creation",
+fallback: <photo key>}`. All keys resolve through the normal asset index. A
+client supporting youth creation chooses once using its saved game RNG and
+persists the selected key; it does not reroll a face on display or rename. This
+document supplies pictures, never player records, ratings or generation rules.
+Readers without this optional feature retain it and use their existing visual
+fallbacks. The current editor preserves it without generating youth players.
+An explicitly indexed player `photo` is displayed before composing a retained
+`appearance` recipe. A visual overlay can therefore keep Classic appearance and
+all game data intact while displaying a supplied photo or silhouette. Sealed
+Classic rendering and runtime capabilities are unaffected.
+
 **Player pictures** (`asset:player/<key>/photo`) resolve in this order:
 
 1. A photo from an active pack.

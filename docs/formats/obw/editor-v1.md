@@ -2,7 +2,7 @@
 
 This additive profile is a native editing interchange. It does **not** change
 `classic-installation-v1`, its seals, the Classic runtime or save files.
-It is implemented by OpenBMH Editor 0.5.0, whose application version is separate
+It is implemented by OpenBMH Editor 0.5.x, whose application version is separate
 from the OBW format version and the OpenBMH 0.2.0 game version.
 
 ## Identification
@@ -60,6 +60,55 @@ attributes does not invent a rating.
 Competition `trophy` and optional fallback remain logical asset references;
 images are indexed just like crests and portraits. Arbitrary new competitions
 can use their own trophy or a package-supplied generic trophy.
+
+### Read-only comparisons (Editor 0.5.1)
+
+The editor's `compare` command / `editor_compare` MCP tool projects ratings and
+salaries without writing an additional OBW table. Player attributes retain their
+set and range. Club and league attributes are player-weighted means of known
+values within one set; mixed sets require a filter. Full rosters include reserves,
+except source evidence explicitly marked
+`x-simulation.squad_role: "source-only-duplicate"`. League membership uses a club's
+explicit league, or an unambiguous league `members` reference as fallback.
+
+`contracts.salary` is per season, in integer `manifest.currency` minor units.
+Only contracts active on `manifest.start_date` and matching the player's current
+team count; absent bounds are open and explicit date bounds are inclusive.
+Multiple matching active contracts are ambiguous, not summed. Missing or invalid
+salary remains null, independently of an explicit zero. Club/league payrolls
+exclude staff and use known player salaries only. `salary_known`,
+`salary_unknown`, `salary_ambiguous`, `salary_complete` and `salary_overflow`
+describe coverage; a missing/empty/overflowed sum is null. Means of known salaries
+round to the nearest minor unit. Attribute means separately report their sample
+sizes in `attribute_counts`. No current date, invented contract or foreign-club
+strength-band interpretation is substituted for missing data.
+
+### Read-only regulations (Editor 0.5.2)
+
+The `regulations` command / `editor_regulations` MCP tool exposes the same
+read-only projection as the Regulations page. It accepts `language` (de/en),
+`search`, `nation` and `competition`. It returns `items`, all preserved `rules`,
+the world date, `read_only: true` and the session revision. It creates no table,
+edits, undo entries or runtime entrants.
+
+Each item retains its full `record` and `stages`. Explicit `movement` entries
+retain rank ranges and destination references; tier comparisons label promotion
+and relegation, participant roles label playoffs. Competition/stage `slots`
+retain their full selector, fallback, explicit destination and phase; they are
+visible on both the source and destination competition. Fixed participant lists
+are not reinterpreted as qualification rules.
+
+Imported `classic_runtime.qualifications: classic-season-entrants@1` and
+`legacy_ladder` records permit a labelled presentation of the existing Classic
+policy, documented in [classic-v1](classic-v1.md). Explicit declared rules take
+precedence. Unknown rules stay unspecified; the editor never substitutes modern
+UEFA quotas or infers qualification from historical colouring fields. This
+presentation registry does not implement a new season engine.
+
+Optional `manifest.presentation` references the `asset-presentation@1` visual
+defaults described in [OBW §9.2](../OBW.md#92-resolution-and-image-formats).
+Youth pools, silhouette and generic trophy keys remain indexed assets. They are
+preserved across editor saves, independent of Classic source recipes or seals.
 
 ## Sources, conflicts and images
 

@@ -26,7 +26,7 @@ Some calendar operations need synchronous human decisions. Their presenters own 
 
 ## Calendar and matches
 
-The planned split into one shared match engine and three season engines (Classic, Classic Extended, Modern) is described in [ENGINE_SPLIT](ENGINE_SPLIT.md).
+The planned split into one shared match engine and the season engines of Classic, Classic Extended (Classic plus backported Modern features) and Modern is described in [ENGINE_SPLIT](ENGINE_SPLIT.md).
 
 The turn driver moves between manager desks, match clocks and calendar events. Weekly, monthly and seasonal processing can produce decisions as well as simulation results. Match groups contain the day's competitions; a manager can intervene only in a group involving that manager's team. A multi-client match clock advances at a barrier shared by all seats.
 
@@ -57,8 +57,11 @@ of `OpenBMH`, keeping edition-specific process globals isolated. Portable mod co
 personal files have independent lifetimes. See [runtime-0.2](formats/obw/runtime-0.2.md).
 
 The launcher layout and theme live in `assets/launcher/launcher.rml` and `theme.rcss`.
-They share the same RmlUI core, FreeType font engine and upstream SDL2/OpenGL renderer
-on all desktop platforms. The C++ view translates events into the existing launcher
+They share the same RmlUI core, FreeType font engine and SDL2 platform layer.
+Windows uses the pinned upstream Direct3D 11 renderer with hardware-to-WARP
+fallback, while Linux/macOS keep the upstream OpenGL renderer. Both the editor
+and launcher share window/device lifetime, resizing and capture through
+`src/launch/rml_video.*`. The C++ view translates events into the existing launcher
 interface; it does not own conversion rules or mod storage. This presentation layer
 can be reused by future modern screens. Classic game screens retain their current UI.
 The operating system supplies the folder picker through nativefiledialog-extended.

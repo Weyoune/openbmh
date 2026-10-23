@@ -66,6 +66,12 @@ jobs:
         run: cmake --build build --config Release --parallel 2
       - name: Run synthetic tests and report data tests as skipped
         run: ctest --test-dir build -C Release --output-on-failure --output-junit test-results.xml
+      - name: Windows Server launcher with WARP software graphics
+        if: runner.os == 'Windows'
+        env:
+          SDL_VIDEODRIVER: windows
+          OPENBMH_RML_DRIVER: warp
+        run: build/launcher_gui_smoke.exe
       - name: Package products and licenses
         run: python3 tools/package/make_package.py --build build --out dist --platform ${{ matrix.platform }}
       - name: Package corresponding source and pinned dependencies

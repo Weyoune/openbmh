@@ -3,6 +3,7 @@
 #include "editor/mcp.hpp"
 #include "editor/session.hpp"
 #include <httplib.h>
+#include <cstdlib>
 #include <iostream>
 #include <thread>
 #ifdef _WIN32
@@ -47,6 +48,7 @@ int main() {
     try {
         Session s;
         s.execute("demo");
+        const auto generation = s.execute("info")["world_generation"];
         check(s.execute("list", {{"table", "players"}})["total"] == 52, "all squads retained");
         check(s.execute("list", {{"table", "players"}, {"team", "club:north"}, {"limit", 24}})["items"].size() == 24,
               "24 view");
@@ -62,6 +64,8 @@ int main() {
         s.execute("undo");
         check(row(s, "players", "player:demo-0") == initial, "undo complete row");
         check(s.execute("info")["revision"] > revision, "revision monotonic across undo");
+        check(s.execute("info")["world_generation"] == generation,
+              "edits and undo keep navigation world identity");
         s.execute("redo");
         check(row(s, "players", "player:demo-0")["attributes"]["strength"] == 99, "redo");
         rejects("validation_failed",
@@ -108,6 +112,25 @@ int main() {
         const auto png = images::encode_png(image);
         write_atomic(root / "input.png", png);
         check(images::decode(png, ".png").pixels == image.pixels, "PNG lossless RGBA");
+        // Authored synthetic pixels: a solid teal 17x19 VP8 image and the
+        // same four RGBA pixels as above encoded as VP8L, including alpha.
+        const std::string webp_lossy(
+            "\x52\x49\x46\x46\x4a\x00\x00\x00\x57\x45\x42\x50\x56\x50\x38\x20"
+            "\x3e\x00\x00\x00\x90\x03\x00\x9d\x01\x2a\x11\x00\x13\x00\x3e\x31"
+            "\x18\x8a\x43\xa2\x21\xa1\x14\x04\x00\x20\x03\x04\xb2\x80\x3b\x00"
+            "\x7e\x00\x7e\x00\x00\x49\x95\x7c\x00\x00\xfe\xe8\x38\xbf\xff\xf6"
+            "\x96\x42\x15\xd7\xfc\x95\x7f\xff\xee\x9e\x90\x81\xa3\xfe\x4a\x00\x00\x00", 82);
+        const std::string webp_lossless(
+            "\x52\x49\x46\x46\x30\x00\x00\x00\x57\x45\x42\x50\x56\x50\x38\x4c"
+            "\x23\x00\x00\x00\x2f\x01\x40\x00\x10\x1f\x20\x10\x48\xde\x1f\x3a"
+            "\x8d\xf9\x17\x10\x14\xfc\x1f\x9d\x80\xa0\xe8\xba\xe5\x22\x66\x0f"
+            "\xc2\x0d\x18\x22\xfa\x1f\x02\x00", 56);
+        const auto webp = images::decode(webp_lossy, ".webp");
+        check(webp.width == 17 && webp.height == 19 && webp.pixels.size() == 17 * 19 * 4 &&
+                  std::abs(int(webp.pixels[0]) - 40) <= 4 && std::abs(int(webp.pixels[1]) - 140) <= 4 &&
+                  std::abs(int(webp.pixels[2]) - 200) <= 4 && webp.pixels[3] == 255,
+              "WebP lossy colour and dimensions");
+        check(images::decode(webp_lossless, ".webp").pixels == image.pixels, "WebP lossless RGBA");
         check(images::transform(png, ".png", Json::object()).bytes == png, "identity preserves exact bytes");
         auto flip = images::decode(images::transform(png, ".png", {{"flip_x", true}}).bytes, ".png");
         check(flip.pixels[1] == 255 && flip.pixels[4] == 255, "horizontal mirror pixels");
@@ -213,6 +236,17 @@ int main() {
         }
 #endif
         check(tr("de", "clubs") != tr("en", "clubs"), "bilingual labels");
+        {
+            Session reopened;
+            reopened.execute("demo");
+            const auto identity = reopened.execute("info")["world_generation"];
+            reopened.execute("save", {{"path", utf8(root / "navigation-world.obw")}});
+            check(reopened.execute("info")["world_generation"] == identity,
+                  "saving keeps navigation world identity");
+            reopened.execute("open", {{"path", utf8(root / "navigation-world.obw")}});
+            check(reopened.execute("info")["world_generation"] > identity,
+                  "reopening identical IDs resets navigation identity");
+        }
         McpServer mcp(s);
         mcp.start(options);
         httplib::Client client("127.0.0.1", mcp.port());

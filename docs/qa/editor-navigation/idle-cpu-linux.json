@@ -1,0 +1,40 @@
+{
+  "environment": {
+    "os": "Debian 13 x64",
+    "renderer": "Mesa software OpenGL",
+    "display": "Xvfb 1600x1000",
+    "window": "1440x900",
+    "software_renderer_threads": 2,
+    "cpu_unit": "percent of one logical core; sums all editor threads"
+  },
+  "before_version": "0.5.3",
+  "after_version": "0.5.4",
+  "before": [
+    {
+      "case": "demo",
+      "duration_s": 6.000090104993433,
+      "cpu_s": 5.720000000000001,
+      "one_core_percent": 95.33190168660411
+    },
+    {
+      "case": "diamond",
+      "duration_s": 6.000068283872679,
+      "cpu_s": 8.16,
+      "one_core_percent": 135.99845224983366
+    }
+  ],
+  "after": [
+    {
+      "case": "demo",
+      "duration_s": 6.000068521825597,
+      "cpu_s": 0.0,
+      "one_core_percent": 0.0
+    },
+    {
+      "case": "diamond",
+      "duration_s": 6.000067526940256,
+      "cpu_s": 0.010000000000000009,
+      "one_core_percent": 0.1666647909394367
+    }
+  ]
+}

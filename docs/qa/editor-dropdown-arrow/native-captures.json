@@ -1,0 +1,65 @@
+{
+  "editor": "0.5.5",
+  "cases": [
+    {
+      "theme": "midnight",
+      "language": "de",
+      "viewport": [
+        1440,
+        900
+      ],
+      "scale": 1.0,
+      "data": "generated demo",
+      "capture": "after-midnight-1440x900.png"
+    },
+    {
+      "theme": "silver",
+      "language": "en",
+      "viewport": [
+        1440,
+        900
+      ],
+      "scale": 1.0,
+      "data": "generated demo",
+      "capture": "after-silver-1440x900.png"
+    },
+    {
+      "theme": "matchday",
+      "language": "de",
+      "viewport": [
+        1440,
+        900
+      ],
+      "scale": 1.0,
+      "data": "generated demo",
+      "capture": "after-matchday-1440x900.png"
+    },
+    {
+      "theme": "midnight",
+      "language": "de",
+      "viewport": [
+        1080,
+        720
+      ],
+      "scale": 0.78,
+      "data": "generated demo",
+      "capture": "after-midnight-1080x720.png"
+    },
+    {
+      "theme": "midnight",
+      "language": "de",
+      "viewport": [
+        2560,
+        1600
+      ],
+      "scale": 1.7777777777777777,
+      "data": "generated demo",
+      "capture": "after-midnight-2560x1600.png",
+      "window_position": [
+        0,
+        0
+      ],
+      "fully_inside_capture_display": true
+    }
+  ]
+}

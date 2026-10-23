@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-only
-#include "launch/launcher_ui.hpp"
-#include "launch/rml_path.hpp"
 #include "launch/archive.hpp"
+#include "launch/launcher_ui.hpp"
 #include "launch/process.hpp"
+#include "launch/rml_path.hpp"
+#include "launch/rml_video.hpp"
 #include "version.hpp"
 #include <RmlUi/Core.h>
 #include <RmlUi/Core/Elements/ElementFormControl.h>
 #include <RmlUi/Core/Elements/ElementFormControlInput.h>
 #include <RmlUi_Platform_SDL.h>
-#include <RmlUi_Renderer_GL3.h>
-#include <nfd.hpp>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <nfd.hpp>
 #include <stdexcept>
 
 namespace bmh::launch {
@@ -41,9 +41,6 @@ std::string escape(std::string_view value) {
         }
     return result;
 }
-[[noreturn]] void sdl_error(const char *operation) {
-    throw std::runtime_error(std::string(operation) + ": " + SDL_GetError());
-}
 int modifiers(Uint16 state) {
     int result = 0;
     if (state & KMOD_CTRL)
@@ -65,62 +62,11 @@ int modifiers(Uint16 state) {
         result |= Rml::Input::KM_NUMLOCK;
     return result;
 }
-struct Video {
-    SDL_Window *window = nullptr;
-    SDL_GLContext gl = nullptr;
-    bool loader = false;
-    Video() {
-        try {
-            if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER) != 0)
-                sdl_error("Launcher video initialization");
-            SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
-            SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-#ifdef __APPLE__
-            SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
-            SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-            SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-#else
-            SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-            SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-#endif
-            SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-            window = SDL_CreateWindow("OpenBMH", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1100, 688,
-                                      SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI |
-                                          SDL_WINDOW_HIDDEN);
-            if (!window)
-                sdl_error("Launcher window");
-            SDL_SetWindowMinimumSize(window, 800, 540);
-            gl = SDL_GL_CreateContext(window);
-            if (!gl)
-                sdl_error("Launcher requires OpenGL 3.3 (macOS: 4.1)");
-            SDL_GL_MakeCurrent(window, gl);
-            SDL_GL_SetSwapInterval(1);
-            std::string error;
-            if (!RmlGL3::Initialize(&error))
-                throw std::runtime_error("Launcher graphics initialization: " + error);
-            loader = true;
-            SDL_StopTextInput();
-        } catch (...) {
-            close();
-            throw;
-        }
-    }
-    void close() {
-        if (loader)
-            RmlGL3::Shutdown();
-        if (gl)
-            SDL_GL_DeleteContext(gl);
-        if (window)
-            SDL_DestroyWindow(window);
-        SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER);
-    }
-    ~Video() { close(); }
-};
 class RmlLauncher final : public LauncherUI, public Rml::EventListener {
-    Video video_;
+    rml::Video video_{"OpenBMH", 1100, 688, 800, 540};
     rml::AssetFiles files_;
     SystemInterface_SDL system_{video_.window};
-    RenderInterface_GL3 renderer_;
+    rml::Renderer renderer_{video_};
     TextInputMethodEditor_SDL ime_;
     Rml::Context *context_ = nullptr;
     Rml::ElementDocument *document_ = nullptr;
@@ -165,7 +111,7 @@ class RmlLauncher final : public LauncherUI, public Rml::EventListener {
     void resize() {
         int w = 0, h = 0, pixels_w = 0, pixels_h = 0;
         SDL_GetWindowSize(video_.window, &w, &h);
-        SDL_GL_GetDrawableSize(video_.window, &pixels_w, &pixels_h);
+        video_.drawable_size(pixels_w, pixels_h);
         if (w <= 0 || h <= 0 || pixels_w <= 0 || pixels_h <= 0)
             return;
         renderer_.SetViewport(pixels_w, pixels_h);
@@ -350,7 +296,7 @@ class RmlLauncher final : public LauncherUI, public Rml::EventListener {
                 // SDL2 reports mouse coordinates in window units on Retina/HiDPI.
                 int w = 0, h = 0, pw = 0, ph = 0;
                 SDL_GetWindowSize(video_.window, &w, &h);
-                SDL_GL_GetDrawableSize(video_.window, &pw, &ph);
+                video_.drawable_size(pw, ph);
                 if (w > 0 && h > 0) {
                     if (event.type == SDL_MOUSEMOTION) {
                         event.motion.x = int(double(event.motion.x) * pw / w);
@@ -377,7 +323,7 @@ class RmlLauncher final : public LauncherUI, public Rml::EventListener {
             renderer_.Clear();
             context_->Render();
             renderer_.EndFrame();
-            SDL_GL_SwapWindow(video_.window);
+            video_.present();
             dirty_ = false;
         }
     }
@@ -390,8 +336,9 @@ class RmlLauncher final : public LauncherUI, public Rml::EventListener {
 
   public:
     RmlLauncher() {
+        SDL_StopTextInput();
         if (!renderer_)
-            throw std::runtime_error("RmlUI could not create the OpenGL renderer");
+            throw std::runtime_error("RmlUI could not create the graphics renderer");
         try {
             Rml::SetSystemInterface(&system_);
             Rml::SetFileInterface(&files_);

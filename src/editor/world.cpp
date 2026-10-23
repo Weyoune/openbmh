@@ -532,6 +532,17 @@ World World::demo() {
                  {"attribute_set", "demo@1"},
                  {"attributes",
                   {{"strength", 68 + (n % 15)}, {"technique", 65 + n % 20}, {"condition", 90}, {"form", 70}}}});
+            // Synthetic per-season salaries make the comparison demo useful.
+            // The last player deliberately has no known contract.
+            if (n != 25)
+                w.rows("contracts")
+                    .push_back({{"id", "contract:demo-" + std::to_string(i * 26 + n)},
+                                {"name", "Demo contract"},
+                                {"person", "player:demo-" + std::to_string(i * 26 + n)},
+                                {"team", id},
+                                {"start", "2026-07-01"},
+                                {"end", "2027-06-30"},
+                                {"salary", (40000 + 5000 * n + 10000 * i) * 100}});
         }
     }
     w.rows("staff").push_back({{"id", "staff:referee-demo"},

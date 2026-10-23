@@ -3,17 +3,19 @@
 #include "editor/images.hpp"
 #include "editor/version.hpp"
 #include "launch/rml_path.hpp"
+#include "launch/rml_video.hpp"
 #include <RmlUi/Core.h>
 #include <RmlUi/Core/Elements/ElementFormControl.h>
 #include <RmlUi/Core/Elements/ElementFormControlInput.h>
+#include <RmlUi/Core/Elements/ElementFormControlSelect.h>
 #include <RmlUi_Platform_SDL.h>
-#include <RmlUi_Renderer_GL3.h>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <deque>
 #include <functional>
 #include <future>
+#include <iomanip>
 #include <nfd.hpp>
 #include <sstream>
 
@@ -30,61 +32,20 @@ std::string button(const std::string &action, const std::string &label, const st
     return "<button data-action=\"" + escaped(action) + "\" class=\"" + css + "\" " + attributes + ">" +
            escaped(label) + "</button>";
 }
-struct Video {
-    SDL_Window *window = nullptr;
-    SDL_GLContext gl = nullptr;
-    bool loader = false;
-    Video() {
-        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER) != 0)
-            throw Error("video_failed");
-        SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-#ifdef __APPLE__
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-#else
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-#endif
-        SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-        window =
-            SDL_CreateWindow("OpenBMH Editor", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1440, 900,
-                             SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_HIDDEN);
-        if (!window)
-            throw Error("video_failed");
-        SDL_SetWindowMinimumSize(window, 1080, 720);
-        gl = SDL_GL_CreateContext(window);
-        if (!gl)
-            throw Error("video_failed");
-        SDL_GL_MakeCurrent(window, gl);
-        SDL_GL_SetSwapInterval(1);
-        std::string error;
-        if (!RmlGL3::Initialize(&error))
-            throw Error("video_failed", {{"detail", error}});
-        loader = true;
-        SDL_StartTextInput();
-    }
-    ~Video() {
-        if (loader)
-            RmlGL3::Shutdown();
-        if (gl)
-            SDL_GL_DeleteContext(gl);
-        if (window)
-            SDL_DestroyWindow(window);
-        SDL_Quit();
-    }
-};
-class Renderer final : public RenderInterface_GL3 {
+class Renderer final : public bmh::rml::Renderer {
   public:
     Session &session;
     std::map<std::string, std::pair<std::string, std::string>> memory;
     std::map<std::string, std::string> logical;
+    std::map<std::string, std::string> asset_tokens;
     uint64_t serial = 0;
-    explicit Renderer(Session &s) : session(s) {}
+    Renderer(Session &s, bmh::rml::Video &video) : bmh::rml::Renderer(video), session(s) {}
     std::string asset(const std::string &key) {
+        if (auto found = asset_tokens.find(key); found != asset_tokens.end())
+            return found->second;
         auto token = "world-image-" + std::to_string(serial++) + ".png";
         logical[token] = key;
+        asset_tokens[key] = token;
         return token;
     }
     std::string bytes(std::string data, const std::string &extension) {
@@ -92,15 +53,28 @@ class Renderer final : public RenderInterface_GL3 {
         memory[token] = {std::move(data), extension};
         return token;
     }
+    static constexpr const char *view_source = "readonly-image-preview.png";
+    void release_view() {
+        for (const auto &source : Rml::GetTextureSourceList())
+            if (utf8(path(source).filename()) == view_source)
+                Rml::ReleaseTexture(source, this);
+        memory.erase(view_source);
+    }
+    std::string view(std::string data) {
+        release_view();
+        memory[view_source] = {std::move(data), ".png"};
+        return view_source;
+    }
     void clear() {
         Rml::ReleaseTextures(this);
         logical.clear();
+        asset_tokens.clear();
         memory.clear();
     }
     Rml::TextureHandle LoadTexture(Rml::Vector2i &dimensions, const Rml::String &source) override {
         const auto token = utf8(path(source).filename());
         if (!memory.contains(token) && !logical.contains(token))
-            return RenderInterface_GL3::LoadTexture(dimensions, source);
+            return bmh::rml::Renderer::LoadTexture(dimensions, source);
         try {
             auto value = memory.contains(token) ? memory.at(token) : session.asset_bytes(logical.at(token));
             auto raster = images::decode(value.first, value.second, token.starts_with("icon-") ? 64 : 512);
@@ -128,7 +102,7 @@ class EditorUi final : public Rml::EventListener {
     Options &options_;
     McpServer &server_;
     UiConfig config_;
-    Video video_;
+    bmh::rml::Video video_{"OpenBMH Editor", 1440, 900, 1080, 720};
     bmh::rml::AssetFiles files_;
     SystemInterface_SDL system_{video_.window};
     Renderer renderer_;
@@ -136,14 +110,42 @@ class EditorUi final : public Rml::EventListener {
     Rml::Context *context_ = nullptr;
     Rml::ElementDocument *doc_ = nullptr;
     bool initialized_ = false, closed_ = false, busy_ = false, modal_ = false;
-    bool roster24_ = false, show_source_ = false, needs_refresh_ = true;
+    bool roster24_ = false, show_source_ = false, needs_refresh_ = true, redraw_ = true;
     uint64_t revision_ = uint64_t(-1);
+    uint64_t world_generation_ = uint64_t(-1);
     Json info_, selected_ = Json::object(), listed_ = Json::array();
     std::map<std::string, Json> lookup_;
     std::string page_ = "overview", selected_id_, search_, nation_, league_, team_, sort_ = "name", remembered_;
     bool descending_ = false;
+    std::string comparison_table_ = "players", comparison_set_, comparison_sort_ = "name";
+    bool comparison_descending_ = false;
+    Json comparison_;
+    std::map<std::string, std::vector<std::string>> comparison_columns_;
+    bool regulations_game_ = false, regulations_source_ = false;
+    std::string regulation_id_, game_rule_id_;
     int offset_ = 0;
     size_t total_ = 0;
+    struct Location {
+        std::string page, selected, search, nation, league, team, sort;
+        bool descending, roster24, show_source;
+        int offset;
+        std::string comparison_table, comparison_set, comparison_sort;
+        bool comparison_descending, regulations_game, regulations_source;
+        std::string regulation_id, game_rule_id;
+        bool operator==(const Location &) const = default;
+    };
+    struct ScrollPosition {
+        std::string selector;
+        float left, top;
+    };
+    struct Visit {
+        Location location;
+        std::vector<ScrollPosition> scroll;
+    };
+    std::vector<Visit> navigation_;
+    size_t navigation_index_ = 0;
+    std::optional<std::vector<ScrollPosition>> restore_scroll_;
+    bool history_menu_open_ = false;
     struct Field {
         std::string id, pointer, kind, initial;
         Json original;
@@ -156,7 +158,7 @@ class EditorUi final : public Rml::EventListener {
     std::string image_bytes_, image_extension_, image_file_, image_key_, image_source_key_;
     Json image_target_, image_recipe_;
     double drag_x_ = 0, drag_y_ = 0;
-    bool dragging_ = false;
+    bool dragging_ = false, image_view_open_ = false;
     std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
     std::string t(const std::string &key) const { return tr(options_.language, key); }
     Rml::Element *el(const std::string &id) const {
@@ -165,7 +167,20 @@ class EditorUi final : public Rml::EventListener {
             throw std::runtime_error("Missing editor element: " + id);
         return value;
     }
-    void html(const std::string &id, const std::string &value) { el(id)->SetInnerRML(value); }
+    void html(const std::string &id, const std::string &value) {
+        auto *container = el(id);
+        container->SetInnerRML(value);
+        Rml::ElementList controls;
+        container->QuerySelectorAll(controls, "select");
+        for (auto *element : controls)
+            if (auto *select = dynamic_cast<Rml::ElementFormControlSelect *>(element))
+                for (int i = 0; i < select->GetNumOptions(); ++i) {
+                    auto *option = select->GetOption(i);
+                    option->SetInnerRML("<span class=\"option-check\"></span><span class=\"option-label\">" +
+                                        option->GetInnerRML() + "</span>");
+                }
+        redraw_ = true;
+    }
     void label(const std::string &id, const std::string &value) { html(id, escaped(value)); }
     std::string value(const std::string &id) const {
         auto *field = dynamic_cast<Rml::ElementFormControl *>(el(id));
@@ -176,6 +191,136 @@ class EditorUi final : public Rml::EventListener {
             field->SetValue(value);
     }
     std::string table() const { return page_ == "roster" ? "players" : page_; }
+    Location location() const {
+        return {page_,
+                selected_id_,
+                search_,
+                nation_,
+                league_,
+                team_,
+                sort_,
+                descending_,
+                roster24_,
+                show_source_,
+                offset_,
+                comparison_table_,
+                comparison_set_,
+                comparison_sort_,
+                comparison_descending_,
+                regulations_game_,
+                regulations_source_,
+                regulation_id_,
+                game_rule_id_};
+    }
+    std::vector<ScrollPosition> scroll_positions() const {
+        std::vector<ScrollPosition> result;
+        for (const auto *selector :
+             {"#table-scroll", ".inspector-scroll", "#comparison-x", ".regulation-list .table-scroll",
+              ".regulation-scroll", ".dashboard", "#navigation"})
+            if (auto *element = doc_->QuerySelector(selector))
+                result.push_back({selector, element->GetScrollLeft(), element->GetScrollTop()});
+        return result;
+    }
+    void remember_location() {
+        if (!navigation_.empty())
+            navigation_[navigation_index_] = {location(), scroll_positions()};
+    }
+    void visit(std::function<void()> next) {
+        leave_fields([this, next] {
+            remember_location();
+            const auto previous = location();
+            next();
+            if (location() == previous)
+                return;
+            navigation_.resize(navigation_index_ + 1);
+            navigation_.push_back({location(), {}});
+            navigation_index_ = navigation_.size() - 1;
+            // Bound memory use during long editing sessions.
+            if (navigation_.size() > 200) {
+                navigation_.erase(navigation_.begin());
+                --navigation_index_;
+            }
+        });
+    }
+    bool can_navigate(int direction) const {
+        return !busy_ && !modal_ && !navigation_.empty() &&
+               (direction < 0 ? navigation_index_ > 0 : navigation_index_ + 1 < navigation_.size());
+    }
+    void navigate_history(int direction) {
+        if (!can_navigate(direction))
+            return;
+        leave_fields([this, direction] {
+            remember_location();
+            navigation_index_ = direction < 0 ? navigation_index_ - 1 : navigation_index_ + 1;
+            const auto &destination = navigation_[navigation_index_];
+            const auto &l = destination.location;
+            page_ = l.page;
+            selected_id_ = l.selected;
+            search_ = l.search;
+            nation_ = l.nation;
+            league_ = l.league;
+            team_ = l.team;
+            sort_ = l.sort;
+            descending_ = l.descending;
+            roster24_ = l.roster24;
+            show_source_ = l.show_source;
+            offset_ = l.offset;
+            comparison_table_ = l.comparison_table;
+            comparison_set_ = l.comparison_set;
+            comparison_sort_ = l.comparison_sort;
+            comparison_descending_ = l.comparison_descending;
+            regulations_game_ = l.regulations_game;
+            regulations_source_ = l.regulations_source;
+            regulation_id_ = l.regulation_id;
+            game_rule_id_ = l.game_rule_id;
+            restore_scroll_ = destination.scroll;
+            fields_.clear();
+            needs_refresh_ = true;
+        });
+    }
+    void close_history_menu() {
+        if (!history_menu_open_)
+            return;
+        el("history-overlay")->SetProperty("display", "none");
+        history_menu_open_ = false;
+        redraw_ = true;
+    }
+    void history_menu(int x, int y) {
+        Rml::ElementList controls;
+        doc_->QuerySelectorAll(controls, "select");
+        for (auto *element : controls)
+            if (auto *select = dynamic_cast<Rml::ElementFormControlSelect *>(element))
+                select->HideSelectBox();
+        std::string items;
+        for (const int direction : {-1, 1}) {
+            const auto action = direction < 0 ? "history-back" : "history-forward";
+            items += "<button id=\"" + std::string(action) + "\" data-action=\"" + action + "\" " +
+                     (can_navigate(direction) ? "" : "disabled") + "><span class=\"history-arrow\">" +
+                     icon(direction < 0 ? "back" : "forward") + "</span><span>" +
+                     escaped(t(direction < 0 ? "navigation_back" : "navigation_forward")) +
+                     "</span><small>Alt + " + t(direction < 0 ? "navigation_left" : "navigation_right") +
+                     "</small></button>";
+        }
+        html("history-menu", items);
+        el("history-overlay")->SetProperty("display", "block");
+        history_menu_open_ = true;
+        context_->Update();
+        const auto dimensions = context_->GetDimensions();
+        auto *menu = el("history-menu");
+        const float margin = 6 * context_->GetDensityIndependentPixelRatio();
+        menu->SetProperty(
+            "left", number(std::clamp(float(x), margin,
+                                      std::max(margin, dimensions.x - menu->GetOffsetWidth() - margin))) +
+                        "px");
+        menu->SetProperty(
+            "top", number(std::clamp(float(y), margin,
+                                     std::max(margin, dimensions.y - menu->GetOffsetHeight() - margin))) +
+                       "px");
+        if (can_navigate(-1))
+            el("history-back")->Focus();
+        else if (can_navigate(1))
+            el("history-forward")->Focus();
+    }
     static std::string identity(const Json &row, const std::string &table) {
         return str(row, table == "assets" ? "key" : "id");
     }
@@ -194,10 +339,13 @@ class EditorUi final : public Rml::EventListener {
         return found == lookup_.end() ? id : title(found->second);
     }
     std::string img(const std::string &key, const std::string &css) {
-        return "<img class=\"" + css + "\" src=\"" + renderer_.asset(key) + "\"/>";
+        return "<img class=\"" + css + "\" src=\"" + renderer_.asset(key) +
+               "\" data-action=\"image-view\" data-value=\"" + escaped(key) + "\"/>";
     }
     std::string icon(const std::string &name) {
         static const std::map<std::string, std::string> paths{
+            {"back", "M19 12H5M12 5l-7 7 7 7"},
+            {"forward", "M5 12h14M12 5l7 7-7 7"},
             {"overview", "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"},
             {"nations", "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M3 12h18M12 3c-5 5-5 "
                         "13 0 18M12 3c5 5 5 13 0 18"},
@@ -206,6 +354,8 @@ class EditorUi final : public Rml::EventListener {
             {"clubs", "M4 3h16v10c0 5-8 9-8 9S4 18 4 13zM8 8h8M8 12h8"},
             {"players", "M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M4 22v-3c0-8 16-8 16 0v3"},
             {"roster", "M3 3h18v18H3zM9 3v18M3 9h18M3 15h18"},
+            {"comparison", "M4 20h17M7 17v-5M12 17V7M17 17V3"},
+            {"regulations", "M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"},
             {"stadiums", "M3 8c0-7 18-7 18 0v8c0 7-18 7-18 0zM3 8c0 7 18 7 18 0M8 "
                          "13v7M16 13v7"},
             {"staff", "M5 22V3h13l-4 5 4 5H5"},
@@ -259,7 +409,7 @@ class EditorUi final : public Rml::EventListener {
                 lookup_[str(row, "id")] = row;
     }
     std::string choices(const std::string &name, const std::string &chosen, const std::string &empty = "",
-                        const std::string &nation = "") const {
+                        const std::string &nation = "", const std::string &competition = "") const {
         std::string result =
             "<option value=\"\"" + std::string(chosen.empty() ? " selected" : "") + ">" + escaped(empty) + "</option>";
         std::vector<std::pair<std::string, std::string>> values;
@@ -270,6 +420,9 @@ class EditorUi final : public Rml::EventListener {
                            : name == "clubs"        ? id.starts_with("club:") || id.starts_with("team:")
                                                     : id.starts_with("stadium:");
             if (!matches || (!nation.empty() && str(row, "nation") != nation && id != chosen))
+                continue;
+            if (name == "clubs" && !competition.empty() && str(row, "competition") != competition &&
+                id != chosen)
                 continue;
             values.emplace_back(id, title(row));
         }
@@ -285,9 +438,11 @@ class EditorUi final : public Rml::EventListener {
         return result;
     }
     void resize() {
+        close_history_menu();
+        redraw_ = true;
         int w, h, pw, ph;
         SDL_GetWindowSize(video_.window, &w, &h);
-        SDL_GL_GetDrawableSize(video_.window, &pw, &ph);
+        video_.drawable_size(pw, ph);
         if (!w || !h)
             return;
         renderer_.SetViewport(pw, ph);
@@ -296,12 +451,21 @@ class EditorUi final : public Rml::EventListener {
                                                   std::clamp(std::min(w / 1440.f, h / 900.f), .78f, 1.8f));
     }
     void close_modal() {
+        redraw_ = true;
         el("overlay")->SetProperty("display", "none");
+        if (image_view_open_) {
+            html("modal-content", "");
+            renderer_.release_view();
+            image_view_open_ = false;
+        }
         modal_ = dragging_ = false;
         modal_accept_ = {};
     }
     void modal(const std::string &title, const std::string &body, const std::string &accept,
                std::function<void()> callback, bool cancel = true, bool wide = false) {
+        close_history_menu();
+        if (image_view_open_)
+            close_modal();
         label("modal-title", title);
         html("modal-content", body);
         label("modal-error", "");
@@ -394,17 +558,22 @@ class EditorUi final : public Rml::EventListener {
                                 button("save", t("save"), "primary", info_.value("loaded", false) ? "" : "disabled") +
                                 button("options", t("options"), "quiet"));
         std::string nav;
-        for (const std::string name : {"overview", "nations", "competitions", "clubs", "players", "roster", "stadiums",
-                                       "staff", "assets", "review", "changes"})
+        for (const std::string name :
+             {"overview", "nations", "competitions", "clubs", "players", "roster", "comparison",
+              "regulations", "stadiums", "staff", "assets", "review", "changes"})
             nav += "<button class=\"nav " + std::string(name == page_ ? "selected" : "") +
                    "\" data-action=\"navigate\" data-value=\"" + name + "\">" + icon(name) + "<span>" +
                    escaped(t(name)) + "</span></button>";
         html("navigation", nav);
         label("page-kicker", "OpenBMH / " + t(page_));
-        label("page-title", t(page_));
+        label("page-title", t(page_ == "comparison"    ? "comparison_title"
+                              : page_ == "regulations" ? "regulations_title"
+                                                       : page_));
         label("page-subtitle", page_ == "roster"   ? t("roster_hint")
                                : page_ == "review" ? t("review_hint")
                                                    : t("subtitle_" + page_));
+        if (page_ == "nations" || page_ == "competitions" || page_ == "clubs")
+            label("page-subtitle", t("subtitle_" + page_) + " · " + t("drill_" + page_));
         label("state", info_.value("dirty", false) ? "*  " + t("unsaved") : t("saved"));
         html("bottom-actions",
              button("undo", t("undo"), "quiet", info_.value("can_undo", false) ? "" : "disabled") +
@@ -462,7 +631,8 @@ class EditorUi final : public Rml::EventListener {
             if (selected_["name"].contains("first") || selected_["name"].contains("last")) {
                 field(body, "/name/first", t("first"));
                 field(body, "/name/last", t("last"));
-                field(body, "/name/known_as", t("known_as"));
+                if (selected_["name"].contains("known_as"))
+                    field(body, "/name/known_as", t("known_as"));
             } else
                 field(body, "/name/default", t("name"));
         } else
@@ -471,9 +641,10 @@ class EditorUi final : public Rml::EventListener {
     std::string inspector() {
         fields_.clear();
         if (selected_.empty())
-            return "<div class=\"inspector\"><div class=\"empty\">" + escaped(t("select_record")) + "</div></div>";
-        std::string body = "<div class=\"inspector\"><div class=\"inspector-head\">";
-        if (table() == "players" || table() == "clubs" || table() == "competitions" || table() == "assets")
+            return "<div class=\"empty\">" + escaped(t("select_record")) + "</div>";
+        std::string body = "<div class=\"inspector-head\">";
+        if (table() == "players" || table() == "clubs" || table() == "competitions" || table() == "assets" ||
+            table() == "staff")
             body += img(table() == "players" && selected_.contains("appearance") ? "portrait:" + selected_id_
                                                                                  : image_key(selected_),
                         "hero-image");
@@ -580,7 +751,53 @@ class EditorUi final : public Rml::EventListener {
         if (page_ != "review")
             body += "<div class=\"inspector-actions\">" + button("delete", t("delete"), "danger") +
                     button("apply", t("apply"), "primary") + "</div>";
-        return body + "</div>";
+        return body;
+    }
+    void initialize_fields() {
+        // Native values also preserve JSON textarea contents without escaping.
+        for (auto &f : fields_) {
+            set_value(f.id, f.kind == "bool" && f.initial.empty() ? "false" : f.initial);
+            f.initial = value(f.id);
+        }
+    }
+    void select_record(const std::string &id) {
+        if (id == selected_id_)
+            return;
+        auto record = session_.execute("get", {{"table", table()}, {"id", id}})["record"];
+        selected_id_ = id;
+        selected_ = std::move(record);
+        Rml::ElementList rows;
+        el("table-scroll")->QuerySelectorAll(rows, ".record");
+        for (auto *row : rows)
+            row->SetClass("selected", row->GetAttribute<Rml::String>("data-value", "") == id);
+        // Keep list elements alive between clicks. Replacing them here would
+        // cancel RmlUI's native double-click detection on a different row.
+        html("record-inspector", inspector());
+        initialize_fields();
+    }
+    void browse_related(const std::string &source, const std::string &id) {
+        if (source != table())
+            return;
+        const auto record = session_.execute("get", {{"table", source}, {"id", id}})["record"];
+        if (source == "competitions" && str(record, "type") != "league")
+            return;
+        visit([this, source, id] {
+            // Apply/discard decisions may have updated the source record.
+            const auto row = session_.execute("get", {{"table", source}, {"id", id}})["record"];
+            if (source == "competitions" && str(row, "type") != "league")
+                return;
+            page_ = source == "nations" ? "competitions" : source == "competitions" ? "clubs" : "players";
+            nation_ = source == "nations" ? id : str(row, "nation");
+            league_ = source == "competitions" ? id : source == "clubs" ? str(row, "competition") : "";
+            team_ = source == "clubs" ? id : "";
+            fields_.clear();
+            selected_id_.clear();
+            search_.clear();
+            offset_ = 0;
+            sort_ = "name";
+            descending_ = false;
+            needs_refresh_ = true;
+        });
     }
     void records() {
         if (!info_.value("loaded", false)) {
@@ -590,6 +807,10 @@ class EditorUi final : public Rml::EventListener {
         html("page-actions", page_ == "review"
                                  ? button("validate", t("validate"))
                                  : button("duplicate", t("duplicate")) + button("add", t("add"), "primary"));
+        if (table() == "players" || table() == "clubs" || table() == "competitions")
+            html("page-actions", button("compare-open", t("comparison")) +
+                                     button("duplicate", t("duplicate")) +
+                                     button("add", t("add"), "primary"));
         std::string toolbar = "<input id=\"search\" type=\"text\" value=\"" + escaped(search_) + "\" placeholder=\"" +
                               escaped(t("search")) + "\"/>";
         if (table() == "clubs" || table() == "players" || table() == "competitions")
@@ -598,7 +819,8 @@ class EditorUi final : public Rml::EventListener {
             toolbar += "<select id=\"filter-league\">" + choices("competitions", league_, t("all_leagues"), nation_) +
                        "</select>";
         if (table() == "players")
-            toolbar += "<select id=\"filter-team\">" + choices("clubs", team_, t("all_clubs"), nation_) + "</select>";
+            toolbar += "<select id=\"filter-team\">" +
+                       choices("clubs", team_, t("all_clubs"), nation_, league_) + "</select>";
         if (page_ == "roster")
             toolbar += button("view24", "24", roster24_ ? "primary" : "");
         html("toolbar", toolbar);
@@ -663,13 +885,11 @@ class EditorUi final : public Rml::EventListener {
         html("page-content", "<div class=\"split\"><div class=\"list-panel\"><div "
                              "class=\"table-header\">" +
                                  columns + "</div><div class=\"table-scroll\" id=\"table-scroll\">" + rows +
-                                 "</div></div>" + inspector() + "</div>");
+                                 "</div></div><div class=\"inspector\" id=\"record-inspector\">" +
+                                 inspector() + "</div></div>");
         // RmlUI's textarea parser retains its raw body rather than decoding
         // HTML entities. Assign native values after constructing the controls.
-        for (auto &f : fields_) {
-            set_value(f.id, f.kind == "bool" && f.initial.empty() ? "false" : f.initial);
-            f.initial = value(f.id);
-        }
+        initialize_fields();
         html("pagination",
              "<span>" + std::to_string(total_) + " " + escaped(t("records")) +
                  (roster24_ ? " · " + escaped(t("compatibility24")) : "") + "</span><div class=\"button-row\">" +
@@ -678,6 +898,484 @@ class EditorUi final : public Rml::EventListener {
                  "</span>" +
                  button("next", t("next"), "quiet", size_t(offset_) + listed_.size() < total_ ? "" : "disabled") +
                  "</div>");
+    }
+    std::string comparison_number(const Json &value, bool salary = false) const {
+        if (!value.is_number())
+            return "—";
+        std::string result;
+        if (salary) {
+            const auto currency = comparison_.value("currency", Json());
+            if (!currency.is_object() || str(currency, "code").empty() ||
+                !currency.value("minor_units", Json()).is_number_integer())
+                return t("unknown");
+            const auto decimals = currency["minor_units"].get<int>();
+            if (decimals < 0 || decimals > 9)
+                return t("unknown");
+            auto digits = std::to_string(value.get<int64_t>());
+            while (digits.size() <= size_t(decimals))
+                digits.insert(digits.begin(), '0');
+            const auto fraction = decimals ? digits.substr(digits.size() - decimals) : "";
+            digits.resize(digits.size() - decimals);
+            for (int i = int(digits.size()) - 3; i > 0; i -= 3)
+                digits.insert(size_t(i), options_.language == "de" ? "." : ",");
+            result = digits + (decimals ? (options_.language == "de" ? "," : ".") + fraction : "");
+        } else if (value.is_number_integer())
+            result = value.dump();
+        else {
+            std::ostringstream stream;
+            stream.imbue(std::locale::classic());
+            stream << std::fixed << std::setprecision(1) << value.get<double>();
+            result = stream.str();
+            if (options_.language == "de")
+                std::replace(result.begin(), result.end(), '.', ',');
+        }
+        return result;
+    }
+    std::string comparison_attribute(const std::string &key) const {
+        // In FC-derived systems strength means physical power, not overall.
+        if (key == "strength")
+            for (const auto &field : comparison_["attributes"])
+                if (str(field, "key") == "overall")
+                    return t("physical_strength");
+        return t(key);
+    }
+    std::vector<std::string> &comparison_columns() {
+        auto key = str(comparison_, "attribute_set");
+        if (!comparison_columns_.contains(key)) {
+            auto &columns = comparison_columns_[key];
+            for (const std::string preferred :
+                 {"overall", "potential", "strength", "technique", "form", "condition", "bonus"}) {
+                for (const auto &field : comparison_["attributes"])
+                    if (str(field, "key") == preferred && columns.size() < 5)
+                        columns.push_back(preferred);
+            }
+            if (columns.empty())
+                for (const auto &field : comparison_["attributes"])
+                    if (columns.size() < 5)
+                        columns.push_back(str(field, "key"));
+        }
+        return comparison_columns_.at(key);
+    }
+    void comparison_choose_columns() {
+        std::string body = "<p>" + escaped(t("comparison_columns_hint")) + "</p><div class=\"button-row\">" +
+                           button("compare-all-columns", t("all_columns")) +
+                           button("compare-no-columns", t("no_columns")) +
+                           "</div><div class=\"comparison-choices\">";
+        const auto &chosen = comparison_columns();
+        size_t index = 0;
+        for (const auto &field : comparison_["attributes"]) {
+            const auto key = str(field, "key");
+            const bool checked = std::find(chosen.begin(), chosen.end(), key) != chosen.end();
+            const auto id = "comparison-column-" + std::to_string(index++);
+            body += "<label for=\"" + id + "\"><input type=\"checkbox\" id=\"" + id + "\"" +
+                    (checked ? " checked" : "") + "/><span>" + escaped(comparison_attribute(key)) + "</span></label>";
+        }
+        modal(
+            t("comparison_columns"), body + "</div>", t("apply"),
+            [this] {
+                auto &chosen = comparison_columns();
+                chosen.clear();
+                size_t index = 0;
+                for (const auto &field : comparison_["attributes"]) {
+                    if (el("comparison-column-" + std::to_string(index++))->HasAttribute("checked"))
+                        chosen.push_back(str(field, "key"));
+                }
+                close_modal();
+                needs_refresh_ = true;
+            },
+            true, true);
+    }
+    void comparison() {
+        if (!info_.value("loaded", false)) {
+            overview();
+            return;
+        }
+        Json args{{"table", comparison_table_},
+                  {"language", options_.language},
+                  {"attribute_set", comparison_set_},
+                  {"search", search_},
+                  {"nation", nation_},
+                  {"competition", league_},
+                  {"team", team_},
+                  {"sort", comparison_sort_},
+                  {"descending", comparison_descending_},
+                  {"offset", offset_},
+                  {"limit", 200}};
+        try {
+            comparison_ = session_.execute("compare", args);
+        } catch (const Error &error) {
+            if (error.code != "invalid_attribute_set" && error.code != "invalid_comparison_sort")
+                throw;
+            // A world replaced through MCP can have different attribute sets.
+            comparison_set_.clear();
+            comparison_sort_ = "name";
+            args["attribute_set"] = "";
+            args["sort"] = "name";
+            comparison_ = session_.execute("compare", args);
+        }
+        listed_ = comparison_["items"];
+        total_ = comparison_["total"].get<size_t>();
+        if (listed_.empty() && offset_ > 0) {
+            offset_ = total_ ? int((total_ - 1) / 200 * 200) : 0;
+            args["offset"] = offset_;
+            comparison_ = session_.execute("compare", args);
+            listed_ = comparison_["items"];
+        }
+        const bool players = comparison_table_ == "players", leagues = comparison_table_ == "leagues";
+        std::string tabs;
+        for (const std::string scope : {"players", "clubs", "leagues"})
+            tabs += button("compare-scope", t(scope == "clubs" ? "teams" : scope),
+                           scope == comparison_table_ ? "primary" : "", "data-value=\"" + scope + "\"");
+        html("page-actions", tabs);
+        std::string toolbar = "<input id=\"search\" type=\"text\" value=\"" + escaped(search_) +
+                              "\" placeholder=\"" + escaped(t("search")) +
+                              "\"/><select id=\"filter-nation\">" +
+                              choices("nations", nation_, t("all_nations")) + "</select>";
+        if (!leagues)
+            toolbar += "<select id=\"filter-league\">" +
+                       choices("competitions", league_, t("all_leagues"), nation_) + "</select>";
+        if (players)
+            toolbar += "<select id=\"filter-team\">" +
+                       choices("clubs", team_, t("all_clubs"), nation_, league_) + "</select>";
+        html("toolbar", toolbar);
+        const auto automatic_profile =
+            comparison_["attribute_sets"].size() == 1
+                ? str(comparison_, "attribute_set") + " · " + t("comparison_all_players")
+                : t("comparison_all_sets");
+        std::string profiles = "<option value=\"\"" +
+                               std::string(comparison_set_.empty() ? " selected" : "") + ">" +
+                               escaped(automatic_profile) + "</option>";
+        for (const auto &profile : comparison_["attribute_sets"]) {
+            const auto id = str(profile, "id");
+            if (!id.empty())
+                profiles += "<option value=\"" + escaped(id) + "\"" +
+                            (id == comparison_set_ ? " selected" : "") + ">" + escaped(id) + " · " +
+                            profile["players"].dump() + "</option>";
+        }
+        std::string body =
+            "<div class=\"comparison-layout\"><div class=\"comparison-bar\"><label>" +
+            escaped(t("attribute_set")) + "</label><select id=\"comparison-set\">" + profiles + "</select>" +
+            button("compare-columns", t("comparison_columns"), "",
+                   comparison_["attributes"].empty() ? "disabled" : "") +
+            "<span>" + escaped(t(players ? "comparison_player_values" : "comparison_mean_values")) +
+            "</span></div>";
+        int width = 0;
+        std::string header;
+        struct Column {
+            std::string key, label;
+            int width;
+        };
+        std::vector<Column> columns{{"name",
+                                     t(players   ? "players"
+                                       : leagues ? "leagues"
+                                                 : "teams"),
+                                     230},
+                                    {"context",
+                                     t(players   ? "team"
+                                       : leagues ? "nation"
+                                                 : "competition"),
+                                     players ? 200 : 180}};
+        if (players)
+            columns.push_back({"positions", t("positions"), 95});
+        else {
+            if (leagues)
+                columns.push_back({"club_count", t("clubs"), 80});
+            columns.push_back({"player_count", t("players"), 85});
+        }
+        const auto &chosen = comparison_columns();
+        std::string primary_attribute;
+        for (const auto &field : comparison_["attributes"]) {
+            const auto key = str(field, "key");
+            if (std::find(chosen.begin(), chosen.end(), key) != chosen.end() &&
+                (primary_attribute.empty() || key == "strength" || key == "overall"))
+                primary_attribute = key;
+            if (primary_attribute == "overall")
+                break;
+        }
+        if (!primary_attribute.empty())
+            columns.push_back(
+                {"attributes." + primary_attribute, comparison_attribute(primary_attribute), 120});
+        const auto currency = str(comparison_.value("currency", Json()), "code", "?");
+        columns.push_back({players ? "salary" : "salary_total",
+                           t(players ? "salary_season" : "salary_total") + " · " + currency, 165});
+        if (!players) {
+            columns.push_back({"salary_average", t("salary_average") + " · " + currency, 165});
+            columns.push_back({"salary_known", t("salary_coverage"), 105});
+        }
+        for (const auto &field : comparison_["attributes"]) {
+            const auto key = str(field, "key");
+            if (key != primary_attribute && std::find(chosen.begin(), chosen.end(), key) != chosen.end())
+                columns.push_back({"attributes." + key, comparison_attribute(key), 135});
+        }
+        for (const auto &column : columns) {
+            width += column.width;
+            const bool sortable = column.key != "context" && column.key != "positions";
+            std::string caption = escaped(column.label);
+            if (column.key == comparison_sort_)
+                caption += "<span class=\"comparison-direction" +
+                           std::string(comparison_descending_ ? "" : " ascending") + "\"></span>";
+            if (column.key.starts_with("attributes."))
+                for (const auto &field : comparison_["attributes"])
+                    if (str(field, "key") == column.key.substr(11) && field["min"].is_number() &&
+                        field["max"].is_number())
+                        caption += "<small>" + field["min"].dump() + "–" + field["max"].dump() + "</small>";
+            header += "<button class=\"comparison-cell" +
+                      std::string(column.key == "name" || column.key == "context" ? " text" : "") +
+                      "\" style=\"width:" + std::to_string(column.width) + "dp\"" +
+                      (sortable ? " data-action=\"compare-sort\" data-value=\"" + escaped(column.key) + "\""
+                                : " disabled") +
+                      ">" + caption + "</button>";
+        }
+        std::string rows;
+        for (const auto &row : listed_) {
+            rows += "<button class=\"comparison-row\" data-action=\"compare-edit\" data-value=\"" +
+                    escaped(str(row, "id")) + "\">";
+            for (const auto &column : columns) {
+                std::string cell, hint;
+                if (column.key == "name") {
+                    cell = "<span class=\"comparison-name-text\">" + escaped(str(row, "name")) + "</span>";
+                    hint = str(row, "name") + " · " + str(row, "id");
+                } else if (column.key == "context")
+                    cell = escaped(ref(row, players ? "team" : leagues ? "nation" : "competition"));
+                else if (column.key == "positions") {
+                    for (const auto &position : row["positions"])
+                        if (position.is_string())
+                            cell += (cell.empty() ? "" : " / ") + escaped(t(position.get<std::string>()));
+                } else if (column.key.starts_with("attributes.")) {
+                    const auto key = column.key.substr(11);
+                    cell = comparison_number(row["attributes"].value(key, Json()));
+                    if (!players)
+                        hint =
+                            row["attribute_counts"].value(key, size_t(0)) == row["player_count"].get<size_t>()
+                                ? t("comparison_mean_values")
+                                : std::to_string(row["attribute_counts"].value(key, size_t(0))) + "/" +
+                                      row["player_count"].dump() + " · " + t("comparison_known_values");
+                } else if (column.key == "salary_known") {
+                    cell = row["salary_known"].dump() + " / " + row["player_count"].dump();
+                    hint = row["salary_unknown"].dump() + " · " + t("salary_missing") + "; " +
+                           row["salary_ambiguous"].dump() + " · " + t("salary_ambiguous");
+                } else {
+                    const bool salary = column.key.starts_with("salary");
+                    cell = comparison_number(row.value(column.key, Json()), salary);
+                    if (salary && !players && row.value(column.key, Json()).is_number() &&
+                        !row.value("salary_complete", false))
+                        cell += " *";
+                    if (salary && players && row.value("salary_ambiguous", 0))
+                        hint = t("salary_ambiguous");
+                }
+                rows += "<span class=\"comparison-cell" +
+                        std::string(column.key == "name" || column.key == "context" ? " text" : "") +
+                        "\" style=\"width:" + std::to_string(column.width) + "dp\" title=\"" + escaped(hint) +
+                        "\">" + cell + "</span>";
+            }
+            rows += "</button>";
+        }
+        if (rows.empty())
+            rows = "<div class=\"empty\">" + escaped(t("empty")) + "</div>";
+        body += "<div class=\"list-panel comparison-panel\"><div class=\"comparison-x\" "
+                "id=\"comparison-x\"><div class=\"comparison-table\" style=\"width:" +
+                std::to_string(width + 20) + "dp\"><div class=\"comparison-head\">" + header +
+                "</div><div class=\"comparison-body\" id=\"table-scroll\">" + rows +
+                "</div></div></div></div>";
+        body += "<div class=\"comparison-note\">" + escaped(t("comparison_salary_note")) + " · " +
+                escaped(str(comparison_, "date")) + "<br/>" + escaped(t("comparison_scope_note"));
+        if (comparison_.value("mixed_attribute_sets", false))
+            body += "<br/>" + escaped(t("comparison_mixed_note"));
+        if (comparison_.value("excluded_players", size_t(0)))
+            body += " · " + comparison_["excluded_players"].dump() + " " + escaped(t("comparison_excluded"));
+        if (comparison_.value("fictional_completion", false))
+            body += "<br/>" + escaped(t("comparison_fictional"));
+        html("page-content", body + "</div></div>");
+        html("pagination", "<span>" + std::to_string(total_) + " " + escaped(t("records")) + " · " +
+                               escaped(t("comparison_sort_hint")) + "</span><div class=\"button-row\">" +
+                               button("previous", t("previous"), "quiet", offset_ > 0 ? "" : "disabled") +
+                               "<span>" + std::to_string(offset_ + (total_ ? 1 : 0)) + "–" +
+                               std::to_string(offset_ + listed_.size()) + "</span>" +
+                               button("next", t("next"), "quiet",
+                                      size_t(offset_) + listed_.size() < total_ ? "" : "disabled") +
+                               "</div>");
+    }
+    std::string regulation_ranks(const Json &ranks) const {
+        if (!ranks.is_array() || ranks.empty())
+            return t("regulation_unspecified");
+        std::string result = t("regulation_rank") + " " + text(ranks.front());
+        if (ranks.size() == 2 && ranks.front() != ranks.back())
+            result += "–" + text(ranks.back());
+        else if (ranks.size() > 2)
+            result = t("regulation_rank") + " " + ranks.dump();
+        return result;
+    }
+    std::string regulation_selector(const Json &definition) const {
+        if (definition.contains("ranks"))
+            return regulation_ranks(definition["ranks"]);
+        for (auto key : {"winner", "runner_up", "next_unqualified"})
+            if (definition.value(key, Json()) == true)
+                return t("regulation_" + std::string(key));
+        if (definition.contains("holder"))
+            return t("regulation_holder") + " · " + ref(definition, "holder");
+        if (str(definition, "from") == "coefficient")
+            return t("regulation_coefficient");
+        if (definition.contains("resolver"))
+            return t("regulation_runtime");
+        return t("regulation_unspecified");
+    }
+    std::string regulation_type(const Json &row, const std::string &prefix) const {
+        const auto type = str(row, "type"), key = prefix + type;
+        const auto translated = t(key);
+        return translated == key ? type : translated;
+    }
+    void regulations() {
+        html("page-actions", "<span class=\"badge\">" + escaped(t("regulation_readonly")) + "</span>");
+        html("pagination", "");
+        html("toolbar",
+             button("regulations-tab", t("regulation_competitions"), regulations_game_ ? "" : "primary",
+                    "data-value=\"competitions\"") +
+                 button("regulations-tab", t("regulation_game"), regulations_game_ ? "primary" : "",
+                        "data-value=\"game\"") +
+                 "<input id=\"search\" type=\"text\" value=\"" + escaped(search_) + "\" placeholder=\"" +
+                 escaped(t("search")) + "\"/>" +
+                 (regulations_game_ ? ""
+                                    : "<select id=\"filter-nation\">" +
+                                          choices("nations", nation_, t("all_nations")) + "</select>"));
+        if (!info_.value("loaded", false)) {
+            html("page-content", "<div class=\"empty\">" + escaped(t("welcome_hint")) + "</div>");
+            return;
+        }
+        const auto view = session_.execute(
+            "regulations", {{"language", options_.language}, {"search", search_}, {"nation", nation_}});
+        Json rows = regulations_game_ ? view["rules"] : view["items"];
+        if (regulations_game_ && !search_.empty()) {
+            Json filtered = Json::array();
+            for (const auto &row : rows)
+                if (folded(str(row, "id") + " " + str(row, "type")).find(folded(search_)) !=
+                    std::string::npos)
+                    filtered.push_back(row);
+            rows = std::move(filtered);
+        }
+        auto &chosen = regulations_game_ ? game_rule_id_ : regulation_id_;
+        const Json *selected = nullptr;
+        for (const auto &row : rows)
+            if (str(row, "id") == chosen)
+                selected = &row;
+        if (!selected && !rows.empty()) {
+            selected = &rows.front();
+            chosen = str(*selected, "id");
+        }
+        std::string body = "<div class=\"regulation-layout\"><div class=\"list-panel regulation-list\"><div "
+                           "class=\"table-scroll\">";
+        for (const auto &row : rows) {
+            const auto id = str(row, "id");
+            body += "<button class=\"regulation-choice " + std::string(id == chosen ? "primary" : "quiet") +
+                    "\" data-action=\"regulation-select\" data-value=\"" + escaped(id) + "\">" +
+                    escaped(regulations_game_ ? regulation_type(row, "rule_type_") : str(row, "name")) +
+                    "<small>" + escaped(regulations_game_ ? id : ref(row, "nation")) + "</small></button>";
+        }
+        body += "</div></div><div class=\"list-panel regulation-detail\"><div class=\"regulation-scroll\">";
+        auto section = [&](const std::string &key, const std::string &content) {
+            return "<div class=\"regulation-section\"><h2>" + escaped(t(key)) + "</h2>" + content + "</div>";
+        };
+        auto paragraph = [&](const std::string &value) { return "<p>" + escaped(value) + "</p>"; };
+        auto source = [&](const Json &value) {
+            return "<div class=\"source-json\">" + escaped(value.dump(2)) + "</div>";
+        };
+        if (!selected)
+            body += "<div class=\"empty\">" + escaped(t("empty")) + "</div>";
+        else if (regulations_game_) {
+            body += "<h2>" + escaped(regulation_type(*selected, "rule_type_")) + "</h2><small>" +
+                    escaped(chosen) + "</small>" + paragraph(t("regulation_preserved")) + source(*selected);
+        } else {
+            const auto &row = *selected;
+            body += "<h2>" + escaped(str(row, "name")) + "</h2><small>" + escaped(chosen) + "</small>" +
+                    paragraph(ref(row, "nation") + " · " + regulation_type(row, "regulation_type_") + " · " +
+                              std::to_string(row.value("teams", 0)) + " " + t("teams"));
+            std::string movement;
+            for (const auto &entry : row["movement"]) {
+                std::string destinations;
+                for (const auto &target : entry["targets"]) {
+                    if (!destinations.empty())
+                        destinations += " / ";
+                    destinations += str(target, "name");
+                }
+                if (entry.value("newcomer_pool", false))
+                    destinations = t("regulation_amateur_pool");
+                movement +=
+                    "<div class=\"regulation-clause\"><strong>" +
+                    escaped(t("regulation_" + str(entry, "kind"))) + "</strong>" +
+                    paragraph((str(entry, "selector") == "classic-playoff-winner"
+                                   ? t("regulation_playoff_winner")
+                                   : regulation_ranks(entry.value("ranks", Json()))) +
+                              " · " + t("regulation_to") + " " + destinations) +
+                    "<small>" +
+                    escaped(t(str(entry, "source") == "declared" ? "regulation_declared"
+                                                                 : "regulation_classic")) +
+                    "</small>" +
+                    (entry.value("conditional_playoffs", false) ? paragraph(t("regulation_classic_playoffs"))
+                                                                : "") +
+                    (regulations_source_ ? source(entry) : "") + "</div>";
+            }
+            if (movement.empty())
+                movement = paragraph(
+                    t(row.value("movement_defined", false) ? "regulation_closed" : "regulation_unspecified"));
+            if (std::any_of(row["movement"].begin(), row["movement"].end(),
+                            [](const auto &entry) { return str(entry, "source") == "classic-ladder@1"; }))
+                movement += "<small>" + escaped(t("regulation_classic_movement_note")) + "</small>";
+            body += section("regulation_movement_title", movement);
+            std::string qualification;
+            const auto policy = row["classic_qualification"];
+            if (!policy.is_null()) {
+                qualification = "<div class=\"regulation-clause\"><span class=\"badge\">" +
+                                escaped(t("regulation_classic")) + "</span>" +
+                                paragraph(t("regulation_classic_intro"));
+                if (policy.value("runtime_participants", false))
+                    qualification += paragraph(t("regulation_runtime"));
+                else
+                    qualification +=
+                        paragraph(t("regulation_classic_champion")) + paragraph(t("regulation_classic_cup")) +
+                        paragraph("UEFA-Cup · " + std::to_string(policy.value("uefa_base_places", 0)) + " " +
+                                  t("regulation_classic_uefa")) +
+                        paragraph(t("regulation_classic_holders"));
+                qualification += "<small>classic-season-entrants@1</small></div>";
+            }
+            for (const auto &entry : row["qualification"]) {
+                const auto &definition = entry["definition"];
+                if (!policy.is_null() && str(entry, "source") == "classic-entry@1")
+                    continue;
+                auto from = str(entry["from"], "name");
+                auto to = str(entry["to"], "name");
+                qualification += "<div class=\"regulation-clause\"><strong>" +
+                                 escaped((from.empty() ? "" : from + " · " + t("regulation_to") + " ") + to) +
+                                 "</strong>" + paragraph(regulation_selector(definition));
+                if (definition.contains("fallback"))
+                    qualification +=
+                        paragraph(t("regulation_fallback") + ": " + ref(definition["fallback"], "from") +
+                                  " · " + regulation_selector(definition["fallback"]));
+                if (!str(entry, "stage").empty())
+                    qualification +=
+                        "<small>" + escaped(t("regulation_stage") + ": " + str(entry, "stage")) + "</small>";
+                qualification += (regulations_source_ ? source(definition) : "") + "</div>";
+            }
+            if (qualification.empty())
+                qualification = paragraph(t("regulation_unspecified"));
+            body += section("regulation_qualification_title", qualification);
+            std::string stages;
+            for (auto stage : row["stages"]) {
+                // Participants can be large; the source toggle exposes them.
+                if (!regulations_source_) {
+                    stage.erase("slots");
+                    stage.erase("fixtures");
+                }
+                stages += source(stage);
+            }
+            if (stages.empty())
+                stages = paragraph(t("regulation_unspecified"));
+            body +=
+                section("regulation_stages", stages) +
+                button("regulation-source",
+                       t(regulations_source_ ? "regulation_hide_source" : "regulation_show_source"), "quiet");
+            if (regulations_source_)
+                body += source(row["record"]);
+        }
+        html("page-content", body + "</div></div></div>");
     }
     void changes() {
         html("toolbar", "");
@@ -698,6 +1396,8 @@ class EditorUi final : public Rml::EventListener {
         html("page-content", body + "</div>");
     }
     void refresh() {
+        const float comparison_scroll =
+            doc_->GetElementById("comparison-x") ? el("comparison-x")->GetScrollLeft() : 0;
         const auto *focus = context_->GetFocusElement();
         const bool search_focused = focus && focus->GetId() == "search";
         int selection_start = 0, selection_end = 0;
@@ -705,6 +1405,31 @@ class EditorUi final : public Rml::EventListener {
             if (auto *input = dynamic_cast<Rml::ElementFormControlInput *>(context_->GetFocusElement()))
                 input->GetSelection(&selection_start, &selection_end, nullptr);
         info_ = session_.execute("info");
+        const auto generation = info_.value("world_generation", uint64_t(0));
+        if (generation != world_generation_) {
+            // An MCP client can also open a different world, even with the
+            // same filename and identifiers. Never replay an old view/draft.
+            world_generation_ = generation;
+            navigation_.clear();
+            navigation_index_ = 0;
+            restore_scroll_.reset();
+            selected_id_.clear();
+            fields_.clear();
+            search_.clear();
+            nation_.clear();
+            league_.clear();
+            team_.clear();
+            remembered_.clear();
+            comparison_set_.clear();
+            comparison_columns_.clear();
+            regulation_id_.clear();
+            game_rule_id_.clear();
+            offset_ = 0;
+            close_history_menu();
+            if (modal_)
+                close_modal();
+            discard_continuation_ = {};
+        }
         auto rev = info_.value("revision", uint64_t(0));
         renderer_.clear();
         if (revision_ != rev) {
@@ -716,13 +1441,32 @@ class EditorUi final : public Rml::EventListener {
             overview();
         else if (page_ == "changes")
             changes();
+        else if (page_ == "comparison")
+            comparison();
+        else if (page_ == "regulations")
+            regulations();
         else
             records();
+        if (page_ == "comparison" && doc_->GetElementById("comparison-x")) {
+            context_->Update();
+            el("comparison-x")->SetScrollLeft(comparison_scroll);
+        }
         if (search_focused && doc_->GetElementById("search")) {
             auto *input = dynamic_cast<Rml::ElementFormControlInput *>(el("search"));
             input->Focus();
             input->SetSelectionRange(selection_start, selection_end);
         }
+        if (restore_scroll_) {
+            context_->Update();
+            for (const auto &position : *restore_scroll_)
+                if (auto *element = doc_->QuerySelector(position.selector)) {
+                    element->SetScrollLeft(position.left);
+                    element->SetScrollTop(position.top);
+                }
+            restore_scroll_.reset();
+        }
+        if (navigation_.empty())
+            navigation_.push_back({location(), {}});
         needs_refresh_ = false;
     }
     bool has_draft() const {
@@ -797,7 +1541,8 @@ class EditorUi final : public Rml::EventListener {
         body += "<p class=\"form-help\">" + t("mcp_local") + " · " + t(server_.running() ? "online" : "offline") +
                 (server_.running() ? "<br/>http://127.0.0.1:" + std::to_string(server_.port()) + "/mcp" : "") + "</p>";
         if (server_.running())
-            body += button("copy-connection", t("copy_connection"));
+            body += "<div class=\"connection-actions\">" + button("copy-connection", t("copy_connection")) +
+                    "</div>";
         modal(t("options"), body, t("apply"), [this] {
             auto next = options_;
             next.apply({{"language", value("option-language")},
@@ -845,6 +1590,42 @@ class EditorUi final : public Rml::EventListener {
         el("crop-canvas")->SetProperty("width", std::to_string(w) + "dp");
         el("crop-canvas")->SetProperty("height", std::to_string(h) + "dp");
         crop_box();
+    }
+    void view_image(const std::string &key) {
+        if (image_view_open_)
+            close_modal();
+        std::string asset_key = key;
+        if (key.starts_with("portrait:")) {
+            const auto player =
+                session_.execute("get", {{"table", "players"}, {"id", key.substr(9)}})["record"];
+            asset_key = str(player, "photo");
+        }
+        std::string caption;
+        if (!asset_key.empty()) {
+            try {
+                const auto asset =
+                    session_.execute("get", {{"table", "assets"}, {"id", asset_key}})["record"];
+                caption = title(asset);
+            } catch (const Error &error) {
+                if (error.code != "record_missing")
+                    throw;
+                asset_key.clear();
+            }
+        }
+        const auto source = session_.asset_bytes(key);
+        const auto raster = images::preview(source.first, source.second, Json::object(), 1536);
+        const double scale = std::min(810.0 / raster.width, 500.0 / raster.height);
+        const auto token = renderer_.view(images::encode_png(raster));
+        const std::string body = "<div class=\"image-stage readonly-stage\"><img src=\"" + token +
+                                 "\" style=\"width:" + number(raster.width * scale) +
+                                 "dp;height:" + number(raster.height * scale) +
+                                 "dp;\"/></div><p class=\"form-help image-caption\">" + escaped(caption) +
+                                 "</p>";
+        modal(t("image_view"), body, t("close"), [this] { close_modal(); }, false, true);
+        image_view_open_ = true;
+        html("modal-buttons", button("image-view-asset", t(asset_key.empty() ? "assets" : "view_asset"), "",
+                                     "data-value=\"" + escaped(asset_key) + "\"") +
+                                  button("accept-modal", t("close"), "primary"));
     }
     void edit_image(bool existing, bool fresh = false) {
         image_file_.clear();
@@ -974,23 +1755,91 @@ class EditorUi final : public Rml::EventListener {
               });
     }
     void dispatch(const std::string &action, const std::string &arg) {
+        if (action == "history-close" || action == "history-back" || action == "history-forward") {
+            close_history_menu();
+            if (action != "history-close")
+                navigate_history(action == "history-back" ? -1 : 1);
+            return;
+        }
         if (busy_)
             return;
         if (action == "navigate")
-            leave_fields([this, arg] {
+            visit([this, arg] {
                 page_ = arg;
                 fields_.clear();
                 selected_id_.clear();
                 offset_ = 0;
                 search_.clear();
+                nation_.clear();
+                league_.clear();
+                team_.clear();
                 needs_refresh_ = true;
             });
-        else if (action == "select")
-            leave_fields([this, arg] {
+        else if (action == "regulations-tab") {
+            regulations_game_ = arg == "game";
+            search_.clear();
+            nation_.clear();
+            needs_refresh_ = true;
+        } else if (action == "regulation-select") {
+            (regulations_game_ ? game_rule_id_ : regulation_id_) = arg;
+            needs_refresh_ = true;
+        } else if (action == "regulation-source") {
+            regulations_source_ = !regulations_source_;
+            needs_refresh_ = true;
+        } else if (action == "compare-open" || action == "compare-scope")
+            visit([this, action, arg] {
+                comparison_table_ =
+                    action == "compare-open" ? (table() == "competitions" ? "leagues" : table()) : arg;
+                page_ = "comparison";
+                fields_.clear();
+                selected_id_.clear();
+                search_.clear();
+                nation_.clear();
+                league_.clear();
+                team_.clear();
+                offset_ = 0;
+                comparison_sort_ = "name";
+                comparison_descending_ = false;
+                needs_refresh_ = true;
+            });
+        else if (action == "compare-sort") {
+            comparison_descending_ = arg == comparison_sort_ ? !comparison_descending_ : true;
+            comparison_sort_ = arg;
+            offset_ = 0;
+            needs_refresh_ = true;
+        } else if (action == "compare-columns")
+            comparison_choose_columns();
+        else if (action == "compare-all-columns" || action == "compare-no-columns") {
+            for (size_t i = 0; i < comparison_["attributes"].size(); ++i) {
+                auto *checkbox = el("comparison-column-" + std::to_string(i));
+                if (action == "compare-all-columns")
+                    checkbox->SetAttribute("checked", "");
+                else
+                    checkbox->RemoveAttribute("checked");
+            }
+        } else if (action == "compare-set") {
+            if (value("comparison-set") != comparison_set_) {
+                comparison_set_ = value("comparison-set");
+                comparison_sort_ = "name";
+                offset_ = 0;
+                needs_refresh_ = true;
+            }
+        } else if (action == "compare-edit")
+            visit([this, arg] {
+                page_ = comparison_table_ == "leagues" ? "competitions" : comparison_table_;
                 selected_id_ = arg;
+                sort_ = "name";
+                offset_ = 0;
+                search_.clear();
                 needs_refresh_ = true;
             });
-        else if (action == "cancel-modal")
+        else if (action.starts_with("browse:"))
+            browse_related(action.substr(7), arg);
+        else if (action.starts_with("select:")) {
+            // The click following a double click still belongs to its old list.
+            if (action.substr(7) == table() && arg != selected_id_)
+                leave_fields([this, arg] { select_record(arg); });
+        } else if (action == "cancel-modal")
             close_modal();
         else if (action == "accept-modal") {
             if (modal_accept_) {
@@ -1061,9 +1910,11 @@ class EditorUi final : public Rml::EventListener {
         } else if (action == "sort") {
             descending_ = arg == sort_ ? !descending_ : false;
             sort_ = arg;
+            offset_ = 0;
             needs_refresh_ = true;
         } else if (action == "next" || action == "previous") {
-            offset_ = std::max(0, offset_ + (action == "next" ? 1 : -1) * (roster24_ ? 24 : 200));
+            offset_ = std::max(0, offset_ + (action == "next" ? 1 : -1) *
+                                                (page_ != "comparison" && roster24_ ? 24 : 200));
             needs_refresh_ = true;
         } else if (action == "filters") {
             const auto next_nation = doc_->GetElementById("filter-nation") ? value("filter-nation") : "";
@@ -1075,6 +1926,7 @@ class EditorUi final : public Rml::EventListener {
             if (next_nation == nation_ && next_league == league_ && next_team == team_ && next_search == search_)
                 return;
             auto old_nation = nation_;
+            auto old_league = league_;
             nation_ = next_nation;
             league_ = next_league;
             team_ = next_team;
@@ -1082,7 +1934,8 @@ class EditorUi final : public Rml::EventListener {
             if (old_nation != nation_) {
                 league_.clear();
                 team_.clear();
-            }
+            } else if (old_league != league_)
+                team_.clear();
             selected_id_.clear();
             offset_ = 0;
             needs_refresh_ = true;
@@ -1132,6 +1985,22 @@ class EditorUi final : public Rml::EventListener {
                                                 {"choice", std::stoi(value("review-choice"))},
                                                 {"expected_revision", revision_}});
             needs_refresh_ = true;
+        } else if (action == "image-view")
+            view_image(arg);
+        else if (action == "image-view-asset") {
+            close_modal();
+            visit([this, arg] {
+                page_ = "assets";
+                selected_id_ = search_ = arg;
+                offset_ = 0;
+                sort_ = "name";
+                descending_ = false;
+                nation_.clear();
+                league_.clear();
+                team_.clear();
+                fields_.clear();
+                needs_refresh_ = true;
+            });
         } else if (action == "image-import" || action == "image-edit") {
             if (has_draft()) {
                 apply_fields();
@@ -1203,23 +2072,16 @@ class EditorUi final : public Rml::EventListener {
         if (config_.screenshot.empty())
             return;
         int w, h;
-        SDL_GL_GetDrawableSize(video_.window, &w, &h);
-        images::Raster raster{w, h, std::vector<uint8_t>(size_t(w) * h * 4)};
-        using ReadPixels = void (*)(int, int, int, int, unsigned, unsigned, void *);
-        auto read = reinterpret_cast<ReadPixels>(SDL_GL_GetProcAddress("glReadPixels"));
-        if (!read)
-            throw Error("video_failed");
-        read(0, 0, w, h, 0x1908 /* RGBA */, 0x1401 /* UNSIGNED_BYTE */, raster.pixels.data());
-        for (int y = 0; y < h / 2; ++y)
-            for (int x = 0; x < w * 4; ++x)
-                std::swap(raster.pixels[size_t(y) * w * 4 + x], raster.pixels[size_t(h - y - 1) * w * 4 + x]);
+        auto pixels = video_.capture(w, h);
+        images::Raster raster{w, h, std::move(pixels)};
         write_atomic(config_.screenshot, images::encode_png(raster));
         config_.screenshot.clear();
     }
 
   public:
     EditorUi(Session &s, Options &o, McpServer &server, UiConfig config)
-        : session_(s), options_(o), server_(server), config_(std::move(config)), renderer_(s) {
+        : session_(s), options_(o), server_(server), config_(std::move(config)), renderer_(s, video_) {
+        SDL_StartTextInput();
         page_ = config_.page;
         Rml::SetSystemInterface(&system_);
         Rml::SetFileInterface(&files_);
@@ -1229,13 +2091,14 @@ class EditorUi final : public Rml::EventListener {
         if (!initialized_)
             throw Error("video_failed");
         for (auto weight : {"Regular", "Bold"})
-            if (!Rml::LoadFontFace(utf8(config_.assets / (std::string("LatoLatin-") + weight + ".ttf"))))
+            if (!Rml::LoadFontFace(
+                    bmh::rml::asset_path(config_.assets / (std::string("LatoLatin-") + weight + ".ttf"))))
                 throw Error("ui_assets_missing");
         context_ = Rml::CreateContext("editor", {1440, 900});
-        doc_ = context_->LoadDocument(utf8(config_.assets / "editor.rml"));
+        doc_ = context_->LoadDocument(bmh::rml::asset_path(config_.assets / "editor.rml"));
         if (!doc_)
             throw Error("ui_assets_missing");
-        for (auto event : {"click", "change", "mousedown", "mouseup", "mousemove"})
+        for (auto event : {"click", "dblclick", "change", "mousedown", "mouseup", "mousemove"})
             doc_->AddEventListener(event, this);
         resize();
         refresh();
@@ -1251,7 +2114,8 @@ class EditorUi final : public Rml::EventListener {
     void ProcessEvent(Rml::Event &event) override {
         auto *target = event.GetTargetElement();
         const auto type = event.GetType();
-        if (type == "mousedown" && modal_ && doc_->GetElementById("crop-canvas")) {
+        if (type == "mousedown" && event.GetParameter<int>("button", 0) == 0 && modal_ &&
+            doc_->GetElementById("crop-canvas")) {
             for (auto *node = target; node; node = node->GetParentNode())
                 if (node->GetId() == "crop-canvas") {
                     crop_drag(event.GetParameter<float>("mouse_x", 0), event.GetParameter<float>("mouse_y", 0), true);
@@ -1270,26 +2134,57 @@ class EditorUi final : public Rml::EventListener {
             auto id = target->GetId();
             if (id.starts_with("filter-") || id == "search")
                 pending_.emplace_back("filters", "");
+            else if (id == "comparison-set")
+                pending_.emplace_back("compare-set", "");
             else if (id == "image-aspect")
                 pending_.emplace_back("aspect", "");
             else if (id.starts_with("image-") && id != "edit-preview")
                 pending_.emplace_back("image-preview", "");
             return;
         }
-        if (type != "click")
+        if (type != "click" && type != "dblclick")
             return;
         for (auto *node = target; node; node = node->GetParentNode())
             if (node->HasAttribute("data-action") && !node->HasAttribute("disabled")) {
-                pending_.emplace_back(node->GetAttribute<Rml::String>("data-action", ""),
-                                      node->GetAttribute<Rml::String>("data-value", ""));
+                auto action = node->GetAttribute<Rml::String>("data-action", "");
+                if (type == "dblclick") {
+                    if (action != "select" ||
+                        (table() != "nations" && table() != "competitions" && table() != "clubs"))
+                        return;
+                    action = "browse:" + table();
+                } else if (action == "select")
+                    action = "select:" + table();
+                pending_.emplace_back(action, node->GetAttribute<Rml::String>("data-value", ""));
                 return;
             }
     }
     int run() {
+        using Clock = std::chrono::steady_clock;
+        using namespace std::chrono_literals;
         auto last_poll = start_;
+        auto next_update = start_;
+        auto observed_revision = revision_;
         while (!closed_) {
+            const auto before_wait = Clock::now();
+            const bool drawable =
+                !(SDL_GetWindowFlags(video_.window) & (SDL_WINDOW_MINIMIZED | SDL_WINDOW_HIDDEN));
+            auto wake = busy_ ? before_wait + 50ms : last_poll + 400ms;
+            if (drawable) {
+                wake = std::min(wake, next_update);
+                if (!busy_ && !config_.screenshot.empty())
+                    wake = std::min(wake, start_ + 1200ms);
+            }
+            if (config_.quit_after_ms > 0)
+                wake = std::min(wake, start_ + std::chrono::milliseconds(config_.quit_after_ms));
+            const auto timeout =
+                !pending_.empty() || (drawable && (redraw_ || (needs_refresh_ && !busy_)))
+                    ? 0
+                    : int(std::clamp(std::chrono::ceil<std::chrono::milliseconds>(wake - before_wait).count(),
+                                     int64_t(0), int64_t(400)));
             SDL_Event event;
-            while (SDL_PollEvent(&event)) {
+            int have_event = timeout > 0 ? SDL_WaitEventTimeout(&event, timeout) : SDL_PollEvent(&event);
+            for (; have_event; have_event = SDL_PollEvent(&event)) {
+                redraw_ = true;
                 if (event.type == SDL_QUIT) {
                     try {
                         leaving([this] { closed_ = true; });
@@ -1318,6 +2213,27 @@ class EditorUi final : public Rml::EventListener {
                         pending_.emplace_back("open", "");
                         continue;
                     }
+                    if ((event.key.keysym.mod & KMOD_ALT) &&
+                        (event.key.keysym.sym == SDLK_LEFT || event.key.keysym.sym == SDLK_RIGHT)) {
+                        pending_.emplace_back(
+                            event.key.keysym.sym == SDLK_LEFT ? "history-back" : "history-forward", "");
+                        continue;
+                    }
+                    if (event.key.keysym.sym == SDLK_ESCAPE && history_menu_open_) {
+                        close_history_menu();
+                        continue;
+                    }
+                    if (event.key.keysym.sym == SDLK_ESCAPE) {
+                        auto *owner = focused;
+                        while (owner && owner->GetTagName() != "select")
+                            owner = owner->GetParentNode();
+                        if (auto *select = dynamic_cast<Rml::ElementFormControlSelect *>(owner);
+                            select && select->IsSelectBoxVisible()) {
+                            select->CancelSelectBox();
+                            select->Focus();
+                            continue;
+                        }
+                    }
                     if (event.key.keysym.sym == SDLK_ESCAPE && modal_) {
                         close_modal();
                         continue;
@@ -1341,7 +2257,7 @@ class EditorUi final : public Rml::EventListener {
                         ime_.HandleEdit(event.edit);
                     int w, h, pw, ph;
                     SDL_GetWindowSize(video_.window, &w, &h);
-                    SDL_GL_GetDrawableSize(video_.window, &pw, &ph);
+                    video_.drawable_size(pw, ph);
                     if (w && h) {
                         if (event.type == SDL_MOUSEMOTION) {
                             event.motion.x = int(double(event.motion.x) * pw / w);
@@ -1353,12 +2269,27 @@ class EditorUi final : public Rml::EventListener {
                             context_->ProcessMouseMove(event.button.x, event.button.y, RmlSDL::GetKeyModifierState());
                         }
                     }
+                    if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP) {
+                        if (event.button.button == SDL_BUTTON_RIGHT) {
+                            if (event.type == SDL_MOUSEBUTTONUP)
+                                history_menu(event.button.x, event.button.y);
+                            continue;
+                        }
+                        if (event.button.button == SDL_BUTTON_X1 || event.button.button == SDL_BUTTON_X2) {
+                            if (event.type == SDL_MOUSEBUTTONUP)
+                                pending_.emplace_back(
+                                    event.button.button == SDL_BUTTON_X1 ? "history-back" : "history-forward",
+                                    "");
+                            continue;
+                        }
+                    }
                     RmlSDL::InputEventHandler(context_, video_.window, event);
                 }
             }
             while (!pending_.empty()) {
                 auto [action, arg] = pending_.front();
                 pending_.pop_front();
+                redraw_ = true;
                 try {
                     dispatch(action, arg);
                 } catch (const std::exception &e) {
@@ -1377,15 +2308,19 @@ class EditorUi final : public Rml::EventListener {
                 }
                 completed_ = {};
             }
-            const auto now = std::chrono::steady_clock::now();
-            if (!busy_ && now - last_poll > std::chrono::milliseconds(400)) {
+            const auto now = Clock::now();
+            if (!busy_ && now - last_poll >= 400ms) {
                 auto info = session_.execute("info");
-                if (info.value("revision", uint64_t(0)) != revision_) {
-                    if (!has_draft() && !modal_)
+                const auto revision = info.value("revision", uint64_t(0));
+                if (info.value("world_generation", uint64_t(0)) != world_generation_)
+                    needs_refresh_ = true;
+                else if (info != info_) {
+                    if (!has_draft() && !modal_ && !history_menu_open_)
                         needs_refresh_ = true;
-                    else
+                    else if (revision != revision_ && revision != observed_revision)
                         label("status-message", t("stale_revision"));
                 }
+                observed_revision = revision;
                 last_poll = now;
             }
             if (needs_refresh_ && !busy_) {
@@ -1396,16 +2331,30 @@ class EditorUi final : public Rml::EventListener {
                     error(e);
                 }
             }
-            context_->Update();
-            renderer_.BeginFrame();
-            renderer_.Clear();
-            context_->Render();
-            renderer_.EndFrame();
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_).count();
-            if (!busy_ && elapsed > 1200 && !config_.screenshot.empty())
-                screenshot();
-            SDL_GL_SwapWindow(video_.window);
-            SDL_Delay(10);
+            const bool capture = !busy_ && elapsed >= 1200 && !config_.screenshot.empty();
+            if (drawable && (redraw_ || now >= next_update || capture)) {
+                const auto updated = Clock::now();
+                context_->Update();
+                // BeginFrame configures transparent clears for offscreen
+                // layers (popup shadows). Clear the output before that setup.
+                renderer_.Clear();
+                renderer_.BeginFrame();
+                context_->Render();
+                renderer_.EndFrame();
+                if (capture)
+                    screenshot();
+                video_.present();
+                redraw_ = false;
+                const double delay = context_->GetNextUpdateDelay();
+                // RmlUI requests timed updates for caret blink, animations and
+                // smooth scrolling. A static view needs no frames at all.
+                next_update =
+                    std::isfinite(delay)
+                        ? updated + std::chrono::duration_cast<Clock::duration>(
+                                        std::chrono::duration<double>(std::clamp(delay, .016, 3600.0)))
+                        : Clock::time_point::max();
+            }
             if (config_.quit_after_ms > 0 && elapsed >= config_.quit_after_ms)
                 closed_ = true;
         }

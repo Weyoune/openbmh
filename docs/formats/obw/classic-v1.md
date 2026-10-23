@@ -126,6 +126,27 @@ the current edition's selection and qualification algorithm, including FA Cup
 qualifying/proper rounds and League Cup for English data, or indoor/Masters for
 German data. The generic `format` field alone is insufficient to execute a stage.
 
+For inspection, `classic-season-entrants@1` assigns each first-division champion
+to the Champions League. A holder in that league also qualifies (or the
+runner-up if already champion). Domestic cup winners, with finalists as
+replacements, enter the Cup Winners' Cup. Title-holder overlap affects the
+remaining allocation. The regular UEFA-Cup quotas are `[4,4,4,4,3]` for source
+league indices `[0,5,6,7,8]`, taking the next unqualified clubs by rank. Foreign
+cup representatives follow the Classic selection procedure. The historical
+`x-legacy.europe_places` field is a prediction/colouring value, not that quota.
+
+The versioned Classic ladder uses its first four domestic groups. Relegation
+counts come from each league's `x-legacy.relegation_places`. A single lower
+league supplies the corresponding top-ranked clubs; parallel lower leagues
+supply champions plus winners of the Classic playoffs. Without that playoff
+result only the champions are exchanged. The last domestic group draws from
+the newcomer pool, never a foreign league named by an unused `below` entry.
+License withdrawals and the Classic protection of a human manager at the
+bottom tier can affect the actual result. Foreign Classic leagues have no
+regular promotion/relegation. These are compatibility policy summaries, not
+independent typed modern rule declarations or permission to simulate them in
+the editor.
+
 `classic-calendar@1` retains the complete source day table and bindings.
 `classic-season-calendar@1` applies options, season cycle, weekday alignment and
 leap-year behavior using the Classic calendar algorithm at runtime. Cup series

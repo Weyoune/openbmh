@@ -52,6 +52,8 @@ const std::map<std::string, std::string> commands{{"editor_info", "info"},
                                                   {"editor_open", "open"},
                                                   {"editor_new", "new"},
                                                   {"editor_list", "list"},
+                                                  {"editor_compare", "compare"},
+                                                  {"editor_regulations", "regulations"},
                                                   {"editor_get", "get"},
                                                   {"editor_apply", "apply"},
                                                   {"editor_validate", "validate"},
@@ -142,6 +144,43 @@ Json McpServer::tools() {
          {"descending", field("boolean")},
          {"unresolved_only", field("boolean")}},
         {"table"}, true);
+    add("editor_compare",
+        "Read-only ratings and salary comparison for players, clubs or leagues. Attributes are native player "
+        "values "
+        "or player-weighted group means, within one attribute_set. Mixed systems need a filter for ratings. "
+        "Salary is integer world-currency minor units per season, from contracts active at "
+        "manifest.start_date "
+        "and matching the player's current team. Unknown/ambiguous salaries stay null. Group totals/means "
+        "cover "
+        "known player salaries only; salary_known/unknown/complete report coverage. All reserves are "
+        "included; "
+        "source-only duplicate evidence is excluded. Sorts the complete result before paging (max 200); "
+        "nulls last in both directions. Does not edit the world.",
+        {{"table", {{"type", "string"}, {"enum", {"players", "clubs", "leagues"}}}},
+         {"language", {{"type", "string"}, {"enum", {"de", "en"}}}},
+         {"attribute_set", field("string", "Optional set ID; automatic when only one system is present.")},
+         {"search", field("string")},
+         {"nation", id},
+         {"competition", id},
+         {"team", id},
+         {"sort", field("string", "name, player_count, club_count, salary, salary_total, salary_average, "
+                                  "salary_known, attributes.<key>")},
+         {"descending", field("boolean")},
+         {"offset", field("integer")},
+         {"limit", field("integer")}},
+        {}, true);
+    add("editor_regulations",
+        "Read-only declared game/league rules, promotion, relegation and qualification selectors. "
+        "Also identifies inherited classic-season-entrants@1 and Classic ladder policies, without "
+        "replacing them with current football regulations. Missing rules remain unspecified. "
+        "Preserves source definitions and returns all game rule records. Never simulates a season or edits "
+        "data.",
+        {{"language", {{"type", "string"}, {"enum", {"de", "en"}}}},
+         {"search", field("string")},
+         {"nation", id},
+         {"competition", id},
+         {"expected_revision", revision}},
+        {}, true);
     add("editor_get", "Read a complete row, including preserved extensions and sources.",
         {{"table", table}, {"id", id}}, {"table", "id"}, true);
     add("editor_apply",
