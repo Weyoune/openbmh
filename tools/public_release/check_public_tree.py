@@ -45,6 +45,21 @@ SKIP_DIRECTORIES = {".git", "__pycache__", ".cache", "_deps", "node_modules"}
 # The latter are reviewed against docs/qa/editor-poc/README.md; no game material.
 # Keep prior reviewed hashes if an asset is intentionally revised in history.
 PROJECT_ARTWORK = {
+    'docs/qa/editor-images/before-club-image.png': {
+        'ac57bbbce2b8b7f71dad1d9e94d7b7baf182cb337d3800b5aac7a7f65db456bc',
+    },
+    'docs/qa/editor-images/linked-asset.png': {
+        '76717df021e0c6db9a4afcab283923a20c2bf47d43f7e111303dca66041d3bf8',
+    },
+    'docs/qa/editor-images/preview-matchday-de.png': {
+        'b7c0fad929fb28d25ef9e104e4ee90e62ab1d6e5ff8746bd0e8805bc2204d410',
+    },
+    'docs/qa/editor-images/preview-midnight-de.png': {
+        'cc0ba1b7a1e4ea21f06fa9eb254a8b523da79bfa495a5068e345651619ab0407',
+    },
+    'docs/qa/editor-images/preview-silver-en.png': {
+        '8704055293f58796b92057bc8a0c111b4db8bcaca297e45b7cb8d4bcacdd9a92',
+    },
     "docs/qa/editor-regulations/before-competitions-0.5.1.png": {
         "cffa594e4d5ee942e086ab24fe7744a53dab4d5083dc1659f5e4b3ebdaee1f0b",
     },

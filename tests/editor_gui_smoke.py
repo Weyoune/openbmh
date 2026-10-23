@@ -186,7 +186,30 @@ def main():
                 click(100, 215); double_click(350, 335)  # Country -> its competitions.
                 double_click(350, 434)  # A cup keeps its own inspector.
                 edit_selected('competitions', 'comp:cup', 'Cup Inspector')
-                print('Native edit, comparisons, rules, league/club drill-down and draft protection passed.')
+                # Viewing a linked image is read only and must preserve a
+                # pending property draft until the user chooses to apply it.
+                click(100, 313)
+                before_view = tool('editor_info')
+                click(1150, 443); x('key', 'ctrl+a'); x('type', '--clearmodifiers', 'Preview Draft')
+                click(1100, 326)
+                assert tool('editor_info') == before_view
+                click(985, 757)  # A jump with a pending draft asks before leaving.
+                assert tool('editor_info') == before_view
+                x('key', 'Escape'); time.sleep(.2)
+                click(1300, 741); wait_name('Preview Draft')
+                tool('editor_undo'); time.sleep(.5)
+                click(1100, 326); click(985, 757)  # Exact linked asset, not the first world row.
+                edit_selected('assets', 'asset:demo/north', 'Preview Asset')
+                # A thumbnail on an unselected row previews that row's image.
+                click(100, 313); click(280, 385); click(985, 757)
+                edit_selected('assets', 'asset:demo/south', 'Second Preview Asset')
+                # Missing/composed portraits still open, with a library link
+                # instead of inventing a single backing asset.
+                click(100, 361)
+                before_view = tool('editor_info')
+                click(1100, 326); x('key', 'Escape'); time.sleep(.2)
+                assert tool('editor_info') == before_view
+                print('Native edit, comparisons, rules, drill-down, read-only image preview and asset links passed.')
             except Exception:
                 log.flush()
                 print((root / 'app.log').read_text())

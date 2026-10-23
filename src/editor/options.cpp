@@ -415,6 +415,8 @@ std::string tr(const std::string &language, const std::string &key) {
         {"amateur", {"Amateur", "Amateur"}},
         {"image_import", {"Bild importieren", "Import image"}},
         {"image_edit", {"Bild bearbeiten", "Edit image"}},
+        {"image_view", {"Bildvorschau", "Image preview"}},
+        {"view_asset", {"Zum Asset", "View asset"}},
         {"image_export", {"PNG exportieren", "Export PNG"}},
         {"angle", {"Drehwinkel", "Rotation"}},
         {"flip_x", {"Horizontal spiegeln", "Flip horizontally"}},

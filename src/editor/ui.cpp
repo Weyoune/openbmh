@@ -52,6 +52,18 @@ class Renderer final : public bmh::rml::Renderer {
         memory[token] = {std::move(data), extension};
         return token;
     }
+    static constexpr const char *view_source = "readonly-image-preview.png";
+    void release_view() {
+        for (const auto &source : Rml::GetTextureSourceList())
+            if (utf8(path(source).filename()) == view_source)
+                Rml::ReleaseTexture(source, this);
+        memory.erase(view_source);
+    }
+    std::string view(std::string data) {
+        release_view();
+        memory[view_source] = {std::move(data), ".png"};
+        return view_source;
+    }
     void clear() {
         Rml::ReleaseTextures(this);
         logical.clear();
@@ -123,7 +135,7 @@ class EditorUi final : public Rml::EventListener {
     std::string image_bytes_, image_extension_, image_file_, image_key_, image_source_key_;
     Json image_target_, image_recipe_;
     double drag_x_ = 0, drag_y_ = 0;
-    bool dragging_ = false;
+    bool dragging_ = false, image_view_open_ = false;
     std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
     std::string t(const std::string &key) const { return tr(options_.language, key); }
     Rml::Element *el(const std::string &id) const {
@@ -161,7 +173,8 @@ class EditorUi final : public Rml::EventListener {
         return found == lookup_.end() ? id : title(found->second);
     }
     std::string img(const std::string &key, const std::string &css) {
-        return "<img class=\"" + css + "\" src=\"" + renderer_.asset(key) + "\"/>";
+        return "<img class=\"" + css + "\" src=\"" + renderer_.asset(key) +
+               "\" data-action=\"image-view\" data-value=\"" + escaped(key) + "\"/>";
     }
     std::string icon(const std::string &name) {
         static const std::map<std::string, std::string> paths{
@@ -269,11 +282,18 @@ class EditorUi final : public Rml::EventListener {
     }
     void close_modal() {
         el("overlay")->SetProperty("display", "none");
+        if (image_view_open_) {
+            html("modal-content", "");
+            renderer_.release_view();
+            image_view_open_ = false;
+        }
         modal_ = dragging_ = false;
         modal_accept_ = {};
     }
     void modal(const std::string &title, const std::string &body, const std::string &accept,
                std::function<void()> callback, bool cancel = true, bool wide = false) {
+        if (image_view_open_)
+            close_modal();
         label("modal-title", title);
         html("modal-content", body);
         label("modal-error", "");
@@ -439,7 +459,8 @@ class EditorUi final : public Rml::EventListener {
             if (selected_["name"].contains("first") || selected_["name"].contains("last")) {
                 field(body, "/name/first", t("first"));
                 field(body, "/name/last", t("last"));
-                field(body, "/name/known_as", t("known_as"));
+                if (selected_["name"].contains("known_as"))
+                    field(body, "/name/known_as", t("known_as"));
             } else
                 field(body, "/name/default", t("name"));
         } else
@@ -450,7 +471,8 @@ class EditorUi final : public Rml::EventListener {
         if (selected_.empty())
             return "<div class=\"empty\">" + escaped(t("select_record")) + "</div>";
         std::string body = "<div class=\"inspector-head\">";
-        if (table() == "players" || table() == "clubs" || table() == "competitions" || table() == "assets")
+        if (table() == "players" || table() == "clubs" || table() == "competitions" || table() == "assets" ||
+            table() == "staff")
             body += img(table() == "players" && selected_.contains("appearance") ? "portrait:" + selected_id_
                                                                                  : image_key(selected_),
                         "hero-image");
@@ -1360,6 +1382,42 @@ class EditorUi final : public Rml::EventListener {
         el("crop-canvas")->SetProperty("height", std::to_string(h) + "dp");
         crop_box();
     }
+    void view_image(const std::string &key) {
+        if (image_view_open_)
+            close_modal();
+        std::string asset_key = key;
+        if (key.starts_with("portrait:")) {
+            const auto player =
+                session_.execute("get", {{"table", "players"}, {"id", key.substr(9)}})["record"];
+            asset_key = str(player, "photo");
+        }
+        std::string caption;
+        if (!asset_key.empty()) {
+            try {
+                const auto asset =
+                    session_.execute("get", {{"table", "assets"}, {"id", asset_key}})["record"];
+                caption = title(asset);
+            } catch (const Error &error) {
+                if (error.code != "record_missing")
+                    throw;
+                asset_key.clear();
+            }
+        }
+        const auto source = session_.asset_bytes(key);
+        const auto raster = images::preview(source.first, source.second, Json::object(), 1536);
+        const double scale = std::min(810.0 / raster.width, 500.0 / raster.height);
+        const auto token = renderer_.view(images::encode_png(raster));
+        const std::string body = "<div class=\"image-stage readonly-stage\"><img src=\"" + token +
+                                 "\" style=\"width:" + number(raster.width * scale) +
+                                 "dp;height:" + number(raster.height * scale) +
+                                 "dp;\"/></div><p class=\"form-help image-caption\">" + escaped(caption) +
+                                 "</p>";
+        modal(t("image_view"), body, t("close"), [this] { close_modal(); }, false, true);
+        image_view_open_ = true;
+        html("modal-buttons", button("image-view-asset", t(asset_key.empty() ? "assets" : "view_asset"), "",
+                                     "data-value=\"" + escaped(asset_key) + "\"") +
+                                  button("accept-modal", t("close"), "primary"));
+    }
     void edit_image(bool existing, bool fresh = false) {
         image_file_.clear();
         image_key_ = fresh ? "" : image_key(selected_);
@@ -1710,6 +1768,22 @@ class EditorUi final : public Rml::EventListener {
                                                 {"choice", std::stoi(value("review-choice"))},
                                                 {"expected_revision", revision_}});
             needs_refresh_ = true;
+        } else if (action == "image-view")
+            view_image(arg);
+        else if (action == "image-view-asset") {
+            close_modal();
+            leave_fields([this, arg] {
+                page_ = "assets";
+                selected_id_ = search_ = arg;
+                offset_ = 0;
+                sort_ = "name";
+                descending_ = false;
+                nation_.clear();
+                league_.clear();
+                team_.clear();
+                fields_.clear();
+                needs_refresh_ = true;
+            });
         } else if (action == "image-import" || action == "image-edit") {
             if (has_draft()) {
                 apply_fields();

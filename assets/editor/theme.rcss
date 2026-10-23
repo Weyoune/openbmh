@@ -264,6 +264,9 @@ footer { height: 57dp; padding: 0 28dp; display: flex; align-items: center; gap:
 #modal-error { color: var(--danger); font-size: 13dp; margin-top: 10dp; }
 .image-layout { display: flex; gap: 24dp; }
 .image-stage { flex: 1; min-height: 360dp; background-color: var(--image-stage); border: 1dp var(--border); border-radius: 10dp; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.hero-image, .mini-logo { cursor: pointer; }
+.readonly-stage { height: 500dp; }
+.image-caption { margin-top: 12dp; word-break: break-all; }
 #crop-canvas { position: relative; }
 #edit-preview { display: block; }
 #crop-box { position: absolute; border: 2dp var(--crop); background-color: var(--crop-wash); pointer-events: none; }
