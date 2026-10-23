@@ -60,7 +60,8 @@ Implementierungs- oder Abnahmebelege. Die Engine entsteht parallel bei Claude.
 2. Durchgehender Weg vom Hauptmenü über Managerwahl und Saisonvorbereitung
    zum Desktop.
 3. Vollständiger Widgetkatalog, Raster/freies Verschieben, Fixierung,
-   Rückgängig, Ansichten und alle vereinbarten Untermenüs.
+   Rückgängig, Ansichten und alle vereinbarten Untermenüs, einschließlich
+   [kompaktem Eintrittspreis-Schieberegler](desktop/entry-price/README.md).
 4. Vergleichsbilder mit zugehörigen Demo-Zuständen und zusammenhängender
    GUI-Abnahme; Testpakete für Windows x64, Linux x64 und macOS ARM64.
 

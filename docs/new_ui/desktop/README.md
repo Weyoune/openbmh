@@ -78,3 +78,5 @@ Privates Repository `bmh_4k_ui`, Commit `19969d430e38eadae7ff7a9d1fb381ab02c395d
 [Trainingslager: alle 18 Ziele mit Qualitätswerten, Preisen und Bedienung](trainingcamp/README.md).
 
 [Transfers: Ablöse-Kasten und Abstand der Positionsfilter](transfers/README.md).
+
+[Eintrittspreis: kompakter Schieberegler mit Bestätigung](entry-price/README.md).
