@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #pragma once
+#include "launch/startup_error.hpp"
 #include <SDL.h>
 #include <cstdint>
 #include <string>
@@ -67,8 +68,4 @@ class Renderer : public RenderInterface_GL3 {
     explicit Renderer(Video &) {}
 };
 #endif
-// Also used before SDL initialization, so an unavailable graphics driver cannot
-// prevent reporting the actual startup error. No preferences or tokens are logged.
-void report_start_error(const char *product, const std::string &message, bool dialog = true) noexcept;
-void attach_parent_console() noexcept;
 } // namespace bmh::rml

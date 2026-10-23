@@ -17,7 +17,7 @@ This is an independent community project, with no affiliation with or endorsemen
 
 Check the [releases page](https://github.com/Weyoune/openbmh/releases) for available packages and their platform notes. A Windows package uses the name `OpenBMH-<version>-windows-x64.zip`. Availability and native validation are stated for each release; source build instructions do not establish platform support on their own.
 
-These instructions describe **0.2.0**, released separately from the editor. See the [0.2 release notes](docs/release/0.2/RELEASE_NOTES.md).
+These instructions describe **0.2.1**, released separately from the editor. See the [0.2 release notes](docs/release/0.2/RELEASE_NOTES.md).
 
 1. Extract OpenBMH into a writable directory.
 2. Start `OpenBMH.exe` on Windows, or `OpenBMH` on Linux/macOS. Its RmlUI launcher initially has an empty **Name | Art** list. The night-stadium design uses a small version label in the lower-right corner.

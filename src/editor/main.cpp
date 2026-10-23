@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "editor/ui.hpp"
 #include "editor/version.hpp"
-#include "launch/rml_video.hpp"
+#include "launch/startup_error.hpp"
 #include <SDL.h>
 #include <atomic>
 #include <chrono>

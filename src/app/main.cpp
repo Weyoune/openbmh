@@ -31,7 +31,7 @@
 #include "launch/file_dialog.hpp"
 #include "launch/game_data.hpp"
 #include "launch/launcher.hpp"
-#include "launch/rml_video.hpp"
+#include "launch/startup_error.hpp"
 #include "content/package.hpp"
 #include "version.hpp"
 #include "app/live_matchday_events.hpp"

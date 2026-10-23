@@ -1,6 +1,6 @@
 # OpenBMH Editor 0.5.3
 
-Der eigenständige, native Editor verwendet **RmlUI, SDL2 und OpenGL**. Er bearbeitet Startdatenbanken, keine laufenden Spielstände. Das Spiel und seine Classic-Prüfung bleiben unverändert. Editor 0.5.3 hat eine eigene Versionsreihe und den Release-Tag `editor-v0.5.3`; die Spielversion ist 0.2.1.
+Der eigenständige, native Editor verwendet **RmlUI und SDL2**, unter Windows mit Direct3D 11, unter Linux/macOS mit OpenGL. Er bearbeitet Startdatenbanken, keine laufenden Spielstände. Das Spiel und seine Classic-Prüfung bleiben unverändert. Editor 0.5.3 hat eine eigene Versionsreihe und den Release-Tag `editor-v0.5.3`; die Spielversion ist 0.2.1.
 
 ## Windows-Start und Diagnose
 

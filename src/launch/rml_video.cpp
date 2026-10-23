@@ -162,13 +162,14 @@ void Video::present() {
 #endif
 }
 std::vector<uint8_t> Video::capture(int &width, int &height) {
-    drawable_size(width, height);
-    std::vector<uint8_t> pixels(size_t(width) * size_t(height) * 4);
 #ifdef _WIN32
     Microsoft::WRL::ComPtr<ID3D11Texture2D> buffer, staging;
     check(swapchain_->GetBuffer(0, IID_PPV_ARGS(&buffer)), "Screenshot buffer");
     D3D11_TEXTURE2D_DESC desc{};
     buffer->GetDesc(&desc);
+    width = static_cast<int>(desc.Width);
+    height = static_cast<int>(desc.Height);
+    std::vector<uint8_t> pixels(size_t(width) * size_t(height) * 4);
     desc.Usage = D3D11_USAGE_STAGING;
     desc.BindFlags = 0;
     desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
@@ -183,6 +184,8 @@ std::vector<uint8_t> Video::capture(int &width, int &height) {
                     size_t(width) * 4);
     context_->Unmap(staging.Get(), 0);
 #else
+    drawable_size(width, height);
+    std::vector<uint8_t> pixels(size_t(width) * size_t(height) * 4);
     using ReadPixels = void (*)(int, int, int, int, unsigned, unsigned, void *);
     auto read = reinterpret_cast<ReadPixels>(SDL_GL_GetProcAddress("glReadPixels"));
     if (!read)

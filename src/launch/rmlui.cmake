@@ -26,7 +26,8 @@ add_library(bmh_rmlui STATIC
 if(WIN32)
     target_sources(bmh_rmlui PRIVATE ${rmlui_SOURCE_DIR}/Backends/RmlUi_Renderer_DX11.cpp)
     target_link_libraries(bmh_rmlui PUBLIC d3d11 dxgi d3dcompiler)
-    target_compile_definitions(bmh_rmlui PUBLIC NUM_MSAA_SAMPLES=1 NOMINMAX)
+    # Upstream resolves its multisampled UI layer into the swapchain every frame.
+    target_compile_definitions(bmh_rmlui PUBLIC NUM_MSAA_SAMPLES=2 NOMINMAX)
 else()
     target_sources(bmh_rmlui PRIVATE ${rmlui_SOURCE_DIR}/Backends/RmlUi_Renderer_GL3.cpp)
 endif()

@@ -61,7 +61,8 @@ See the [runtime and migration contract](../../formats/obw/runtime-0.2.md).
 The build pipeline produces Windows x64, Linux x64 and macOS ARM64 ZIPs and a
 matching source ZIP with pinned dependency sources and build information.
 Builds and automated tests do not replace native interactive acceptance.
-The launcher requires OpenGL 3.3 (macOS: 4.1). Linux requires the platform libraries
+The launcher uses Direct3D 11 with WARP fallback on Windows, OpenGL 3.3 on Linux,
+and OpenGL 4.1 on macOS. Linux requires the platform libraries
 described in [BUILDING](../../BUILDING.md), including GTK3 for its folder picker.
 The macOS executable is unsigned and is not a notarised application bundle.
 
