@@ -1,5 +1,13 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
-# OpenBMH Editor 0.5.4
+# OpenBMH Editor 0.5.5
+
+Centers the dropdown chevron vertically and moves it into the reserved right
+padding. This fixes its low, inset position in toolbar filters, inspectors and
+Options across all three themes and editor scales. Native select behavior is
+preserved. [Before/after native captures](../../qa/editor-dropdown-arrow/README.md)
+use synthetic data.
+
+## Editor 0.5.4
 
 Adds browser-style **Back / Forward** navigation. Right-click anywhere in the
 editor to open the context menu; Alt+Left/Right and mouse side buttons use the
