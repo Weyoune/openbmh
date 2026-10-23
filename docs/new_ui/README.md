@@ -9,6 +9,7 @@ Implementierung in der Spiel-Engine.
 |---|---|
 | Umsetzung | [Abgestimmter Umfang der nativen UI bis zum Anstoß](PLAN.md) |
 | Nativer Stand | [Unterbau, erster Durchlauf und noch offene Übertragungen](NATIVE_STATUS.md) |
+| Schrift-QA | [Button-/Dropdown-Ausrichtung und unabhängiger Vergleich](typography-qa.md) |
 | Ressourcen | [GUI-Assets, Weltbilder und spätere Paketbereinigung](assets.md) |
 | Desktop | [Statusleiste, Gestaltung und Fenster](desktop/README.md) |
 | Eintrittspreis | [Kompakter Schieberegler im Konto-Widget](desktop/entry-price/README.md) |

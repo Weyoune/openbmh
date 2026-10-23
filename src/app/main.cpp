@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
     const std::vector<std::string> args = launch::utf8_arguments(argc, argv);  // (file names beyond the code page)
     fs::path data, save_directory;
 #ifdef OPENBMH_MODERN_UI
-    modern_ui::Config modern_ui;
+    modern_ui::Config modern_config;
     bool modern_demo = false;
 #endif
     uint32_t seed = uint32_t(std::chrono::system_clock::now().time_since_epoch().count());
@@ -119,26 +119,26 @@ int main(int argc, char** argv) {
         if (is("--modern-ui-demo")) {
             modern_demo = true;
         } else if (is("--gui-assets") && value) {
-            modern_ui.gui_assets = launch::path_from_utf8(args[++i]);
+            modern_config.gui_assets = launch::path_from_utf8(args[++i]);
         } else if (is("--ui-scene") && value) {
-            modern_ui.scene = args[++i];
+            modern_config.scene = args[++i];
         } else if (is("--ui-theme") && value) {
-            modern_ui.theme = args[++i];
+            modern_config.theme = args[++i];
         } else if (is("--ui-screenshot") && value) {
-            modern_ui.screenshot = launch::path_from_utf8(args[++i]);
+            modern_config.screenshot = launch::path_from_utf8(args[++i]);
             modern_demo = true;
         } else if (is("--ui-script") && value) {
-            modern_ui.commands = launch::path_from_utf8(args[++i]);
+            modern_config.commands = launch::path_from_utf8(args[++i]);
             modern_demo = true;
         } else if (is("--ui-state") && value) {
-            modern_ui.state = launch::path_from_utf8(args[++i]);
+            modern_config.state = launch::path_from_utf8(args[++i]);
         } else if (is("--ui-size") && value) {
             const auto size = args[++i];
             const auto separator = size.find('x');
             if (separator == std::string::npos) throw std::runtime_error("--ui-size requires WIDTHxHEIGHT");
-            modern_ui.width = std::stoi(size.substr(0, separator));
-            modern_ui.height = std::stoi(size.substr(separator + 1));
-            if (modern_ui.width < 960 || modern_ui.width > 7680 || modern_ui.height < 540 || modern_ui.height > 4320)
+            modern_config.width = std::stoi(size.substr(0, separator));
+            modern_config.height = std::stoi(size.substr(separator + 1));
+            if (modern_config.width < 960 || modern_config.width > 7680 || modern_config.height < 540 || modern_config.height > 4320)
                 throw std::runtime_error("Unsupported Modern UI preview size");
         } else
 #endif
@@ -211,8 +211,8 @@ int main(int argc, char** argv) {
                     throw FormatError("Spielstand konnte nicht übernommen werden: " + error);
             };
 #ifdef OPENBMH_MODERN_UI
-            modern_ui.world = data;
-            return modern_ui::run(executable, migrate, modern_ui);
+            modern_config.world = data;
+            return modern_ui::run(executable, migrate, modern_config);
 #else
             return launch::run_launcher(executable, migrate);
 #endif

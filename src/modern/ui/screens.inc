@@ -34,7 +34,12 @@ std::string App::widget(const std::string &id, const Json &o) {
            "style=\"font-size:240dp;line-height:1.1;\">" +
            std::to_string(std::stoi(day)) + "</p><p class=\"small\">" +
            esc(date) + "</p></div>" +
-           btn("open:calendar", "Kalender öffnen ↗", "card-button",
+           btn("open:calendar",
+               glyph("calendar", 32) +
+                   "<span>Kalender öffnen</span><span "
+                   "class=\"calendar-arrow\">" +
+                   glyph("arrow-diagonal", 30) + "</span>",
+               "card-button calendar-link",
                "style=\"left:0;bottom:0;width:100%;height:90dp;border-top:2dp "
                "var(--border);font-size:25dp;color:var(--muted);\"");
   }
@@ -203,10 +208,25 @@ std::string App::render_desktop() {
              "</div>";
     else {
       const auto route = id.substr(4);
+      const std::array<std::string, 31> colors = {
+          "#3d789b", "#375a83", "#477c73", "#42846b", "#a58a49", "#586ba0",
+          "#517d71", "#668a98", "#af6860", "#6b809c", "#657cb3", "#507b9c",
+          "#559b76", "#a7474e", "#967d50", "#648f91", "#54856b", "#558f93",
+          "#6379a3", "#788598", "#8d7856", "#a66d64", "#748474", "#6887a2",
+          "#6b9270", "#7c8b9c", "#ac8b52", "#7783a4", "#648f83", "#927d9d",
+          "#ac5e63"};
+      const auto i = std::find(routes.begin(), routes.end(), route);
+      const auto color = colors[size_t(i - routes.begin())];
+      const auto top = theme_ == "matchday" ? mixed_color(color, "#27282e", .55)
+                                            : mixed_color(color, "#c5ddf1", .1);
+      const auto bottom =
+          theme_ == "matchday" ? "#272a30" : mixed_color(color, "#07111e", .38);
       out += "<button id=\"object-" + esc(id) + "\" data-object=\"" + esc(id) +
              "\" data-action=\"open:" + route +
              "\" class=\"desktop-app\" style=\"" + style +
-             "\"><div class=\"app-tile\">" +
+             "\"><div class=\"app-tile\" "
+             "style=\"decorator:linear-gradient(140deg," +
+             top + "," + bottom + ");\">" +
              img("button." + route, 146, 146, false, false, 256) +
              "</div><span class=\"app-name\">" + esc(title(route)) + "</span>" +
              (o.value("pinned", true) ? "<div class=\"pin-dot\"></div>" : "") +
@@ -649,7 +669,7 @@ std::string App::render_table(bool strengths, bool indoor) {
             "</div>";
     if (strengths) {
       const auto players = world_->squad(c->value("id", ""));
-      for (const auto &position : {"gk", "df", "mf", "fw", "all"}) {
+      for (const auto &position : {"gk", "def", "mid", "fwd", "all"}) {
         int sum = 0, n = 0;
         for (auto *p : players) {
           const auto positions = p->value("positions", Json::array());
@@ -799,7 +819,8 @@ std::string App::render_settings() {
                settings_category_ == key ? "primary" : "",
                "data-id=\"" + key +
                    "\" "
-                   "style=\"display:block;width:100%;height:100dp;margin-"
+                   "style=\"display:flex;justify-content:flex-start;width:100%;"
+                   "height:100dp;margin-"
                    "bottom:14dp;text-align:left;\"");
   }
   std::string pane = "<h2>" +

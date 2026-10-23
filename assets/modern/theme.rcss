@@ -25,6 +25,9 @@ body.matchday {
 #canvas {position:absolute;width:3840dp;height:2160dp;overflow:hidden;}
 button,input,select,textarea {font-family:Modern;color:var(--text);font-size:32dp;}
 button {padding:16dp 26dp;background-color:var(--soft);border:2dp var(--border);border-radius:14dp;cursor:pointer;text-align:center;tab-index:auto;}
+.control-button {display:flex;align-items:center;justify-content:center;}
+.control-label {display:block;}
+.choice.control-button {justify-content:flex-start;}
 button:hover {background-color:var(--hover);}
 button:disabled,button[disabled] {opacity:0.4;cursor:default;tab-index:none;}
 button:focus-visible,input:focus-visible,select:focus-visible {border-color:var(--accent);}
@@ -35,7 +38,9 @@ select {width:520dp;padding-right:45dp;}
 select selectvalue {padding-right:24dp;}
 select selectarrow {width:10dp;height:10dp;margin-right:-12dp;margin-top:6dp;border-bottom:2dp var(--muted);border-right:2dp var(--muted);transform:rotate(45deg);}
 select selectbox {padding:8dp;border:2dp var(--border);border-radius:12dp;background-color:var(--strong);max-height:760dp;}
-select option {font-size:32dp;padding:12dp 20dp;min-height:42dp;}
+select option {font-size:1em;padding:12dp 20dp;min-height:42dp;}
+#manager-country,#manager-league,#manager-strength {height:88dp;font-size:30dp;}
+#manager-strength {width:100%;}
 select option:hover,select option:checked {background-color:var(--selected);}
 scrollbarvertical {width:18dp;}
 scrollbarhorizontal {height:18dp;}
@@ -71,13 +76,14 @@ h3 {font-size:31dp;font-weight:bold;}
 .brand span {color:#a9d5c9;}
 .main-options {position:absolute;left:308dp;top:764dp;width:1250dp;}
 .main-options button {display:block;width:100%;height:128dp;margin-bottom:18dp;padding:18dp 38dp;background-color:transparent;border-color:transparent;text-align:left;font-size:59dp;font-weight:normal;color:#d3dfe7;}
+.main-options button {display:flex;align-items:center;justify-content:flex-start;}
 .main-options button:hover,.main-options button:focus {background-color:#b5dbd51a;border-color:#c6e3df26;color:#ecf9f4;}
 .main-options button:disabled {color:#7a8f9e;}
 .main-options small {font-size:25dp;margin-left:36dp;}
 .front-footer {position:absolute;left:346dp;right:180dp;bottom:140dp;display:flex;align-items:flex-end;justify-content:space-between;color:#bacdd7;}
 .front-footer p {font-size:29dp;}
 .front-footer small {font-size:22dp;color:#849dad;}
-.window {position:absolute;left:560dp;top:60dp;width:2720dp;height:2040dp;overflow:hidden;border:2dp var(--border);border-radius:30dp;decorator:linear-gradient(155deg,var(--menu-top),var(--menu-bottom));backdrop-filter:blur(36dp);box-shadow:0dp 24dp 70dp #0008;}
+.window {position:absolute;left:560dp;top:60dp;width:2720dp;height:2040dp;overflow:hidden;border:2dp var(--border);border-radius:30dp;decorator:linear-gradient(155deg,var(--menu-top),var(--menu-bottom));backdrop-filter:blur(36dp);box-shadow:0dp 12dp 36dp #0008;}
 .titlebar {position:absolute;left:0;top:0;width:100%;height:108dp;display:flex;align-items:center;padding:0 28dp;border-bottom:2dp var(--border);background-color:var(--soft);}
 .titlebar h1 {flex:1;text-align:center;margin-right:76dp;}
 .close {width:76dp;height:76dp;padding:0;border-width:0;background-color:transparent;}
@@ -96,11 +102,15 @@ h3 {font-size:31dp;font-weight:bold;}
 .table .tr.odd {background-color:var(--soft);}
 .table .tr:hover {background-color:var(--hover);}
 .table button {background-color:transparent;border-width:0;padding:0;text-align:left;font-size:36dp;}
+.table .control-button {justify-content:flex-start;}
+.table .th.center .control-button {justify-content:center;}
+.table .th button {font-size:30dp;}
 .club-label {display:flex;align-items:center;gap:20dp;}
 .club-label img {flex-shrink:0;}
 .rank {width:75dp;text-align:right;color:var(--muted);}
 .info-bar {position:absolute;left:0;top:0;width:100%;height:148dp;display:flex;align-items:center;gap:64dp;padding:0 64dp;border-bottom:2dp var(--border);decorator:linear-gradient(145deg,var(--desk-top),var(--desk-bottom));backdrop-filter:blur(48dp);}
 .identity {display:flex;align-items:center;gap:26dp;min-width:650dp;padding:0;background-color:transparent;border-width:0;text-align:left;}
+.identity {justify-content:flex-start;}
 .identity strong {font-size:38dp;}
 .identity small {display:block;font-size:27dp;color:var(--muted);margin-top:8dp;}
 .info-date {margin-left:auto;min-width:430dp;font-size:34dp;}
@@ -112,10 +122,14 @@ h3 {font-size:31dp;font-weight:bold;}
 .desktop-card.pinned {border-color:var(--border);}
 .card-heading {position:absolute;left:30dp;right:30dp;top:22dp;color:var(--muted);font-size:25dp;}
 .card-button {position:absolute;background-color:transparent;border-width:0;padding:0;}
+.calendar-link {display:flex;align-items:center;gap:18dp;padding:18dp 28dp;justify-content:flex-start;}
+.calendar-arrow {margin-left:auto;}
 .desktop-app {position:absolute;width:224dp;height:224dp;padding:0;background-color:transparent;border-width:0;text-align:center;}
 .app-tile {position:absolute;left:25dp;top:0;width:174dp;height:174dp;padding:12dp;border:2dp #e3efff59;border-radius:42dp;decorator:linear-gradient(140deg,#597d8e,#274956);box-shadow:0dp 12dp 25dp #0005;}
 .app-name {position:absolute;left:-20dp;top:190dp;width:264dp;font-size:29dp;color:#f6f8fa;}
 .desktop-app:hover .app-tile {background-color:#ffffff20;}
+body.matchday .app-tile {border-radius:32dp;border-color:#dbdfe33d;}
+body.silver .app-tile {border-color:#edf7ff99;}
 .pin-dot {position:absolute;right:16dp;top:16dp;width:14dp;height:14dp;border-radius:7dp;background-color:var(--accent);}
 .field-row {display:flex;align-items:center;justify-content:space-between;gap:28dp;min-height:112dp;padding:20dp 0;border-bottom:2dp var(--border);}
 .field-row label {flex:1;font-size:32dp;}
@@ -133,6 +147,7 @@ h3 {font-size:31dp;font-weight:bold;}
 #toast {position:absolute;left:50%;bottom:20dp;width:1100dp;margin-left:-550dp;padding:18dp 30dp;border:2dp var(--border);border-radius:18dp;background-color:var(--strong);text-align:center;font-size:27dp;display:none;z-index:250;}
 #desktop-context {display:none;position:absolute;width:280px;padding:6px;border:1px var(--border);border-radius:12px;background-color:var(--strong);z-index:180;box-shadow:0px 8px 24px #0005;}
 #desktop-context button {display:block;width:100%;padding:9px 12px;border:0px;border-radius:6px;background-color:transparent;text-align:left;font-size:15px;}
+#desktop-context .control-button {display:flex;justify-content:flex-start;}
 #desktop-context button:hover {background-color:var(--selected);}
 #desktop-context .separator {height:1px;margin:5px;background-color:var(--border);}
 .gallery-card {position:absolute;width:800dp;height:440dp;padding:30dp;}

@@ -13,10 +13,18 @@ OpenBMH is a C++20 engine with graphical and console frontends. The implementati
 | `src/cli` | Command language, structured protocol, console windows and multi-client seat routing |
 | `src/audio` | Bank decoding, synthesis, playback and cues, without authority to change gameplay |
 | `src/launch` | RmlUI launcher, portable mod library, child processes and legacy installation discovery |
+| `src/modern/ui` | Opt-in native Modern UI with a read-only world catalogue and a replaceable presentation data source |
 | `src/content` | Sealed OBW content, native career containers and personal preferences |
 | `src/import` | Legacy installation and save-layout conversion; original readers are used here |
 
 `bmhcore` contains the format and game layers. `bmhui`, `openbmh_audio` and the application session provide reusable pieces above it. Frontends should translate actions and display results; they should not introduce independent transfer, calendar or financial rules.
+
+The experimental Modern frontend uses namespace `bmh::modern_ui`, preserving
+the Modern season fork's existing lookup of `bmh::ui`. Its current `DemoSource`
+owns presentation-only fixtures and separate JSON checkpoints; it neither
+constructs a career nor starts matches. See [native UI status](new_ui/NATIVE_STATUS.md)
+for the implemented slice and outstanding HTML transfers. Shared archive/image
+helpers live in `bmh_asset_io`, without linking the editor GUI or MCP server.
 
 ## Session boundary
 

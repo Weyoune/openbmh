@@ -5,6 +5,7 @@
 #include "launch/process.hpp"
 #include "launch/rml_path.hpp"
 #include "launch/rml_video.hpp"
+#include "modern/ui/controls.hpp"
 #include "modern/ui/desktop.hpp"
 #include "modern/ui/gui_assets.hpp"
 #include "modern/ui/model.hpp"
@@ -12,6 +13,7 @@
 #include "version.hpp"
 #include <RmlUi/Core.h>
 #include <RmlUi/Core/Elements/ElementFormControl.h>
+#include <RmlUi/Core/Elements/ElementFormControlSelect.h>
 #include <RmlUi_Platform_SDL.h>
 #include <SDL.h>
 #include <algorithm>
@@ -32,14 +34,24 @@ std::string scalar(double n) {
   s << n;
   return s.str();
 }
+std::string mixed_color(const std::string &first, const std::string &second,
+                        double amount) {
+  std::ostringstream out;
+  out << '#' << std::hex << std::setfill('0');
+  for (size_t i = 1; i < 7; i += 2) {
+    const int a = std::stoi(first.substr(i, 2), nullptr, 16),
+              b = std::stoi(second.substr(i, 2), nullptr, 16);
+    out << std::setw(2) << int(std::round(a * (1 - amount) + b * amount));
+  }
+  return out.str();
+}
 std::string rect(double x, double y, double w, double h) {
   return "left:" + scalar(x) + "dp;top:" + scalar(y) + "dp;width:" + scalar(w) +
          "dp;height:" + scalar(h) + "dp;";
 }
 std::string btn(const std::string &action, const std::string &label,
                 const std::string &css = {}, const std::string &attrs = {}) {
-  return "<button data-action=\"" + esc(action) + "\" class=\"" + css + "\" " +
-         attrs + ">" + label + "</button>";
+  return button_markup(action, label, css, attrs);
 }
 const std::array<std::string, 31> routes = {
     "tables",   "league",      "strengths", "lineup",     "achievements",
@@ -84,6 +96,14 @@ std::string title(const std::string &route) {
   const auto i = std::find(routes.begin(), routes.end(), route);
   if (i != routes.end())
     return titles[size_t(i - routes.begin())];
+  if (route == "widgets")
+    return "Widget hinzufügen";
+  if (route == "view-save")
+    return "Ansicht speichern";
+  if (route == "view-load")
+    return "Ansicht laden";
+  if (route == "background")
+    return "Hintergrundbild ändern";
   if (route == "newgame")
     return "Neues Spiel";
   if (route == "mods")
@@ -149,13 +169,22 @@ public:
           return {};
         raster = editor::images::decode(bytes.first, bytes.second, pixels);
       } else if (key.starts_with("icon.")) {
-        const auto name = key.substr(5);
+        auto name = key.substr(5);
+        const bool ink = name.ends_with("-ink");
+        if (ink)
+          name.resize(name.size() - 4);
         if (name.empty() ||
             name.find_first_not_of("abcdefghijklmnopqrstuvwxyz-") != name.npos)
           return {};
-        raster = editor::images::decode(
-            editor::read_file(assets_ / "icons" / (name + ".svg")), ".svg",
-            pixels);
+        auto svg = editor::read_file(assets_ / "icons" / (name + ".svg"));
+        if (ink) {
+          size_t at = 0;
+          while ((at = svg.find("#dceae7", at)) != std::string::npos) {
+            svg.replace(at, 7, "#426071");
+            at += 7;
+          }
+        }
+        raster = editor::images::decode(svg, ".svg", pixels);
       } else if (gui_.contains(key))
         raster = gui_.decode(key, pixels);
       else if (key == "background")
@@ -244,6 +273,8 @@ class App final : public Rml::EventListener {
   std::unique_ptr<DemoSource> source_;
   std::unique_ptr<TicketPopover> ticket_;
   bool focus_ticket_ = false;
+  std::set<std::string> pending_selects_;
+  std::string focus_after_render_;
   float device_ratio_ = 1.f;
   Json desktop_ = Json::object(), saved_desktop_ = Json::object(),
        options_ = Json::object();
@@ -334,7 +365,8 @@ class App final : public Rml::EventListener {
     return c ? img(c->value("crest", ""), size, size, true) : "";
   }
   std::string glyph(const std::string &name, double size) {
-    return img("icon." + name, size, size, false, false, int(size));
+    return img("icon." + name + (theme_ == "silver" ? "-ink" : ""), size, size,
+               false, false, int(size));
   }
   std::string label(const Json *c, double size = 40) {
     return c ? "<span class=\"club-label\">" + crest(c, size) + "<span>" +
@@ -466,7 +498,9 @@ class App final : public Rml::EventListener {
          {"exit", "Beenden"}}};
     for (const auto &[key, name] : actions)
       out += btn(
-          key, esc(name) + (key == "network" ? "<small>Demnächst</small>" : ""),
+          key,
+          (key == "network" ? "<span>" + esc(name) + "</span>" : esc(name)) +
+              (key == "network" ? "<small>Demnächst</small>" : ""),
           {},
           key == "network" || (key == "new" && !m && !world_) ? "disabled"
                                                               : "");
@@ -534,6 +568,19 @@ class App final : public Rml::EventListener {
   std::string render_menu(const std::string &);
   void dispatch(const std::string &, Rml::Element *);
   void change(Rml::Element *);
+  void flush_selects() {
+    std::vector<std::string> ready;
+    for (const auto &id : pending_selects_) {
+      auto *select = dynamic_cast<Rml::ElementFormControlSelect *>(element(id));
+      if (!select || !select->IsSelectBoxVisible())
+        ready.push_back(id);
+    }
+    for (const auto &id : ready) {
+      pending_selects_.erase(id);
+      if (auto *select = element(id))
+        change(select);
+    }
+  }
   void input(Rml::Element *);
   void resize() {
     int w, h, pw, ph;
@@ -594,6 +641,11 @@ class App final : public Rml::EventListener {
         n->Focus();
       focus_ticket_ = false;
     }
+    if (!focus_after_render_.empty()) {
+      if (auto *node = element(focus_after_render_))
+        node->Focus(true);
+      focus_after_render_.clear();
+    }
   }
   void render_popup() {
     if (popup_.empty()) {
@@ -626,6 +678,7 @@ class App final : public Rml::EventListener {
       button->Focus();
   }
   void frame() {
+    flush_selects();
     if (ticket_)
       ticket_->update();
     if (needs_render_)
@@ -633,6 +686,8 @@ class App final : public Rml::EventListener {
     render_popup();
     render_context();
     context_->Update();
+    if (center_selects(*doc_))
+      context_->Update();
     renderer_.Clear();
     renderer_.BeginFrame();
     context_->Render();
@@ -728,12 +783,15 @@ public:
            {"click", "dblclick", "change", "input", "keydown", "mousedown",
             "mouseup", "mousemove", "contextmenu"})
         doc_->AddEventListener(event, this);
-      if(!config_.theme.empty())theme_ = config_.theme;
-      if(theme_!="midnight"&&theme_!="silver"&&theme_!="matchday")throw editor::Error("Unbekanntes Modern-Theme.");
+      if (!config_.theme.empty())
+        theme_ = config_.theme;
+      if (theme_ != "midnight" && theme_ != "silver" && theme_ != "matchday")
+        throw editor::Error("Unbekanntes Modern-Theme.");
       collect_mods();
       if (!mods_.empty())
         active_mod_ = mods_.front().name;
       if (!config_.world.empty()) {
+        active_mod_.clear();
         load_world(config_.world);
         scene_ = config_.scene;
         if (scene_ != "main" && scene_ != "newgame" && scene_ != "manager" &&
@@ -745,10 +803,13 @@ public:
       if (!config_.state.empty() && source_) {
         desktop_ = source_->load(config_.state);
         saved_desktop_ = desktop_;
-        if(config_.theme.empty())theme_ = snap().state.at("preferences").value("theme", theme_);
+        if (config_.theme.empty())
+          theme_ = snap().state.at("preferences").value("theme", theme_);
       }
-      if(source_&&!config_.theme.empty()){
-        auto preferences=snap().state.at("preferences");preferences["theme"]=theme_;apply("preferences",preferences);
+      if (source_ && !config_.theme.empty()) {
+        auto preferences = snap().state.at("preferences");
+        preferences["theme"] = theme_;
+        apply("preferences", preferences);
       }
       if (scene_ == "manager" && selections_["manager-name"].empty())
         selections_["manager-name"] = "Alex Berger";

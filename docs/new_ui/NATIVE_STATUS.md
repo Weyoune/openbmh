@@ -90,6 +90,9 @@ Synthetische Tests prüfen Katalog, HQ-Bildauswahl, ausländische Übernahmesper
 Revisionsschutz, Desktop-Grenzen/Fixierung/Größen und atomare Demostand-
 Wiederherstellung. Drei fensterlose RmlUI-Tests prüfen den Eintrittspreis in
 allen Themes, einschließlich doppelter Pixeldichte und abgewiesener Übernahme.
+Die [dedizierte Schrift-QA](typography-qa.md) prüft zusätzlich Buttons und
+Dropdowns gegen das HTML-Mockup, einschließlich tatsächlicher Textmitten,
+Pixeldichten sowie Escape- und Fokusverhalten.
 
 Ein nativer Linux-/OpenGL-Durchlauf mit externem Diamond-Datensatz führt über
 das Hauptmenü, die Managerwahl und Auslosung zum Desktop, verändert den

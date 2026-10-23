@@ -196,6 +196,18 @@ void App::ProcessEvent(Rml::Event &event) try {
         }
     }
     if (key == Rml::Input::KI_ESCAPE) {
+      Rml::ElementList selects;
+      doc_->QuerySelectorAll(selects, "select");
+      for (auto *node : selects)
+        if (auto *select = dynamic_cast<Rml::ElementFormControlSelect *>(node);
+            select && select->IsSelectBoxVisible()) {
+          select->CancelSelectBox();
+          select->Focus(true);
+          event.StopImmediatePropagation();
+          dirty_ = true;
+          return;
+        }
+
       if (context_open_) {
         context_open_ = false;
         dirty_ = true;
@@ -615,32 +627,39 @@ void App::dispatch(const std::string &action, Rml::Element *target) {
       message("Die Dateiauswahl konnte nicht geöffnet werden.");
       return;
     }
-    try {
-      auto candidate = Catalog::open(editor::path(chosen.get()));
-      std::string name = candidate->title();
-      launch::ModLibrary::validate_name(name);
-      const auto destination = root_ / "mods" / editor::path(name);
-      if (fs::exists(destination))
-        throw std::runtime_error(
-            "Eine Mod mit diesem Namen ist bereits vorhanden.");
-      fs::create_directories(destination.parent_path());
-      const auto staging = destination.parent_path() /
-                           (".ui-import-" + std::to_string(SDL_GetTicks64()));
-      fs::create_directory(staging);
-      try {
-        fs::copy_file(editor::path(chosen.get()), staging / "content.obw");
-        (void)Catalog::open(staging / "content.obw");
-        fs::rename(staging, destination);
-      } catch (...) {
-        fs::remove_all(staging);
-        throw;
-      }
-      collect_mods();
-      selected_mod_ = name;
-      refresh();
-    } catch (const std::exception &e) {
-      message(e.what());
-    }
+    const auto file = editor::path(chosen.get());
+    auto candidate = Catalog::open(file);
+    auto initial = candidate->title();
+    for (char &c : initial)
+      if (std::string("/\\:*?\"<>|").find(c) != std::string::npos)
+        c = '-';
+    if (initial.empty())
+      initial = "Modern";
+    text_dialog("Bezeichnung der neuen Mod", initial,
+                [this, file](const std::string &name) {
+                  launch::ModLibrary::validate_name(name);
+                  const auto destination = root_ / "mods" / editor::path(name);
+                  if (fs::exists(destination))
+                    throw editor::Error(
+                        "Eine Mod mit diesem Namen ist bereits vorhanden.");
+                  fs::create_directories(destination.parent_path());
+                  const auto staging =
+                      destination.parent_path() /
+                      (".ui-import-" + std::to_string(SDL_GetTicks64()));
+                  if (!fs::create_directory(staging))
+                    throw editor::Error("Import wird bereits vorbereitet.");
+                  try {
+                    fs::copy_file(file, staging / "content.obw");
+                    (void)Catalog::open(staging / "content.obw");
+                    fs::rename(staging, destination);
+                  } catch (...) {
+                    fs::remove_all(staging);
+                    throw;
+                  }
+                  collect_mods();
+                  selected_mod_ = name;
+                  refresh();
+                });
     return;
   }
   if (action == "import-classic") {
@@ -660,11 +679,16 @@ void App::dispatch(const std::string &action, Rml::Element *target) {
       request.name = game.family == launch::GameFamily::english ? "FTDL-classic"
                                                                 : "BMH-classic";
       request.migrate = false;
-      launch::ModLibrary library(root_);
-      library.add(request, migrate_);
-      collect_mods();
-      selected_mod_ = request.name;
-      refresh();
+      text_dialog("Bezeichnung der neuen Mod", request.name,
+                  [this, request](const std::string &name) mutable {
+                    launch::ModLibrary::validate_name(name);
+                    request.name = name;
+                    launch::ModLibrary library(root_);
+                    library.add(request, migrate_);
+                    collect_mods();
+                    selected_mod_ = name;
+                    refresh();
+                  });
     } catch (const std::exception &e) {
       message(e.what());
     }
@@ -1032,6 +1056,19 @@ void App::change(Rml::Element *target) {
   if (!control)
     return;
   const auto value = control->GetValue();
+  if (auto *select = dynamic_cast<Rml::ElementFormControlSelect *>(target);
+      select && select->IsSelectBoxVisible()) {
+    pending_selects_.insert(target->GetId());
+    return;
+  }
+  if ((kind == "manager-country" || kind == "table-country") &&
+      value == country_)
+    return;
+  if ((kind == "manager-league" || kind == "table-league") && value == league_)
+    return;
+  if (kind == "manager-country" || kind == "manager-league" ||
+      kind == "table-country" || kind == "table-league")
+    focus_after_render_ = target->GetId();
   if (kind == "manager-country" || kind == "manager-league") {
     if (!manager_picker_)
       selections_["manager-name"] = field("manager-name");
