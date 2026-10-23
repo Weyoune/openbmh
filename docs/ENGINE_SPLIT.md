@@ -1,6 +1,6 @@
 # Engine split: Classic, Classic Extended and Modern
 
-Status: **concept and migration plan**. It prepares one shared match engine under three season engines. Nothing in this document changes the behaviour of the current release.
+Status: **concept and migration plan**. It prepares one shared match engine under the season engines of three game variants. Nothing in this document changes the behaviour of the current release.
 
 ## 1. Goal
 
@@ -8,27 +8,35 @@ OpenBMH will offer three game variants:
 
 | Variant | Data | Season engine | Interface | State |
 |---|---|---|---|---|
-| **Classic** | Imported from the user's BMH or FLTD installation (OBW `runtime:classic-v1`) | The current engine: fixed calendar, 9 leagues, original competition structure and rules | Classic 320×200 interface | Essentially complete |
-| **Classic Extended** | Classic data plus extension data | Classic engine with optional, switchable extensions | Classic interface plus additional screens in the same style | Not started |
-| **Modern** | Typed OBW worlds (imported or own) | New engine: generated calendar, data-driven leagues and competitions, playable foreign leagues | New high-resolution interface (RmlUi) | Interface in progress |
+| **Classic** | Imported from the user's BMH or FLTD installation (OBW `runtime:classic-v1`) | Classic: fixed calendar, 9 leagues, original competition structure and rules | Classic 320×200 bitmap interface | Essentially complete |
+| **Classic Extended** | Classic data, optionally extended where the classic screens can show it | Classic engine plus features **backported from Modern**, step by step | Classic bitmap interface, extended by hand per feature | Grows after Modern |
+| **Modern** | New OBW data set (imported and extended, or own worlds) | Modern: generated calendar, data-driven leagues and competitions, playable foreign leagues, leagues larger than 12 teams | New high-resolution interface (RmlUi), designed for many leagues | Interface in progress |
 
 All three use **the same match engine**. A match between two given teams under the same rules is simulated by the same code in every variant; only what happens around it (calendar, competitions, finances, transfers, development) differs.
+
+### 1.1 Where a change belongs
+
+- **Classic** receives changes that work with the imported original assets and the original data layout: bug fixes, quality of life, small rule corrections, menus such as the environment menu of a later DIAMOND release.
+- **Modern** is where new features are designed first, without the limits of the original screens or data layout: more leagues, foreign leagues with more than 12 teams, a free calendar, new competitions and systems.
+- **Classic Extended** takes Modern features back into the Classic engine **one at a time**, where the bitmap interface can present them with reasonable manual work. The classic screens were never designed for variable structures, so Classic Extended will never offer every Modern feature; each backport is a decision of its own (§4).
 
 ## 2. Target architecture
 
 ```
-            Classic UI     Classic Extended UI      Modern UI (RmlUi)
-                 \                 |                    /
-                  +-------- app / protocol layer -------+     variant capabilities
-                 /                 |                    \
-   season: classic    season: classic + extensions    season: modern
-   (GameState image)  (GameState image + ext state)   (typed OBW model)
-                 \                 |                    /
-                  +------ match adapter (per engine) ---+
-                                   |
-                     match engine  (bmh_match: typed contract)
-                                   |
-                     random sources, attribute set bmh-classic@1
+      Classic UI (bitmap)         Classic UI + extra screens        Modern UI (RmlUi)
+              |                              |                              |
+              +---------------- app / protocol layer (capabilities) -------+
+              |                              |                              |
+      season: classic          season: classic + backported features   season: modern
+      (GameState image)        (GameState image + extension state)    (typed OBW model)
+              |                              |   \                    /     |
+              |                              |    shared feature modules    |
+              |                              |    (bmh_features, ports)     |
+              +------------------ match adapter (per engine) --------------+
+                                             |
+                              match engine (bmh_match: typed contract)
+                                             |
+                              random sources, attribute set bmh-classic@1
 ```
 
 ### 2.1 Libraries
@@ -37,11 +45,21 @@ All three use **the same match engine**. A match between two given teams under t
 |---|---|---|
 | `bmh_match` | Minute simulation, events, chances, cards, injuries during the match, substitutions, live interventions, the Reality scene and reporter | `random`, the match contract types; **not** `GameState`, calendar, finances |
 | `bmh_season_classic` | Today's `src/game` without the match core: turn driver, weekly/monthly/season processing, cups, transfers, finances, post-match effects | `bmh_match`, `bmhcore` formats |
-| `bmh_season_classic_ext` | Extension modules on top of Classic (§4) | `bmh_season_classic` |
-| `bmh_season_modern` | New season engine on the typed OBW model (§5) | `bmh_match`, `bmh_world` |
-| `bmh_world` | Typed OBW model, reader/writer, validator, importers (`src/import`) | `bmhcore` formats |
+| `bmh_season_classic_ext` | Classic Extended: registry of backported features, their state and hook points in the Classic turn (§4) | `bmh_season_classic`, `bmh_features` |
+| `bmh_features` | Season features written once for Modern and reusable by Classic Extended, each against small **ports** (interfaces) instead of a concrete state model | the match contract types only |
+| `bmh_season_modern` | New season engine on the typed OBW model (§5) | `bmh_match`, `bmh_features`, `bmh_world` |
+| `bmh_world` | Typed OBW model, reader/writer, validator (`src/content`, `src/import`) | `bmhcore` formats |
 
-The dependency rule: **the match engine knows no season engine**, and no season engine reaches into another one's state.
+The dependency rules: **the match engine knows no season engine**; no season engine reaches into the state of another; **no season engine knows an interface**; a feature in `bmh_features` knows neither `GameState` nor the OBW model, only its ports.
+
+### 2.2 Writing Modern features so they can be backported
+
+Backporting is cheap only if a feature is written for it from the start:
+
+- The rules of a feature (for example youth development, a staff system, sponsor negotiation) live in `bmh_features` and read and write the game only through a port: `PlayerRoster`, `ClubFinance`, `Calendar`, `Mailbox`, `RandomSources` and similar narrow interfaces.
+- Modern implements the ports on the typed model. Classic Extended implements the same ports as adapters on `GameState` plus its extension state.
+- A feature declares what it needs (ports, data fields, calendar events) and which presentation it needs (screens, messages). This declaration is the checklist for a backport: if the Classic adapter cannot provide a port, or no classic screen can show the result, the feature stays Modern-only.
+- Features that depend on Modern-only structures (generated calendar, generic competition stages, leagues of variable size) are marked as such and are not candidates.
 
 ## 3. The match contract
 
@@ -94,7 +112,7 @@ The match engine draws only through an injected `RandomSources` interface with t
 
 ### 3.5 Attribute set
 
-The match engine consumes players in attribute set `bmh-classic@1` (OBW §5.3). Classic and Classic Extended already store exactly this. Modern may keep richer attributes for its own systems, but provides a `bmh-classic@1` projection for every player it sends into a match. A later, finer match model would be a **new version** of the match engine with its own attribute set, selectable per variant; it is not part of this plan.
+The match engine consumes players in attribute set `bmh-classic@1` (OBW §5.3). Classic already stores exactly this. Modern may keep richer attributes for its own systems, but provides a `bmh-classic@1` projection for every player it sends into a match. A later, finer match model would be a **new version** of the match engine with its own attribute set, selectable per variant; it is not part of this plan.
 
 ### 3.6 Versioning
 
@@ -102,22 +120,27 @@ The match engine consumes players in attribute set `bmh-classic@1` (OBW §5.3). 
 
 ## 4. Classic Extended
 
-Classic Extended is **Classic plus switchable extensions**:
+Classic Extended is the **Classic season engine plus backported Modern features**, presented in the classic bitmap interface.
 
-- It runs on the Classic season engine and the Classic save layout, plus one additional state block for extensions (`x-extended/` in OBW saves).
-- Each extension is a module with an id, a version, its own state, its rules and its screens. A career records which extensions it uses.
-- **Invariant:** with every extension switched off, Classic Extended produces exactly the Classic results. A test runs the Classic regression through the Extended engine with no extensions.
-- Extensions hook into defined points of the Classic turn (start/end of day, week, month, season; before/after matchday; desk actions), never into the middle of a Classic routine.
-- Its screens use the classic interface toolkit (`src/ui`), in the same resolution and style.
-- Candidates for first extensions: the environment ("Umfeld") menu of a later DIAMOND release (reviewed against our rule base, documented as a deviation), more statistics and history screens, quality-of-life automation, configurable rule values (roadmap 0.3).
+- **Invariant:** with every backported feature switched off, Classic Extended produces exactly the Classic results. A test runs the Classic regression through the Extended engine with no features.
+- Each backported feature is a module with an id and version, its own state (`x-extended/` in OBW saves), the Classic adapters for its ports and its classic-style screens. A career records which features it uses; features can be switched on at career start and, where safe, later.
+- Features hook into defined points of the Classic turn (start/end of day, week, month and season; before/after a matchday; desk actions), never into the middle of a Classic routine.
+- **Data:** Classic Extended starts from Classic data. A feature may bring additional data, but only in a shape the classic screens can show. Structures that change the size of what the screens list (more or larger leagues, new competitions) are Modern-only unless a specific screen is redesigned for them.
+- **Interface cost per feature**, the main factor in each backport decision:
+  1. The result fits existing screens (a new value on the player card, a message, a desk action): small.
+  2. A new screen of fixed size in the classic style (a staff or youth screen): medium, new own artwork needed.
+  3. A screen whose content grows with the data (longer tables, more league selectors, calendar views): large, often not worth it.
+- **Assets:** the original bitmaps of the user's installation plus new classic-style artwork. New artwork must be the project's own.
+- Order of work: a feature is built and settled in Modern first, then backported if its ports and its presentation fit (§2.2).
 
 ## 5. Modern
 
 Modern is a new season engine on the typed OBW model (`docs/formats/OBW.md`):
 
+- **Data set:** an OBW world that goes beyond the original structure, for example foreign leagues with more than 12 teams, more leagues (up to 32) and real-world competition formats. It can start from an imported Classic world and be extended, or be a world of its own.
 - **Calendar:** generated each season from `world/calendar.json` (series, windows, events) instead of a fixed day table; any season start, international windows, winter breaks per nation.
-- **Competitions:** the generic stage model (league, groups, league phase, knockout, playoff, final) with declarative slots and promotion/relegation; up to 32 leagues; foreign leagues are playable, not only simulated.
-- **Systems:** finances, transfers, contracts, youth, staff and development are rewritten on the typed model, reusing Classic formulas where they fit, documented where they differ.
+- **Competitions:** the generic stage model (league, groups, league phase, knockout, playoff, final) with declarative slots and promotion/relegation; foreign leagues are playable, not only simulated.
+- **Systems:** finances, transfers, contracts, youth, staff and development are rewritten on the typed model, reusing Classic formulas where they fit and documenting where they differ.
 - **Interface:** the RmlUi client through the app/protocol layer only.
 - Matches always go through the shared match contract (§3).
 
@@ -125,9 +148,9 @@ Modern does not have to reproduce Classic results; its quality gate is plausibil
 
 ## 6. Variant selection and saves
 
-- The world or save manifest names the runtime: `requires: ["runtime:classic-v1"]`, `["runtime:classic-extended-v1"]` or `["runtime:modern-v1"]`, plus `match@1`.
-- `CareerSession` selects the season engine from the manifest; the protocol reports **capabilities** per variant, so interfaces and console clients only offer supported actions.
-- Conversions are **one-way**: Classic → Classic Extended (switch on extensions), Classic or Classic Extended → Modern (convert to the typed model). There is no way back, and the original file is kept.
+- The world or save manifest names the runtime: `requires: ["runtime:classic-v1"]`, `["runtime:classic-extended-v1"]` (with the list of active features and their versions) or `["runtime:modern-v1"]`, plus `match@1`.
+- `CareerSession` selects the season engine from the manifest; the protocol reports **capabilities** per engine and feature, so interfaces and console clients only offer supported actions.
+- Conversions are **one-way**: Classic → Classic Extended (switch features on), Classic or Classic Extended → Modern (convert to the typed model; backported feature state maps to the Modern original of the feature). There is no way back, and the original file is kept.
 - Legacy `.FBM` saves stay Classic.
 
 ## 7. Migration plan
@@ -141,23 +164,26 @@ Each step keeps the game playable and the Classic regression (`tools/regression/
 | 2 | Introduce `RandomSources`; the match core no longer touches the global streams directly | Regression identical |
 | 3 | Typed `MatchdaySetup`/`MatchdayResult`; Classic adapter builds the setup from `MatchGroup`/`GameState` and writes results back; move post-match effects out of the minute loop into `bmh_season_classic` | Regression identical; match contract tests |
 | 4 | Remove the remaining `GameState` dependencies from `bmh_match` (enforced by the build: `bmh_match` does not link `GameState`) | Build rule; regression identical |
-| 5 | Variant field in manifests, engine selection in `CareerSession`, capability reporting in the protocol | Classic unchanged; capability tests |
-| 6 | Classic Extended skeleton: extension registry, hook points, `x-extended` state, "all extensions off = Classic" test | Regression identical through Extended |
-| 7 | Modern season engine on `bmh_world`, first with one nation and the shared match engine, then the competition model, then foreign leagues | Modern plausibility runs |
-| 8 | First Classic Extended extensions; Modern feature growth | Per extension/feature |
+| 5 | Runtime field in manifests, engine selection in `CareerSession`, capability reporting in the protocol | Classic unchanged; capability tests |
+| 6 | `bmh_features` with the first ports; Modern season engine on `bmh_world`, first with one nation and the shared match engine, then the competition model, then foreign leagues and larger leagues | Modern plausibility runs |
+| 7 | Classic Extended skeleton: feature registry, hook points, `x-extended` state, Classic adapters for the first ports, "no features = Classic" test | Regression identical through Extended |
+| 8 | Backports one feature at a time, each with its interface cost assessed (§4) | Per feature: Classic regression with the feature off, plausibility with it on |
+| 9 | Classic → Modern conversion of worlds and careers | Converted careers playable |
 
-Steps 1 to 4 are the actual split and the risky part; they are pure refactoring and must be done in small commits with the regression after each.
+Steps 1 to 4 are the actual split and the risky part; they are pure refactoring and must be done in small commits with the regression after each. Classic improvements continue in parallel on `bmh_season_classic`.
 
 ## 8. Tests
 
 - **Match contract tests:** a fixed `MatchdaySetup` with fixed seeds yields a fixed `MatchdayResult` (golden files with synthetic teams, public).
 - **Classic regression:** unchanged scripts and expected outputs; run after every step.
-- **Extended identity:** Classic regression through the Extended engine with no extensions.
+- **Extended identity:** the Classic regression through the Extended engine with no features.
+- **Feature tests:** each module in `bmh_features` is tested once against fake ports, then through both adapters (Modern and Classic Extended).
 - **Modern plausibility:** bulk season simulations with goal, points and money distributions compared to Classic as a reference band.
-- **Dependency check:** the build fails if `bmh_match` includes season or `GameState` headers.
+- **Dependency checks:** the build fails if `bmh_match` includes season or `GameState` headers, if `bmh_features` includes `GameState` or OBW model headers, or if a season engine includes interface headers.
 
 ## 9. Open decisions
 
-- Whether Classic Extended may change the save layout for its extensions only in OBW saves or also offer a legacy `.FBM` export (proposal: OBW only).
-- Whether Modern keeps `bmh-classic@1` as its only player attribute set at first (proposal: yes, richer attributes later).
-- Which team owns which variant: Classic and the split (engine/integration), Modern interface (UI), Classic Extended extensions (both, per module).
+- Which features become the first backport candidates (proposal: features of interface cost 1 or 2 that do not change league structure).
+- Whether Classic Extended saves exist only as OBW saves (proposal: yes, no `.FBM` export).
+- Whether Modern keeps `bmh-classic@1` as its only player attribute set at first (proposal: yes, richer attributes later as a new match engine version).
+- Ownership: the split and Classic (engine/integration), the Modern interface (UI), Modern features and their backports (shared, per feature).

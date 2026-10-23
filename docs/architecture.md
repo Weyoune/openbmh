@@ -26,7 +26,7 @@ Some calendar operations need synchronous human decisions. Their presenters own 
 
 ## Calendar and matches
 
-The planned split into one shared match engine and three season engines (Classic, Classic Extended, Modern) is described in [ENGINE_SPLIT](ENGINE_SPLIT.md).
+The planned split into one shared match engine and the season engines of Classic, Classic Extended (Classic plus backported Modern features) and Modern is described in [ENGINE_SPLIT](ENGINE_SPLIT.md).
 
 The turn driver moves between manager desks, match clocks and calendar events. Weekly, monthly and seasonal processing can produce decisions as well as simulation results. Match groups contain the day's competitions; a manager can intervene only in a group involving that manager's team. A multi-client match clock advances at a barrier shared by all seats.
 
