@@ -394,6 +394,15 @@ ExpandReport expand_to_world(ModernState& g, const World& world) {
     g.world_club_id.assign(size_t(new_total), {});
     g.world_club_name.assign(size_t(new_total), {});
     g.world_club_short.assign(size_t(new_total), {});
+    g.world_league_id.clear(), g.world_league_name.clear();
+    for (const WorldLeague& l : world.leagues) {
+        if (size_t(l.index) >= g.world_league_id.size()) {
+            g.world_league_id.resize(size_t(l.index) + 1);
+            g.world_league_name.resize(size_t(l.index) + 1);
+        }
+        g.world_league_id[size_t(l.index)] = l.id;
+        g.world_league_name[size_t(l.index)] = l.name;
+    }
     for (int n = 0; n < new_total; ++n)
         if (const WorldClub* c = club_at[size_t(n)]) {
             g.world_club_id[size_t(n)] = c->id;

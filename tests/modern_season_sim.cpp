@@ -91,6 +91,51 @@ int g_high_scores = 0;  // matches with 13-15 goals (outside shoot-outs)
 int g_human_team = -1, g_human_for = 0, g_human_against = 0, g_human_matches = 0;
 int g_league_goals = 0, g_league_matches = 0;
 
+// The almanac of the run (docs/new_engine/almanach.md): size, consistency of the recorded
+// goals with the results, and the top scorers over all seasons by stable player id.
+void print_almanac(const modern::ModernState& g) {
+    std::vector<modern::AlmanacSeason> seasons;
+    size_t bytes = 0;
+    for (const auto& [name, data] : g.almanac.finished) {
+        seasons.push_back(modern::decode_almanac_season(data));
+        bytes += data.size();
+    }
+    if (g.almanac.current.season >= 0) {
+        const std::string data = modern::encode_almanac_season(g.almanac.current);
+        bytes += data.size();
+        if (!(modern::decode_almanac_season(data) == g.almanac.current)) std::printf("almanac: current season does not round-trip\n");
+        seasons.push_back(g.almanac.current);
+    }
+    size_t matches = 0, events = 0, mismatched = 0, without_lineup = 0;
+    std::map<std::string, std::pair<int, std::string>> scorers;  // player id -> goals, name
+    for (const auto& s : seasons) {
+        matches += s.matches.size();
+        for (const auto& m : s.matches) {
+            events += m.events.size();
+            int goals[2] = {0, 0};
+            for (const auto& e : m.events) {
+                if (e.kind != modern::AlmanacEventKind::Goal) continue;
+                ++goals[e.side];
+                if (e.player == modern::kAlmanacNone) continue;
+                const auto& p = s.players.at(e.player);
+                auto& row = scorers[p.id];
+                ++row.first;
+                row.second = (p.first.empty() ? "" : p.first + " ") + p.last;
+            }
+            if (goals[0] != m.home_goals || goals[1] != m.away_goals) ++mismatched;
+            if (m.lineup[0].empty() && m.lineup[1].empty()) ++without_lineup;
+        }
+    }
+    std::printf("almanac: %zu seasons, %zu matches, %zu events, %zu bytes uncompressed, %u new player identities\n",
+                seasons.size(), matches, events, bytes, g.almanac.generated_players);
+    std::printf("almanac: %zu matches whose goal events differ from the result, %zu without line-ups\n", mismatched, without_lineup);
+    std::vector<std::pair<int, std::string>> top;
+    for (const auto& [id, row] : scorers) top.emplace_back(row.first, row.second + " (" + id + ")");
+    std::sort(top.begin(), top.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+    for (size_t i = 0; i < std::min<size_t>(5, top.size()); ++i)
+        std::printf("almanac top scorer %zu: %d goals, %s\n", i + 1, top[i].first, top[i].second.c_str());
+}
+
 // Read only the current season's first-league results. A complete German Bundesliga
 // season has 34 rounds x 9 fixtures = 306 matches. Unlike the historical snapshot
 // counters, this includes background fixtures played while seeking the next desk.
@@ -407,13 +452,16 @@ int main(int argc, char** argv) {
                                             h.player_last == g.player_last && h.world_player_id == g.world_player_id;
                     const bool same_layout = world_layout().league_teams == layout.league_teams &&
                                              world_layout().total_slots == layout.total_slots;
-                    std::printf("save check at turn %d: state %s, names %s, layout %s, %ju bytes\n", played,
+                    const bool same_almanac = h.almanac == g.almanac && h.world_league_id == g.world_league_id;
+                    std::printf("save check at turn %d: state %s, names %s, layout %s, almanac %s, %ju bytes\n", played,
                                 same_state ? "same" : "DIFFERS", same_names ? "same" : "DIFFER",
-                                same_layout ? "same" : "DIFFERS", uintmax_t(std::filesystem::file_size(file)));
+                                same_layout ? "same" : "DIFFERS", same_almanac ? "same" : "DIFFERS",
+                                uintmax_t(std::filesystem::file_size(file)));
                 }
             }
         }
         print_first_league_results(g, "run end");
+        if (modern::current_world()) print_almanac(g);
         if (std::getenv("SIM_ADVERTISING")) std::printf("%d advertising contracts accepted (SIM_ADVERTISING=1)\n", ad_contracts);
         if (std::getenv("SIM_INTERVENE")) std::printf("%d interventions (substitution at minute 30, re-rated)\n", interventions);
         if (sim_contracts_env && std::string(sim_contracts_env) == "1")

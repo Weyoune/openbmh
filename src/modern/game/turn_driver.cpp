@@ -5,7 +5,9 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdio>
 #include <exception>
+#include <optional>
 
 #include "modern/game/desk.hpp"
 #include "modern/game/driver.hpp"
@@ -163,7 +165,15 @@ bool run_current_matchday(TurnDriver& driver, ModernState& g, GameRandom& game,
         if (manager_match_played) engine.original_sound(3); // EndPhase / ReadButtons, crowd.
     }
     std::vector<ShowEvent> sportschau_show_events;
-    if (driver.sportschau.fixture) engine.show = &sportschau_show_events;
+    // The almanac reads goals, cards and shoot-out kicks of every match from the show
+    // events, so Modern always collects them (appending draws no random numbers).
+    engine.show = &sportschau_show_events;
+    std::optional<AlmanacRecorder> almanac;
+    try {
+        almanac.emplace(g, driver.groups);
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "almanac: matchday not recorded: %s\n", e.what());
+    }
     engine.month = context.month;
     engine.buttons = read_buttons(g);
     engine.reality_rules = driver.reality_rules;
@@ -246,6 +256,7 @@ bool run_current_matchday(TurnDriver& driver, ModernState& g, GameRandom& game,
     };
     auto after_minute = [&](int minute) {
         collect_goals(minute);
+        if (almanac) almanac->after_minute(minute);
         if (driver.live_minute) driver.live_minute(minute, engine, driver.groups, g);
     };
     turn_step = "play_matchday";
@@ -256,6 +267,14 @@ bool run_current_matchday(TurnDriver& driver, ModernState& g, GameRandom& game,
     if (manager_match_scored) events.push_back(audio_event(driver, TurnAudioKind::goal));
     if (manager_match_played) events.push_back(audio_event(driver, TurnAudioKind::full_time_whistle));
 
+    turn_step = "almanac";
+    if (almanac) {
+        try {
+            almanac->finish(sportschau_show_events);
+        } catch (const std::exception& e) {
+            std::fprintf(stderr, "almanac: matchday not recorded: %s\n", e.what());
+        }
+    }
     turn_step = "finish_event";
     modern::store_group_descriptors(g, driver.groups, true);
     modern::finish_event(g, driver.groups, driver.calendar_entry, engine.buttons,

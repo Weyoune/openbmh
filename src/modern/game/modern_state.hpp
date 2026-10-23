@@ -15,6 +15,7 @@
 
 #include "game/state.hpp"
 #include "game/world_layout.hpp"
+#include "modern/game/almanac.hpp"
 #include "modern/game/training_camps.hpp"
 
 namespace bmh::modern {
@@ -45,9 +46,12 @@ struct ModernState : GameState {
     std::vector<std::string> world_club_id, world_club_name, world_club_short;   // per team
     std::vector<std::string> world_player_id, player_first, player_last;         // per player
     std::vector<std::string> player_nation;                                       // nation id per player
+    std::vector<std::string> world_league_id, world_league_name;                 // per league index
     // Training camps (M4): Classic data gives the eight original resorts, a Modern world its catalogue.
     std::vector<CampMap> camp_maps;
     std::vector<TrainingCamp> training_camps;
+    // The football almanac (docs/new_engine/almanach.md): every match of the career.
+    Almanac almanac;
 
     ModernState() { season_hooks = &modern::season_hooks(); }
     // Takes over a state built by shared code (save loading, career setup).

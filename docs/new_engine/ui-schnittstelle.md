@@ -51,6 +51,7 @@ bmh::modern::app::ModernSession session(path, seed);            // erweitert den
 | Trainingslager | siehe unten | Schwerpunkte setzen, buchen | M4 |
 | Post | `Mail[]`: Datum, Absender, Betreff, Text | Gelesen markieren | M3 |
 | Spieltag | Fortschritt und Ereignisse über den bestehenden Match-Kern | Weiter, Eingriffe | M3 |
+| Fußball-Almanach | `ModernState::almanac`: alle Spiele aller Saisons ([Almanach](almanach.md)); Auswertungs-Projektionen folgen, sobald die Oberfläche feststeht | – | M8 (Daten vorhanden) |
 
 Alles, was hier noch fehlt (Transfers, Finanzen, Stadion, Umfeld und weitere
 Menüs), folgt nach demselben Muster. Jedes neue Menü der UI bekommt in diesem

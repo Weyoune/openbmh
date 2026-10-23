@@ -59,14 +59,20 @@ void save_world_career(const std::filesystem::path& path, const World& world, co
           {"world", O{{"id", world.id}, {"data_revision", world.data_revision}, {"title", world.title}}}});
     put(docs, "state/career.json", encode_native_state(state));
     put(docs, "state/modern.json",
-        O{{"schema", "modern-state@1.0"},
+        O{{"schema", "modern-state@1.1"},
           {"club_ids", strings(state.world_club_id)},
           {"club_names", strings(state.world_club_name)},
           {"club_short_names", strings(state.world_club_short)},
           {"player_ids", strings(state.world_player_id)},
           {"player_first", strings(state.player_first)},
           {"player_last", strings(state.player_last)},
-          {"player_nations", strings(state.player_nation)}});
+          {"player_nations", strings(state.player_nation)},
+          {"league_ids", strings(state.world_league_id)},
+          {"league_names", strings(state.world_league_name)},
+          {"generated_players", int64_t(state.almanac.generated_players)}});
+    // The almanac: finished seasons unchanged, the running one encoded now.
+    for (const auto& [name, bytes] : state.almanac.finished) docs[name] = bytes;
+    if (state.almanac.current.season >= 0) docs["history/current.bin"] = encode_almanac_season(state.almanac.current);
     put(docs, "state/rng.json",
         O{{"schema", "classic-rng@1.0"},
           {"watcom", generator(random.seed(), random.calls())},
@@ -76,7 +82,7 @@ void save_world_career(const std::filesystem::path& path, const World& world, co
     put(docs, "state/information.json", encode_native_bytes(modern::save_header(state)));
     O checks;
     for (const auto& [name, value] : docs)
-        if (name.starts_with("state/")) checks[name] = content::sha256(value);
+        if (name.starts_with("state/") || name.starts_with("history/")) checks[name] = content::sha256(value);
     put(docs, "state/integrity.json", O{{"schema", "save-integrity@1.0"}, {"entries", std::move(checks)}});
     content::write_archive(docs, path, overwrite);
 }
@@ -94,13 +100,13 @@ SavedWorldCareer load_world_career(const std::filesystem::path& path, const Worl
     if (str(get(integrity, "schema")) != "save-integrity@1.0") fail("unsupported save integrity");
     O checks;
     for (const auto& [name, value] : docs)
-        if (name.starts_with("state/") && name != "state/integrity.json") checks[name] = content::sha256(value);
+        if ((name.starts_with("state/") || name.starts_with("history/")) && name != "state/integrity.json") checks[name] = content::sha256(value);
     if (cli::dump_json(get(integrity, "entries")) != cli::dump_json(checks)) fail("damaged Modern save");
 
     SavedWorldCareer out;
     out.state = ModernState(decode_native_state(parse(docs, "state/career.json")));
     const auto modern = parse(docs, "state/modern.json");
-    if (str(get(modern, "schema")) != "modern-state@1.0") fail("unsupported Modern state");
+    if (str(get(modern, "schema")) != "modern-state@1.1") fail("unsupported Modern state");
     out.state.world_club_id = strings(get(modern, "club_ids"));
     out.state.world_club_name = strings(get(modern, "club_names"));
     out.state.world_club_short = strings(get(modern, "club_short_names"));
@@ -108,6 +114,16 @@ SavedWorldCareer load_world_career(const std::filesystem::path& path, const Worl
     out.state.player_first = strings(get(modern, "player_first"));
     out.state.player_last = strings(get(modern, "player_last"));
     out.state.player_nation = strings(get(modern, "player_nations"));
+    out.state.world_league_id = strings(get(modern, "league_ids"));
+    out.state.world_league_name = strings(get(modern, "league_names"));
+    out.state.almanac.generated_players = uint32_t(num(get(modern, "generated_players")));
+    for (const auto& [name, bytes] : docs) {
+        if (!name.starts_with("history/season-")) continue;
+        decode_almanac_season(bytes);  // a damaged season fails here, not in the almanac screen
+        out.state.almanac.finished.emplace_back(name, bytes);
+    }
+    if (const auto it = docs.find("history/current.bin"); it != docs.end())
+        out.state.almanac.current = decode_almanac_season(it->second);
     if (out.state.world_player_id.size() != out.state.players.size() ||
         out.state.world_club_id.size() != out.state.club_ids.size())
         fail("Modern names do not match the saved state");

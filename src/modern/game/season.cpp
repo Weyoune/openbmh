@@ -681,6 +681,7 @@ bool youth_academy_player(ModernState& g, int m, GameRandom& game, WatcomRandom&
             const int band = league == 0 ? 0 : league == 1 ? 1 : league < 4 ? 2 : 3;
             const int level = game.range(kLevel[band][0], kLevel[band][1]);
             modern::generate_player(g, player, level | 0x3000, game, rand);
+            modern::new_player_identity(g, player);  // the youth player is a new person (almanac)
             // PendingOfferAnswer(manager, player | 0xf000, -1, squad start)
             int slot = -1;
             for (size_t q = own.first; q < own.first + 24 && slot < 0; q++)
@@ -1089,6 +1090,7 @@ bool release_player(ModernState& g, int slot, GameRandom& game, WatcomRandom& ra
         if (g.squad_slots.at(size_t(s)) == 0x0FFF) free = s;
     const uint32_t skills = g.players.at(size_t(player)).w35c;  // RegeneratePlayer
     regenerate_player(g, player, 0x32, game, rand);
+    modern::new_player_identity(g, player);  // a new person for the almanac
     Player& p = g.players.at(size_t(player));
     p.w35c = skills;
     g.player_bonus.at(size_t(player)) &= 0x80;

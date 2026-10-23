@@ -21,6 +21,7 @@ Status: *geplant* (noch nicht in der Engine), *umgesetzt* (Engine liest/prüft e
 | F7 | Finanzen | Finanzangaben für Vereine ohne Classic-Startregel | M5 | geplant |
 | F8 | Spielstand | `save_profile: modern-career-v1` | M6 | Engine erledigt: Spielstand nennt seine Welt (ID, Revision), enthält nur die Karriere |
 | F9 | Schiedsrichter | eigener Schiedsrichter-Pool der Welt, mehr als 49 | M5 | Engine erledigt (Pool aus `staff`, neu: `perception`); Daten folgen mit 1.4 |
+| F10 | Almanach | alle gespielten Spiele im Spielstand (`history/…`) | M8 | Engine erledigt (Aufzeichnung, Spielstand); UI offen |
 
 ## F1 · Manifest
 
@@ -126,6 +127,13 @@ Die bestehende Regel `rule:training-camps` (Typ `training_camps`) bleibt und wir
   - Ein Spielstand passt nur zu einer Welt mit gleich vielen Schiedsrichtern.
   - Test ohne neuen Datensatz: `MODERN_EXTRA_REFEREES=N modern_season_sim …`.
 - **Editor:** Schiedsrichterliste anzeigen und bearbeiten (Name, Nation, Strenge, Wahrnehmung), neue Schiedsrichter anlegen; Prüfung auf eindeutige IDs, Werte 0–3 und höchstens 255 Schiedsrichter.
+
+## F10 · Almanach
+
+- Ein Modern-Spielstand enthält alle gespielten Spiele der Karriere: `history/season-<Jahr>.bin` je abgeschlossener Saison (unveränderlich) und `history/current.bin` für die laufende. Beschreibung: [Almanach](almanach.md).
+- `state/modern.json` (Schema jetzt `modern-state@1.1`) bekommt dazu `league_ids`, `league_names` und `generated_players` (Zähler der neu vergebenen Spieler-IDs `player:gen-<n>`).
+- Die Integritätsprüfung deckt `history/` mit ab.
+- **Editor:** keine Änderung (öffnet keine Spielstände). Eine Welt muss nichts liefern; sinnvoll sind stabile Vereins- und Spieler-IDs, die sich zwischen Datenrevisionen nicht ändern.
 
 ## Modern-Prüfung (Engine und Editor)
 

@@ -59,5 +59,6 @@ Für 0.3 gilt außerdem:
 | M5 | Datenrevision 1.4 des Modern-Datensatzes (privat), Wirtschaftsprüfung | offen |
 | M6 | Modern-Spielstände (`modern-career-v1`), Projektionen für die UI | Spielstände erledigt (Rundreise identisch); Projektionen offen |
 | M7 | Balance-Läufe und Anpassungen | offen |
+| M8 | Fußball-Almanach: alle Spiele mit Ereignissen und Aufstellungen ([Almanach](almanach.md)) | Engine erledigt (Aufzeichnung, Spielstand, IDs); UI und Projektionen offen |
 
 Details und Abnahmekriterien stehen in [Phasen](phasen.md).
