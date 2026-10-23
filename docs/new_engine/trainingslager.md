@@ -33,18 +33,19 @@ Der Katalog erweitert die bestehende Regel `rule:training-camps` (Liste
   "id": "resort:4",
   "base_price": 485000,
   "quality": [4, 4, 4, 4],
-  "region": "eu",
+  "map": "map:eu",
+  "x": null,
+  "y": null,
   "name": {"default": "Sportzentrum Groningen"},
   "place": {"default": "Groningen"},
   "country": "nation:nl",
-  "position": {"lat_e6": 53219400, "lon_e6": 6566500},
   "image": "asset:camp/4/image"
 }
 ```
 
 - `quality`: Platz, Fitness, Verpflegung, Unterkunft, je 0–6.
-- `region`: `de` (Deutschland), `eu` (übriges Europa), `me` (Naher Osten).
-- `position`: Breite und Länge in Millionstel Grad als Ganzzahlen, weil der JSON-Leser der Laufzeit keine Gleitkommazahlen kennt.
+- `map`: immer gesetzt, `map:de` (Deutschland), `map:eu` (Europa) oder `map:me` (Naher Osten); weitere Karten können später hinzukommen.
+- `x`, `y`: Lage auf der Karte in deren Koordinatensystem; bis die Oberfläche die Kartenmaße festlegt `null`.
 - Die IDs `resort:0` bis `resort:17` entsprechen den IDs 0–17 der Oberfläche und werden nicht neu sortiert.
 - Preis, Grenzen und Schwerpunkte bleiben wie in Classic.
 

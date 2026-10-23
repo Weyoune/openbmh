@@ -47,10 +47,16 @@ Dokument eine Zeile, sobald seine Projektion festgelegt ist.
 
 Projektion `TrainingCampView`:
 
-- `camps[]`: ID, Region (`de`, `eu`, `me`), Name, Ort, Land, Position, vier Qualitätswerte (0–6), Basispreis, Bildschlüssel,
+- `maps[]`: Karten mit ID, Name und – sobald festgelegt – Breite und Höhe; die UI zeigt je Karte einen Umschalter,
+- `camps[]`: ID, Karte (`map:de`, `map:eu`, `map:me`), X/Y-Lage auf der Karte (anfangs leer), Name, Ort, Land, vier Qualitätswerte (0–6), Basispreis, Bildschlüssel,
 - `price`: Preis für den aktuellen Kader (Basispreis + 5000 × Spieler) je Lager,
 - `stays_this_season` (0–3), `booked_this_week`, `affordable` je Lager,
 - `focus`: Kondition, Technik, Spiel (0–15) und die abgeleitete Erholung.
+
+Koordinatensystem und Maße der Karten legt die Oberfläche fest; die Werte werden
+über den Editor in den Datensatz eingetragen (siehe [Datenformat F4](datenformat.md#f4--trainingslager)).
+Bis dahin platziert die UI Lager ohne Koordinaten selbst, zum Beispiel nach dem
+bisherigen POC.
 
 Aktionen:
 

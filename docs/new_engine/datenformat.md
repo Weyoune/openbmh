@@ -15,7 +15,7 @@ Status: *geplant* (noch nicht in der Engine), *umgesetzt* (Engine liest/prüft e
 | F1 | Manifest | Laufzeit `runtime:modern-v1`, spielbare Modern-Welt | M3 | geplant |
 | F2 | Ligen | Größe je Liga frei (12–20), Generator je Liga | M2 | geplant |
 | F3 | Kalender | Ligatermine als Datumsliste | M2 | geplant |
-| F4 | Trainingslager | Katalog mit Region, Ort, Bild, Qualität 0–6 | M4 | geplant |
+| F4 | Trainingslager | Katalog mit Karte und X/Y-Lage, Ort, Bild, Qualität 0–6 | M4 | geplant |
 | F5 | Namen | Vor- und Nachname Pflicht, UTF-8 | M3 | geplant |
 | F6 | Kader | bis 24 Plätze je Verein, Mindestgröße | M3 | geplant |
 | F7 | Finanzen | Finanzangaben für Vereine ohne Classic-Startregel | M5 | geplant |
@@ -51,21 +51,22 @@ Die bestehende Regel `rule:training-camps` (Typ `training_camps`) bleibt und wir
 {
   "id": "rule:training-camps",
   "type": "training_camps",
-  "regions": [
-    {"id": "de", "name": {"default": "Deutschland"}},
-    {"id": "eu", "name": {"default": "Europa"}},
-    {"id": "me", "name": {"default": "Naher Osten"}}
+  "maps": [
+    {"id": "map:de", "name": {"default": "Deutschland"}},
+    {"id": "map:eu", "name": {"default": "Europa"}},
+    {"id": "map:me", "name": {"default": "Naher Osten"}}
   ],
   "resorts": [
     {
       "id": "resort:4",
       "base_price": 485000,
       "quality": [4, 4, 4, 4],
-      "region": "eu",
+      "map": "map:eu",
+      "x": null,
+      "y": null,
       "name": {"default": "Sportzentrum Groningen"},
       "place": {"default": "Groningen"},
       "country": "nation:nl",
-      "position": {"lat_e6": 53219400, "lon_e6": 6566500},
       "image": "asset:camp/4/image"
     }
   ]
@@ -73,10 +74,12 @@ Die bestehende Regel `rule:training-camps` (Typ `training_camps`) bleibt und wir
 ```
 
 - `id`, `base_price`, `quality` wie bisher; `quality` in der Reihenfolge Platz, Fitness, Verpflegung, Unterkunft, je **0–6** (Classic: 1–5).
-- Neu und für Modern Pflicht: `region` (Verweis auf `regions`), `name`, `place`, `country`, `position` (Millionstel Grad als Ganzzahlen), `image` (Asset-Schlüssel).
+- **Karte und Lage:** Jedes Lager trägt immer `map` (Verweis auf `maps`) sowie `x` und `y` als ganzzahlige Koordinaten auf dieser Karte. Das Koordinatensystem einer Karte legt die Oberfläche fest; solange es nicht feststeht, sind `x` und `y` `null`. Sobald die GUI die Kartenmaße liefert, bekommt jede Karte zusätzlich `width` und `height` (Ursprung oben links), und `x`/`y` müssen innerhalb liegen.
+- Die Karten sind eine eigene Liste, damit später weitere hinzukommen können, etwa wenn ausländische Vereine spielbar werden und Lager aus deren Sicht dargestellt werden. Ein Lager gehört genau zu einer Karte.
+- Weitere Pflichtfelder für Modern: `name`, `place`, `country`, `image` (Asset-Schlüssel). Geografische Koordinaten werden nicht gespeichert.
 - Die IDs `resort:0` bis `resort:17` entsprechen den IDs 0–17 der Oberfläche und werden nicht umsortiert.
 - Fehlt die Regel in einer Modern-Welt, gilt die öffentliche Vorgabe `assets/modern/rules/training_camps.json` mit den 18 fiktiven Lagern.
-- **Editor:** Liste der Lager mit Region, Karte bzw. Koordinaten, vier Qualitätswerten (0–6), Preis und Bild bearbeiten; Prüfung auf eindeutige IDs, gültige Region und Nation, Qualitäten im Bereich.
+- **Editor:** Kartenliste und Lager bearbeiten: Karte (Pflicht), `x`/`y` (leer erlaubt, solange die Karte keine Maße hat), vier Qualitätswerte (0–6), Preis, Ort, Land und Bild. Prüfung auf eindeutige IDs, gültige Karte und Nation, Qualitäten im Bereich und Koordinaten innerhalb der Kartenmaße, sobald diese gesetzt sind.
 
 ## F5 · Namen
 
