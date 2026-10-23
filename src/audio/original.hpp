@@ -31,6 +31,21 @@ struct OriginalAudioStats {
     std::uint32_t bar{}, step{}, song = 255;
     bool playing{}, ambient{}, failed{};
 };
+// Timing of one song: one sequencer step every `tempo` IRQ0 ticks, 16 steps per
+// bar; after bar `end` playback continues at bar `repeat` (end == repeat: stop).
+struct OriginalSongTiming {
+    std::uint16_t tempo{}, end{}, repeat{};
+};
+// One note the music sequencer actually started (offline tools such as the MIDI
+// export). `pitch` is the index into the OPL note table with the track transpose
+// applied; `duration` counts sequencer steps until key-off (255 = held until the
+// channel's next note); `level` is the OPL output level 0..63. Sample notes
+// (track 9) carry the sample slot in `pitch` and no channel, duration or level.
+struct OriginalNoteEvent {
+    std::uint32_t bar{}, step{};
+    std::uint8_t track{}, channel{}, instrument{}, pitch{}, duration{}, level{};
+    bool sample{};
+};
 
 // The Original MIDILINK sequencer and one Sound Blaster PCM channel. IRQ0 uses
 // PIT divisor0x199a. SONG/TRCK/PART, OPL instruments, SFX priorities/lifetimes,
@@ -58,6 +73,9 @@ public:
     void tick() noexcept;
     void set_register_observer(std::function<void(std::uint8_t, std::uint8_t)> observer);
     void set_sample_observer(std::function<void(std::uint8_t)> observer);
+    void set_note_observer(std::function<void(const OriginalNoteEvent&)> observer);
+    // Timing of song 0..2; false before load() or for another index.
+    bool song_timing(unsigned song, OriginalSongTiming& timing) const noexcept;
 private:
     struct State;
     std::unique_ptr<State> state_;

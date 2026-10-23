@@ -2,6 +2,7 @@
 #include "formats/executable_layout.hpp"
 #include "container.hpp"
 #include "music_fallback.hpp"
+#include "original.hpp"
 #include "playback.hpp"
 #include "formats/le.hpp"
 
@@ -19,6 +20,7 @@
 #include <charconv>
 #include <filesystem>
 #include <span>
+#include <sstream>
 #include <string_view>
 
 namespace {
@@ -77,6 +79,274 @@ openbmh::audio::OriginalAssets load_original_assets(const std::filesystem::path&
     return assets;
 }
 
+// ---------------------------------------------------------------------------
+// MIDI export of the Original music (for remastering with other instruments).
+//
+// The sequencer runs offline exactly as in the game; the note observer records
+// every note it starts. Each of the 16 song tracks becomes one MIDI track on the
+// MIDI channel of the same number, so track 9, the sample (drum) track, lands on
+// General MIDI channel 10. One sequencer step is a sixteenth note (16 steps per
+// bar, 96 ticks per quarter); the tempo follows from the song's IRQ0 divisor.
+// OPL pitches are converted through the note table of the user's executable.
+// An optional map file assigns General MIDI programs and drum notes:
+//   inst <instrument> <program 0..127>
+//   sample <slot> <drum note 0..127>
+// A template listing the instruments and samples a song uses is written next to
+// the MIDI file (OUTPUT.map.txt) so the assignment can be edited and re-run.
+struct MidiNote {
+    std::uint32_t start{}, end{};
+    std::uint8_t note{}, velocity{}, instrument{};
+    bool sample{};
+};
+// Program per instrument and drum note per sample slot; -1 = not assigned.
+struct MidiMap {
+    std::array<int, 256> program;
+    std::array<int, 256> drum;
+    MidiMap() { program.fill(-1); drum.fill(-1); }
+};
+// Default General MIDI program from how an instrument is played: low lines become
+// a bass, instruments that often sound in chords strings, high lines a trumpet and
+// the remaining lines a brass section. Only a starting point for the editable map.
+int guess_program(double mean_note, double chord_share) {
+    if (mean_note < 50.0) return 33;        // Electric Bass (finger)
+    if (chord_share > 0.25) return 48;      // String Ensemble 1
+    return mean_note >= 70.0 ? 56 : 61;     // Trumpet for high lines, else Brass Section
+}
+// Default drum note from the sample itself: zero crossings per second separate
+// dark (kick), middle (snare, tom) and bright (hi-hat, cymbal) sounds; the
+// length separates closed from open or crash sounds.
+int guess_drum(const openbmh::audio::PcmSample& pcm) {
+    if (pcm.mono.empty() || !pcm.sample_rate) return 38;
+    std::size_t crossings = 0;
+    for (std::size_t i = 1; i < pcm.mono.size(); ++i)
+        crossings += (pcm.mono[i - 1] < 0) != (pcm.mono[i] < 0);
+    const double seconds = double(pcm.mono.size()) / pcm.sample_rate;
+    const double rate = crossings / seconds;
+    if (rate < 1200.0) return seconds < 0.6 ? 36 : 41;   // Bass Drum 1 / Low Floor Tom
+    if (rate < 4000.0) return seconds < 0.4 ? 38 : 45;   // Acoustic Snare / Low Tom
+    if (seconds < 0.15) return 42;                       // Closed Hi-Hat
+    return seconds < 0.5 ? 46 : 49;                      // Open Hi-Hat / Crash Cymbal 1
+}
+bool read_midi_map(const std::filesystem::path& path, MidiMap& map, std::string& error) {
+    std::ifstream in(path);
+    if (!in) { error = "cannot read MIDI map"; return false; }
+    std::string kind;
+    unsigned line = 0;
+    for (std::string text; std::getline(in, text);) {
+        ++line;
+        if (const auto hash = text.find('#'); hash != std::string::npos) text.resize(hash);
+        std::istringstream fields(text);
+        int index = -1, value = -1;
+        if (!(fields >> kind)) continue;
+        if (!(fields >> index >> value) || index < 0 || index > 255 || value < 0 || value > 127 ||
+            (kind != "inst" && kind != "sample")) {
+            error = "invalid MIDI map line " + std::to_string(line); return false;
+        }
+        (kind == "inst" ? map.program : map.drum)[std::size_t(index)] = value;
+    }
+    return true;
+}
+bool write_midi(const std::filesystem::path& path, const std::array<std::vector<MidiNote>, 16>& tracks,
+                const MidiMap& map, std::uint32_t usec_per_quarter, std::uint32_t loop_start,
+                std::uint32_t loop_end, std::string& error) {
+    using Track = std::vector<std::uint8_t>;
+    const auto vlq = [](Track& t, std::uint32_t value) {
+        std::uint8_t bytes[5]; int n = 0;
+        do { bytes[n++] = std::uint8_t(value & 0x7f); value >>= 7; } while (value);
+        while (n--) t.push_back(std::uint8_t(bytes[n] | (n ? 0x80 : 0)));
+    };
+    const auto meta_text = [&vlq](Track& t, std::uint32_t delta, std::uint8_t type, const std::string& text) {
+        vlq(t, delta); t.push_back(0xff); t.push_back(type); vlq(t, std::uint32_t(text.size()));
+        t.insert(t.end(), text.begin(), text.end());
+    };
+    std::vector<Track> chunks;
+    {   // Conductor track: tempo, 4/4, loop markers.
+        Track t;
+        t.insert(t.end(), {0x00, 0xff, 0x51, 0x03, std::uint8_t(usec_per_quarter >> 16),
+                           std::uint8_t(usec_per_quarter >> 8), std::uint8_t(usec_per_quarter)});
+        t.insert(t.end(), {0x00, 0xff, 0x58, 0x04, 0x04, 0x02, 0x18, 0x08});
+        std::uint32_t now = 0;
+        if (loop_start != loop_end) {
+            meta_text(t, loop_start, 0x06, "loop start"); now = loop_start;
+            meta_text(t, loop_end - now, 0x06, "loop end"); now = loop_end;
+        }
+        t.insert(t.end(), {0x00, 0xff, 0x2f, 0x00});
+        chunks.push_back(std::move(t));
+    }
+    for (unsigned index = 0; index < tracks.size(); ++index) {
+        const auto& notes = tracks[index];
+        if (notes.empty()) continue;
+        const std::uint8_t channel = std::uint8_t(index);
+        struct Event { std::uint32_t time; int order; std::uint8_t status, a, b; bool two; };
+        std::vector<Event> events;
+        int last_program = -1;
+        for (const auto& n : notes) {
+            if (!n.sample) {
+                const int program = map.program[n.instrument];
+                if (program != last_program) {
+                    events.push_back({n.start, 1, std::uint8_t(0xc0 | channel), std::uint8_t(program), 0, false});
+                    last_program = program;
+                }
+            }
+            // Sample notes carry their slot in `instrument`; the map names the drum.
+            const auto key = n.sample ? std::uint8_t(map.drum[n.instrument]) : n.note;
+            events.push_back({n.start, 2, std::uint8_t(0x90 | channel), key, n.velocity, true});
+            events.push_back({n.end, 0, std::uint8_t(0x80 | channel), key, 0, true});
+        }
+        // Note-offs before program changes before note-ons at the same time.
+        std::stable_sort(events.begin(), events.end(), [](const Event& l, const Event& r) {
+            return l.time != r.time ? l.time < r.time : l.order < r.order;
+        });
+        Track t;
+        meta_text(t, 0, 0x03, index == 9 ? "track 9 (samples)" : "track " + std::to_string(index));
+        std::uint32_t now = 0;
+        for (const auto& e : events) {
+            vlq(t, e.time - now); now = e.time;
+            t.push_back(e.status); t.push_back(e.a);
+            if (e.two) t.push_back(e.b);
+        }
+        t.insert(t.end(), {0x00, 0xff, 0x2f, 0x00});
+        chunks.push_back(std::move(t));
+    }
+    std::ofstream out(path, std::ios::binary);
+    if (!out) { error = "cannot create MIDI output"; return false; }
+    const auto put16 = [&out](unsigned v) { const char b[] = {char(v >> 8), char(v)}; out.write(b, 2); };
+    const auto put32 = [&out](std::uint32_t v) {
+        const char b[] = {char(v >> 24), char(v >> 16), char(v >> 8), char(v)}; out.write(b, 4);
+    };
+    out.write("MThd", 4); put32(6); put16(1); put16(unsigned(chunks.size())); put16(96);
+    for (const auto& t : chunks) {
+        out.write("MTrk", 4); put32(std::uint32_t(t.size()));
+        out.write(reinterpret_cast<const char*>(t.data()), std::streamsize(t.size()));
+    }
+    if (!out) { error = "failed while writing MIDI output"; return false; }
+    return true;
+}
+int export_midi(openbmh::audio::OriginalAssets assets, unsigned song, const std::filesystem::path& output,
+                unsigned loops, const std::filesystem::path& map_path) {
+    using namespace openbmh::audio;
+    MidiMap map;
+    std::string error;
+    if (!map_path.empty() && !read_midi_map(map_path, map, error)) { std::cerr << error << '\n'; return 1; }
+    // MIDI note of every entry of the OPL note table: F-number and block give the
+    // frequency (49716 Hz OPL clock), rounded to the nearest equal-tempered note.
+    std::array<std::uint8_t, 96> midi_note{};
+    for (unsigned i = 0; i < midi_note.size(); ++i) {
+        const auto f = assets.tables.frequencies[i];
+        const double hz = double(f & 0x3ff) * 49716.0 / std::pow(2.0, 20 - ((f >> 10) & 7));
+        midi_note[i] = std::uint8_t(std::clamp(std::lround(69.0 + 12.0 * std::log2(hz / 440.0)), 0L, 127L));
+    }
+    // The song's own bank, kept for analysing its drum samples after the run.
+    const std::vector<std::uint8_t> bank = assets.containers.at(song);
+    OriginalSynth synth;
+    if (!synth.load(std::move(assets), 22050, error)) {
+        std::cerr << "Original audio rejected: " << error << '\n'; return 1;
+    }
+    OriginalSongTiming timing;
+    if (!synth.song_timing(song, timing)) { std::cerr << "unknown song\n"; return 1; }
+    constexpr std::uint32_t kTicksPerStep = 24;  // 96 per quarter, a step is a sixteenth
+    std::array<std::vector<MidiNote>, 16> tracks;
+    // Last note per OPL channel: a new note on the channel ends the previous one.
+    std::array<std::pair<int, std::size_t>, 9> sounding;
+    sounding.fill({-1, 0});
+    std::array<bool, 256> used_instrument{}, used_sample{};
+    // The export ends after the first pass plus (loops - 1) passes of the loop
+    // section; a song without a loop (end == repeat) ends after its last bar.
+    const bool looping = timing.end != timing.repeat;
+    const std::uint64_t last_step = std::uint64_t(timing.end) * 16 +
+        (looping ? std::uint64_t(loops - 1) * (timing.end - timing.repeat) * 16 : 0);
+    std::uint64_t tick = 0;
+    synth.set_note_observer([&](const OriginalNoteEvent& e) {
+        if (tick / timing.tempo >= last_step) return;
+        const auto start = std::uint32_t(tick / timing.tempo) * kTicksPerStep;
+        if (e.sample) {
+            used_sample[e.pitch] = true;
+            tracks[e.track].push_back({start, start + kTicksPerStep / 2, 0, 100, e.pitch, true});
+            return;
+        }
+        used_instrument[e.instrument] = true;
+        if (auto [track, index] = sounding[e.channel]; track >= 0) {
+            auto& previous = tracks[std::size_t(track)][index];
+            previous.end = std::min(previous.end, start);
+            if (previous.end <= previous.start) previous.end = previous.start + 1;
+        }
+        // duration 0 releases in the step it starts; 255 holds until the next note.
+        const std::uint32_t length = e.duration == 255 ? std::numeric_limits<std::uint32_t>::max() / 2
+                                   : std::max<std::uint32_t>(e.duration * kTicksPerStep, kTicksPerStep / 4);
+        tracks[e.track].push_back({start, start + length, midi_note[e.pitch],
+                                   std::uint8_t(std::min(127, 1 + e.level * 2)), e.instrument, false});
+        sounding[e.channel] = {int(e.track), tracks[e.track].size() - 1};
+    });
+    if (!synth.command(std::uint8_t(song))) { std::cerr << "Original command rejected\n"; return 1; }
+    std::uint64_t steps = 0;
+    for (; tick / timing.tempo < last_step; ++tick) {
+        synth.tick();
+        const auto stats = synth.stats();
+        if (stats.failed) { std::cerr << "Original decoder failed during export\n"; return 1; }
+        steps = tick / timing.tempo + 1;
+        if (!stats.playing) break;
+    }
+    const auto song_end = std::uint32_t(std::min(steps, last_step)) * kTicksPerStep;
+    const unsigned completed_loops = looping ? loops : 1;
+    for (auto& notes : tracks)
+        for (auto& n : notes) n.end = std::min(n.end, song_end);
+    // One step lasts tempo * 6554 / 1193180 s; a quarter is four steps.
+    const auto usec = std::uint32_t(std::lround(4.0 * timing.tempo * 6554.0 / 1193180.0 * 1e6));
+    const std::uint32_t loop_start = timing.repeat * 16u * kTicksPerStep;
+    const std::uint32_t loop_end = timing.end == timing.repeat ? loop_start : timing.end * 16u * kTicksPerStep;
+    // Defaults for everything the map file leaves open (§ guess_program/guess_drum):
+    // per instrument the mean note and the share of notes that start together with
+    // another note of the same instrument (chords); per sample its sound.
+    struct Usage { std::size_t notes{}, chord{}; double sum{}; int low{127}, high{0}; };
+    std::array<Usage, 256> usage{};
+    for (const auto& notes : tracks)
+        for (std::size_t i = 0; i < notes.size(); ++i) {
+            const auto& n = notes[i];
+            if (n.sample) continue;
+            auto& u = usage[n.instrument];
+            ++u.notes; u.sum += n.note; u.low = std::min<int>(u.low, n.note); u.high = std::max<int>(u.high, n.note);
+        }
+    for (const auto& a : tracks) for (const auto& n : a) {
+        if (n.sample) continue;
+        bool together = false;
+        for (const auto& b : tracks) for (const auto& m : b)
+            if (&m != &n && !m.sample && m.instrument == n.instrument && m.start == n.start) { together = true; break; }
+        if (together) ++usage[n.instrument].chord;
+    }
+    Container container;
+    std::span<const std::uint8_t> samp;
+    if (parse_container(bank, container, error))
+        for (const auto& c : container.chunks)
+            if (c.id == "SAMP") samp = std::span<const std::uint8_t>(bank).subspan(c.payload_offset, c.payload_size);
+    for (unsigned i = 0; i < 256; ++i) {
+        if (used_instrument[i] && map.program[i] < 0) {
+            const auto& u = usage[i];
+            map.program[i] = guess_program(u.notes ? u.sum / u.notes : 60.0, u.notes ? double(u.chord) / u.notes : 0.0);
+        }
+        if (used_sample[i] && map.drum[i] < 0) {
+            PcmSample pcm;
+            map.drum[i] = !samp.empty() && decode_sample(samp, i, pcm, error) ? guess_drum(pcm) : 38;
+        }
+    }
+    if (!write_midi(output, tracks, map, usec, loop_start, loop_end, error)) { std::cerr << error << '\n'; return 1; }
+    auto template_path = output;
+    template_path += ".map.txt";
+    std::ofstream list(template_path);
+    list << "# OpenBMH MIDI map for song " << song << ": edit and pass with --map FILE\n"
+         << "# inst <instrument> <General MIDI program 0..127>, sample <slot> <drum note>\n";
+    for (unsigned i = 0; i < 256; ++i) if (used_instrument[i]) {
+        const auto& u = usage[i];
+        list << "inst " << i << ' ' << map.program[i] << "    # " << u.notes << " notes, range " << u.low << '-'
+             << u.high << ", chords " << (u.notes ? 100 * u.chord / u.notes : 0) << "%\n";
+    }
+    for (unsigned i = 0; i < 256; ++i) if (used_sample[i]) list << "sample " << i << ' ' << map.drum[i] << '\n';
+    std::size_t notes = 0;
+    for (const auto& t : tracks) notes += t.size();
+    std::cout << "exported Original song=" << song << " midi notes=" << notes << " tempo_us=" << usec
+              << " loops=" << completed_loops << " map=" << template_path.string() << '\n';
+    return 0;
+}
+
 int original_driver(int argc, char** argv) {
     using namespace openbmh::audio;
     const auto usage = [] {
@@ -88,6 +358,24 @@ int original_driver(int argc, char** argv) {
     };
     if (argc < 4) return usage();
     const std::string action = argv[3];
+    if (action == "--export-midi") {
+        unsigned song = 0, loops = 1;
+        std::filesystem::path map;
+        if (argc < 6 || !bounded_number(argv[4], 0, 2, song)) return usage();
+        for (int at = 6; at < argc; at += 2) {
+            if (at + 1 >= argc) return usage();
+            const std::string option = argv[at];
+            if (option == "--loops") {
+                if (!bounded_number(argv[at + 1], 1, 16, loops)) return usage();
+            } else if (option == "--map") map = argv[at + 1];
+            else return usage();
+        }
+        try {
+            return export_midi(load_original_assets(argv[2]), song, argv[5], loops, map);
+        } catch (const std::exception& error) {
+            std::cerr << "Original audio input: " << error.what() << '\n'; return 1;
+        }
+    }
     const bool song = action == "--export-song";
     const bool export_id = action == "--export-id";
     const bool play = action == "--play-id";
