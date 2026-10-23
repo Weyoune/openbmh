@@ -1,10 +1,10 @@
-# OpenBMH Editor 0.5.1
+# OpenBMH Editor 0.5.2
 
-Der eigenständige, native Editor verwendet **RmlUI, SDL2 und OpenGL**. Er bearbeitet Startdatenbanken, keine laufenden Spielstände. Das Spiel und seine Classic-Prüfung bleiben unverändert. Editor 0.5.1 hat eine eigene Versionsreihe und den Release-Tag `editor-v0.5.1`; die Spielversion ist 0.2.0.
+Der eigenständige, native Editor verwendet **RmlUI, SDL2 und OpenGL**. Er bearbeitet Startdatenbanken, keine laufenden Spielstände. Das Spiel und seine Classic-Prüfung bleiben unverändert. Editor 0.5.2 hat eine eigene Versionsreihe und den Release-Tag `editor-v0.5.2`; die Spielversion ist 0.2.0.
 
 ## Starten und Daten öffnen
 
-Das vollständige Paket `OpenBMHEditor-0.5.1-<plattform>.zip` entpacken und `OpenBMHEditor.exe` (Windows) beziehungsweise `OpenBMHEditor` (Linux/macOS) starten. `assets/editor` muss beim Programm bleiben. Auf macOS kann die unsignierte Anwendung über **Rechtsklick → Öffnen** gestartet werden. Eine Signatur/Notarisierung ist nicht Bestandteil dieser Version. `OpenBMHEditor --version` zeigt die Editorversion ohne Grafikstart.
+Das vollständige Paket `OpenBMHEditor-0.5.2-<plattform>.zip` entpacken und `OpenBMHEditor.exe` (Windows) beziehungsweise `OpenBMHEditor` (Linux/macOS) starten. `assets/editor` muss beim Programm bleiben. Auf macOS kann die unsignierte Anwendung über **Rechtsklick → Öffnen** gestartet werden. Eine Signatur/Notarisierung ist nicht Bestandteil dieser Version. `OpenBMHEditor --version` zeigt die Editorversion ohne Grafikstart.
 
 **Öffnen** bietet OBW-Dateien und entpackte Welten an. **BMH / FLTD importieren** liest einen Ordner mit einer unterstützten BMH- oder Football-Limited-Installation durch den bestehenden Konverter. Das Original wird nicht überschrieben. Eine bestehende Classic-OBW wird zunächst überprüft und dann in eine bearbeitbare Editorwelt übernommen.
 
@@ -63,7 +63,24 @@ Der MCP-Server ist standardmäßig aktiviert und bindet ausschließlich `127.0.0
 
 Implementiert ist [MCP Streamable HTTP 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), mit Aushandlung von 2025-06-18; JSON-Antworten, ohne optionale SSE-Sitzungen. Neuere MCP-Versionen werden nicht als unterstützt beworben. Der Server prüft Token, Host und gegebenenfalls Origin. Oberfläche und Agent bearbeiten dieselbe Welt, verwenden dieselbe Validierung und dieselbe Undo-Historie. Für konkurrierende Änderungen `expected_revision` aus `editor_info`/`editor_get` mitsenden.
 
-Werkzeuge: `editor_info`, `editor_open`, `editor_new`, `editor_list`, `editor_compare`, `editor_get`, `editor_apply`, `editor_rules`, `editor_validate`, `editor_history`, `editor_save`, `editor_undo`, `editor_redo`, `editor_roster_move`, `editor_roster_swap`, `editor_roster_order`, `editor_review_resolve`, `editor_image_import`, `editor_image_edit`, `editor_image_preview`, `editor_image_export`. Die eingeblendeten Tools enthalten Parameterschemata und Beschreibungen. Öffnen einer anderen Welt verwirft ungespeicherte Änderungen nur mit `discard: true`.
+Werkzeuge: `editor_info`, `editor_open`, `editor_new`, `editor_list`, `editor_compare`, `editor_regulations`, `editor_get`, `editor_apply`, `editor_rules`, `editor_validate`, `editor_history`, `editor_save`, `editor_undo`, `editor_redo`, `editor_roster_move`, `editor_roster_swap`, `editor_roster_order`, `editor_review_resolve`, `editor_image_import`, `editor_image_edit`, `editor_image_preview`, `editor_image_export`. Die eingeblendeten Tools enthalten Parameterschemata und Beschreibungen. Öffnen einer anderen Welt verwirft ungespeicherte Änderungen nur mit `discard: true`.
+
+## Spiel- und Ligaregeln ansehen
+
+**Regelwerk** zeigt Auf- und Abstieg, Ziel-Ligen, Relegation und internationale
+Qualifikation. Wettbewerbe lassen sich durchsuchen und nach Land filtern.
+**Spielregeln** zeigt die übernommenen Einträge aus `world/rules.json`, etwa
+Wertebereiche, Kreditfaktoren, Trainingslager und Classic-Verfahren. Phasen und
+weitere Originalfelder sind ebenfalls einsehbar. Dieser Bereich ist vollständig
+schreibgeschützt; er verändert weder Welt noch Undo-Historie.
+
+Explizite OBW-Regeln werden direkt dargestellt. Bei Classic-Importen kennzeichnet
+die Ansicht die versionierten Classic-Verfahrensregeln. Parallel-Ligen behalten
+Meister plus bedingte Relegationsplätze; die unterste Liga nutzt den Nachrückerpool.
+Internationale Plätze folgen dem ursprünglichen Champions-League-/UEFA-/
+Pokalsieger-Cup-Verfahren. Nicht festgelegte Regeln bleiben als solche sichtbar.
+Das sind keine heutigen UEFA-Regeln und kein neuer Saison-Simulator.
+`editor_regulations` bietet dieselben Informationen schreibgeschützt über MCP.
 
 ## Kompilieren
 
@@ -71,8 +88,8 @@ Voraussetzungen entsprechen dem Hauptprojekt: C++20-Compiler, Git, CMake ≥ 3.2
 
 ```sh
 cmake -S . -B build-editor -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENBMH_BUILD_EDITOR=ON
-cmake --build build-editor --target openbmh_editor editor_core_tests editor_comparison_tests --parallel 2
-ctest --test-dir build-editor -C Release -R '^editor_(core_tests|comparison_tests|version)$' --output-on-failure
+cmake --build build-editor --target openbmh_editor editor_core_tests editor_comparison_tests editor_regulations_tests --parallel 2
+ctest --test-dir build-editor -C Release -R '^editor_(core_tests|comparison_tests|regulations_tests|version)$' --output-on-failure
 ```
 
 macOS ARM zusätzlich bei der Konfiguration: `-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0`. Unter Windows das Argument nach `-R` ohne einfache Shell-Anführungszeichen verwenden. Der Editor wird beim normalen Spiel-Build standardmäßig nicht mitgebaut.
@@ -95,8 +112,10 @@ Extract the complete package and run **OpenBMHEditor**. Open an OBW archive or a
 
 Use **Comparison** to inspect sortable player, team and league ratings and per-season salaries. Select attribute columns and filter by country, league, club or attribute system. Group ratings are player-weighted means; salary totals and means use known player contracts only and explicitly flag incomplete coverage. Missing values remain unknown. The read-only MCP tool `editor_compare` returns the same data.
 
+Use **Regulations** to inspect promotion, relegation, playoffs, international qualification and stored game rules. Explicit OBW declarations and versioned Classic policies are distinguished; missing rules stay unspecified. This page and `editor_regulations` are read only.
+
 The editor retains full squads, original image data, source claims and unknown extensions. Its 24-player view does not remove players. Image import offers normalized crop, arbitrary rotation and mirroring; re-editing uses the preserved source. Classic portraits keep their frozen appearance recipe. Unsupported editing areas are preserved rather than replaced.
 
 In **Options**, switch the interface to **English**, choose one of the three themes, and enable/disable the integrated local MCP server. **Copy connection** provides the authenticated configuration. The server defaults to loopback port 8765; use port 0 for a free port. GUI and MCP share the same world, validation and undo history. It supports MCP Streamable HTTP 2025-11-25/2025-06-18 and optional stdio mode. Use `expected_revision` for concurrent edits.
 
-Build with the three commands above, including `-DOPENBMH_BUILD_EDITOR=ON`. The native application requires OpenGL 3.3 (macOS 4.1) and the platform development dependencies documented in the main README. Editor 0.5.1 is unsigned and does not bundle any real-world dataset or proprietary game assets.
+Build with the three commands above, including `-DOPENBMH_BUILD_EDITOR=ON`. The native application requires OpenGL 3.3 (macOS 4.1) and the platform development dependencies documented in the main README. Editor 0.5.2 is unsigned and does not bundle any real-world dataset or proprietary game assets.

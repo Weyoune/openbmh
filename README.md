@@ -1,8 +1,8 @@
 # OpenBMH
 
-The separate [OpenBMH Editor 0.5.1](docs/EDITOR.md) uses native RmlUI,
+The separate [OpenBMH Editor 0.5.2](docs/EDITOR.md) uses native RmlUI,
 supports German/English, three themes, image editing and a local MCP server.
-Download its own `editor-v0.5.1` release or build with
+Download its own `editor-v0.5.2` release or build with
 `-DOPENBMH_BUILD_EDITOR=ON`. Edited worlds are independent of the Classic runtime.
 
 A modern and faithful open source rebuild of the *Bundesliga Manager Hattrick* engine.

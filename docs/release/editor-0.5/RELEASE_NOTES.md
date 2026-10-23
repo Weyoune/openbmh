@@ -1,5 +1,21 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
-# OpenBMH Editor 0.5.1
+# OpenBMH Editor 0.5.2
+
+Adds **Regulations / Regelwerk**, a read-only view of game and league rules.
+Inspect promotion/relegation places and destinations, playoff conditions,
+international qualification selectors and replacement rules. Search competitions
+and filter by country; inspect preserved game-rule records and stage details.
+Both interface languages and all three themes are supported. The read-only MCP
+tool `editor_regulations` returns the same projection.
+
+Explicit OBW declarations take precedence. Imported worlds show the named
+Classic ladder and qualification policy, clearly labelled. The parallel third
+divisions retain champion-plus-playoff promotion; the bottom tier uses its
+newcomer pool. Historical display/colouring quotas are not reinterpreted as
+European qualification rules. Undeclared rules stay unspecified.
+This adds no season simulation or rule editing.
+
+## Editor 0.5.1
 
 Adds **Ratings & salaries / Wertevergleich**: sortable player, team and league
 overviews, searchable and filterable by country/league/club and attribute system.

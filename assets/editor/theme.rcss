@@ -237,6 +237,19 @@ footer { height: 57dp; padding: 0 28dp; display: flex; align-items: center; gap:
 .metric span { display: block; font-size: 28dp; font-weight: bold; color: var(--text); margin-top: 9dp; }
 .note { margin-top: 22dp; padding: 18dp 20dp; background-color: var(--note); border: 1dp var(--accent-border); border-radius: 10dp; color: var(--positive); font-size: 13dp; line-height: 1.6; }
 .source-json { font-size: 11dp; line-height: 1.5; white-space: pre-wrap; color: var(--muted); margin: 14dp 0; }
+.regulation-layout { flex: 1; display: flex; gap: 20dp; min-width: 0; min-height: 0; }
+.regulation-list { width: 270dp; flex: none; }
+.regulation-choice { display: block; width: 100%; text-align: left; white-space: normal; padding: 15dp 18dp; border-radius: 0; border: 0; border-bottom: 1dp var(--divider); }
+.regulation-choice small { font-size: 11dp; }
+.regulation-detail { min-width: 0; }
+.regulation-scroll { flex: 1; overflow-y: auto; padding: 25dp; }
+.regulation-scroll p { margin-top: 12dp; font-size: 15dp; line-height: 1.55; }
+.regulation-scroll h2 { line-height: 1.4; }
+.regulation-section { margin: 27dp 0; padding-top: 22dp; border-top: 1dp var(--divider); }
+.regulation-section h2 { font-size: 18dp; margin-bottom: 13dp; }
+.regulation-clause { padding: 15dp 18dp; border: 1dp var(--border); border-radius: 10dp; background-color: var(--wash); margin-bottom: 12dp; }
+.regulation-clause p { margin-top: 8dp; }
+.regulation-scroll .source-json { font-size: 13dp; line-height: 1.55; }
 .history-row, .diagnostic { padding: 15dp 20dp; border-bottom: 1dp var(--divider); line-height: 1.6; }
 .diagnostic.error { color: var(--danger); }
 .diagnostic.warning { color: var(--warning); }

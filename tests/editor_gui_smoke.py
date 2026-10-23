@@ -127,7 +127,17 @@ def main():
                 click(1378, 153)  # Leagues; its row opens the competition editor.
                 first_property('competitions', 'comp:demo', 'League Comparison')
                 assert tool('editor_info')['dirty'] is False
-                print('Native RmlUI edit, search, undo/save and sorted player/team/league comparison passed.')
+                before_rules = tool('editor_info')
+                click(100, 509)  # New read-only Regulations page.
+                click(475, 232)  # Game rules.
+                click(325, 232)  # Leagues & competitions.
+                click(650, 233); x('type', '--clearmodifiers', 'League')
+                time.sleep(.2); x('key', 'ctrl+a'); x('key', 'BackSpace')
+                rules = tool('editor_regulations', {'competition': 'comp:demo', 'language': 'en'})
+                assert rules['read_only'] is True and len(rules['items']) == 1
+                assert rules['items'][0]['movement_defined'] is False
+                assert tool('editor_info') == before_rules
+                print('Native edit, search, undo/save, sorted comparisons and read-only regulations passed.')
             except Exception:
                 log.flush()
                 print((root / 'app.log').read_text())

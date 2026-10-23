@@ -83,6 +83,33 @@ round to the nearest minor unit. Attribute means separately report their sample
 sizes in `attribute_counts`. No current date, invented contract or foreign-club
 strength-band interpretation is substituted for missing data.
 
+### Read-only regulations (Editor 0.5.2)
+
+The `regulations` command / `editor_regulations` MCP tool exposes the same
+read-only projection as the Regulations page. It accepts `language` (de/en),
+`search`, `nation` and `competition`. It returns `items`, all preserved `rules`,
+the world date, `read_only: true` and the session revision. It creates no table,
+edits, undo entries or runtime entrants.
+
+Each item retains its full `record` and `stages`. Explicit `movement` entries
+retain rank ranges and destination references; tier comparisons label promotion
+and relegation, participant roles label playoffs. Competition/stage `slots`
+retain their full selector, fallback, explicit destination and phase; they are
+visible on both the source and destination competition. Fixed participant lists
+are not reinterpreted as qualification rules.
+
+Imported `classic_runtime.qualifications: classic-season-entrants@1` and
+`legacy_ladder` records permit a labelled presentation of the existing Classic
+policy, documented in [classic-v1](classic-v1.md). Explicit declared rules take
+precedence. Unknown rules stay unspecified; the editor never substitutes modern
+UEFA quotas or infers qualification from historical colouring fields. This
+presentation registry does not implement a new season engine.
+
+Optional `manifest.presentation` references the `asset-presentation@1` visual
+defaults described in [OBW §9.2](../OBW.md#92-resolution-and-image-formats).
+Youth pools, silhouette and generic trophy keys remain indexed assets. They are
+preserved across editor saves, independent of Classic source recipes or seals.
+
 ## Sources, conflicts and images
 
 - `x-source/` can contain unchanged or losslessly gzipped normalized source

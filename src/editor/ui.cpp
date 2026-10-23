@@ -147,6 +147,8 @@ class EditorUi final : public Rml::EventListener {
     bool comparison_descending_ = false;
     Json comparison_;
     std::map<std::string, std::vector<std::string>> comparison_columns_;
+    bool regulations_game_ = false, regulations_source_ = false;
+    std::string regulation_id_, game_rule_id_;
     int offset_ = 0;
     size_t total_ = 0;
     struct Field {
@@ -212,6 +214,7 @@ class EditorUi final : public Rml::EventListener {
             {"players", "M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M4 22v-3c0-8 16-8 16 0v3"},
             {"roster", "M3 3h18v18H3zM9 3v18M3 9h18M3 15h18"},
             {"comparison", "M4 20h17M7 17v-5M12 17V7M17 17V3"},
+            {"regulations", "M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"},
             {"stadiums", "M3 8c0-7 18-7 18 0v8c0 7-18 7-18 0zM3 8c0 7 18 7 18 0M8 "
                          "13v7M16 13v7"},
             {"staff", "M5 22V3h13l-4 5 4 5H5"},
@@ -403,14 +406,17 @@ class EditorUi final : public Rml::EventListener {
                                 button("save", t("save"), "primary", info_.value("loaded", false) ? "" : "disabled") +
                                 button("options", t("options"), "quiet"));
         std::string nav;
-        for (const std::string name : {"overview", "nations", "competitions", "clubs", "players", "roster",
-                                       "comparison", "stadiums", "staff", "assets", "review", "changes"})
+        for (const std::string name :
+             {"overview", "nations", "competitions", "clubs", "players", "roster", "comparison",
+              "regulations", "stadiums", "staff", "assets", "review", "changes"})
             nav += "<button class=\"nav " + std::string(name == page_ ? "selected" : "") +
                    "\" data-action=\"navigate\" data-value=\"" + name + "\">" + icon(name) + "<span>" +
                    escaped(t(name)) + "</span></button>";
         html("navigation", nav);
         label("page-kicker", "OpenBMH / " + t(page_));
-        label("page-title", t(page_ == "comparison" ? "comparison_title" : page_));
+        label("page-title", t(page_ == "comparison"    ? "comparison_title"
+                              : page_ == "regulations" ? "regulations_title"
+                                                       : page_));
         label("page-subtitle", page_ == "roster"   ? t("roster_hint")
                                : page_ == "review" ? t("review_hint")
                                                    : t("subtitle_" + page_));
@@ -988,6 +994,188 @@ class EditorUi final : public Rml::EventListener {
                                       size_t(offset_) + listed_.size() < total_ ? "" : "disabled") +
                                "</div>");
     }
+    std::string regulation_ranks(const Json &ranks) const {
+        if (!ranks.is_array() || ranks.empty())
+            return t("regulation_unspecified");
+        std::string result = t("regulation_rank") + " " + text(ranks.front());
+        if (ranks.size() == 2 && ranks.front() != ranks.back())
+            result += "–" + text(ranks.back());
+        else if (ranks.size() > 2)
+            result = t("regulation_rank") + " " + ranks.dump();
+        return result;
+    }
+    std::string regulation_selector(const Json &definition) const {
+        if (definition.contains("ranks"))
+            return regulation_ranks(definition["ranks"]);
+        for (auto key : {"winner", "runner_up", "next_unqualified"})
+            if (definition.value(key, Json()) == true)
+                return t("regulation_" + std::string(key));
+        if (definition.contains("holder"))
+            return t("regulation_holder") + " · " + ref(definition, "holder");
+        if (str(definition, "from") == "coefficient")
+            return t("regulation_coefficient");
+        if (definition.contains("resolver"))
+            return t("regulation_runtime");
+        return t("regulation_unspecified");
+    }
+    std::string regulation_type(const Json &row, const std::string &prefix) const {
+        const auto type = str(row, "type"), key = prefix + type;
+        const auto translated = t(key);
+        return translated == key ? type : translated;
+    }
+    void regulations() {
+        html("page-actions", "<span class=\"badge\">" + escaped(t("regulation_readonly")) + "</span>");
+        html("pagination", "");
+        html("toolbar",
+             button("regulations-tab", t("regulation_competitions"), regulations_game_ ? "" : "primary",
+                    "data-value=\"competitions\"") +
+                 button("regulations-tab", t("regulation_game"), regulations_game_ ? "primary" : "",
+                        "data-value=\"game\"") +
+                 "<input id=\"search\" type=\"text\" value=\"" + escaped(search_) + "\" placeholder=\"" +
+                 escaped(t("search")) + "\"/>" +
+                 (regulations_game_ ? ""
+                                    : "<select id=\"filter-nation\">" +
+                                          choices("nations", nation_, t("all_nations")) + "</select>"));
+        if (!info_.value("loaded", false)) {
+            html("page-content", "<div class=\"empty\">" + escaped(t("welcome_hint")) + "</div>");
+            return;
+        }
+        const auto view = session_.execute(
+            "regulations", {{"language", options_.language}, {"search", search_}, {"nation", nation_}});
+        Json rows = regulations_game_ ? view["rules"] : view["items"];
+        if (regulations_game_ && !search_.empty()) {
+            Json filtered = Json::array();
+            for (const auto &row : rows)
+                if (folded(str(row, "id") + " " + str(row, "type")).find(folded(search_)) !=
+                    std::string::npos)
+                    filtered.push_back(row);
+            rows = std::move(filtered);
+        }
+        auto &chosen = regulations_game_ ? game_rule_id_ : regulation_id_;
+        const Json *selected = nullptr;
+        for (const auto &row : rows)
+            if (str(row, "id") == chosen)
+                selected = &row;
+        if (!selected && !rows.empty()) {
+            selected = &rows.front();
+            chosen = str(*selected, "id");
+        }
+        std::string body = "<div class=\"regulation-layout\"><div class=\"list-panel regulation-list\"><div "
+                           "class=\"table-scroll\">";
+        for (const auto &row : rows) {
+            const auto id = str(row, "id");
+            body += "<button class=\"regulation-choice " + std::string(id == chosen ? "primary" : "quiet") +
+                    "\" data-action=\"regulation-select\" data-value=\"" + escaped(id) + "\">" +
+                    escaped(regulations_game_ ? regulation_type(row, "rule_type_") : str(row, "name")) +
+                    "<small>" + escaped(regulations_game_ ? id : ref(row, "nation")) + "</small></button>";
+        }
+        body += "</div></div><div class=\"list-panel regulation-detail\"><div class=\"regulation-scroll\">";
+        auto section = [&](const std::string &key, const std::string &content) {
+            return "<div class=\"regulation-section\"><h2>" + escaped(t(key)) + "</h2>" + content + "</div>";
+        };
+        auto paragraph = [&](const std::string &value) { return "<p>" + escaped(value) + "</p>"; };
+        auto source = [&](const Json &value) {
+            return "<div class=\"source-json\">" + escaped(value.dump(2)) + "</div>";
+        };
+        if (!selected)
+            body += "<div class=\"empty\">" + escaped(t("empty")) + "</div>";
+        else if (regulations_game_) {
+            body += "<h2>" + escaped(regulation_type(*selected, "rule_type_")) + "</h2><small>" +
+                    escaped(chosen) + "</small>" + paragraph(t("regulation_preserved")) + source(*selected);
+        } else {
+            const auto &row = *selected;
+            body += "<h2>" + escaped(str(row, "name")) + "</h2><small>" + escaped(chosen) + "</small>" +
+                    paragraph(ref(row, "nation") + " · " + regulation_type(row, "regulation_type_") + " · " +
+                              std::to_string(row.value("teams", 0)) + " " + t("teams"));
+            std::string movement;
+            for (const auto &entry : row["movement"]) {
+                std::string destinations;
+                for (const auto &target : entry["targets"]) {
+                    if (!destinations.empty())
+                        destinations += " / ";
+                    destinations += str(target, "name");
+                }
+                if (entry.value("newcomer_pool", false))
+                    destinations = t("regulation_amateur_pool");
+                movement +=
+                    "<div class=\"regulation-clause\"><strong>" +
+                    escaped(t("regulation_" + str(entry, "kind"))) + "</strong>" +
+                    paragraph((str(entry, "selector") == "classic-playoff-winner"
+                                   ? t("regulation_playoff_winner")
+                                   : regulation_ranks(entry.value("ranks", Json()))) +
+                              " · " + t("regulation_to") + " " + destinations) +
+                    "<small>" +
+                    escaped(t(str(entry, "source") == "declared" ? "regulation_declared"
+                                                                 : "regulation_classic")) +
+                    "</small>" +
+                    (entry.value("conditional_playoffs", false) ? paragraph(t("regulation_classic_playoffs"))
+                                                                : "") +
+                    (regulations_source_ ? source(entry) : "") + "</div>";
+            }
+            if (movement.empty())
+                movement = paragraph(
+                    t(row.value("movement_defined", false) ? "regulation_closed" : "regulation_unspecified"));
+            if (std::any_of(row["movement"].begin(), row["movement"].end(),
+                            [](const auto &entry) { return str(entry, "source") == "classic-ladder@1"; }))
+                movement += "<small>" + escaped(t("regulation_classic_movement_note")) + "</small>";
+            body += section("regulation_movement_title", movement);
+            std::string qualification;
+            const auto policy = row["classic_qualification"];
+            if (!policy.is_null()) {
+                qualification = "<div class=\"regulation-clause\"><span class=\"badge\">" +
+                                escaped(t("regulation_classic")) + "</span>" +
+                                paragraph(t("regulation_classic_intro"));
+                if (policy.value("runtime_participants", false))
+                    qualification += paragraph(t("regulation_runtime"));
+                else
+                    qualification +=
+                        paragraph(t("regulation_classic_champion")) + paragraph(t("regulation_classic_cup")) +
+                        paragraph("UEFA-Cup · " + std::to_string(policy.value("uefa_base_places", 0)) + " " +
+                                  t("regulation_classic_uefa")) +
+                        paragraph(t("regulation_classic_holders"));
+                qualification += "<small>classic-season-entrants@1</small></div>";
+            }
+            for (const auto &entry : row["qualification"]) {
+                const auto &definition = entry["definition"];
+                if (!policy.is_null() && str(entry, "source") == "classic-entry@1")
+                    continue;
+                auto from = str(entry["from"], "name");
+                auto to = str(entry["to"], "name");
+                qualification += "<div class=\"regulation-clause\"><strong>" +
+                                 escaped((from.empty() ? "" : from + " · " + t("regulation_to") + " ") + to) +
+                                 "</strong>" + paragraph(regulation_selector(definition));
+                if (definition.contains("fallback"))
+                    qualification +=
+                        paragraph(t("regulation_fallback") + ": " + ref(definition["fallback"], "from") +
+                                  " · " + regulation_selector(definition["fallback"]));
+                if (!str(entry, "stage").empty())
+                    qualification +=
+                        "<small>" + escaped(t("regulation_stage") + ": " + str(entry, "stage")) + "</small>";
+                qualification += (regulations_source_ ? source(definition) : "") + "</div>";
+            }
+            if (qualification.empty())
+                qualification = paragraph(t("regulation_unspecified"));
+            body += section("regulation_qualification_title", qualification);
+            std::string stages;
+            for (auto stage : row["stages"]) {
+                // Participants can be large; the source toggle exposes them.
+                if (!regulations_source_) {
+                    stage.erase("slots");
+                    stage.erase("fixtures");
+                }
+                stages += source(stage);
+            }
+            if (stages.empty())
+                stages = paragraph(t("regulation_unspecified"));
+            body +=
+                section("regulation_stages", stages) +
+                button("regulation-source",
+                       t(regulations_source_ ? "regulation_hide_source" : "regulation_show_source"), "quiet");
+            if (regulations_source_)
+                body += source(row["record"]);
+        }
+        html("page-content", body + "</div></div></div>");
+    }
     void changes() {
         html("toolbar", "");
         html("pagination", "");
@@ -1029,6 +1217,8 @@ class EditorUi final : public Rml::EventListener {
             changes();
         else if (page_ == "comparison")
             comparison();
+        else if (page_ == "regulations")
+            regulations();
         else
             records();
         if (page_ == "comparison" && doc_->GetElementById("comparison-x")) {
@@ -1300,14 +1490,25 @@ class EditorUi final : public Rml::EventListener {
                 selected_id_.clear();
                 offset_ = 0;
                 search_.clear();
-                if (arg == "comparison") {
+                if (arg == "comparison" || arg == "regulations") {
                     nation_.clear();
                     league_.clear();
                     team_.clear();
                 }
                 needs_refresh_ = true;
             });
-        else if (action == "compare-open" || action == "compare-scope")
+        else if (action == "regulations-tab") {
+            regulations_game_ = arg == "game";
+            search_.clear();
+            nation_.clear();
+            needs_refresh_ = true;
+        } else if (action == "regulation-select") {
+            (regulations_game_ ? game_rule_id_ : regulation_id_) = arg;
+            needs_refresh_ = true;
+        } else if (action == "regulation-source") {
+            regulations_source_ = !regulations_source_;
+            needs_refresh_ = true;
+        } else if (action == "compare-open" || action == "compare-scope")
             leave_fields([this, action, arg] {
                 comparison_table_ =
                     action == "compare-open" ? (table() == "competitions" ? "leagues" : table()) : arg;

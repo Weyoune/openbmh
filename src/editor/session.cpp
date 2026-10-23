@@ -3,6 +3,7 @@
 #include "content/digest.hpp"
 #include "editor/comparison.hpp"
 #include "editor/images.hpp"
+#include "editor/regulations.hpp"
 #include <algorithm>
 #include <limits>
 
@@ -459,6 +460,11 @@ Json Session::execute(const std::string &command, const Json &args) {
     }
     if (command == "rules")
         return w.rows("rules");
+    if (command == "regulations") {
+        auto result = regulation_view(w, args);
+        result["revision"] = revision_;
+        return result;
+    }
     if (command == "validate")
         return {{"diagnostics", w.validate()}, {"revision", revision_}};
     if (command == "history") {
