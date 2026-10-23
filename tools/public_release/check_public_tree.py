@@ -58,6 +58,7 @@ PROJECT_ARTWORK = {
         "ae8d8790e4c00ab09b98b1f1e3f1e22acd6a8103bf5104c4e0d690d6bf1cdcfd",
     },
     "docs/qa/editor-dropdown-arrow/after-midnight-2560x1600.png": {
+        "ae3fc896f391cbfa2443a9c896a734e98564d0e260e5f60bb8ad0b2e39a97f38",
         "67283d8a4e9be4f779ef1482016059febbb6be7d94242b074bbafa6f1ce5e18f",
     },
     "docs/qa/editor-dropdown-arrow/after-silver-1440x900.png": {

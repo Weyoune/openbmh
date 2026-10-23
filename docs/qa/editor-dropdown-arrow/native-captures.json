@@ -54,7 +54,12 @@
       ],
       "scale": 1.7777777777777777,
       "data": "generated demo",
-      "capture": "after-midnight-2560x1600.png"
+      "capture": "after-midnight-2560x1600.png",
+      "window_position": [
+        0,
+        0
+      ],
+      "fully_inside_capture_display": true
     }
   ]
 }
