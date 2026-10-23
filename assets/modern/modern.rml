@@ -1,0 +1,10 @@
+<rml>
+<head><title>OpenBMH</title><link type="text/rcss" href="theme.rcss"/><link type="text/rcss" href="ticket.rcss"/></head>
+<body class="midnight">
+<div id="background"></div>
+<div id="canvas"></div>
+<div id="popup"></div>
+<div id="desktop-context"></div>
+<div id="toast"></div>
+</body>
+</rml>

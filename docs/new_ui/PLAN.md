@@ -1,6 +1,8 @@
 # Native Modern UI bis zum Anstoß
 
-Stand: 23. Oktober 2026. **Abgestimmter Umfang; native Umsetzung noch offen.**
+Stand: 23. Oktober 2026. **Abgestimmter Gesamtumfang; native Umsetzung begonnen.**
+Der [native Umsetzungsstand](NATIVE_STATUS.md) unterscheidet den bereits
+bedienbaren Unterbau von den noch ausstehenden Menüübertragungen.
 Diese Seite hält die Entscheidungen aus dem UI-Plan fest. Sie ersetzt keine
 Implementierungs- oder Abnahmebelege. Die Engine entsteht parallel bei Claude.
 

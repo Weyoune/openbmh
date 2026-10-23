@@ -349,8 +349,12 @@ else()
     target_compile_options(bmh_modern_session PRIVATE -Wall -Wextra)
 endif()
 option(OPENBMH_BUILD_EDITOR "Build the standalone OBW editor" OFF)
-if(OPENBMH_BUILD_EDITOR)
+option(OPENBMH_BUILD_MODERN_UI "Build the experimental native Modern UI demonstration" OFF)
+if(OPENBMH_BUILD_EDITOR OR OPENBMH_BUILD_MODERN_UI)
     add_subdirectory(src/editor)
+endif()
+if(OPENBMH_BUILD_MODERN_UI)
+    add_subdirectory(src/modern/ui)
 endif()
 target_link_libraries(bmhui PUBLIC bmh_content)
 add_executable(driver_barrier_tests tests/driver_barrier_tests.cpp)
@@ -476,6 +480,10 @@ add_executable(openbmh_play
     ${BMH_APP_CONTROLLER_SOURCE}
     ${BMH_APP_SESSION_SDL_SOURCE})
 target_link_libraries(openbmh_play PRIVATE bmhui bmh_launcher bmhlaunch_dialog openbmh_audio ${BMH_SDL_TARGET})
+if(OPENBMH_BUILD_MODERN_UI)
+    target_link_libraries(openbmh_play PRIVATE bmh_modern_ui)
+    target_compile_definitions(openbmh_play PRIVATE OPENBMH_MODERN_UI=1)
+endif()
 # a game without a console window on double-click (SDL2main provides WinMain); started from a
 # console it attaches to that one for --version, --help and start errors (src/app/main.cpp)
 set_target_properties(openbmh_play PROPERTIES WIN32_EXECUTABLE TRUE OUTPUT_NAME OpenBMH)
@@ -483,6 +491,11 @@ if(CMAKE_CONFIGURATION_TYPES)
     add_custom_command(TARGET openbmh_play POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_BINARY_DIR}/assets/launcher"
                 "$<TARGET_FILE_DIR:openbmh_play>/assets/launcher")
+    if(OPENBMH_BUILD_MODERN_UI)
+        add_custom_command(TARGET openbmh_play POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_BINARY_DIR}/assets/modern"
+                    "$<TARGET_FILE_DIR:openbmh_play>/assets/modern")
+    endif()
 endif()
 if(MSVC)
     target_compile_options(openbmh_play PRIVATE /utf-8)

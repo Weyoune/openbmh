@@ -1,7 +1,7 @@
 # Eintrittspreis · Konto-/Eintritts-Widget
 
-Stand: 23. Oktober 2026. Im HTML-Mockup umgesetzt; die native Modern UI
-übernimmt diese Bedienung bei ihrer Umsetzung.
+Stand: 23. Oktober 2026. Im HTML-Mockup und im experimentellen nativen
+RmlUI-Desktop umgesetzt. Siehe [nativer Umsetzungsstand](../../NATIVE_STATUS.md).
 
 ## Bedienung und Größe
 

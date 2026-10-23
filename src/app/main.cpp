@@ -32,6 +32,9 @@
 #include "launch/game_data.hpp"
 #include "launch/launcher.hpp"
 #include "launch/startup_error.hpp"
+#ifdef OPENBMH_MODERN_UI
+#include "modern/ui/view.hpp"
+#endif
 #include "content/package.hpp"
 #include "version.hpp"
 #include "app/live_matchday_events.hpp"
@@ -95,6 +98,10 @@ int main(int argc, char** argv) {
     rml::attach_parent_console();
     const std::vector<std::string> args = launch::utf8_arguments(argc, argv);  // (file names beyond the code page)
     fs::path data, save_directory;
+#ifdef OPENBMH_MODERN_UI
+    modern_ui::Config modern_ui;
+    bool modern_demo = false;
+#endif
     uint32_t seed = uint32_t(std::chrono::system_clock::now().time_since_epoch().count());
     bool muted = false, music_enabled = true;
     int live_frame_ms = 0;
@@ -104,9 +111,37 @@ int main(int argc, char** argv) {
         live_frame_ms_explicit = true;
     }
     float volume = 1.0F;
+    try {
     for (size_t i = 1; i < args.size(); ++i) {
         const auto is = [&](const char* name) { return args[i] == name; };
         const bool value = i + 1 < args.size();
+#ifdef OPENBMH_MODERN_UI
+        if (is("--modern-ui-demo")) {
+            modern_demo = true;
+        } else if (is("--gui-assets") && value) {
+            modern_ui.gui_assets = launch::path_from_utf8(args[++i]);
+        } else if (is("--ui-scene") && value) {
+            modern_ui.scene = args[++i];
+        } else if (is("--ui-theme") && value) {
+            modern_ui.theme = args[++i];
+        } else if (is("--ui-screenshot") && value) {
+            modern_ui.screenshot = launch::path_from_utf8(args[++i]);
+            modern_demo = true;
+        } else if (is("--ui-script") && value) {
+            modern_ui.commands = launch::path_from_utf8(args[++i]);
+            modern_demo = true;
+        } else if (is("--ui-state") && value) {
+            modern_ui.state = launch::path_from_utf8(args[++i]);
+        } else if (is("--ui-size") && value) {
+            const auto size = args[++i];
+            const auto separator = size.find('x');
+            if (separator == std::string::npos) throw std::runtime_error("--ui-size requires WIDTHxHEIGHT");
+            modern_ui.width = std::stoi(size.substr(0, separator));
+            modern_ui.height = std::stoi(size.substr(separator + 1));
+            if (modern_ui.width < 960 || modern_ui.width > 7680 || modern_ui.height < 540 || modern_ui.height > 4320)
+                throw std::runtime_error("Unsupported Modern UI preview size");
+        } else
+#endif
         if (is("--mute")) {
             muted = true;
         } else if (is("--music")) {
@@ -131,6 +166,11 @@ int main(int argc, char** argv) {
             std::printf("usage: OpenBMH [--mod <mods/name/content.obw>] [--seed <Watcom seed>] "
                         "[--save-directory <directory>] [--mute] [--volume <0..1>] [--no-music] "
                         "[--live-frame-ms <0..1000>]\n");
+#ifdef OPENBMH_MODERN_UI
+            std::printf("Modern UI preview: --modern-ui-demo --gui-assets <directory> "
+                        "[--ui-scene main|desktop|camp|manager|newgame|tables] "
+                        "[--ui-theme midnight|silver|matchday] [--ui-size WIDTHxHEIGHT]\n");
+#endif
             return 0;
         } else if (args[i].rfind("--", 0) != 0 && data.empty()) {
             data = launch::path_from_utf8(args[i]);
@@ -139,6 +179,7 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
+    }catch(const std::exception &e){show_start_error(e.what());return 1;}
     std::filesystem::path executable;
     if (char *base = SDL_GetBasePath()) {
         executable = launch::path_from_utf8(base);
@@ -150,9 +191,13 @@ int main(int argc, char** argv) {
 #endif
     } else
         executable = fs::absolute(launch::path_from_utf8(args.front()));
-    if (data.empty()) {
+    if (data.empty()
+#ifdef OPENBMH_MODERN_UI
+        || modern_demo || modern_ui::is_modern_world(data)
+#endif
+    ) {
         try {
-            return launch::run_launcher(executable, [](const fs::path &package, const fs::path &source,
+            const launch::SaveMigrator migrate = [](const fs::path &package, const fs::path &source,
                                                        const fs::path &destination) {
                 const auto content = content::open(package);
                 content::Mount mount(package, content);
@@ -164,7 +209,13 @@ int main(int argc, char** argv) {
                 if (!migrated.save_game(destination, migrated.state().memory.u8(::bmh::layout::ActiveManager),
                                         false, error))
                     throw FormatError("Spielstand konnte nicht übernommen werden: " + error);
-            });
+            };
+#ifdef OPENBMH_MODERN_UI
+            modern_ui.world = data;
+            return modern_ui::run(executable, migrate, modern_ui);
+#else
+            return launch::run_launcher(executable, migrate);
+#endif
         } catch (const std::exception &e) {
             show_start_error(e.what());
             return 1;
