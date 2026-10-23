@@ -351,6 +351,7 @@ int original_driver(int argc, char** argv) {
     using namespace openbmh::audio;
     const auto usage = [] {
         std::cerr << "usage: openbmh_sound --original DATA_DIR --export-song 0..2 OUTPUT.wav [--seconds 1..600] [--loops 1..16]\n"
+                     "       openbmh_sound --original DATA_DIR --export-midi 0..2 OUTPUT.mid [--loops 1..16] [--map FILE]\n"
                      "       openbmh_sound --original DATA_DIR --export-id 10..22 OUTPUT.wav [--seconds 1..600]\n"
                      "       openbmh_sound --original DATA_DIR --play-id ID [--seconds 1..600]\n"
                      "       openbmh_sound --original DATA_DIR --play-all [--seconds 1..600]\n";
@@ -468,6 +469,7 @@ int main(int argc, char** argv) {
     if (argc < 2) {
         std::cerr << "usage: openbmh_sound <container-file> [--play-test-tone | --play-sample INDEX | --export-sample INDEX OUTPUT.wav | --play-id ID | --export-id ID OUTPUT.wav]\n"
                      "       openbmh_sound --original DATA_DIR --export-song 0..2 OUTPUT.wav [--seconds N] [--loops N]\n"
+                     "       openbmh_sound --original DATA_DIR --export-midi 0..2 OUTPUT.mid [--loops N] [--map FILE]\n"
                      "       openbmh_sound --original DATA_DIR --export-id 10..22 OUTPUT.wav [--seconds N]\n"
                      "       openbmh_sound --original DATA_DIR --play-id ID | --play-all [--seconds N]\n"
                      "       openbmh_sound --play-cue NAME | --export-cue NAME OUTPUT.wav\n"
