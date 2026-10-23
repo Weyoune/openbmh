@@ -6,13 +6,15 @@ Stand: 23. Oktober 2026. Im HTML-Mockup umgesetzt; die native Modern UI
 ## Bedienung und Größe
 
 Ein Klick auf den Eintrittspreis im Konto-/Eintritts-Widget öffnet einen
-kompakten Dialog mit gut lesbarem Betrag, waagerechtem Schieberegler und
-Minus-/Plus-Schritten. Der Taschenrechner wird dafür nicht mehr verwendet.
+kleinen Popover direkt am Preisfeld: Überschrift, Betrag, waagerechter
+Schieberegler und Bestätigung. Die große zentrierte Dialogfläche entfällt.
 
-Der Dialog misst 1120 × 800 logische Pixel im 3840 × 2160 großen Desktop:
-bei Full HD 560 × 400, bei 1280 × 720 etwa 373 × 267 Bildschirmpixel. Er liegt
-zentriert im vorhandenen Dialog-Layer und wird genau einmal mit dem Desktop
-skaliert. Die Widgetgröße wird durch das Öffnen nicht verändert.
+Der Popover misst in der normalen Ansicht 330 × 196 CSS-Pixel und bleibt bei
+720p und Full HD gleich groß; die Schrift ist etwa 14 Pixel, der Betrag 26 Pixel groß. Er liegt
+außerhalb des transformierten Desktop-Zeichenraums und erhält keine zusätzliche
+Desktop-Skalierung. Seine Position wird aus dem tatsächlich sichtbaren
+Preis-Button bestimmt und am Bildschirmrand angepasst. Der Hintergrund bleibt
+unabgedunkelt; ein Klick außerhalb verwirft den Entwurf.
 
 Im aktuellen HTML-Datensatz sind 0–25 € in Schritten von 1 € zulässig,
 Ausgangswert 13 €. Dies sind die vorhandenen POC-Grenzen, keine neue
@@ -22,11 +24,11 @@ Werte und zulässige Grenzen später vom Datenanbieter beziehungsweise der Sessi
 ## Entwurf und Übernahme
 
 - Öffnen übernimmt den zuletzt akzeptierten Preis in einen lokalen Entwurf.
-- Schieberegler und Minus/Plus ändern nur diesen Entwurf. Pfeiltasten ändern
+- Der Schieberegler ändert nur diesen Entwurf. Pfeiltasten ändern
   um 1 €, Home/End wählen die Grenzen.
 - „Übernehmen“ zeigt eine Bestätigung mit altem und neuem Betrag. Erst
   „Bestätigen“ speichert den neuen Wert. „Ändern“ führt zum Entwurf zurück.
-- Abbrechen, Schließen und Escape verwerfen den Entwurf ohne Schreibzugriff.
+- Abbrechen, Escape und ein Klick außerhalb verwerfen den Entwurf ohne Schreibzugriff.
   Erneutes Öffnen beginnt beim zuletzt akzeptierten Preis.
 - Bei einem Speicherfehler bleibt der akzeptierte Wert erhalten; der Dialog
   zeigt den Fehler und erlaubt einen erneuten Versuch.
@@ -42,18 +44,21 @@ Diamond-Inhalte bleiben schreibgeschützt.
 ## Quelle und Prüfung
 
 Privates Repository `bmh_4k_ui`, Commit
-`47ac47430cf708afb0bc6d4f45e281d341d6e59a`.
+`0bf0f2afd2ff8d5dabb96c795db2a5d0abaaf278`.
 
 Quellen: `desktop/modern-dialogs.js`, `desktop/modern-desktop.js` und
 `desktop/modern-desktop.css`. Die Ursache der zuvor winzigen Desktop-Eingabe
 war ein CSS-Scope auf `.game-screen`, den der Aufruf unter `#stage` nicht traf.
-Der neue Dialog hat eigene, passend skalierte Bedienelemente.
+Der Popover verwendet eigene Bedienelemente in Bildschirmkoordinaten. Sein
+Host kehrt beim Schließen oder Wechsel zu einer anderen Dialogart in den
+Desktop-Zeichenraum zurück; andere Fenster behalten ihre normale Skalierung.
 
 Vorher-/Nachher-Screenshots mit POC-, Layout- und Dialogzustand liegen im
-privaten Repository unter `docs/qa/entry-price-slider-2026-10-23/`.
-128 Verhaltenstests bestanden in Chromium und WebKit; nach der anschließenden
-reinen Größenanpassung bestanden 85 gezielte Darstellungsprüfungen für die
-kompakte Fassung in beiden Browsern, allen drei Themes und bei 720p/Full HD.
-Dabei wurden auch Bestätigung und Speicherfehler auf Textüberstände geprüft.
-Die kompakte Silver-Fassung wurde zusätzlich bei beiden Auflösungen visuell
+privaten Repository unter `docs/qa/entry-price-popover-2026-10-23/`.
+119 gezielte Prüfungen bestanden in Chromium und WebKit: alle drei Themes bei
+720p/Full HD, konstante Schrift-/Popovergröße, Verankerung am Preis-Button,
+Ausweichen an Bildschirmrändern mit allen vier Widgetgrößen, Tastatur,
+Außenklick/Abbrechen, Größenwechsel, Bestätigung, veraltete Zustände,
+Speicherfehler und Rückgabe des gemeinsamen Hosts an andere Desktopdialoge.
+Die Silver-Fassung wurde bei beiden Auflösungen samt Bestätigung auch visuell
 abgenommen. Keine Browser- oder Ressourcenfehler.
