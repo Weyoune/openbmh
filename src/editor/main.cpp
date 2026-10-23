@@ -163,7 +163,9 @@ int main(int argc, char **argv) {
     } catch (const Error &e) {
         const auto message =
             Json{{"error", e.code}, {"message", tr(language, e.code)}, {"details", e.details}}.dump();
-        bmh::rml::report_start_error("OpenBMHEditor", message, graphical);
+        std::cerr << message << '\n';
+        if (graphical)
+            bmh::rml::report_start_error("OpenBMHEditor", tr(language, e.code));
         return 1;
     } catch (const std::exception &e) {
         bmh::rml::report_start_error("OpenBMHEditor", tr(language, "error") + ": " + e.what(), graphical);
