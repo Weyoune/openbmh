@@ -9,7 +9,7 @@ OpenBMH will offer three game variants:
 | Variant | Data | Season engine | Interface | State |
 |---|---|---|---|---|
 | **Classic** | Imported from the user's BMH or FLTD installation (OBW `runtime:classic-v1`) | Classic: fixed calendar, 9 leagues, original competition structure and rules | Classic 320×200 bitmap interface | Essentially complete |
-| **Classic Extended** | Classic data, optionally extended where the classic screens can show it | Classic engine plus features **backported from Modern**, step by step | Classic bitmap interface, extended by hand per feature | Grows after Modern |
+| **Classic Extended** | Classic data, optionally extended where the classic screens can show it | Working idea: Classic engine plus features **backported from Modern**, step by step (§4) | Classic bitmap interface, extended by hand per feature | Open; after Modern |
 | **Modern** | New OBW data set (imported and extended, or own worlds) | Modern: generated calendar, data-driven leagues and competitions, playable foreign leagues, leagues larger than 12 teams | New high-resolution interface (RmlUi), designed for many leagues | Interface in progress |
 
 All three use **the same match engine**. A match between two given teams under the same rules is simulated by the same code in every variant; only what happens around it (calendar, competitions, finances, transfers, development) differs.
@@ -120,6 +120,8 @@ The match engine consumes players in attribute set `bmh-classic@1` (OBW §5.3). 
 
 ## 4. Classic Extended
 
+> **Working idea, not a decision.** Backporting Modern features into the Classic engine is the current idea for Classic Extended; the variant may take a different shape. What does not depend on it: the shared match engine (§3), the Modern engine driven only through the protocol, and features written against ports (§2.2), which keep several options open.
+
 Classic Extended is the **Classic season engine plus backported Modern features**, presented in the classic bitmap interface.
 
 - **Invariant:** with every backported feature switched off, Classic Extended produces exactly the Classic results. A test runs the Classic regression through the Extended engine with no features.
@@ -151,7 +153,7 @@ Modern does not have to reproduce Classic results; its quality gate is plausibil
 - The world or save manifest names the runtime: `requires: ["runtime:classic-v1"]`, `["runtime:classic-extended-v1"]` (with the list of active features and their versions) or `["runtime:modern-v1"]`, plus `match@1`.
 - `CareerSession` selects the season engine from the manifest; the protocol reports **capabilities** per engine and feature, so interfaces and console clients only offer supported actions.
 - Conversions are **one-way**: Classic → Classic Extended (switch features on), Classic or Classic Extended → Modern (convert to the typed model; backported feature state maps to the Modern original of the feature). There is no way back, and the original file is kept.
-- Legacy `.FBM` saves stay Classic.
+- **All variants save only in the OBW format** (`.obs`). Legacy `.FBM` saves are an import source only: they are converted into a Classic `.obs` career and never written.
 
 ## 7. Migration plan
 
@@ -184,6 +186,5 @@ Steps 1 to 4 are the actual split and the risky part; they are pure refactoring 
 ## 9. Open decisions
 
 - Which features become the first backport candidates (proposal: features of interface cost 1 or 2 that do not change league structure).
-- Whether Classic Extended saves exist only as OBW saves (proposal: yes, no `.FBM` export).
 - Whether Modern keeps `bmh-classic@1` as its only player attribute set at first (proposal: yes, richer attributes later as a new match engine version).
 - Ownership: the split and Classic (engine/integration), the Modern interface (UI), Modern features and their backports (shared, per feature).
