@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 cmake_minimum_required(VERSION 3.24)
-project(OpenBMH VERSION 0.2.0 LANGUAGES CXX C)
+project(OpenBMH VERSION 0.2.1 LANGUAGES CXX C)
 if(APPLE)
     enable_language(OBJC OBJCXX)
     set(CMAKE_OBJCXX_STANDARD 20)

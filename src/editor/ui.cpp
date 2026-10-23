@@ -3,11 +3,11 @@
 #include "editor/images.hpp"
 #include "editor/version.hpp"
 #include "launch/rml_path.hpp"
+#include "launch/rml_video.hpp"
 #include <RmlUi/Core.h>
 #include <RmlUi/Core/Elements/ElementFormControl.h>
 #include <RmlUi/Core/Elements/ElementFormControlInput.h>
 #include <RmlUi_Platform_SDL.h>
-#include <RmlUi_Renderer_GL3.h>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -31,58 +31,13 @@ std::string button(const std::string &action, const std::string &label, const st
     return "<button data-action=\"" + escaped(action) + "\" class=\"" + css + "\" " + attributes + ">" +
            escaped(label) + "</button>";
 }
-struct Video {
-    SDL_Window *window = nullptr;
-    SDL_GLContext gl = nullptr;
-    bool loader = false;
-    Video() {
-        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS | SDL_INIT_TIMER) != 0)
-            throw Error("video_failed");
-        SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-#ifdef __APPLE__
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-#else
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-#endif
-        SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-        window =
-            SDL_CreateWindow("OpenBMH Editor", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1440, 900,
-                             SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_HIDDEN);
-        if (!window)
-            throw Error("video_failed");
-        SDL_SetWindowMinimumSize(window, 1080, 720);
-        gl = SDL_GL_CreateContext(window);
-        if (!gl)
-            throw Error("video_failed");
-        SDL_GL_MakeCurrent(window, gl);
-        SDL_GL_SetSwapInterval(1);
-        std::string error;
-        if (!RmlGL3::Initialize(&error))
-            throw Error("video_failed", {{"detail", error}});
-        loader = true;
-        SDL_StartTextInput();
-    }
-    ~Video() {
-        if (loader)
-            RmlGL3::Shutdown();
-        if (gl)
-            SDL_GL_DeleteContext(gl);
-        if (window)
-            SDL_DestroyWindow(window);
-        SDL_Quit();
-    }
-};
-class Renderer final : public RenderInterface_GL3 {
+class Renderer final : public bmh::rml::Renderer {
   public:
     Session &session;
     std::map<std::string, std::pair<std::string, std::string>> memory;
     std::map<std::string, std::string> logical;
     uint64_t serial = 0;
-    explicit Renderer(Session &s) : session(s) {}
+    Renderer(Session &s, bmh::rml::Video &video) : bmh::rml::Renderer(video), session(s) {}
     std::string asset(const std::string &key) {
         auto token = "world-image-" + std::to_string(serial++) + ".png";
         logical[token] = key;
@@ -101,7 +56,7 @@ class Renderer final : public RenderInterface_GL3 {
     Rml::TextureHandle LoadTexture(Rml::Vector2i &dimensions, const Rml::String &source) override {
         const auto token = utf8(path(source).filename());
         if (!memory.contains(token) && !logical.contains(token))
-            return RenderInterface_GL3::LoadTexture(dimensions, source);
+            return bmh::rml::Renderer::LoadTexture(dimensions, source);
         try {
             auto value = memory.contains(token) ? memory.at(token) : session.asset_bytes(logical.at(token));
             auto raster = images::decode(value.first, value.second, token.starts_with("icon-") ? 64 : 512);
@@ -129,7 +84,7 @@ class EditorUi final : public Rml::EventListener {
     Options &options_;
     McpServer &server_;
     UiConfig config_;
-    Video video_;
+    bmh::rml::Video video_{"OpenBMH Editor", 1440, 900, 1080, 720};
     bmh::rml::AssetFiles files_;
     SystemInterface_SDL system_{video_.window};
     Renderer renderer_;
@@ -299,7 +254,7 @@ class EditorUi final : public Rml::EventListener {
     void resize() {
         int w, h, pw, ph;
         SDL_GetWindowSize(video_.window, &w, &h);
-        SDL_GL_GetDrawableSize(video_.window, &pw, &ph);
+        video_.drawable_size(pw, ph);
         if (!w || !h)
             return;
         renderer_.SetViewport(pw, ph);
@@ -1775,23 +1730,16 @@ class EditorUi final : public Rml::EventListener {
         if (config_.screenshot.empty())
             return;
         int w, h;
-        SDL_GL_GetDrawableSize(video_.window, &w, &h);
-        images::Raster raster{w, h, std::vector<uint8_t>(size_t(w) * h * 4)};
-        using ReadPixels = void (*)(int, int, int, int, unsigned, unsigned, void *);
-        auto read = reinterpret_cast<ReadPixels>(SDL_GL_GetProcAddress("glReadPixels"));
-        if (!read)
-            throw Error("video_failed");
-        read(0, 0, w, h, 0x1908 /* RGBA */, 0x1401 /* UNSIGNED_BYTE */, raster.pixels.data());
-        for (int y = 0; y < h / 2; ++y)
-            for (int x = 0; x < w * 4; ++x)
-                std::swap(raster.pixels[size_t(y) * w * 4 + x], raster.pixels[size_t(h - y - 1) * w * 4 + x]);
+        auto pixels = video_.capture(w, h);
+        images::Raster raster{w, h, std::move(pixels)};
         write_atomic(config_.screenshot, images::encode_png(raster));
         config_.screenshot.clear();
     }
 
   public:
     EditorUi(Session &s, Options &o, McpServer &server, UiConfig config)
-        : session_(s), options_(o), server_(server), config_(std::move(config)), renderer_(s) {
+        : session_(s), options_(o), server_(server), config_(std::move(config)), renderer_(s, video_) {
+        SDL_StartTextInput();
         page_ = config_.page;
         Rml::SetSystemInterface(&system_);
         Rml::SetFileInterface(&files_);
@@ -1801,10 +1749,11 @@ class EditorUi final : public Rml::EventListener {
         if (!initialized_)
             throw Error("video_failed");
         for (auto weight : {"Regular", "Bold"})
-            if (!Rml::LoadFontFace(utf8(config_.assets / (std::string("LatoLatin-") + weight + ".ttf"))))
+            if (!Rml::LoadFontFace(
+                    bmh::rml::asset_path(config_.assets / (std::string("LatoLatin-") + weight + ".ttf"))))
                 throw Error("ui_assets_missing");
         context_ = Rml::CreateContext("editor", {1440, 900});
-        doc_ = context_->LoadDocument(utf8(config_.assets / "editor.rml"));
+        doc_ = context_->LoadDocument(bmh::rml::asset_path(config_.assets / "editor.rml"));
         if (!doc_)
             throw Error("ui_assets_missing");
         for (auto event : {"click", "change", "mousedown", "mouseup", "mousemove"})
@@ -1915,7 +1864,7 @@ class EditorUi final : public Rml::EventListener {
                         ime_.HandleEdit(event.edit);
                     int w, h, pw, ph;
                     SDL_GetWindowSize(video_.window, &w, &h);
-                    SDL_GL_GetDrawableSize(video_.window, &pw, &ph);
+                    video_.drawable_size(pw, ph);
                     if (w && h) {
                         if (event.type == SDL_MOUSEMOTION) {
                             event.motion.x = int(double(event.motion.x) * pw / w);
@@ -1978,7 +1927,7 @@ class EditorUi final : public Rml::EventListener {
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_).count();
             if (!busy_ && elapsed > 1200 && !config_.screenshot.empty())
                 screenshot();
-            SDL_GL_SwapWindow(video_.window);
+            video_.present();
             SDL_Delay(10);
             if (config_.quit_after_ms > 0 && elapsed >= config_.quit_after_ms)
                 closed_ = true;

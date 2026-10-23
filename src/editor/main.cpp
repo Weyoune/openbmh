@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "editor/ui.hpp"
 #include "editor/version.hpp"
+#include "launch/rml_video.hpp"
 #include <SDL.h>
 #include <atomic>
 #include <chrono>
@@ -14,7 +15,14 @@ void stop(int) { stopped = true; }
 } // namespace
 int main(int argc, char **argv) {
     using namespace bmh::editor;
+    bmh::rml::attach_parent_console();
     std::string language = "de";
+    bool graphical = true;
+    for (int i = 1; i < argc; ++i)
+        if (std::string_view(argv[i]) == "--headless" || std::string_view(argv[i]) == "--serve" ||
+            std::string_view(argv[i]) == "--stdio-mcp" || std::string_view(argv[i]) == "--version" ||
+            std::string_view(argv[i]) == "--help")
+            graphical = false;
     try {
         bool headless = false, serve = false, stdio = false, demo = false, blank = false, validate = false,
              print = false;
@@ -153,10 +161,12 @@ int main(int argc, char **argv) {
         }
         return has_errors ? 2 : 0;
     } catch (const Error &e) {
-        std::cerr << Json{{"error", e.code}, {"message", tr(language, e.code)}, {"details", e.details}}.dump() << '\n';
+        const auto message =
+            Json{{"error", e.code}, {"message", tr(language, e.code)}, {"details", e.details}}.dump();
+        bmh::rml::report_start_error("OpenBMHEditor", message, graphical);
         return 1;
     } catch (const std::exception &e) {
-        std::cerr << tr(language, "error") << ": " << e.what() << '\n';
+        bmh::rml::report_start_error("OpenBMHEditor", tr(language, "error") + ": " + e.what(), graphical);
         return 1;
     }
 }

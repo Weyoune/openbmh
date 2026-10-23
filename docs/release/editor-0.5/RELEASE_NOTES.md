@@ -1,5 +1,19 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
-# OpenBMH Editor 0.5.2
+# OpenBMH Editor 0.5.3
+
+Fixes the Windows graphical startup on machines without an OpenGL 3.3 driver,
+including Windows Server / Remote Desktop. The editor and game launcher use the
+pinned RmlUI Direct3D 11 renderer with automatic WARP software fallback. No
+additional graphics runtime download is needed on the supported Windows systems.
+Linux/macOS retain their existing OpenGL rendering.
+
+Windows startup failures now produce a native dialog and a log in
+`%LOCALAPPDATA%/OpenBMH/OpenBMHEditor-startup.log`. Console redirection is
+retained and headless/MCP errors remain nonmodal. Native GUI startup, screenshots,
+Unicode paths and the actual launcher are now tested on Windows Server 2022
+with WARP forced, in addition to the existing core/MCP tests.
+
+## Editor 0.5.2
 
 Adds **Regulations / Regelwerk**, a read-only view of game and league rules.
 Inspect promotion/relegation places and destinations, playoff conditions,

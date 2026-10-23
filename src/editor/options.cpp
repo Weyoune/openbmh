@@ -4,7 +4,9 @@
 #include <map>
 #include <random>
 #ifdef _WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #else
 #include <sys/stat.h>
@@ -268,8 +270,7 @@ std::string tr(const std::string &language, const std::string &key) {
           "Drag a rectangle on the image or enter crop values. Without cropping, "
           "the original resolution is retained."}},
         {"video_failed",
-         {"Die Grafikausgabe benötigt OpenGL 3.3 (macOS: 4.1).",
-          "The interface requires OpenGL 3.3 (macOS: 4.1)."}},
+         {"Die Grafikausgabe konnte nicht initialisiert werden.", "Graphics initialization failed."}},
         {"ui_assets_missing",
          {"Editor-Oberfläche fehlt. Bitte das vollständige Paket entpacken.",
           "Editor interface files are missing. Please extract the complete "

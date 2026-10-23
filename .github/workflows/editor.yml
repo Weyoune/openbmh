@@ -49,7 +49,7 @@ jobs:
           if [[ "$RUNNER_OS" == "macOS" ]]; then args+=(-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0); fi
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENBMH_BUILD_EDITOR=ON -DBMH_DATA= "${args[@]}"
       - name: Build editor and synthetic tests
-        run: cmake --build build --target openbmh_editor editor_core_tests editor_comparison_tests editor_regulations_tests --parallel 2
+        run: cmake --build build --target openbmh_editor launcher_gui_smoke editor_core_tests editor_comparison_tests editor_regulations_tests --parallel 2
       - name: Native editor core and MCP tests
         run: ctest --test-dir build -C Release -R "^editor_(core_tests|comparison_tests|regulations_tests|version)$" --output-on-failure --output-junit editor-tests.xml
       - name: Linux native GUI smoke
@@ -57,6 +57,10 @@ jobs:
         run: |
           xvfb-run -a -s '-screen 0 1600x1000x24' python3 tests/editor_gui_smoke.py build/OpenBMHEditor
           xvfb-run -a -s '-screen 0 1600x1000x24' build/OpenBMHEditor --demo --page players --settings build/test-options.json --screenshot build/editor.png --quit-after-ms 1800
+          xvfb-run -a -s '-screen 0 1600x1000x24' python3 tests/editor_startup_smoke.py build/OpenBMHEditor --launcher build/launcher_gui_smoke
+      - name: Windows Server native GUI and WARP fallback
+        if: runner.os == 'Windows'
+        run: python3 tests/editor_startup_smoke.py build/OpenBMHEditor.exe --launcher build/launcher_gui_smoke.exe
       - name: Package editor
         shell: bash
         run: |

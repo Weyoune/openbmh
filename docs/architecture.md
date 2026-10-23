@@ -57,8 +57,11 @@ of `OpenBMH`, keeping edition-specific process globals isolated. Portable mod co
 personal files have independent lifetimes. See [runtime-0.2](formats/obw/runtime-0.2.md).
 
 The launcher layout and theme live in `assets/launcher/launcher.rml` and `theme.rcss`.
-They share the same RmlUI core, FreeType font engine and upstream SDL2/OpenGL renderer
-on all desktop platforms. The C++ view translates events into the existing launcher
+They share the same RmlUI core, FreeType font engine and SDL2 platform layer.
+Windows uses the pinned upstream Direct3D 11 renderer with hardware-to-WARP
+fallback, while Linux/macOS keep the upstream OpenGL renderer. Both the editor
+and launcher share window/device lifetime, resizing and capture through
+`src/launch/rml_video.*`. The C++ view translates events into the existing launcher
 interface; it does not own conversion rules or mod storage. This presentation layer
 can be reused by future modern screens. Classic game screens retain their current UI.
 The operating system supplies the folder picker through nativefiledialog-extended.
