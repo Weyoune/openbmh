@@ -24,24 +24,28 @@ Der Katalog steht im Modern-Datensatz unter `rules.training_camps`. Fehlt er,
 gilt die öffentliche Vorgabe `assets/modern/rules/training_camps.json` mit den
 18 fiktiven Lagern der Oberfläche.
 
+Der Katalog erweitert die bestehende Regel `rule:training-camps` (Liste
+`resorts`); das genaue Format und die Aufgaben für den Editor stehen in
+[Datenformat F4](datenformat.md#f4--trainingslager). Ein Eintrag:
+
 ```json
 {
-  "id": "camp:04",
+  "id": "resort:4",
+  "base_price": 485000,
+  "quality": [4, 4, 4, 4],
   "region": "eu",
   "name": {"default": "Sportzentrum Groningen"},
   "place": {"default": "Groningen"},
   "country": "nation:nl",
   "position": {"lat_e6": 53219400, "lon_e6": 6566500},
-  "quality": {"pitch": 4, "fitness": 4, "catering": 4, "lodging": 4},
-  "base_price": 485000,
-  "image": "asset:camp/04/image"
+  "image": "asset:camp/4/image"
 }
 ```
 
+- `quality`: Platz, Fitness, Verpflegung, Unterkunft, je 0–6.
 - `region`: `de` (Deutschland), `eu` (übriges Europa), `me` (Naher Osten).
 - `position`: Breite und Länge in Millionstel Grad als Ganzzahlen, weil der JSON-Leser der Laufzeit keine Gleitkommazahlen kennt.
-- `quality`: je 0–6; die Reihenfolge in der UI ist Platz, Fitness, Verpflegung, Unterkunft.
-- Die numerischen IDs 0–17 der Oberfläche bleiben als `camp:00` bis `camp:17` erhalten und werden nicht neu sortiert.
+- Die IDs `resort:0` bis `resort:17` entsprechen den IDs 0–17 der Oberfläche und werden nicht neu sortiert.
 - Preis, Grenzen und Schwerpunkte bleiben wie in Classic.
 
 ## Die 6-Sterne-Stufe

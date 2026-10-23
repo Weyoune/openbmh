@@ -11,6 +11,7 @@ Grundlage ist der [Engine-Split](../ENGINE_SPLIT.md); die Oberfläche ist in
 | [Phasen](phasen.md) | Arbeitsschritte M0–M7 mit Abnahmekriterien |
 | [Befund](befund.md) | Feste Classic-Größen im Code, die Modern auflösen muss |
 | [Trainingslager](trainingslager.md) | Katalog, Preis, Wirkung und die neue 6-Sterne-Stufe |
+| [Datenformat](datenformat.md) | **Formatänderungen für Engine und Editor** (F1–F8) |
 | [Agentenregeln](AGENTS.md) | Arbeitsregeln für diesen Bereich |
 
 ## Ziel

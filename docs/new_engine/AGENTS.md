@@ -6,6 +6,7 @@
 - Die Modern-Engine lädt nur Modern-Datensätze (`runtime:modern-v1`); Classic lädt keine Modern-Datensätze.
 - UI-Code (RmlUi) liest Spielzustand nur über die Modern-Session und ihre Projektionen ([UI-Schnittstelle](ui-schnittstelle.md)), nie direkt aus `GameState`.
 - Regeländerungen gegenüber Classic werden in [DIFFERENCES](../DIFFERENCES.md) als Modern-Abweichung festgehalten.
+- Jede Änderung am OBW-Format (neue Felder, Wertebereiche, Prüfregeln) wird vor oder mit dem Code in [Datenformat](datenformat.md) eingetragen, mit einer Zeile „Editor“ für die nötige Editor-Anpassung.
 - Mit jeder Phase den Status in [README](README.md) und die Details in [Phasen](phasen.md) nachführen.
 - Private Datensätze, echte Namen, Wappen und Fotos gehören nicht in dieses Repository; Tests nutzen synthetische Welten.
 - Diese Notizen sind deutsch; Code, Kommentare und Commits englisch.

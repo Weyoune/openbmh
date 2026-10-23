@@ -8,8 +8,8 @@ und womit die UI bis dahin arbeitet.
 
 - Die Modern UI (RmlUi) spricht ausschließlich mit der **`ModernSession`** (`src/modern/app/modern_session.hpp`, ab M1) und deren Projektionen. Sie liest nie direkt `GameState` und rechnet keine Spielregeln nach (Preise, Grenzen, Tabellen).
 - Projektionen sind unveränderliche Momentaufnahmen mit einer **Revision**. Aktionen geben die neue Revision oder einen Fehlercode mit deutscher und englischer Meldung zurück; abgelehnte Aktionen ändern nichts.
-- Identitäten sind die stabilen OBW-IDs (`club:…`, `player:…`, `comp:…`, `camp:…`), nicht Laufzeitindizes.
-- Bilder werden über Asset-Schlüssel referenziert (`asset:club/<id>/crest`, `asset:player/<id>/photo`, `asset:comp/<id>/trophy`, `asset:camp/<id>/image`). Auflösung und Rückfallbilder (Silhouette, generisches Wappen) übernimmt die UI über das Asset-Verzeichnis des Datensatzes.
+- Identitäten sind die stabilen OBW-IDs (`club:…`, `player:…`, `comp:…`, `resort:…`), nicht Laufzeitindizes.
+- Bilder werden über Asset-Schlüssel referenziert (`asset:club/<id>/crest`, `asset:player/<id>/photo`, `asset:comp/<id>/trophy`, `asset:camp/<n>/image`). Auflösung und Rückfallbilder (Silhouette, generisches Wappen) übernimmt die UI über das Asset-Verzeichnis des Datensatzes.
 - Texte aus der Engine (Post, Meldungen) kommen als fertige UTF-8-Zeichenketten in der gewählten Sprache.
 
 ## Verzeichnisaufteilung
