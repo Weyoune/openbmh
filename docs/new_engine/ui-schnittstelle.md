@@ -9,7 +9,7 @@ und womit die UI bis dahin arbeitet.
 - Die Modern UI (RmlUi) spricht ausschließlich mit der **`ModernSession`** (`src/modern/app/modern_session.hpp`, ab M1) und deren Projektionen. Sie liest nie direkt `GameState` und rechnet keine Spielregeln nach (Preise, Grenzen, Tabellen).
 - Projektionen sind unveränderliche Momentaufnahmen mit einer **Revision**. Aktionen geben die neue Revision oder einen Fehlercode mit deutscher und englischer Meldung zurück; abgelehnte Aktionen ändern nichts.
 - Identitäten sind die stabilen OBW-IDs (`club:…`, `player:…`, `comp:…`, `resort:…`), nicht Laufzeitindizes.
-- Bilder werden über Asset-Schlüssel referenziert (`asset:club/<id>/crest`, `asset:player/<id>/photo`, `asset:comp/<id>/trophy`, `asset:camp/<n>/image`). Auflösung und Rückfallbilder (Silhouette, generisches Wappen) übernimmt die UI über das Asset-Verzeichnis des Datensatzes.
+- Weltbilder werden über Asset-Schlüssel referenziert (`asset:club/<id>/crest`, `asset:player/<id>/photo`, `asset:comp/<id>/trophy`). Auflösung und Rückfallbilder übernimmt die UI über das Asset-Verzeichnis des Datensatzes. Feste GUI-Motive, insbesondere Trainingslagerbilder und Karten, gehören zum eigenen GUI-Ressourcenbestand; sie müssen nicht im OBW-Paket liegen ([GUI-/Welt-Trennung](../new_ui/assets.md)).
 - Texte aus der Engine (Post, Meldungen) kommen als fertige UTF-8-Zeichenketten in der gewählten Sprache.
 
 ## Verzeichnisaufteilung
@@ -21,7 +21,7 @@ und womit die UI bis dahin arbeitet.
 | `src/modern/app/` | `ModernSession`, Projektionen, Aktionen | Engine |
 | `src/modern/ui/` | RmlUi-Fenster, Ansichten, Modell der Oberfläche | UI |
 
-Der bestehende POC (`modern::Model` mit `Snapshot`, Branch `assist/codex-0.2-modern-poc`) kann weitergeführt werden. Er hängt künftig an der `ModernSession` statt an der Classic-`CareerSession`. Wird der POC übernommen, wandert er nach `src/modern/ui/`.
+Der bestehende POC (`modern::Model` mit `Snapshot`, gesichert unter Tag `archive/modern-poc-0.2`) kann weitergeführt werden. Er hängt künftig an der `ModernSession` statt an der Classic-`CareerSession`. Wird der POC übernommen, wandert er nach `src/modern/ui/`.
 
 ## Projektionen und Aktionen
 
@@ -48,7 +48,7 @@ Dokument eine Zeile, sobald seine Projektion festgelegt ist.
 Projektion `TrainingCampView`:
 
 - `maps[]`: Karten mit ID, Name und – sobald festgelegt – Breite und Höhe; die UI zeigt je Karte einen Umschalter,
-- `camps[]`: ID, Karte (`map:de`, `map:eu`, `map:me`), X/Y-Lage auf der Karte (anfangs leer), Name, Ort, Land, vier Qualitätswerte (0–6), Basispreis, Bildschlüssel,
+- `camps[]`: ID, Karte (`map:de`, `map:eu`, `map:me`), X/Y-Lage auf der Karte (anfangs leer), Name, Ort, Land, vier Qualitätswerte (0–6), Basispreis, optionaler Bildschlüssel für ein ausdrücklich in der Welt geliefertes Bild,
 - `price`: Preis für den aktuellen Kader (Basispreis + 5000 × Spieler) je Lager,
 - `stays_this_season` (0–3), `booked_this_week`, `affordable` je Lager,
 - `focus`: Kondition, Technik, Spiel (0–15) und die abgeleitete Erholung.
@@ -57,6 +57,10 @@ Koordinatensystem und Maße der Karten legt die Oberfläche fest; die Werte werd
 über den Editor in den Datensatz eingetragen (siehe [Datenformat F4](datenformat.md#f4--trainingslager)).
 Bis dahin platziert die UI Lager ohne Koordinaten selbst, zum Beispiel nach dem
 bisherigen POC.
+
+Ohne datensatzspezifischen Bildschlüssel ordnet die GUI der Karten-/Lager-ID
+ihre eigenen Bildmotive zu. Die Session lädt keine GUI-Bilder und verlangt
+für Standardmotive keine Einträge im OBW-Asset-Index.
 
 Aktionen:
 

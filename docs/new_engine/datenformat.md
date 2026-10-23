@@ -66,8 +66,7 @@ Die bestehende Regel `rule:training-camps` (Typ `training_camps`) bleibt und wir
       "y": null,
       "name": {"default": "Sportzentrum Groningen"},
       "place": {"default": "Groningen"},
-      "country": "nation:nl",
-      "image": "asset:camp/4/image"
+      "country": "nation:nl"
     }
   ]
 }
@@ -76,10 +75,11 @@ Die bestehende Regel `rule:training-camps` (Typ `training_camps`) bleibt und wir
 - `id`, `base_price`, `quality` wie bisher; `quality` in der Reihenfolge Platz, Fitness, Verpflegung, Unterkunft, je **0–6** (Classic: 1–5).
 - **Karte und Lage:** Jedes Lager trägt immer `map` (Verweis auf `maps`) sowie `x` und `y` als ganzzahlige Koordinaten auf dieser Karte. Das Koordinatensystem einer Karte legt die Oberfläche fest; solange es nicht feststeht, sind `x` und `y` `null`. Sobald die GUI die Kartenmaße liefert, bekommt jede Karte zusätzlich `width` und `height` (Ursprung oben links), und `x`/`y` müssen innerhalb liegen.
 - Die Karten sind eine eigene Liste, damit später weitere hinzukommen können, etwa wenn ausländische Vereine spielbar werden und Lager aus deren Sicht dargestellt werden. Ein Lager gehört genau zu einer Karte.
-- Weitere Pflichtfelder für Modern: `name`, `place`, `country`, `image` (Asset-Schlüssel). Geografische Koordinaten werden nicht gespeichert.
+- Weitere Pflichtfelder für Modern: `name`, `place`, `country`. Geografische Koordinaten werden nicht gespeichert.
+- Standardkarten und Resortbilder sind GUI-Ressourcen und werden anhand von Karten-/Lager-ID zugeordnet; sie sind keine Pflichtinhalte der Welt. `image` ist optional und nur für ein ausdrücklich in der Welt geliefertes Bild vorgesehen. Wenn gesetzt, muss der Asset-Schlüssel im normalen OBW-Asset-Index auflösbar sein. Siehe [GUI-/Welt-Trennung](../new_ui/assets.md).
 - Die IDs `resort:0` bis `resort:17` entsprechen den IDs 0–17 der Oberfläche und werden nicht umsortiert.
 - Fehlt die Regel in einer Modern-Welt, gilt die öffentliche Vorgabe `assets/modern/rules/training_camps.json` mit den 18 fiktiven Lagern.
-- **Editor:** Kartenliste und Lager bearbeiten: Karte (Pflicht), `x`/`y` (leer erlaubt, solange die Karte keine Maße hat), vier Qualitätswerte (0–6), Preis, Ort, Land und Bild. Prüfung auf eindeutige IDs, gültige Karte und Nation, Qualitäten im Bereich und Koordinaten innerhalb der Kartenmaße, sobald diese gesetzt sind.
+- **Editor:** Kartenliste und Lager bearbeiten: Karte (Pflicht), `x`/`y` (leer erlaubt, solange die Karte keine Maße hat), vier Qualitätswerte (0–6), Preis, Ort, Land und optionales datensatzspezifisches Bild. Prüfung auf eindeutige IDs, gültige Karte und Nation, Qualitäten im Bereich, auflösbare explizite Bildreferenzen und Koordinaten innerhalb der Kartenmaße, sobald diese gesetzt sind. Ein fehlendes `image` ist kein Fehler; feste GUI-Motive müssen nicht in den Datensatz kopiert werden.
 
 ## F5 · Namen
 

@@ -532,6 +532,7 @@ Composed pictures may be cached in the user's cache directory; they are never wr
 ### 9.6 RmlUi themes (`.obt`)
 
 - A theme contains `.rml` documents, `.rcss` style sheets, fonts, icons and its `locale/` texts, plus a manifest naming the client version it targets.
+- Fixed interface artwork, including training-camp illustrations, maps, menu scenes and desktop motifs, belongs to the GUI resources or theme, not to the world. World assets include club crests, player photos and competition trophies. The stock Modern UI must not require its own pictures in the world's asset index; see the [GUI/world boundary](../new_ui/assets.md). Old interface images can be removed from Modern worlds through a separate validated migration once their remaining dependencies are gone. Classic content and its seals retain their existing requirements.
 - Interfaces bind to a **view model**, not to the world files. The client exposes data models (RmlUi data bindings) built from the application/protocol layer (`docs/protocol.md`), with ids and asset keys as values. RmlUi loads images through a file interface that resolves `asset:` keys (§9.2).
 - Neither worlds nor packs contain layout, so a theme works with every world, and the classic 320×200 interface keeps working next to it.
 

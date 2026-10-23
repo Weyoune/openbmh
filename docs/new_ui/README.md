@@ -7,6 +7,8 @@ Implementierung in der Spiel-Engine.
 
 | Bereich | Dokument |
 |---|---|
+| Umsetzung | [Abgestimmter Umfang der nativen UI bis zum Anstoß](PLAN.md) |
+| Ressourcen | [GUI-Assets, Weltbilder und spätere Paketbereinigung](assets.md) |
 | Desktop | [Statusleiste, Gestaltung und Fenster](desktop/README.md) |
 | Trainingslager | [Alle 18 Angebote, Qualitätswerte und Bedienung](desktop/trainingcamp/README.md) |
 | Transfers | [Ablöse-Kasten und Positionsfilter](desktop/transfers/README.md) |

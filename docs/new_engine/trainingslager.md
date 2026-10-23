@@ -38,8 +38,7 @@ Der Katalog erweitert die bestehende Regel `rule:training-camps` (Liste
   "y": null,
   "name": {"default": "Sportzentrum Groningen"},
   "place": {"default": "Groningen"},
-  "country": "nation:nl",
-  "image": "asset:camp/4/image"
+  "country": "nation:nl"
 }
 ```
 
@@ -47,6 +46,7 @@ Der Katalog erweitert die bestehende Regel `rule:training-camps` (Liste
 - `map`: immer gesetzt, `map:de` (Deutschland), `map:eu` (Europa) oder `map:me` (Naher Osten); weitere Karten können später hinzukommen.
 - `x`, `y`: Lage auf der Karte in deren Koordinatensystem; bis die Oberfläche die Kartenmaße festlegt `null`.
 - Die IDs `resort:0` bis `resort:17` entsprechen den IDs 0–17 der Oberfläche und werden nicht neu sortiert.
+- Standardkarten und Resortbilder liefert die GUI anhand dieser IDs; sie sind keine Pflichtdateien im OBW-Paket. Das optionale Feld `image` ist nur für ein ausdrücklich im Datensatz geliefertes Bild vorgesehen ([GUI-/Welt-Trennung](../new_ui/assets.md)).
 - Preis, Grenzen und Schwerpunkte bleiben wie in Classic.
 
 ## Die 6-Sterne-Stufe

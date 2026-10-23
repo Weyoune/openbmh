@@ -72,15 +72,21 @@ Migration gespeicherter POC-Ansichten nicht versehentlich neu sortiert werden.
 
 ## Grundlage für die Engine-Anbindung
 
-Die UI benötigt eine stabile Lager-ID, Region, geografische Position, Name,
-Ort und Land, vier Qualitätswerte, Preis und Bildreferenz. Auswahl und
+Die UI benötigt eine stabile Lager-ID, Karte und X/Y-Lage, Name,
+Ort und Land, vier Qualitätswerte und Preis. Auswahl und
 Vormerkung sind getrennte Zustände; die drei einstellbaren Schwerpunkte
 werden separat gespeichert.
 
-Vor einer wirksamen Buchung sind Preisbasis, Dauer, verfügbare Termine,
-Stornierung und Trainingswirkung festzulegen. Der POC spezifiziert diese
-Spielregeln nicht. Insbesondere darf aus dem angezeigten Preis kein Preis
-pro Spieler oder pro Woche abgeleitet werden.
+Karten und feste Lagermotive gehören zum GUI-Ressourcenbestand und werden über
+die Karten- beziehungsweise Lager-ID zugeordnet. Sie müssen nicht im OBW-Paket
+liegen. Ein optionales datensatzspezifisches Bild kann die Welt ausdrücklich
+über ihren Asset-Index liefern. Siehe [GUI-/Welt-Trennung](../../assets.md).
+
+Der POC spezifiziert keine Spielregeln für eine wirksame Buchung. Der inzwischen
+abgestimmte [Engine-Plan](../../../new_engine/trainingslager.md) legt einen Preis
+pro Aufenthalt, Grenzen und Wirkung fest. Die UI übernimmt später Preisangebote
+und Ergebnisse aus der Session; aus den hier angezeigten Demo-Preisen wird keine
+eigene Preis- oder Trainingsberechnung abgeleitet.
 
 ## Quellen und Nachführung
 
