@@ -9,6 +9,7 @@ Implementierung in der Spiel-Engine.
 |---|---|
 | Desktop | [Statusleiste, Gestaltung und Fenster](desktop/README.md) |
 | Trainingslager | [Alle 18 Angebote, Qualitätswerte und Bedienung](desktop/trainingcamp/README.md) |
+| Transfers | [Abstand der Positionsfilter](desktop/transfers/README.md) |
 
 Jeder Bereich nennt die geprüfte Quelle, bestehende Funktionen und offene
 Entscheidungen für die Engine-Anbindung. Die Architekturgrundlage bleibt der
