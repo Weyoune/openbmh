@@ -49,9 +49,9 @@ jobs:
           if [[ "$RUNNER_OS" == "macOS" ]]; then args+=(-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0); fi
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENBMH_BUILD_EDITOR=ON -DBMH_DATA= "${args[@]}"
       - name: Build editor and synthetic tests
-        run: cmake --build build --target openbmh_editor editor_core_tests --parallel 2
+        run: cmake --build build --target openbmh_editor editor_core_tests editor_comparison_tests --parallel 2
       - name: Native editor core and MCP tests
-        run: ctest --test-dir build -C Release -R "^editor_(core_tests|version)$" --output-on-failure --output-junit editor-tests.xml
+        run: ctest --test-dir build -C Release -R "^editor_(core_tests|comparison_tests|version)$" --output-on-failure --output-junit editor-tests.xml
       - name: Linux native GUI smoke
         if: runner.os == 'Linux'
         run: |

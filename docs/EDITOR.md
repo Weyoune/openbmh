@@ -1,10 +1,10 @@
-# OpenBMH Editor 0.5.0
+# OpenBMH Editor 0.5.1
 
-Der eigenständige, native Editor verwendet **RmlUI, SDL2 und OpenGL**. Er bearbeitet Startdatenbanken, keine laufenden Spielstände. Das Spiel und seine Classic-Prüfung bleiben unverändert. Editor 0.5.0 hat eine eigene Versionsreihe und den Release-Tag `editor-v0.5.0`; die Spielversion ist 0.2.0.
+Der eigenständige, native Editor verwendet **RmlUI, SDL2 und OpenGL**. Er bearbeitet Startdatenbanken, keine laufenden Spielstände. Das Spiel und seine Classic-Prüfung bleiben unverändert. Editor 0.5.1 hat eine eigene Versionsreihe und den Release-Tag `editor-v0.5.1`; die Spielversion ist 0.2.0.
 
 ## Starten und Daten öffnen
 
-Das vollständige Paket `OpenBMHEditor-0.5.0-<plattform>.zip` entpacken und `OpenBMHEditor.exe` (Windows) beziehungsweise `OpenBMHEditor` (Linux/macOS) starten. `assets/editor` muss beim Programm bleiben. Auf macOS kann die unsignierte Anwendung über **Rechtsklick → Öffnen** gestartet werden. Eine Signatur/Notarisierung ist nicht Bestandteil dieser Version. `OpenBMHEditor --version` zeigt die Editorversion ohne Grafikstart.
+Das vollständige Paket `OpenBMHEditor-0.5.1-<plattform>.zip` entpacken und `OpenBMHEditor.exe` (Windows) beziehungsweise `OpenBMHEditor` (Linux/macOS) starten. `assets/editor` muss beim Programm bleiben. Auf macOS kann die unsignierte Anwendung über **Rechtsklick → Öffnen** gestartet werden. Eine Signatur/Notarisierung ist nicht Bestandteil dieser Version. `OpenBMHEditor --version` zeigt die Editorversion ohne Grafikstart.
 
 **Öffnen** bietet OBW-Dateien und entpackte Welten an. **BMH / FLTD importieren** liest einen Ordner mit einer unterstützten BMH- oder Football-Limited-Installation durch den bestehenden Konverter. Das Original wird nicht überschrieben. Eine bestehende Classic-OBW wird zunächst überprüft und dann in eine bearbeitbare Editorwelt übernommen.
 
@@ -25,6 +25,28 @@ Das vollständige Paket `OpenBMHEditor-0.5.0-<plattform>.zip` entpacken und `Ope
 
 Shortcuts: Ctrl/Cmd+O, Ctrl/Cmd+S, Shift+Ctrl/Cmd+S, Ctrl/Cmd+Z und Shift+Ctrl/Cmd+Z. In Textfeldern gilt die lokale Text-Rückgängig-Funktion.
 
+## Stärken und Gehälter vergleichen
+
+**Wertevergleich** in der Seitenleiste (oder die gleichnamige Schaltfläche bei Spielern, Vereinen und Wettbewerben) öffnet eine Übersicht mit drei Ansichten: **Spieler**, **Mannschaften**, **Ligen**. Spieler zeigen ihre einzelnen Spielwerte und das Gehalt je Saison; Mannschaften und Ligen zeigen Durchschnittswerte, Spielergehaltssummen, das Durchschnittsgehalt und die Anzahl bekannter Gehälter. Ein Klick auf eine Zeile öffnet ihren Datensatz zur Bearbeitung.
+
+- Auf einen Spaltenkopf klicken, um auf- oder absteigend zu sortieren. Sortiert wird der gesamte gefilterte Bestand vor der Aufteilung auf Seiten mit bis zu 200 Zeilen. Suche sowie Land-, Liga- und Vereinsfilter grenzen die Ansicht ein. Fehlende Zahlen stehen in beiden Sortierrichtungen hinten.
+- **Spalten auswählen** blendet beliebige vorhandene Spielwerte ein. Bei vielen Spalten horizontal scrollen; Tabellenkopf und Werte bewegen sich gemeinsam. Die Wertebereiche stehen im Spaltenkopf, Gruppenwerte sind spielergewichtete Durchschnitte über bekannte Werte. Der gesamte Kader einschließlich Reserve zählt; reine Quellenduplikate mit `x-simulation.squad_role: source-only-duplicate` werden ausgeschlossen und ihre Anzahl angezeigt.
+- Verschiedene Attributsysteme bleiben getrennt. Bei einem einzigen System werden dessen Spielwerte automatisch angezeigt. Bei mehreren ein **Attributsystem** wählen, um dessen Spieler und die daraus gebildeten Mannschafts-/Ligawerte zu vergleichen. Das FC-Attribut `strength` heißt in einem System mit `overall` **Körperkraft**; es wird nicht als Classic-Gesamtstärke interpretiert. Es wird keine neue Stärkeskala berechnet.
+- **Gehälter gelten je Saison**, in der Währung und kleinsten Einheit aus dem OBW-Manifest. Berücksichtigt werden zum Saisonstart gültige Verträge des Spielers mit seiner aktuellen Mannschaft. Personalverträge, abgelaufene und zukünftige Verträge zählen nicht. Mehrere gleichzeitig gültige Verträge derselben Zuordnung sind unklar und werden nicht addiert. Ohne Vertragsangabe steht **—**, ein ausdrücklich gespeichertes Nullgehalt bleibt **0**.
+- Unvollständige Gehaltssummen und Durchschnitte tragen ein **\***. Sie berücksichtigen nur bekannte Spielergehälter; die Spalte **Gehälter bekannt** zeigt die Abdeckung. Auch Spielwertdurchschnitte verwenden nur bekannte Werte (Anzahl per Tooltip). Classic-Grunddaten liefern häufig keine konkreten Verträge: Der Editor erfindet diese Gehälter nicht.
+
+[Native Vorher-/Nachher-Bilder](qa/editor-comparison/README.md) dokumentieren die Ansichten und Spaltenauswahl.
+
+Die Übersicht verändert weder Daten noch Undo-Historie. Änderungen und Rückgängig aktualisieren ihre Werte automatisch. Alle drei Themes und beide Sprachen werden unterstützt.
+
+Über MCP liefert **`editor_compare`** dieselbe schreibgeschützte Übersicht. Beispielargumente:
+
+```json
+{"table":"players","sort":"attributes.overall","descending":true,"limit":200}
+```
+
+`table` ist `players`, `clubs` oder `leagues`. Weitere Sortierschlüssel sind `name`, `salary` (Spieler), `salary_total`, `salary_average`, `salary_known`, `player_count`, `club_count` sowie `attributes.<feld>`. `attribute_set` grenzt das System ein, `search`, `nation`, `competition`, `team` filtern, `offset`/`limit` blättern. Die Antwort enthält Originalskalen, Stichtag, Währung und Abdeckung. Gehälter bleiben Integer in kleinster Währungseinheit; das Durchschnittsgehalt wird auf diese Einheit gerundet. Das entsprechende Session-Kommando für Command-Scripts heißt `compare`.
+
 ## Optionen und MCP
 
 **Optionen** bietet Deutsch/Englisch, Midnight Glass/Silver Glass/Matchday und den integrierten MCP-Server. Die Sprache ändert die Oberfläche; Namen und Quelldaten werden nicht übersetzt. Einstellungen werden im Benutzerprofil gespeichert.
@@ -41,7 +63,7 @@ Der MCP-Server ist standardmäßig aktiviert und bindet ausschließlich `127.0.0
 
 Implementiert ist [MCP Streamable HTTP 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), mit Aushandlung von 2025-06-18; JSON-Antworten, ohne optionale SSE-Sitzungen. Neuere MCP-Versionen werden nicht als unterstützt beworben. Der Server prüft Token, Host und gegebenenfalls Origin. Oberfläche und Agent bearbeiten dieselbe Welt, verwenden dieselbe Validierung und dieselbe Undo-Historie. Für konkurrierende Änderungen `expected_revision` aus `editor_info`/`editor_get` mitsenden.
 
-Werkzeuge: `editor_info`, `editor_open`, `editor_new`, `editor_list`, `editor_get`, `editor_apply`, `editor_rules`, `editor_validate`, `editor_history`, `editor_save`, `editor_undo`, `editor_redo`, `editor_roster_move`, `editor_roster_swap`, `editor_roster_order`, `editor_review_resolve`, `editor_image_import`, `editor_image_edit`, `editor_image_preview`, `editor_image_export`. Die eingeblendeten Tools enthalten Parameterschemata und Beschreibungen. Öffnen einer anderen Welt verwirft ungespeicherte Änderungen nur mit `discard: true`.
+Werkzeuge: `editor_info`, `editor_open`, `editor_new`, `editor_list`, `editor_compare`, `editor_get`, `editor_apply`, `editor_rules`, `editor_validate`, `editor_history`, `editor_save`, `editor_undo`, `editor_redo`, `editor_roster_move`, `editor_roster_swap`, `editor_roster_order`, `editor_review_resolve`, `editor_image_import`, `editor_image_edit`, `editor_image_preview`, `editor_image_export`. Die eingeblendeten Tools enthalten Parameterschemata und Beschreibungen. Öffnen einer anderen Welt verwirft ungespeicherte Änderungen nur mit `discard: true`.
 
 ## Kompilieren
 
@@ -49,8 +71,8 @@ Voraussetzungen entsprechen dem Hauptprojekt: C++20-Compiler, Git, CMake ≥ 3.2
 
 ```sh
 cmake -S . -B build-editor -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENBMH_BUILD_EDITOR=ON
-cmake --build build-editor --target openbmh_editor editor_core_tests --parallel 2
-ctest --test-dir build-editor -C Release -R '^editor_(core_tests|version)$' --output-on-failure
+cmake --build build-editor --target openbmh_editor editor_core_tests editor_comparison_tests --parallel 2
+ctest --test-dir build-editor -C Release -R '^editor_(core_tests|comparison_tests|version)$' --output-on-failure
 ```
 
 macOS ARM zusätzlich bei der Konfiguration: `-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0`. Unter Windows das Argument nach `-R` ohne einfache Shell-Anführungszeichen verwenden. Der Editor wird beim normalen Spiel-Build standardmäßig nicht mitgebaut.
@@ -71,8 +93,10 @@ Pakete baut `tools/package/make_editor_package.py --build build-editor --out dis
 
 Extract the complete package and run **OpenBMHEditor**. Open an OBW archive or an unpacked world, import a supported BMH/Football Limited installation, or open the synthetic demo. Use the sidebar, searchable/filterable list and property inspector; **Apply** records one shared, undoable transaction. **Save** writes only an **OBW 1.1 editor world**, not a playable Classic mod or a legacy installation.
 
+Use **Comparison** to inspect sortable player, team and league ratings and per-season salaries. Select attribute columns and filter by country, league, club or attribute system. Group ratings are player-weighted means; salary totals and means use known player contracts only and explicitly flag incomplete coverage. Missing values remain unknown. The read-only MCP tool `editor_compare` returns the same data.
+
 The editor retains full squads, original image data, source claims and unknown extensions. Its 24-player view does not remove players. Image import offers normalized crop, arbitrary rotation and mirroring; re-editing uses the preserved source. Classic portraits keep their frozen appearance recipe. Unsupported editing areas are preserved rather than replaced.
 
 In **Options**, switch the interface to **English**, choose one of the three themes, and enable/disable the integrated local MCP server. **Copy connection** provides the authenticated configuration. The server defaults to loopback port 8765; use port 0 for a free port. GUI and MCP share the same world, validation and undo history. It supports MCP Streamable HTTP 2025-11-25/2025-06-18 and optional stdio mode. Use `expected_revision` for concurrent edits.
 
-Build with the three commands above, including `-DOPENBMH_BUILD_EDITOR=ON`. The native application requires OpenGL 3.3 (macOS 4.1) and the platform development dependencies documented in the main README. Editor 0.5.0 is unsigned and does not bundle any real-world dataset or proprietary game assets.
+Build with the three commands above, including `-DOPENBMH_BUILD_EDITOR=ON`. The native application requires OpenGL 3.3 (macOS 4.1) and the platform development dependencies documented in the main README. Editor 0.5.1 is unsigned and does not bundle any real-world dataset or proprietary game assets.

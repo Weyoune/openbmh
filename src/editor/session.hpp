@@ -34,6 +34,9 @@ class Session {
     fs::path saved_path_;
     fs::file_time_type saved_time_{};
     uint64_t saved_size_ = 0;
+    Json comparison_cache_;
+    std::string comparison_key_;
+    std::optional<uint64_t> comparison_revision_;
     World &world();
     bool dirty() const;
     Json info() const;

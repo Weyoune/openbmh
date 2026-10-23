@@ -142,7 +142,7 @@ button.quiet:hover { background-color: var(--hover); }
 aside { width: 220dp; flex-shrink: 0; padding: 28dp 14dp 18dp; display: flex; flex-direction: column; background-color: var(--sidebar); border-right: 1dp var(--divider); }
 .eyebrow { font-size: 11dp; font-weight: bold; letter-spacing: 1.5dp; color: var(--muted); text-transform: uppercase; }
 #nav-label { padding: 0 14dp 18dp; }
-#navigation { display: flex; flex-direction: column; gap: 5dp; }
+#navigation { display: flex; flex-direction: column; gap: 5dp; min-height: 0; overflow-y: auto; }
 .nav { width: 100%; display: flex; align-items: center; padding: 11dp 13dp; text-align: left; border-color: transparent; background-color: transparent; decorator: none; font-size: 15dp; }
 .nav .glyph { width: 20dp; height: 20dp; margin-right: 16dp; flex-shrink: 0; }
 .nav.selected { background-color: var(--selected); color: var(--accent); border-color: var(--accent-border); }
@@ -178,6 +178,29 @@ select option:hover, select option:checked { background-color: var(--selected); 
 .table-header button:hover { color: var(--text); }
 .table-header button:first-child { flex: 2; }
 .table-scroll { flex: 1; overflow-y: auto; }
+.comparison-layout { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.comparison-bar { display: flex; align-items: center; gap: 12dp; margin-bottom: 14dp; flex-shrink: 0; }
+.comparison-bar label, .comparison-bar span { color: var(--muted); font-size: 12dp; }
+.comparison-bar span { margin-left: auto; }
+#comparison-set { width: 310dp; }
+.comparison-panel { min-height: 0; }
+.comparison-x { flex: 1; min-height: 0; overflow-x: auto; overflow-y: hidden; display: flex; }
+.comparison-table { flex-shrink: 0; display: flex; flex-direction: column; min-height: 0; }
+.comparison-head { display: flex; flex-shrink: 0; align-items: stretch; background-color: var(--wash); border-bottom: 1dp var(--border); padding-right: 20dp; }
+.comparison-head button { border: 0; border-radius: 0; decorator: none; background-color: transparent; color: var(--muted); font-size: 13dp; padding: 12dp 10dp; white-space: normal; }
+.comparison-head button:disabled { opacity: 1; cursor: default; }
+.comparison-head small { font-size: 11dp; }
+.comparison-direction { width: 7dp; height: 7dp; border-bottom: 1.5dp var(--accent); border-right: 1.5dp var(--accent); transform: rotate(45deg); margin-left: 8dp; margin-bottom: 3dp; }
+.comparison-direction.ascending { transform: rotate(225deg); margin-bottom: 0; }
+.comparison-body { flex: 1; min-height: 0; overflow-y: auto; }
+.comparison-row { display: flex; align-items: center; border: 0; border-bottom: 1dp var(--divider); border-radius: 0; decorator: none; background-color: transparent; padding: 0; min-height: 47dp; text-align: left; }
+.comparison-cell { flex-shrink: 0; padding: 14dp 10dp; text-align: right; font-size: 14dp; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.comparison-cell.text { text-align: left; }
+.comparison-name-text { display: block; overflow: hidden; text-overflow: ellipsis; }
+.comparison-note { flex-shrink: 0; margin-top: 12dp; font-size: 12dp; line-height: 1.6; color: var(--muted); }
+.comparison-choices { display: flex; flex-wrap: wrap; max-height: 430dp; overflow-y: auto; margin-top: 16dp; gap: 6dp; }
+.comparison-choices label { width: 31%; display: flex; align-items: center; padding: 10dp 4dp; font-size: 14dp; }
+.comparison-choices input { flex-shrink: 0; margin-right: 10dp; border-radius: 4dp; }
 .record { display: flex; align-items: center; width: 100%; min-height: 49dp; padding: 9dp 16dp; border: 0; border-bottom: 1dp var(--divider); border-radius: 0; background-color: transparent; decorator: none; text-align: left; }
 .record:hover { background-color: var(--hover); }
 .record.selected { background-color: var(--selected); border-left: 3dp var(--accent); padding-left: 13dp; }
@@ -240,5 +263,10 @@ scrollbarvertical slidertrack { background-color: transparent; }
 scrollbarvertical sliderbar { background-color: var(--scrollbar); border-radius: 4dp; min-height: 30dp; }
 scrollbarvertical sliderbar:hover { background-color: var(--scrollbar-hover); }
 scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { height: 0; }
+scrollbarhorizontal { height: 10dp; margin: 3dp; }
+scrollbarhorizontal slidertrack { background-color: transparent; }
+scrollbarhorizontal sliderbar { background-color: var(--scrollbar); border-radius: 4dp; min-width: 40dp; }
+scrollbarhorizontal sliderbar:hover { background-color: var(--scrollbar-hover); }
+scrollbarhorizontal sliderarrowdec, scrollbarhorizontal sliderarrowinc { width: 0; }
 button:focus, input:focus, select:focus, textarea:focus { border-color: var(--focus); }
 .nav:focus { border-color: var(--focus); }

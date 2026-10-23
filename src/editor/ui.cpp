@@ -14,6 +14,7 @@
 #include <deque>
 #include <functional>
 #include <future>
+#include <iomanip>
 #include <nfd.hpp>
 #include <sstream>
 
@@ -142,6 +143,10 @@ class EditorUi final : public Rml::EventListener {
     std::map<std::string, Json> lookup_;
     std::string page_ = "overview", selected_id_, search_, nation_, league_, team_, sort_ = "name", remembered_;
     bool descending_ = false;
+    std::string comparison_table_ = "players", comparison_set_, comparison_sort_ = "name";
+    bool comparison_descending_ = false;
+    Json comparison_;
+    std::map<std::string, std::vector<std::string>> comparison_columns_;
     int offset_ = 0;
     size_t total_ = 0;
     struct Field {
@@ -206,6 +211,7 @@ class EditorUi final : public Rml::EventListener {
             {"clubs", "M4 3h16v10c0 5-8 9-8 9S4 18 4 13zM8 8h8M8 12h8"},
             {"players", "M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0M4 22v-3c0-8 16-8 16 0v3"},
             {"roster", "M3 3h18v18H3zM9 3v18M3 9h18M3 15h18"},
+            {"comparison", "M4 20h17M7 17v-5M12 17V7M17 17V3"},
             {"stadiums", "M3 8c0-7 18-7 18 0v8c0 7-18 7-18 0zM3 8c0 7 18 7 18 0M8 "
                          "13v7M16 13v7"},
             {"staff", "M5 22V3h13l-4 5 4 5H5"},
@@ -259,7 +265,7 @@ class EditorUi final : public Rml::EventListener {
                 lookup_[str(row, "id")] = row;
     }
     std::string choices(const std::string &name, const std::string &chosen, const std::string &empty = "",
-                        const std::string &nation = "") const {
+                        const std::string &nation = "", const std::string &competition = "") const {
         std::string result =
             "<option value=\"\"" + std::string(chosen.empty() ? " selected" : "") + ">" + escaped(empty) + "</option>";
         std::vector<std::pair<std::string, std::string>> values;
@@ -270,6 +276,9 @@ class EditorUi final : public Rml::EventListener {
                            : name == "clubs"        ? id.starts_with("club:") || id.starts_with("team:")
                                                     : id.starts_with("stadium:");
             if (!matches || (!nation.empty() && str(row, "nation") != nation && id != chosen))
+                continue;
+            if (name == "clubs" && !competition.empty() && str(row, "competition") != competition &&
+                id != chosen)
                 continue;
             values.emplace_back(id, title(row));
         }
@@ -394,14 +403,14 @@ class EditorUi final : public Rml::EventListener {
                                 button("save", t("save"), "primary", info_.value("loaded", false) ? "" : "disabled") +
                                 button("options", t("options"), "quiet"));
         std::string nav;
-        for (const std::string name : {"overview", "nations", "competitions", "clubs", "players", "roster", "stadiums",
-                                       "staff", "assets", "review", "changes"})
+        for (const std::string name : {"overview", "nations", "competitions", "clubs", "players", "roster",
+                                       "comparison", "stadiums", "staff", "assets", "review", "changes"})
             nav += "<button class=\"nav " + std::string(name == page_ ? "selected" : "") +
                    "\" data-action=\"navigate\" data-value=\"" + name + "\">" + icon(name) + "<span>" +
                    escaped(t(name)) + "</span></button>";
         html("navigation", nav);
         label("page-kicker", "OpenBMH / " + t(page_));
-        label("page-title", t(page_));
+        label("page-title", t(page_ == "comparison" ? "comparison_title" : page_));
         label("page-subtitle", page_ == "roster"   ? t("roster_hint")
                                : page_ == "review" ? t("review_hint")
                                                    : t("subtitle_" + page_));
@@ -590,6 +599,10 @@ class EditorUi final : public Rml::EventListener {
         html("page-actions", page_ == "review"
                                  ? button("validate", t("validate"))
                                  : button("duplicate", t("duplicate")) + button("add", t("add"), "primary"));
+        if (table() == "players" || table() == "clubs" || table() == "competitions")
+            html("page-actions", button("compare-open", t("comparison")) +
+                                     button("duplicate", t("duplicate")) +
+                                     button("add", t("add"), "primary"));
         std::string toolbar = "<input id=\"search\" type=\"text\" value=\"" + escaped(search_) + "\" placeholder=\"" +
                               escaped(t("search")) + "\"/>";
         if (table() == "clubs" || table() == "players" || table() == "competitions")
@@ -679,6 +692,302 @@ class EditorUi final : public Rml::EventListener {
                  button("next", t("next"), "quiet", size_t(offset_) + listed_.size() < total_ ? "" : "disabled") +
                  "</div>");
     }
+    std::string comparison_number(const Json &value, bool salary = false) const {
+        if (!value.is_number())
+            return "—";
+        std::string result;
+        if (salary) {
+            const auto currency = comparison_.value("currency", Json());
+            if (!currency.is_object() || str(currency, "code").empty() ||
+                !currency.value("minor_units", Json()).is_number_integer())
+                return t("unknown");
+            const auto decimals = currency["minor_units"].get<int>();
+            if (decimals < 0 || decimals > 9)
+                return t("unknown");
+            auto digits = std::to_string(value.get<int64_t>());
+            while (digits.size() <= size_t(decimals))
+                digits.insert(digits.begin(), '0');
+            const auto fraction = decimals ? digits.substr(digits.size() - decimals) : "";
+            digits.resize(digits.size() - decimals);
+            for (int i = int(digits.size()) - 3; i > 0; i -= 3)
+                digits.insert(size_t(i), options_.language == "de" ? "." : ",");
+            result = digits + (decimals ? (options_.language == "de" ? "," : ".") + fraction : "");
+        } else if (value.is_number_integer())
+            result = value.dump();
+        else {
+            std::ostringstream stream;
+            stream.imbue(std::locale::classic());
+            stream << std::fixed << std::setprecision(1) << value.get<double>();
+            result = stream.str();
+            if (options_.language == "de")
+                std::replace(result.begin(), result.end(), '.', ',');
+        }
+        return result;
+    }
+    std::string comparison_attribute(const std::string &key) const {
+        // In FC-derived systems strength means physical power, not overall.
+        if (key == "strength")
+            for (const auto &field : comparison_["attributes"])
+                if (str(field, "key") == "overall")
+                    return t("physical_strength");
+        return t(key);
+    }
+    std::vector<std::string> &comparison_columns() {
+        auto key = str(comparison_, "attribute_set");
+        if (!comparison_columns_.contains(key)) {
+            auto &columns = comparison_columns_[key];
+            for (const std::string preferred :
+                 {"overall", "potential", "strength", "technique", "form", "condition", "bonus"}) {
+                for (const auto &field : comparison_["attributes"])
+                    if (str(field, "key") == preferred && columns.size() < 5)
+                        columns.push_back(preferred);
+            }
+            if (columns.empty())
+                for (const auto &field : comparison_["attributes"])
+                    if (columns.size() < 5)
+                        columns.push_back(str(field, "key"));
+        }
+        return comparison_columns_.at(key);
+    }
+    void comparison_choose_columns() {
+        std::string body = "<p>" + escaped(t("comparison_columns_hint")) + "</p><div class=\"button-row\">" +
+                           button("compare-all-columns", t("all_columns")) +
+                           button("compare-no-columns", t("no_columns")) +
+                           "</div><div class=\"comparison-choices\">";
+        const auto &chosen = comparison_columns();
+        size_t index = 0;
+        for (const auto &field : comparison_["attributes"]) {
+            const auto key = str(field, "key");
+            const bool checked = std::find(chosen.begin(), chosen.end(), key) != chosen.end();
+            const auto id = "comparison-column-" + std::to_string(index++);
+            body += "<label for=\"" + id + "\"><input type=\"checkbox\" id=\"" + id + "\"" +
+                    (checked ? " checked" : "") + "/><span>" + escaped(comparison_attribute(key)) + "</span></label>";
+        }
+        modal(
+            t("comparison_columns"), body + "</div>", t("apply"),
+            [this] {
+                auto &chosen = comparison_columns();
+                chosen.clear();
+                size_t index = 0;
+                for (const auto &field : comparison_["attributes"]) {
+                    if (el("comparison-column-" + std::to_string(index++))->HasAttribute("checked"))
+                        chosen.push_back(str(field, "key"));
+                }
+                close_modal();
+                needs_refresh_ = true;
+            },
+            true, true);
+    }
+    void comparison() {
+        if (!info_.value("loaded", false)) {
+            overview();
+            return;
+        }
+        Json args{{"table", comparison_table_},
+                  {"language", options_.language},
+                  {"attribute_set", comparison_set_},
+                  {"search", search_},
+                  {"nation", nation_},
+                  {"competition", league_},
+                  {"team", team_},
+                  {"sort", comparison_sort_},
+                  {"descending", comparison_descending_},
+                  {"offset", offset_},
+                  {"limit", 200}};
+        try {
+            comparison_ = session_.execute("compare", args);
+        } catch (const Error &error) {
+            if (error.code != "invalid_attribute_set" && error.code != "invalid_comparison_sort")
+                throw;
+            // A world replaced through MCP can have different attribute sets.
+            comparison_set_.clear();
+            comparison_sort_ = "name";
+            args["attribute_set"] = "";
+            args["sort"] = "name";
+            comparison_ = session_.execute("compare", args);
+        }
+        listed_ = comparison_["items"];
+        total_ = comparison_["total"].get<size_t>();
+        if (listed_.empty() && offset_ > 0) {
+            offset_ = total_ ? int((total_ - 1) / 200 * 200) : 0;
+            args["offset"] = offset_;
+            comparison_ = session_.execute("compare", args);
+            listed_ = comparison_["items"];
+        }
+        const bool players = comparison_table_ == "players", leagues = comparison_table_ == "leagues";
+        std::string tabs;
+        for (const std::string scope : {"players", "clubs", "leagues"})
+            tabs += button("compare-scope", t(scope == "clubs" ? "teams" : scope),
+                           scope == comparison_table_ ? "primary" : "", "data-value=\"" + scope + "\"");
+        html("page-actions", tabs);
+        std::string toolbar = "<input id=\"search\" type=\"text\" value=\"" + escaped(search_) +
+                              "\" placeholder=\"" + escaped(t("search")) +
+                              "\"/><select id=\"filter-nation\">" +
+                              choices("nations", nation_, t("all_nations")) + "</select>";
+        if (!leagues)
+            toolbar += "<select id=\"filter-league\">" +
+                       choices("competitions", league_, t("all_leagues"), nation_) + "</select>";
+        if (players)
+            toolbar += "<select id=\"filter-team\">" +
+                       choices("clubs", team_, t("all_clubs"), nation_, league_) + "</select>";
+        html("toolbar", toolbar);
+        const auto automatic_profile =
+            comparison_["attribute_sets"].size() == 1
+                ? str(comparison_, "attribute_set") + " · " + t("comparison_all_players")
+                : t("comparison_all_sets");
+        std::string profiles = "<option value=\"\"" +
+                               std::string(comparison_set_.empty() ? " selected" : "") + ">" +
+                               escaped(automatic_profile) + "</option>";
+        for (const auto &profile : comparison_["attribute_sets"]) {
+            const auto id = str(profile, "id");
+            if (!id.empty())
+                profiles += "<option value=\"" + escaped(id) + "\"" +
+                            (id == comparison_set_ ? " selected" : "") + ">" + escaped(id) + " · " +
+                            profile["players"].dump() + "</option>";
+        }
+        std::string body =
+            "<div class=\"comparison-layout\"><div class=\"comparison-bar\"><label>" +
+            escaped(t("attribute_set")) + "</label><select id=\"comparison-set\">" + profiles + "</select>" +
+            button("compare-columns", t("comparison_columns"), "",
+                   comparison_["attributes"].empty() ? "disabled" : "") +
+            "<span>" + escaped(t(players ? "comparison_player_values" : "comparison_mean_values")) +
+            "</span></div>";
+        int width = 0;
+        std::string header;
+        struct Column {
+            std::string key, label;
+            int width;
+        };
+        std::vector<Column> columns{{"name",
+                                     t(players   ? "players"
+                                       : leagues ? "leagues"
+                                                 : "teams"),
+                                     230},
+                                    {"context",
+                                     t(players   ? "team"
+                                       : leagues ? "nation"
+                                                 : "competition"),
+                                     players ? 200 : 180}};
+        if (players)
+            columns.push_back({"positions", t("positions"), 95});
+        else {
+            if (leagues)
+                columns.push_back({"club_count", t("clubs"), 80});
+            columns.push_back({"player_count", t("players"), 85});
+        }
+        const auto &chosen = comparison_columns();
+        std::string primary_attribute;
+        for (const auto &field : comparison_["attributes"]) {
+            const auto key = str(field, "key");
+            if (std::find(chosen.begin(), chosen.end(), key) != chosen.end() &&
+                (primary_attribute.empty() || key == "strength" || key == "overall"))
+                primary_attribute = key;
+            if (primary_attribute == "overall")
+                break;
+        }
+        if (!primary_attribute.empty())
+            columns.push_back(
+                {"attributes." + primary_attribute, comparison_attribute(primary_attribute), 120});
+        const auto currency = str(comparison_.value("currency", Json()), "code", "?");
+        columns.push_back({players ? "salary" : "salary_total",
+                           t(players ? "salary_season" : "salary_total") + " · " + currency, 165});
+        if (!players) {
+            columns.push_back({"salary_average", t("salary_average") + " · " + currency, 165});
+            columns.push_back({"salary_known", t("salary_coverage"), 105});
+        }
+        for (const auto &field : comparison_["attributes"]) {
+            const auto key = str(field, "key");
+            if (key != primary_attribute && std::find(chosen.begin(), chosen.end(), key) != chosen.end())
+                columns.push_back({"attributes." + key, comparison_attribute(key), 135});
+        }
+        for (const auto &column : columns) {
+            width += column.width;
+            const bool sortable = column.key != "context" && column.key != "positions";
+            std::string caption = escaped(column.label);
+            if (column.key == comparison_sort_)
+                caption += "<span class=\"comparison-direction" +
+                           std::string(comparison_descending_ ? "" : " ascending") + "\"></span>";
+            if (column.key.starts_with("attributes."))
+                for (const auto &field : comparison_["attributes"])
+                    if (str(field, "key") == column.key.substr(11) && field["min"].is_number() &&
+                        field["max"].is_number())
+                        caption += "<small>" + field["min"].dump() + "–" + field["max"].dump() + "</small>";
+            header += "<button class=\"comparison-cell" +
+                      std::string(column.key == "name" || column.key == "context" ? " text" : "") +
+                      "\" style=\"width:" + std::to_string(column.width) + "dp\"" +
+                      (sortable ? " data-action=\"compare-sort\" data-value=\"" + escaped(column.key) + "\""
+                                : " disabled") +
+                      ">" + caption + "</button>";
+        }
+        std::string rows;
+        for (const auto &row : listed_) {
+            rows += "<button class=\"comparison-row\" data-action=\"compare-edit\" data-value=\"" +
+                    escaped(str(row, "id")) + "\">";
+            for (const auto &column : columns) {
+                std::string cell, hint;
+                if (column.key == "name") {
+                    cell = "<span class=\"comparison-name-text\">" + escaped(str(row, "name")) + "</span>";
+                    hint = str(row, "name") + " · " + str(row, "id");
+                } else if (column.key == "context")
+                    cell = escaped(ref(row, players ? "team" : leagues ? "nation" : "competition"));
+                else if (column.key == "positions") {
+                    for (const auto &position : row["positions"])
+                        if (position.is_string())
+                            cell += (cell.empty() ? "" : " / ") + escaped(t(position.get<std::string>()));
+                } else if (column.key.starts_with("attributes.")) {
+                    const auto key = column.key.substr(11);
+                    cell = comparison_number(row["attributes"].value(key, Json()));
+                    if (!players)
+                        hint =
+                            row["attribute_counts"].value(key, size_t(0)) == row["player_count"].get<size_t>()
+                                ? t("comparison_mean_values")
+                                : std::to_string(row["attribute_counts"].value(key, size_t(0))) + "/" +
+                                      row["player_count"].dump() + " · " + t("comparison_known_values");
+                } else if (column.key == "salary_known") {
+                    cell = row["salary_known"].dump() + " / " + row["player_count"].dump();
+                    hint = row["salary_unknown"].dump() + " · " + t("salary_missing") + "; " +
+                           row["salary_ambiguous"].dump() + " · " + t("salary_ambiguous");
+                } else {
+                    const bool salary = column.key.starts_with("salary");
+                    cell = comparison_number(row.value(column.key, Json()), salary);
+                    if (salary && !players && row.value(column.key, Json()).is_number() &&
+                        !row.value("salary_complete", false))
+                        cell += " *";
+                    if (salary && players && row.value("salary_ambiguous", 0))
+                        hint = t("salary_ambiguous");
+                }
+                rows += "<span class=\"comparison-cell" +
+                        std::string(column.key == "name" || column.key == "context" ? " text" : "") +
+                        "\" style=\"width:" + std::to_string(column.width) + "dp\" title=\"" + escaped(hint) +
+                        "\">" + cell + "</span>";
+            }
+            rows += "</button>";
+        }
+        if (rows.empty())
+            rows = "<div class=\"empty\">" + escaped(t("empty")) + "</div>";
+        body += "<div class=\"list-panel comparison-panel\"><div class=\"comparison-x\" "
+                "id=\"comparison-x\"><div class=\"comparison-table\" style=\"width:" +
+                std::to_string(width + 20) + "dp\"><div class=\"comparison-head\">" + header +
+                "</div><div class=\"comparison-body\" id=\"table-scroll\">" + rows +
+                "</div></div></div></div>";
+        body += "<div class=\"comparison-note\">" + escaped(t("comparison_salary_note")) + " · " +
+                escaped(str(comparison_, "date")) + "<br/>" + escaped(t("comparison_scope_note"));
+        if (comparison_.value("mixed_attribute_sets", false))
+            body += "<br/>" + escaped(t("comparison_mixed_note"));
+        if (comparison_.value("excluded_players", size_t(0)))
+            body += " · " + comparison_["excluded_players"].dump() + " " + escaped(t("comparison_excluded"));
+        if (comparison_.value("fictional_completion", false))
+            body += "<br/>" + escaped(t("comparison_fictional"));
+        html("page-content", body + "</div></div>");
+        html("pagination", "<span>" + std::to_string(total_) + " " + escaped(t("records")) + " · " +
+                               escaped(t("comparison_sort_hint")) + "</span><div class=\"button-row\">" +
+                               button("previous", t("previous"), "quiet", offset_ > 0 ? "" : "disabled") +
+                               "<span>" + std::to_string(offset_ + (total_ ? 1 : 0)) + "–" +
+                               std::to_string(offset_ + listed_.size()) + "</span>" +
+                               button("next", t("next"), "quiet",
+                                      size_t(offset_) + listed_.size() < total_ ? "" : "disabled") +
+                               "</div>");
+    }
     void changes() {
         html("toolbar", "");
         html("pagination", "");
@@ -698,6 +1007,8 @@ class EditorUi final : public Rml::EventListener {
         html("page-content", body + "</div>");
     }
     void refresh() {
+        const float comparison_scroll =
+            doc_->GetElementById("comparison-x") ? el("comparison-x")->GetScrollLeft() : 0;
         const auto *focus = context_->GetFocusElement();
         const bool search_focused = focus && focus->GetId() == "search";
         int selection_start = 0, selection_end = 0;
@@ -716,8 +1027,14 @@ class EditorUi final : public Rml::EventListener {
             overview();
         else if (page_ == "changes")
             changes();
+        else if (page_ == "comparison")
+            comparison();
         else
             records();
+        if (page_ == "comparison" && doc_->GetElementById("comparison-x")) {
+            context_->Update();
+            el("comparison-x")->SetScrollLeft(comparison_scroll);
+        }
         if (search_focused && doc_->GetElementById("search")) {
             auto *input = dynamic_cast<Rml::ElementFormControlInput *>(el("search"));
             input->Focus();
@@ -983,9 +1300,59 @@ class EditorUi final : public Rml::EventListener {
                 selected_id_.clear();
                 offset_ = 0;
                 search_.clear();
+                if (arg == "comparison") {
+                    nation_.clear();
+                    league_.clear();
+                    team_.clear();
+                }
                 needs_refresh_ = true;
             });
-        else if (action == "select")
+        else if (action == "compare-open" || action == "compare-scope")
+            leave_fields([this, action, arg] {
+                comparison_table_ =
+                    action == "compare-open" ? (table() == "competitions" ? "leagues" : table()) : arg;
+                page_ = "comparison";
+                fields_.clear();
+                selected_id_.clear();
+                search_.clear();
+                nation_.clear();
+                league_.clear();
+                team_.clear();
+                offset_ = 0;
+                comparison_sort_ = "name";
+                comparison_descending_ = false;
+                needs_refresh_ = true;
+            });
+        else if (action == "compare-sort") {
+            comparison_descending_ = arg == comparison_sort_ ? !comparison_descending_ : true;
+            comparison_sort_ = arg;
+            offset_ = 0;
+            needs_refresh_ = true;
+        } else if (action == "compare-columns")
+            comparison_choose_columns();
+        else if (action == "compare-all-columns" || action == "compare-no-columns") {
+            for (size_t i = 0; i < comparison_["attributes"].size(); ++i) {
+                auto *checkbox = el("comparison-column-" + std::to_string(i));
+                if (action == "compare-all-columns")
+                    checkbox->SetAttribute("checked", "");
+                else
+                    checkbox->RemoveAttribute("checked");
+            }
+        } else if (action == "compare-set") {
+            if (value("comparison-set") != comparison_set_) {
+                comparison_set_ = value("comparison-set");
+                comparison_sort_ = "name";
+                offset_ = 0;
+                needs_refresh_ = true;
+            }
+        } else if (action == "compare-edit") {
+            page_ = comparison_table_ == "leagues" ? "competitions" : comparison_table_;
+            selected_id_ = arg;
+            sort_ = "name";
+            offset_ = 0;
+            search_.clear();
+            needs_refresh_ = true;
+        } else if (action == "select")
             leave_fields([this, arg] {
                 selected_id_ = arg;
                 needs_refresh_ = true;
@@ -1061,9 +1428,11 @@ class EditorUi final : public Rml::EventListener {
         } else if (action == "sort") {
             descending_ = arg == sort_ ? !descending_ : false;
             sort_ = arg;
+            offset_ = 0;
             needs_refresh_ = true;
         } else if (action == "next" || action == "previous") {
-            offset_ = std::max(0, offset_ + (action == "next" ? 1 : -1) * (roster24_ ? 24 : 200));
+            offset_ = std::max(0, offset_ + (action == "next" ? 1 : -1) *
+                                                (page_ != "comparison" && roster24_ ? 24 : 200));
             needs_refresh_ = true;
         } else if (action == "filters") {
             const auto next_nation = doc_->GetElementById("filter-nation") ? value("filter-nation") : "";
@@ -1075,6 +1444,7 @@ class EditorUi final : public Rml::EventListener {
             if (next_nation == nation_ && next_league == league_ && next_team == team_ && next_search == search_)
                 return;
             auto old_nation = nation_;
+            auto old_league = league_;
             nation_ = next_nation;
             league_ = next_league;
             team_ = next_team;
@@ -1082,7 +1452,8 @@ class EditorUi final : public Rml::EventListener {
             if (old_nation != nation_) {
                 league_.clear();
                 team_.clear();
-            }
+            } else if (old_league != league_)
+                team_.clear();
             selected_id_.clear();
             offset_ = 0;
             needs_refresh_ = true;
@@ -1270,6 +1641,8 @@ class EditorUi final : public Rml::EventListener {
             auto id = target->GetId();
             if (id.starts_with("filter-") || id == "search")
                 pending_.emplace_back("filters", "");
+            else if (id == "comparison-set")
+                pending_.emplace_back("compare-set", "");
             else if (id == "image-aspect")
                 pending_.emplace_back("aspect", "");
             else if (id.starts_with("image-") && id != "edit-preview")

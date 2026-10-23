@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "editor/session.hpp"
 #include "content/digest.hpp"
+#include "editor/comparison.hpp"
 #include "editor/images.hpp"
 #include <algorithm>
 #include <limits>
@@ -435,6 +436,20 @@ Json Session::execute(const std::string &command, const Json &args) {
     auto &w = world();
     if (command == "list")
         return w.query(args);
+    if (command == "compare") {
+        const Json key{{"table", str(args, "table", "players")},
+                       {"attribute_set", str(args, "attribute_set")},
+                       {"language", str(args, "language", "de")}};
+        if (comparison_revision_ != revision_ || comparison_key_ != key.dump()) {
+            auto data = comparison_data(w, key);
+            comparison_cache_ = std::move(data);
+            comparison_key_ = key.dump();
+            comparison_revision_ = revision_;
+        }
+        auto result = query_comparison(comparison_cache_, args);
+        result["revision"] = revision_;
+        return result;
+    }
     if (command == "get") {
         auto name = str(args, "table"), id = str(args, "id");
         const auto *found = name == "manifest" ? &w.manifest : w.find(name, id);

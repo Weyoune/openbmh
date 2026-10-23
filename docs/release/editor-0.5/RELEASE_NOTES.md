@@ -1,5 +1,21 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
-# OpenBMH Editor 0.5.0
+# OpenBMH Editor 0.5.1
+
+Adds **Ratings & salaries / Wertevergleich**: sortable player, team and league
+overviews, searchable and filterable by country/league/club and attribute system.
+Choose the attribute columns and scroll horizontally for additional metrics.
+Click a row to open its existing editor. All three themes and both interface
+languages are supported.
+
+Player values retain their native scales. Group ratings are player-weighted
+means; salaries are per-season amounts from contracts active at the world start
+date. Partial wage bills are marked, unknown values stay unknown, explicit zero
+salaries remain zero. All reserves are included; source-only duplicate evidence
+is excluded. Different rating systems are not combined. The read-only MCP tool
+`editor_compare` exposes the same results and pagination. Comparison caches
+refresh after edits and undo/redo without changing the world.
+
+## Initial editor 0.5.0
 
 The first standalone editor release uses SDL2, RmlUI and OpenGL on Windows x64,
 Linux x64 and macOS ARM64. Its version is independent of OpenBMH 0.2.0.

@@ -116,8 +116,8 @@ def main():
             (stage / 'dependencies.cmake').write_text('\n'.join(cache) + '\n')
             (stage / 'SOURCE_MANIFEST.json').write_text(json.dumps(manifest, indent=2) + '\n')
             (stage / 'BUILD_SOURCE.txt').write_text('cmake -S project -B build -C dependencies.cmake -G Ninja -DCMAKE_BUILD_TYPE=Release\n'
-                'cmake --build build --target openbmh_editor editor_core_tests\n'
-                'ctest --test-dir build -R "^editor_(core_tests|version)$" --output-on-failure\n'
+                'cmake --build build --target openbmh_editor editor_core_tests editor_comparison_tests\n'
+                'ctest --test-dir build -R "^editor_(core_tests|comparison_tests|version)$" --output-on-failure\n'
                 'Native compiler, CMake and OS development libraries: see project/docs/EDITOR.md.\n')
             zip_tree(stage, args.out / (source_name + '.zip'))
             print(args.out / (source_name + '.zip'))

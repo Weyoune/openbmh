@@ -89,7 +89,45 @@ def main():
                 tool('editor_save', {'path': str(root / 'world.obw')})
                 assert (root / 'world.obw').is_file()
                 assert tool('editor_info')['dirty'] is False
-                print('Native RmlUI edit, JSON fields, search focus, shared undo/redo and OBW save passed.')
+                # Exercise the native comparison, not just its MCP projection:
+                # sort, open the first displayed row, edit its first property,
+                # and observe which stable record actually changed via MCP.
+                def compare_open():
+                    click(100, 460); time.sleep(.25)
+                def first_property(table, identifier, expected, first_name=False):
+                    click(330, 402); time.sleep(.2)
+                    click(1150, 443); x('key', 'ctrl+a'); x('type', '--clearmodifiers', expected)
+                    click(1300, 741)
+                    for _ in range(40):
+                        record = tool('editor_get', {'table': table, 'id': identifier})['record']
+                        if record['name']['first' if first_name else 'default'] == expected:
+                            break
+                        time.sleep(.05)
+                    else:
+                        raise AssertionError('Comparison opened the wrong row: ' + identifier)
+                    tool('editor_undo'); time.sleep(.3)
+                compare_open()
+                click(730, 288)  # Attribute chooser: hide all, select Strength via its label.
+                click(495, 405)
+                click(900, 461)
+                click(1080, 575)
+                click(835, 345)  # Sort the remaining rating column descending.
+                first_property('players', 'player:demo-14', 'Rating Descending', True)
+                compare_open()
+                click(978, 345)  # Salary descending: highest known demo wage.
+                first_property('players', 'player:demo-50', 'Salary Descending', True)
+                compare_open()
+                click(978, 345)  # Ascending; missing salary must remain last.
+                first_property('players', 'player:demo-0', 'Salary Ascending', True)
+                compare_open()
+                click(1274, 153)  # Teams.
+                click(946, 345)   # Total salary descending.
+                first_property('clubs', 'club:south', 'Payroll Descending')
+                compare_open()
+                click(1378, 153)  # Leagues; its row opens the competition editor.
+                first_property('competitions', 'comp:demo', 'League Comparison')
+                assert tool('editor_info')['dirty'] is False
+                print('Native RmlUI edit, search, undo/save and sorted player/team/league comparison passed.')
             except Exception:
                 log.flush()
                 print((root / 'app.log').read_text())

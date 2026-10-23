@@ -45,6 +45,24 @@ SKIP_DIRECTORIES = {".git", "__pycache__", ".cache", "_deps", "node_modules"}
 # The latter are reviewed against docs/qa/editor-poc/README.md; no game material.
 # Keep prior reviewed hashes if an asset is intentionally revised in history.
 PROJECT_ARTWORK = {
+    "docs/qa/editor-comparison/before-players-0.5.0.png": {
+        "e061cf1fcbafffc2950037f2f4bf24f28c00fe835988b56b198d88bce33b97e2",
+    },
+    "docs/qa/editor-comparison/players-midnight-de.png": {
+        "ab1debb1e282d5462eab1a570137477884b2c773a900ec45a74783d50693367d",
+    },
+    "docs/qa/editor-comparison/teams-silver-en.png": {
+        "ad8e8274f21465686b8c499ad44344ea4705cbec520560b12f8d7dde878204ea",
+    },
+    "docs/qa/editor-comparison/leagues-matchday-de.png": {
+        "f24cd278b30ce3ccecc7320ae105ea5d0394e759c8045a76e75851259a487ada",
+    },
+    "docs/qa/editor-comparison/columns-midnight-de.png": {
+        "74d825609b862c7dc60dc5182a32c010df73177b10d849079b02a2b4dc2d1620",
+    },
+    "docs/qa/editor-comparison/players-scroll-midnight-de.png": {
+        "8e23a0fe6ea31ca6050fd5f157016948e0bad2f83093dcc3c53a3ba855c3bb40",
+    },
     "docs/qa/editor-poc/clubs-midnight-de.png": {
         "2921aa67a870633c96f46328a82bc3022e5489b38d551c5314f13c7e59446070",
         "aa53e9cdd9ac8f6bf18b514862ac704ff9003bd1b62466cad2ebc329b09703dc",

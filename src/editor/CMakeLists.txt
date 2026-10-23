@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 include(FetchContent)
-set(OPENBMH_EDITOR_VERSION "0.5.0")
+set(OPENBMH_EDITOR_VERSION "0.5.1")
 file(WRITE "${CMAKE_BINARY_DIR}/editor-version.json" "{\"version\": \"${OPENBMH_EDITOR_VERSION}\"}\n")
 set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(editor_json GIT_REPOSITORY https://github.com/nlohmann/json.git
@@ -44,7 +44,7 @@ foreach(component editor_json editor_http editor_images editor_svg editor_xml)
 endforeach()
 file(APPEND "${CMAKE_BINARY_DIR}/editor-dependencies.json" "}\n")
 
-add_library(bmh_editor_core STATIC archive.cpp world.cpp session.cpp images.cpp options.cpp mcp.cpp)
+add_library(bmh_editor_core STATIC archive.cpp world.cpp session.cpp comparison.cpp images.cpp options.cpp mcp.cpp)
 target_compile_definitions(bmh_editor_core PUBLIC OPENBMH_EDITOR_VERSION="${OPENBMH_EDITOR_VERSION}")
 target_include_directories(bmh_editor_core PUBLIC .. ${editor_http_SOURCE_DIR})
 target_link_libraries(bmh_editor_core PUBLIC nlohmann_json::nlohmann_json bmh_content
@@ -85,5 +85,11 @@ if(MSVC)
     target_compile_options(editor_core_tests PRIVATE /utf-8)
 endif()
 add_test(NAME editor_core_tests COMMAND editor_core_tests)
+add_executable(editor_comparison_tests ../../tests/editor_comparison_tests.cpp)
+target_link_libraries(editor_comparison_tests PRIVATE bmh_editor_core)
+if(MSVC)
+    target_compile_options(editor_comparison_tests PRIVATE /utf-8)
+endif()
+add_test(NAME editor_comparison_tests COMMAND editor_comparison_tests)
 add_test(NAME editor_version COMMAND openbmh_editor --version)
 set_tests_properties(editor_version PROPERTIES PASS_REGULAR_EXPRESSION "OpenBMH Editor ${OPENBMH_EDITOR_VERSION}")
