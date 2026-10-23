@@ -30,6 +30,11 @@ wird ausdrücklich mit `OPENBMH_BUILD_MODERN_UI=ON` gebaut.
   Ansichten vorhanden; ihr vollständiger Bedienungsabgleich bleibt offen.
 - Separate UI-Demostände und Desktopansichten. Ansichten speichern zusätzlich
   einen Screenshot; die Standardansicht kann nicht gelöscht werden.
+- [Training](desktop/training/README.md): neun Übungen, vier Arten, Kader mit
+  Schwerpunkt/Intensität, Automatikgruppen und gemeinsame Automatik.
+- [Taktik](desktop/tactics/README.md): sieben interaktive Diagrammflächen,
+  zyklische Einstellungen und Einsatzregler. Die Grafik aktualisiert sich
+  unmittelbar und speichert ausschließlich UI-Vorschaueinstellungen.
 
 **Anstoß führt keine Aktion aus**, weder per Maus noch per Tastatur. Das gilt
 auch für die direkte Aktionsschnittstelle des Demoanbieters.
@@ -93,6 +98,11 @@ allen Themes, einschließlich doppelter Pixeldichte und abgewiesener Übernahme.
 Die [dedizierte Schrift-QA](typography-qa.md) prüft zusätzlich Buttons und
 Dropdowns gegen das HTML-Mockup, einschließlich tatsächlicher Textmitten,
 Pixeldichten sowie Escape- und Fokusverhalten.
+
+Die [Menü-QA](menu-qa.md) hält den Gesamtkatalog einschließlich fehlender
+Ports nach. Training/Taktik wurden in zwölf tatsächlichen Rendererläufen
+mit drei Themes und zwei Auflösungen verglichen. Die native UI und die
+synthetischen Kontrolltests bauen in der CI unter Linux, Windows und macOS.
 
 Ein nativer Linux-/OpenGL-Durchlauf mit externem Diamond-Datensatz führt über
 das Hauptmenü, die Managerwahl und Auslosung zum Desktop, verändert den

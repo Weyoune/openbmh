@@ -1,0 +1,49 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+.training-skills {position:absolute;left:0;top:0;width:1060dp;height:1008dp;}
+.training-skill {height:112dp;display:flex;align-items:center;gap:14dp;font-size:36dp;}
+.training-skill>div,.training-skill>span {flex-shrink:0;}
+.training-balls {display:flex;align-items:center;justify-content:flex-start;}
+.training-ball {display:flex;align-items:center;justify-content:center;padding:0;border:0dp;background-color:transparent;flex-shrink:0;}
+.training-ball:hover,.training-ball:disabled {background-color:transparent;}
+.training-ball.is-empty {opacity:.18;filter:grayscale(1);}
+.training-ball.overtraining {filter:sepia(1) saturate(9) hue-rotate(310deg);}
+.training-pitch {position:absolute;left:0;top:1040dp;width:570dp;height:390dp;border:3dp var(--border);border-radius:12dp;overflow:hidden;box-shadow:0dp 0dp 0dp 3dp #244c38;}
+.training-midline {position:absolute;left:50%;top:0;width:2dp;height:100%;background-color:#d5efd2;}
+.training-circle {position:absolute;left:50%;top:50%;width:110dp;height:110dp;margin-left:-55dp;margin-top:-55dp;border:3dp #d5efd2;border-radius:55dp;}
+.training-box {position:absolute;top:22%;width:19%;height:56%;border:3dp #d5efd2;}
+.left-box {left:-4dp;}.right-box {right:-4dp;}
+.training-type-cell {position:absolute;width:227dp;height:156dp;display:flex;align-items:center;justify-content:center;}
+.training-auto {font-size:32dp;}
+.training-auto.auto-players {font-size:29dp;}
+.training-budget {position:absolute;left:604dp;top:1338dp;width:440dp;font-size:27dp;line-height:1.5;color:var(--muted);}
+.training-roster {position:absolute;left:1120dp;right:0;top:0;bottom:80dp;overflow-y:auto;overflow-x:hidden;}
+.training-row {display:flex;align-items:center;height:99dp;border-bottom:2dp var(--border);font-size:34dp;}
+.training-row>div {flex-shrink:0;}
+.training-header {height:62dp;font-size:31dp;color:var(--muted);border-bottom:2dp var(--border);}
+.training-position {font-size:30dp;color:var(--muted);}
+.training-name {overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding-right:10dp;}
+.training-row.striped {background-color:var(--soft);}
+.training-roster select {width:490dp;height:62dp;padding:10dp 12dp;border:2dp var(--border);border-radius:8dp;font-size:32dp;}
+.training-roster select selectbox {width:490dp;max-height:480dp;margin-top:8dp;padding:10dp;border-radius:16dp;}
+.training-roster select option {min-height:72dp;padding:10dp 14dp;line-height:1.3;}
+.tactics-board {position:absolute;left:76dp;top:0;width:2300dp;height:100%;}
+.tactics-surface {position:absolute;left:0;right:0;top:0;bottom:100dp;border:2dp var(--border);border-radius:28dp;decorator:linear-gradient(130deg,#bfd9e40a,#9ecbb809);}
+.tactics-board>.image-frame {filter:drop-shadow(0dp 0dp 1dp #e0edbc);}
+.tactic-hotspot {padding:0;border:0dp;background-color:transparent;}
+.tactic-hotspot:hover,.tactic-hotspot:active {background-color:transparent;}
+.tactic-hotspot:focus-visible {border:3dp var(--accent);}
+.tactic-effort {position:absolute;left:1021.188dp;top:1021.469dp;width:1012dp;height:316.875dp;color:#d4e6b3;}
+body.silver .tactic-effort {color:#536f66;}
+.tactic-effort-label {display:flex;align-items:baseline;gap:18dp;font-family:Chalk;font-size:60dp;line-height:1.2;letter-spacing:4dp;font-effect:shadow(2dp 2dp #386824);}
+.tactic-effort-marks {font-size:52dp;letter-spacing:1dp;line-height:1.2;}
+.tactic-effort input {position:absolute;left:2dp;top:96dp;width:96%;height:20dp;}
+.tactic-effort input slidertrack {margin:8dp 0;height:4dp;}
+.tactic-effort input sliderprogress {height:4dp;background-color:var(--accent);border-radius:2dp;}
+.tactic-effort input sliderbar {width:16dp;height:16dp;margin-top:2dp;border:0dp;border-radius:8dp;background-color:var(--accent);}
+.tactic-hint {position:absolute;left:0;right:0;bottom:34dp;height:39dp;text-align:center;font-size:34dp;color:var(--text);}
+body.midnight .training-skill {color:#c6d6df;}
+body.midnight .training-row {color:#d8e3eb;}
+body.midnight .training-header,body.midnight .training-position {color:#9fb2c3;}
+body.midnight .training-budget {color:#9fb6c6;}
+body.midnight .training-pitch {border-color:#9eb9a5;}
+body.midnight .tactic-hint {color:#b8cddc;}

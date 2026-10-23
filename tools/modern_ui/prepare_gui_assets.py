@@ -55,6 +55,10 @@ def main():
     for route, button in zip(routes, buttons, strict=True):
         add('button.' + route, button['src'].removeprefix('../'))
     add('button.news', 'assets/vector/desktop-news.svg')
+    for i in range(9):
+        add('training.skill.' + str(i), 'assets/studies/submenus/training-icons-v2.png',
+            [(i % 3) / 3, (i // 3) / 3, 1 / 3, 1 / 3])
+    add('training.ball', 'assets/studies/submenus/training-ball-v1.png')
     for i in range(12):
         add('manager.' + str(i), 'assets/studies/submenus/manager-portraits-photo-v1.png',
             [(i % 4) / 4, (i // 4) / 3, 1 / 4, 1 / 3])

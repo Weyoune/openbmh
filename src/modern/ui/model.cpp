@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "modern/ui/model.hpp"
+#include "modern/ui/demo_sports.hpp"
 #include "modern/ui/desktop.hpp"
 #include <algorithm>
 #include <chrono>
@@ -73,6 +74,8 @@ DemoSource::DemoSource(std::shared_ptr<const Catalog> catalog)
       {"preferences",
        {{"theme", "midnight"}, {"volume", 80}, {"effects", true}}},
       {"edits", Json::object()}};
+  state_["training"] = demo_training(*catalog_, club);
+  state_["tactics"] = demo_tactics();
   saved_ = state_;
   if (!valid_date(state_.at("date")))
     throw editor::Error("invalid_demo_date");
@@ -106,6 +109,19 @@ ActionResult DemoSource::apply(const Action &action) {
           return {false, revision_, "invalid_manager"};
       }
       next["managers"] = action.value;
+      const auto first = action.value.at(0).at("club").get<std::string>();
+      if (next.at("training").at("club") != first) {
+        next["training"] = demo_training(*catalog_, first);
+        next["tactics"] = demo_tactics();
+      }
+    } else if (action.kind == "training") {
+      const auto error = edit_demo_training(next["training"], action.value);
+      if (!error.empty())
+        return {false, revision_, error};
+    } else if (action.kind == "tactics") {
+      const auto error = edit_demo_tactics(next["tactics"], action.value);
+      if (!error.empty())
+        return {false, revision_, error};
     } else if (action.kind == "camp.select") {
       if (!camp_id(action.value))
         return {false, revision_, "camp_unknown"};
@@ -147,7 +163,7 @@ void DemoSource::save(const fs::path &file, const Json &desktop) {
   saved_ = state_;
 }
 Json DemoSource::load(const fs::path &file) {
-  const auto data = Json::parse(editor::read_file(file));
+  auto data = Json::parse(editor::read_file(file));
   if (data.value("schema", "") != "openbmh-ui-demo@1" ||
       data.value("world", "") != catalog_->manifest().value("id", ""))
     throw editor::Error("wrong_demo_world");
@@ -155,6 +171,14 @@ Json DemoSource::load(const fs::path &file) {
   const auto result = validation.apply({0, "managers", data.at("managers")});
   if (!result.ok)
     throw editor::Error(result.error);
+  const auto club = data.at("managers").at(0).at("club").get<std::string>();
+  if (!data.contains("training"))
+    data["training"] = demo_training(*catalog_, club);
+  if (!data.contains("tactics"))
+    data["tactics"] = demo_tactics();
+  if (!valid_demo_training(data.at("training"), *catalog_, club) ||
+      !valid_demo_tactics(data.at("tactics")))
+    throw editor::Error("invalid_demo_sports");
   if (!data.at("ticket").is_number_integer() || data.at("ticket") < 0 ||
       data.at("ticket") > 25)
     throw editor::Error("invalid_demo_ticket");

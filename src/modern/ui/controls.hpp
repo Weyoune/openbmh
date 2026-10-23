@@ -29,13 +29,13 @@ inline bool center_selects(Rml::ElementDocument &document) {
   bool changed = false;
   Rml::ElementList controls;
   document.QuerySelectorAll(controls, "select");
-  const auto set_pixels = [&](Rml::Element *element, const char *name,
+  const auto set_pixels = [&](Rml::Element *element, Rml::PropertyId name,
                               float value) {
     const auto *old = element->GetLocalProperty(name);
     if (old && old->unit == Rml::Unit::PX &&
         std::abs(old->Get<float>() - value) < .02f)
       return;
-    element->SetProperty(name, std::to_string(value) + "px");
+    element->SetProperty(name, Rml::Property(value, Rml::Unit::PX));
     changed = true;
   };
   for (auto *select : controls) {
@@ -48,8 +48,8 @@ inline bool center_selects(Rml::ElementDocument &document) {
       continue;
     // WidgetDropDown fixes both offsets at the content-box top. A flex
     // selectvalue loses its text in pinned RmlUI; center its line instead.
-    set_pixels(caption, "line-height", height);
-    set_pixels(arrow, "margin-top",
+    set_pixels(caption, Rml::PropertyId::LineHeight, height);
+    set_pixels(arrow, Rml::PropertyId::MarginTop,
                std::max(0.f, (height -
                               arrow->GetBox().GetSize(Rml::BoxArea::Border).y) /
                                  2));

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "modern/ui/demo_sports.hpp"
 #include "modern/ui/desktop.hpp"
 #include "modern/ui/gui_assets.hpp"
 #include "modern/ui/model.hpp"
@@ -174,6 +175,93 @@ int main(int argc, char **argv) try {
   require(rejected && source.snapshot().state == accepted.state &&
               source.snapshot().revision == accepted.revision,
           "Invalid desktop partially restored demo");
+  DemoSource sports(world);
+  const auto initial_sports = sports.snapshot();
+  require(!sports
+               .apply({0,
+                       "training",
+                       {{"kind", "ball"},
+                        {"group", "type"},
+                        {"index", 0},
+                        {"value", 3}}})
+               .ok,
+          "Training preview budget exceeded");
+  require(sports.snapshot().state == initial_sports.state &&
+              sports.snapshot().revision == 0,
+          "Rejected training mutated demo");
+  require(!sports
+               .apply({0,
+                       "training",
+                       {{"kind", "ball"},
+                        {"group", "area"},
+                        {"index", 0},
+                        {"value", 1.5}}})
+               .ok,
+          "Fractional training value accepted");
+  const auto player = world->squad("club:a").front()->value("id", "");
+  require(sports
+              .apply({0,
+                      "training",
+                      {{"kind", "ball"},
+                       {"group", "player"},
+                       {"player", player},
+                       {"value", 1}}})
+              .ok,
+          "Player intensity action failed");
+  require(sports.snapshot().state["training"]["players"][player]["intensity"] ==
+              0,
+          "Selected intensity must toggle to zero in UI demo");
+  require(sports
+              .apply({1,
+                      "training",
+                      {{"kind", "focus"}, {"player", player}, {"value", 7}}})
+              .ok,
+          "Direct focus selection failed");
+  for (int i = 0; i < 4; ++i)
+    require(sports
+                .apply({sports.snapshot().revision,
+                        "tactics",
+                        {{"kind", "cycle"}, {"index", 0}}})
+                .ok,
+            "Tactic cycle failed");
+  require(sports.snapshot().state["tactics"]["values"][0] ==
+              initial_sports.state["tactics"]["values"][0],
+          "Tactic cycle did not wrap");
+  require(
+      sports
+          .apply(
+              {sports.snapshot().revision, "training", {{"kind", "auto-all"}}})
+          .ok,
+      "Global automatic training failed");
+  const auto automated = sports.snapshot();
+  require(automated.state["training"]["players"][player]["intensity"] == 2 &&
+              automated.state["training"]["players"][player]["focus"] == 7,
+          "Automatic training must preserve focuses");
+  require(!sports.apply({automated.revision,
+                         "training",
+                         {{"kind", "focus"}, {"player", player}, {"value", 0}}})
+                  .ok &&
+              sports.snapshot().state == automated.state,
+          "Automatic player controls accepted manual changes");
+  sports.save(root / "sports.ui.json", default_desktop());
+  DemoSource restored_sports(world);
+  restored_sports.load(root / "sports.ui.json");
+  require(restored_sports.snapshot().state == sports.snapshot().state,
+          "Training/tactics were lost on restoration");
+  auto legacy = Json::parse(bmh::editor::read_file(root / "sports.ui.json"));
+  legacy.erase("training");
+  legacy.erase("tactics");
+  write(root, "legacy-ui.json", legacy);
+  restored_sports.load(root / "legacy-ui.json");
+  require(valid_demo_training(restored_sports.snapshot().state["training"],
+                              *world, "club:a"),
+          "Older UI checkpoint did not migrate safely");
+  for (const auto *theme : {"midnight", "silver", "matchday"}) {
+    const auto diagram = bmh::editor::images::decode(
+        tactics_diagram(demo_tactics(), theme), ".svg", 256);
+    require(diagram.width == 256 && diagram.height > 0,
+            "Tactic SVG failed to decode");
+  }
   GuiAssets absent(root / "missing-gui");
   require(!absent.available(),
           "World resources were mistaken for GUI resources");

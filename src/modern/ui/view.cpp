@@ -5,6 +5,7 @@
 #include "launch/rml_path.hpp"
 #include "launch/rml_video.hpp"
 #include "modern/ui/controls.hpp"
+#include "modern/ui/demo_sports.hpp"
 #include "modern/ui/desktop.hpp"
 #include "modern/ui/gui_assets.hpp"
 #include "modern/ui/model.hpp"
@@ -24,6 +25,7 @@
 #include <functional>
 #include <iomanip>
 #include <nfd.hpp>
+#include <optional>
 #include <sstream>
 
 namespace bmh::modern_ui {
@@ -129,11 +131,29 @@ class Renderer final : public rml::Renderer {
   };
   std::map<std::string, Entry> entries_;
   std::map<std::string, std::string> keys_;
+  std::map<std::string, std::string> loaded_sources_;
   size_t serial_ = 0;
 
 public:
   Renderer(rml::Video &video, GuiAssets &gui, fs::path assets)
       : rml::Renderer(video), gui_(gui), assets_(std::move(assets)) {}
+  Picture diagram(const std::string &slot, const std::string &svg,
+                  int pixels = 2400) {
+    const auto token = "modern-dynamic-" + slot + ".png",
+               digest = content::sha256(svg);
+    auto found = entries_.find(token);
+    if (found == entries_.end() || found->second.key != digest) {
+      auto raster = editor::images::decode(svg, ".svg", pixels);
+      if (const auto loaded = loaded_sources_.find(token);
+          loaded != loaded_sources_.end()) {
+        Rml::ReleaseTexture(loaded->second, this);
+        loaded_sources_.erase(loaded);
+      }
+      entries_[token] = {digest, false, pixels, std::move(raster)};
+    }
+    const auto &r = entries_.at(token).raster;
+    return {token, r.width, r.height};
+  }
   Picture local_image(const fs::path &file, int pixels) {
     const auto identity =
         editor::utf8(file) + ":" +
@@ -155,6 +175,7 @@ public:
     Rml::ReleaseTextures(this);
     entries_.clear();
     keys_.clear();
+    loaded_sources_.clear();
     world_ = std::move(value);
   }
   Picture image(const std::string &key, bool world = false, int pixels = 512) {
@@ -239,6 +260,7 @@ public:
     auto found = entries_.find(token);
     if (found == entries_.end())
       return rml::Renderer::LoadTexture(dimensions, source);
+    loaded_sources_[token] = source;
     auto pixels = found->second.raster.pixels;
     for (size_t i = 0; i < pixels.size(); i += 4)
       for (int c = 0; c < 3; ++c)
@@ -278,6 +300,9 @@ class App final : public Rml::EventListener {
   bool focus_ticket_ = false;
   std::set<std::string> pending_selects_;
   std::string focus_after_render_;
+  bool keyboard_navigation_ = false;
+  std::string last_rendered_menu_;
+  std::optional<float> training_scroll_;
   float device_ratio_ = 1.f;
   Json desktop_ = Json::object(), saved_desktop_ = Json::object(),
        options_ = Json::object();
@@ -305,6 +330,7 @@ class App final : public Rml::EventListener {
   std::string context_id_;
   int context_x_ = 0, context_y_ = 0;
   int opening_page_ = 0, draw_revealed_ = 0;
+  int last_tactic_ = 0;
   bool draw_playing_ = true;
   uint64_t draw_at_ = 0;
   std::string settings_category_ = "display";
@@ -336,7 +362,10 @@ class App final : public Rml::EventListener {
   }
   std::string img(const std::string &key, double w, double h,
                   bool world = false, bool cover = false, int pixels = 512) {
-    const auto p = renderer_.image(key, world, pixels);
+    return picture(renderer_.image(key, world, pixels), w, h, cover);
+  }
+  std::string picture(const Picture &p, double w, double h,
+                      bool cover = false) {
     if (p.token.empty())
       return "<div style=\"width:" + scalar(w) + "dp;height:" + scalar(h) +
              "dp;\"></div>";
@@ -398,6 +427,14 @@ class App final : public Rml::EventListener {
   bool apply(const std::string &kind, const Json &value) {
     const auto r = source_->apply({source_->snapshot().revision, kind, value});
     if (!r.ok) {
+      if (kind == "training" && r.error == "training_preview_budget") {
+        const int limit = value.value("group", "") == "type" ? 8
+                          : value.value("index", 0) < 2      ? 4
+                                                             : 18;
+        message("Für diesen Trainingsbereich stehen höchstens " +
+                std::to_string(limit) + " Bälle zur Verfügung.");
+        return false;
+      }
       message("Die Eingabe konnte nicht übernommen werden: " + r.error);
       return false;
     }
@@ -559,6 +596,11 @@ class App final : public Rml::EventListener {
   std::string widget(const std::string &, const Json &);
   std::string render_table(bool strengths = false, bool indoor = false);
   std::string render_camp();
+  std::string render_training();
+  std::string render_tactics();
+  std::string training_balls(const std::string &, int, int, bool,
+                             const std::string &player = {}, int size = 56,
+                             int gap = 10, bool overtraining = false);
   std::string render_settings();
   std::string render_save(bool save);
   std::string render_desktop_tools(const std::string &);
@@ -605,6 +647,10 @@ class App final : public Rml::EventListener {
     dirty_ = true;
   }
   void render() {
+    training_scroll_.reset();
+    if (menu_ == "training" && last_rendered_menu_ == "training")
+      if (auto *roster = element("training-roster"))
+        training_scroll_ = roster->GetScrollTop();
     if (ticket_)
       ticket_->close(false);
     context_open_ = false;
@@ -638,6 +684,7 @@ class App final : public Rml::EventListener {
                                     ? "saturate(0.13) brightness(0.56)"
                                     : "saturate(0.34) brightness(0.70)");
     needs_render_ = false;
+    last_rendered_menu_ = menu_;
     dirty_ = true;
     if (focus_ticket_) {
       if (auto *n = element("desktop-ticket"))
@@ -646,7 +693,7 @@ class App final : public Rml::EventListener {
     }
     if (!focus_after_render_.empty()) {
       if (auto *node = element(focus_after_render_))
-        node->Focus(true);
+        node->Focus(keyboard_navigation_);
       focus_after_render_.clear();
     }
   }
@@ -691,6 +738,11 @@ class App final : public Rml::EventListener {
     context_->Update();
     if (center_selects(*doc_))
       context_->Update();
+    if (training_scroll_) {
+      if (auto *roster = element("training-roster"))
+        roster->SetScrollTop(*training_scroll_);
+      training_scroll_.reset();
+    }
     renderer_.Clear();
     renderer_.BeginFrame();
     context_->Render();
@@ -750,6 +802,27 @@ class App final : public Rml::EventListener {
       bold = Rml::LoadFontFace(rml::asset_path(assets_ / "LatoLatin-Bold.ttf"),
                                "Modern", Rml::Style::FontStyle::Normal,
                                Rml::Style::FontWeight::Bold);
+    std::vector<fs::path> chalk_fonts;
+#ifdef _WIN32
+    if (const char *windir = std::getenv("WINDIR")) {
+      chalk_fonts.push_back(fs::path(windir) / "Fonts" / "comic.ttf");
+      chalk_fonts.push_back(fs::path(windir) / "Fonts" / "times.ttf");
+    }
+#elif defined(__APPLE__)
+    chalk_fonts = {"/System/Library/Fonts/Supplemental/Comic Sans MS.ttf",
+                   "/System/Library/Fonts/Supplemental/Apple Chancery.ttf",
+                   "/System/Library/Fonts/Times.ttc"};
+#else
+    chalk_fonts = {
+        "/usr/share/fonts/truetype/liberation2/LiberationSerif-Regular.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf"};
+#endif
+    chalk_fonts.push_back(assets_ / "LatoLatin-Regular.ttf");
+    for (const auto &font : chalk_fonts)
+      if (fs::exists(font) && Rml::LoadFontFace(rml::asset_path(font), "Chalk",
+                                                Rml::Style::FontStyle::Normal,
+                                                Rml::Style::FontWeight::Normal))
+        break;
     if (!regular || !bold)
       throw std::runtime_error(
           "GUI-Schriften fehlen. Bitte das vollständige Paket entpacken.");
@@ -906,6 +979,7 @@ public:
 #include "modern/ui/controls.inc"
 #include "modern/ui/desktop_screens.inc"
 #include "modern/ui/screens.inc"
+#include "modern/ui/sports_screens.inc"
 } // namespace
 bool is_modern_world(const fs::path &file) {
   try {

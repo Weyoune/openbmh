@@ -963,6 +963,10 @@ std::string App::render_menu(const std::string &key) {
   std::string body;
   if (key == "tables" || key == "strengths")
     body = render_table(key == "strengths", false);
+  else if (key == "training")
+    body = render_training();
+  else if (key == "tactics")
+    body = render_tactics();
   else if (key == "camp")
     body = render_camp();
   else if (key == "settings")

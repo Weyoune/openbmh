@@ -131,6 +131,10 @@ void App::drag_event(Rml::Event &event) {
 }
 void App::ProcessEvent(Rml::Event &event) try {
   const auto type = event.GetType();
+  if (type == "keydown")
+    keyboard_navigation_ = true;
+  else if (type == "mousedown")
+    keyboard_navigation_ = false;
   for (auto *n = event.GetTargetElement(); n && n != doc_;
        n = n->GetParentNode())
     if (n->GetId() == "native-ticket-layer")
@@ -267,7 +271,10 @@ void App::ProcessEvent(Rml::Event &event) try {
     }
   }
   if (type == "change") {
-    change(target);
+    if (target->HasAttribute("data-input"))
+      input(target);
+    else
+      change(target);
     return;
   }
   if (type == "input") {
@@ -879,7 +886,8 @@ void App::dispatch(const std::string &action, Rml::Element *target) {
       return;
     }
     static const std::set<std::string> available = {
-        "tables", "strengths", "camp", "settings", "save", "load"};
+        "tables", "strengths", "camp",     "settings",
+        "save",   "load",      "training", "tactics"};
     if (!available.contains(route)) {
       message("Diese native Ansicht wird im nächsten Menüpaket übertragen.");
       return;
@@ -890,6 +898,39 @@ void App::dispatch(const std::string &action, Rml::Element *target) {
       draft_preferences_ = nullptr;
     }
     refresh();
+    return;
+  }
+  if (action == "training-auto" || action == "training-auto-all" ||
+      action == "training-ball") {
+    Json change;
+    if (action == "training-auto-all")
+      change = {{"kind", "auto-all"}};
+    else if (action == "training-auto")
+      change = {{"kind", "auto"}, {"index", std::stoi(id)}};
+    else {
+      const auto group = target->GetAttribute<Rml::String>("data-group", "");
+      change = {{"kind", "ball"},
+                {"group", group},
+                {"index", std::stoi(id)},
+                {"value", target->GetAttribute<int>("data-value", 1)}};
+      if (group == "player")
+        change["player"] = target->GetAttribute<Rml::String>("data-player", "");
+    }
+    if (apply("training", change)) {
+      focus_after_render_ = target->GetId();
+      refresh();
+    }
+    return;
+  }
+  if (action == "tactic-cycle") {
+    const int i = std::stoi(id);
+    if (i < 0 || i > 6)
+      return;
+    if (apply("tactics", {{"kind", "cycle"}, {"index", i}})) {
+      last_tactic_ = i;
+      focus_after_render_ = "tactic-cycle-" + id;
+      refresh();
+    }
     return;
   }
   if (action == "ticket") {
@@ -1061,6 +1102,19 @@ void App::change(Rml::Element *target) {
     pending_selects_.insert(target->GetId());
     return;
   }
+  if (kind == "training-focus") {
+    const auto player = target->GetAttribute<Rml::String>("data-player", "");
+    const int focus = std::stoi(value);
+    if (snap().state.at("training").at("players").at(player).at("focus") ==
+        focus)
+      return;
+    if (apply("training",
+              {{"kind", "focus"}, {"player", player}, {"value", focus}})) {
+      focus_after_render_ = target->GetId();
+      refresh();
+    }
+    return;
+  }
   if ((kind == "manager-country" || kind == "table-country") &&
       value == country_)
     return;
@@ -1097,6 +1151,18 @@ void App::input(Rml::Element *target) {
   if (!control)
     return;
   const auto value = control->GetValue();
+  if (kind == "tactic-effort") {
+    const int value = std::stoi(control->GetValue());
+    if (apply("tactics", {{"kind", "effort"}, {"value", value}})) {
+      last_tactic_ = 7;
+      element("tactic-effort-value")
+          ->SetInnerRML(std::string(size_t(value), '!'));
+      element("tactic-hint")
+          ->SetInnerRML("Einsatz: " + std::to_string(value) + " / 11");
+      dirty_ = true;
+    }
+    return;
+  }
   if (kind == "sound-volume") {
     const int n = std::stoi(value);
     draft_preferences_["volume"] = n;
