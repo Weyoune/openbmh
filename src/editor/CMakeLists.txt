@@ -22,10 +22,7 @@ set(SDL2IMAGE_PNG ON CACHE BOOL "" FORCE)
 set(SDL2IMAGE_JPG ON CACHE BOOL "" FORCE)
 set(SDL2IMAGE_WEBP ON CACHE BOOL "" FORCE)
 if(MSVC)
-    # The pinned WebP build applies /arch:AVX to its SSE2 sources as well.
-    # Runtime SSE2 detection cannot make those AVX instructions safe on older
-    # CPUs or virtual machines. Small editor images use the portable decoder.
-    set(WEBP_ENABLE_SIMD OFF CACHE BOOL "Portable Windows WebP decoding" FORCE)
+    set(WEBP_ENABLE_SIMD ON CACHE BOOL "Use WebP's runtime CPU selection" FORCE)
 endif()
 set(SDL2IMAGE_PNG_SAVE OFF CACHE BOOL "" FORCE)
 set(SDL2IMAGE_JPG_SAVE OFF CACHE BOOL "" FORCE)
@@ -39,6 +36,20 @@ set(PUGIXML_BUILD_SHARED_AND_STATIC_LIBS OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(editor_xml GIT_REPOSITORY https://github.com/zeux/pugixml.git
     GIT_TAG v1.15 GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(editor_json editor_http editor_images editor_svg editor_xml)
+if(MSVC)
+    # The pinned WebP CMake propagates /arch:AVX into SSE2 source files, even
+    # though their runtime gate only checks SSE2. Compile its explicit SSE
+    # intrinsics at the default x64 baseline, preserving CPU dispatch and all
+    # upstream sources. Disabling SIMD is broken in this pinned MSVC build.
+    get_target_property(webp_source_directory webpdsp SOURCE_DIR)
+    get_target_property(webp_dsp_sources webpdsp SOURCES)
+    foreach(source IN LISTS webp_dsp_sources)
+        if(source MATCHES "_sse(2|41)\\.c$")
+            set_source_files_properties("${source}" DIRECTORY "${webp_source_directory}"
+                PROPERTIES COMPILE_FLAGS "")
+        endif()
+    endforeach()
+endif()
 file(WRITE "${CMAKE_BINARY_DIR}/editor-dependencies.json" "{\n")
 foreach(component editor_json editor_http editor_images editor_svg editor_xml)
     file(TO_CMAKE_PATH "${${component}_SOURCE_DIR}" component_path)

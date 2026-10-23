@@ -137,7 +137,56 @@ def main():
                 assert rules['read_only'] is True and len(rules['items']) == 1
                 assert rules['items'][0]['movement_defined'] is False
                 assert tool('editor_info') == before_rules
-                print('Native edit, search, undo/save, sorted comparisons and read-only regulations passed.')
+                # Two distinct leagues ensure drilling filters rows rather than
+                # merely opening the first club/player from the whole world.
+                tool('editor_apply', {'changes': [
+                    {'op': 'create', 'table': 'competitions', 'id': 'comp:second',
+                     'name': 'Zweite Demo-Liga', 'data': {'nation': 'nation:de', 'tier': 2}},
+                    {'op': 'create', 'table': 'competitions', 'id': 'comp:cup',
+                     'name': 'Zzz-Testpokal', 'data': {'nation': 'nation:de', 'type': 'cup'}},
+                    {'op': 'update', 'table': 'clubs', 'id': 'club:south',
+                     'set': {'/competition': 'comp:second'}}]})
+                tool('editor_save', {'path': str(root / 'world.obw')})
+                time.sleep(.6)
+                def double_click(a, b):
+                    before = tool('editor_info')
+                    x('mousemove', '--window', window, a, b, 'click', '--repeat', 2, '--delay', 120, 1)
+                    time.sleep(.4)
+                    assert tool('editor_info') == before, 'Navigation must not mutate the world'
+                def edit_selected(table, identifier, expected, first=False):
+                    click(1150, 443); x('key', 'ctrl+a'); x('type', '--clearmodifiers', expected)
+                    click(1300, 741)
+                    for _ in range(40):
+                        name = tool('editor_get', {'table': table, 'id': identifier})['record']['name']
+                        if name['first' if first else 'default'] == expected:
+                            break
+                        time.sleep(.05)
+                    else:
+                        raise AssertionError('Double click did not filter the expected destination: ' + identifier)
+                    tool('editor_undo'); time.sleep(.5)
+                south_player = tool('editor_list', {'table': 'players', 'team': 'club:south',
+                                                    'sort': 'name', 'limit': 1})['items'][0]['id']
+                click(100, 264)  # Leagues, then the unselected second row.
+                double_click(350, 385)
+                edit_selected('clubs', 'club:south', 'Filtered South')
+                double_click(350, 335)  # That club's players, all nationalities.
+                edit_selected('players', south_player, 'Filtered Player', True)
+                click(100, 264)  # Root navigation clears hidden team filters.
+                double_click(350, 335)
+                edit_selected('clubs', 'club:north', 'Filtered North')
+                click(100, 313)  # Double click a club that was not already selected.
+                double_click(350, 385)
+                edit_selected('players', south_player, 'Second Club', True)
+                click(100, 313)
+                click(1150, 443); x('key', 'ctrl+a'); x('type', '--clearmodifiers', 'Keep Draft')
+                double_click(350, 385)
+                x('key', 'Escape'); time.sleep(.2)
+                click(1300, 741); wait_name('Keep Draft')
+                tool('editor_undo'); time.sleep(.5)
+                click(100, 215); double_click(350, 335)  # Country -> its competitions.
+                double_click(350, 434)  # A cup keeps its own inspector.
+                edit_selected('competitions', 'comp:cup', 'Cup Inspector')
+                print('Native edit, comparisons, rules, league/club drill-down and draft protection passed.')
             except Exception:
                 log.flush()
                 print((root / 'app.log').read_text())

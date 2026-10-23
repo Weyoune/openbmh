@@ -7,8 +7,12 @@ pinned RmlUI Direct3D 11 renderer with automatic WARP software fallback. No
 additional graphics runtime download is needed on the supported Windows systems.
 Linux/macOS retain their existing OpenGL rendering.
 
-Windows also uses the portable WebP decoder, avoiding illegal AVX instructions
+Windows also builds WebP without an AVX requirement, avoiding illegal instructions
 when displaying imported club images on older CPUs or virtual machines.
+
+Double-click a country to see its competitions, a league to see its clubs, and
+a club to see its players. Destination lists inherit the corresponding filters;
+unapplied inspector entries are protected by the existing confirmation dialog.
 
 Windows startup failures now produce a native dialog and a log in
 `%LOCALAPPDATA%/OpenBMH/OpenBMHEditor-startup.log`. Console redirection is

@@ -36,11 +36,15 @@ class Renderer final : public bmh::rml::Renderer {
     Session &session;
     std::map<std::string, std::pair<std::string, std::string>> memory;
     std::map<std::string, std::string> logical;
+    std::map<std::string, std::string> asset_tokens;
     uint64_t serial = 0;
     Renderer(Session &s, bmh::rml::Video &video) : bmh::rml::Renderer(video), session(s) {}
     std::string asset(const std::string &key) {
+        if (auto found = asset_tokens.find(key); found != asset_tokens.end())
+            return found->second;
         auto token = "world-image-" + std::to_string(serial++) + ".png";
         logical[token] = key;
+        asset_tokens[key] = token;
         return token;
     }
     std::string bytes(std::string data, const std::string &extension) {
@@ -51,6 +55,7 @@ class Renderer final : public bmh::rml::Renderer {
     void clear() {
         Rml::ReleaseTextures(this);
         logical.clear();
+        asset_tokens.clear();
         memory.clear();
     }
     Rml::TextureHandle LoadTexture(Rml::Vector2i &dimensions, const Rml::String &source) override {
@@ -375,6 +380,8 @@ class EditorUi final : public Rml::EventListener {
         label("page-subtitle", page_ == "roster"   ? t("roster_hint")
                                : page_ == "review" ? t("review_hint")
                                                    : t("subtitle_" + page_));
+        if (page_ == "nations" || page_ == "competitions" || page_ == "clubs")
+            label("page-subtitle", t("subtitle_" + page_) + " · " + t("drill_" + page_));
         label("state", info_.value("dirty", false) ? "*  " + t("unsaved") : t("saved"));
         html("bottom-actions",
              button("undo", t("undo"), "quiet", info_.value("can_undo", false) ? "" : "disabled") +
@@ -441,8 +448,8 @@ class EditorUi final : public Rml::EventListener {
     std::string inspector() {
         fields_.clear();
         if (selected_.empty())
-            return "<div class=\"inspector\"><div class=\"empty\">" + escaped(t("select_record")) + "</div></div>";
-        std::string body = "<div class=\"inspector\"><div class=\"inspector-head\">";
+            return "<div class=\"empty\">" + escaped(t("select_record")) + "</div>";
+        std::string body = "<div class=\"inspector-head\">";
         if (table() == "players" || table() == "clubs" || table() == "competitions" || table() == "assets")
             body += img(table() == "players" && selected_.contains("appearance") ? "portrait:" + selected_id_
                                                                                  : image_key(selected_),
@@ -550,7 +557,53 @@ class EditorUi final : public Rml::EventListener {
         if (page_ != "review")
             body += "<div class=\"inspector-actions\">" + button("delete", t("delete"), "danger") +
                     button("apply", t("apply"), "primary") + "</div>";
-        return body + "</div>";
+        return body;
+    }
+    void initialize_fields() {
+        // Native values also preserve JSON textarea contents without escaping.
+        for (auto &f : fields_) {
+            set_value(f.id, f.kind == "bool" && f.initial.empty() ? "false" : f.initial);
+            f.initial = value(f.id);
+        }
+    }
+    void select_record(const std::string &id) {
+        if (id == selected_id_)
+            return;
+        auto record = session_.execute("get", {{"table", table()}, {"id", id}})["record"];
+        selected_id_ = id;
+        selected_ = std::move(record);
+        Rml::ElementList rows;
+        el("table-scroll")->QuerySelectorAll(rows, ".record");
+        for (auto *row : rows)
+            row->SetClass("selected", row->GetAttribute<Rml::String>("data-value", "") == id);
+        // Keep list elements alive between clicks. Replacing them here would
+        // cancel RmlUI's native double-click detection on a different row.
+        html("record-inspector", inspector());
+        initialize_fields();
+    }
+    void browse_related(const std::string &source, const std::string &id) {
+        if (source != table())
+            return;
+        const auto record = session_.execute("get", {{"table", source}, {"id", id}})["record"];
+        if (source == "competitions" && str(record, "type") != "league")
+            return;
+        leave_fields([this, source, id] {
+            // Apply/discard decisions may have updated the source record.
+            const auto row = session_.execute("get", {{"table", source}, {"id", id}})["record"];
+            if (source == "competitions" && str(row, "type") != "league")
+                return;
+            page_ = source == "nations" ? "competitions" : source == "competitions" ? "clubs" : "players";
+            nation_ = source == "nations" ? id : str(row, "nation");
+            league_ = source == "competitions" ? id : source == "clubs" ? str(row, "competition") : "";
+            team_ = source == "clubs" ? id : "";
+            fields_.clear();
+            selected_id_.clear();
+            search_.clear();
+            offset_ = 0;
+            sort_ = "name";
+            descending_ = false;
+            needs_refresh_ = true;
+        });
     }
     void records() {
         if (!info_.value("loaded", false)) {
@@ -572,7 +625,8 @@ class EditorUi final : public Rml::EventListener {
             toolbar += "<select id=\"filter-league\">" + choices("competitions", league_, t("all_leagues"), nation_) +
                        "</select>";
         if (table() == "players")
-            toolbar += "<select id=\"filter-team\">" + choices("clubs", team_, t("all_clubs"), nation_) + "</select>";
+            toolbar += "<select id=\"filter-team\">" +
+                       choices("clubs", team_, t("all_clubs"), nation_, league_) + "</select>";
         if (page_ == "roster")
             toolbar += button("view24", "24", roster24_ ? "primary" : "");
         html("toolbar", toolbar);
@@ -637,13 +691,11 @@ class EditorUi final : public Rml::EventListener {
         html("page-content", "<div class=\"split\"><div class=\"list-panel\"><div "
                              "class=\"table-header\">" +
                                  columns + "</div><div class=\"table-scroll\" id=\"table-scroll\">" + rows +
-                                 "</div></div>" + inspector() + "</div>");
+                                 "</div></div><div class=\"inspector\" id=\"record-inspector\">" +
+                                 inspector() + "</div></div>");
         // RmlUI's textarea parser retains its raw body rather than decoding
         // HTML entities. Assign native values after constructing the controls.
-        for (auto &f : fields_) {
-            set_value(f.id, f.kind == "bool" && f.initial.empty() ? "false" : f.initial);
-            f.initial = value(f.id);
-        }
+        initialize_fields();
         html("pagination",
              "<span>" + std::to_string(total_) + " " + escaped(t("records")) +
                  (roster24_ ? " · " + escaped(t("compatibility24")) : "") + "</span><div class=\"button-row\">" +
@@ -1445,11 +1497,9 @@ class EditorUi final : public Rml::EventListener {
                 selected_id_.clear();
                 offset_ = 0;
                 search_.clear();
-                if (arg == "comparison" || arg == "regulations") {
-                    nation_.clear();
-                    league_.clear();
-                    team_.clear();
-                }
+                nation_.clear();
+                league_.clear();
+                team_.clear();
                 needs_refresh_ = true;
             });
         else if (action == "regulations-tab") {
@@ -1508,12 +1558,13 @@ class EditorUi final : public Rml::EventListener {
             offset_ = 0;
             search_.clear();
             needs_refresh_ = true;
-        } else if (action == "select")
-            leave_fields([this, arg] {
-                selected_id_ = arg;
-                needs_refresh_ = true;
-            });
-        else if (action == "cancel-modal")
+        } else if (action.starts_with("browse:"))
+            browse_related(action.substr(7), arg);
+        else if (action.starts_with("select:")) {
+            // The click following a double click still belongs to its old list.
+            if (action.substr(7) == table() && arg != selected_id_)
+                leave_fields([this, arg] { select_record(arg); });
+        } else if (action == "cancel-modal")
             close_modal();
         else if (action == "accept-modal") {
             if (modal_accept_) {
@@ -1756,7 +1807,7 @@ class EditorUi final : public Rml::EventListener {
         doc_ = context_->LoadDocument(bmh::rml::asset_path(config_.assets / "editor.rml"));
         if (!doc_)
             throw Error("ui_assets_missing");
-        for (auto event : {"click", "change", "mousedown", "mouseup", "mousemove"})
+        for (auto event : {"click", "dblclick", "change", "mousedown", "mouseup", "mousemove"})
             doc_->AddEventListener(event, this);
         resize();
         refresh();
@@ -1799,12 +1850,19 @@ class EditorUi final : public Rml::EventListener {
                 pending_.emplace_back("image-preview", "");
             return;
         }
-        if (type != "click")
+        if (type != "click" && type != "dblclick")
             return;
         for (auto *node = target; node; node = node->GetParentNode())
             if (node->HasAttribute("data-action") && !node->HasAttribute("disabled")) {
-                pending_.emplace_back(node->GetAttribute<Rml::String>("data-action", ""),
-                                      node->GetAttribute<Rml::String>("data-value", ""));
+                auto action = node->GetAttribute<Rml::String>("data-action", "");
+                if (type == "dblclick") {
+                    if (action != "select" ||
+                        (table() != "nations" && table() != "competitions" && table() != "clubs"))
+                        return;
+                    action = "browse:" + table();
+                } else if (action == "select")
+                    action = "select:" + table();
+                pending_.emplace_back(action, node->GetAttribute<Rml::String>("data-value", ""));
                 return;
             }
     }

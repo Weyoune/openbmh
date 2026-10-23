@@ -47,7 +47,17 @@ jobs:
         run: |
           args=()
           if [[ "$RUNNER_OS" == "macOS" ]]; then args+=(-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0); fi
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENBMH_BUILD_EDITOR=ON -DBMH_DATA= "${args[@]}"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DOPENBMH_BUILD_EDITOR=ON -DBMH_DATA= "${args[@]}"
+      - name: Check portable Windows WebP instructions
+        if: runner.os == 'Windows'
+        shell: python
+        run: |
+          import json, pathlib, re
+          commands = json.loads(pathlib.Path('build/compile_commands.json').read_text())
+          simd = [c for c in commands if 'libwebp' in c['file'] and re.search(r'_sse(?:2|41)\.c$', c['file'])]
+          assert simd, 'No WebP runtime-dispatched SIMD sources found'
+          assert all(not re.search(r'/arch:AVX', c['command'], re.I) for c in simd), 'WebP SSE paths must run without AVX'
+          print('WebP SSE paths retain the Windows x64 baseline and runtime CPU detection')
       - name: Build editor and synthetic tests
         run: cmake --build build --target openbmh_editor launcher_gui_smoke editor_core_tests editor_comparison_tests editor_regulations_tests --parallel 2
       - name: Native editor core and MCP tests

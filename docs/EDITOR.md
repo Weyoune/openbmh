@@ -26,6 +26,7 @@ Das vollständige Paket `OpenBMHEditor-0.5.3-<plattform>.zip` entpacken und `Ope
 ## Bearbeiten
 
 - Links einen Datenbereich auswählen; die Liste lässt sich durchsuchen, filtern, sortieren und seitenweise durchgehen. Rechts Änderungen mit **Anwenden** übernehmen. **Speichern** übernimmt auch die aktuellen Eingaben.
+- **Doppelklick** auf ein Land zeigt seine Ligen, auf eine Liga ihre Vereine und auf einen Verein dessen Spieler. Land, Liga und Verein werden als Filter übernommen. Ein einfacher Klick wählt weiterhin den Datensatz zum Bearbeiten aus. Nicht übernommene Eingaben werden vor dem Wechsel abgefragt.
 - Länder, Wettbewerbe, Vereine, Spieler, Kader, Stadien und Schiedsrichter lassen sich anlegen und bearbeiten. Referenzierte Datensätze werden erst nach Änderung ihrer Verknüpfungen gelöscht. Vereinswechsel zwischen Ligen aktualisieren auch deren Mitgliederlisten.
 - Spielwerte behalten ihre **quellenspezifischen Wertebereiche**. Ein Classic-Wert wird nicht auf eine erfundene 1–10-Skala umgerechnet. Neue Spieler ohne belegte Werte bleiben zunächst unbewertet.
 - Kader bleiben vollständig erhalten. Die Schaltfläche **24** schaltet lediglich die Seitengröße um. Spieler lassen sich über das Vereinsfeld verschieben, zum Tausch merken und mit einem anderen Spieler tauschen; die Pfeile ändern ihre Reihenfolge.
