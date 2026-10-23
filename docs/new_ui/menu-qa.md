@@ -22,8 +22,8 @@ Das private Mockup-Repository enthält dafür
 `--scenes all` nimmt jede katalogisierte Ansicht bis Anstoß auf; fehlende
 native Ports erhalten weiterhin eine HTML-Aufnahme. Native Fälle enthalten
 PNG, DOM, Snapshot, Eingabeskript und ladbaren Demostand. Das Werkzeug ist
-ein endlicher QA-Lauf, kein unbeaufsichtigter Dauerprozess. Folgende
-Menü-Meilensteine verwenden denselben Katalog erneut.
+ein endlicher QA-Lauf. Der zusätzlich eingerichtete lokale Watcher startet
+diesen Katalog nach stabilen Build- oder Referenzänderungen automatisch erneut.
 
 Die Matrix trennt technische Aufnahme, Datenabgleich und visuelle Freigabe.
 Reviewer, Zeitpunkt und fünf Prüfbereiche werden gespeichert. Unvollständige
@@ -39,6 +39,19 @@ Verwerfen von Eingaben. Private Ressourcen werden dort nicht vorausgesetzt.
 
 CI ergänzt die tatsächlichen Renderer-/HTML-Vergleiche. Ein erfolgreicher
 Build bestätigt keine visuelle Abnahme auf dem jeweiligen Betriebssystem.
+
+Auf dem Entwicklungsserver läuft `openbmh-native-ui-qa.service` unabhängig
+von einem aktiven Chat weiter. Er beobachtet fertiges Binary, ausgelieferte
+Stylesheets, GUI-Index und HTML-Quelldateien; nach 60 Sekunden unverändertem
+Stand erfasst er alle Menürouten in den drei Themes bei 1280 × 720. Er behält
+die letzten drei eigenen abgeschlossenen Läufe. Identische Stände lösen keine
+neuen Aufnahmen aus. Die größere Matrix und gezielte Bedienungsprüfungen
+bleiben Teil der Agenten-Abnahme am Menü-Meilenstein.
+
+Der Dienst erzeugt Bilder, Zustände, Logs und offene Reviewchecklisten.
+Er erteilt keine automatische gestalterische Freigabe und behebt keine
+erkannten Fehler eigenständig. Bedienung und Installationshinweise stehen
+im privaten Mockup-Repository unter `tools/qa/README-watch-native.md`.
 
 ## Nachweise
 
