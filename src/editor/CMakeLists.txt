@@ -21,6 +21,12 @@ endforeach()
 set(SDL2IMAGE_PNG ON CACHE BOOL "" FORCE)
 set(SDL2IMAGE_JPG ON CACHE BOOL "" FORCE)
 set(SDL2IMAGE_WEBP ON CACHE BOOL "" FORCE)
+if(MSVC)
+    # The pinned WebP build applies /arch:AVX to its SSE2 sources as well.
+    # Runtime SSE2 detection cannot make those AVX instructions safe on older
+    # CPUs or virtual machines. Small editor images use the portable decoder.
+    set(WEBP_ENABLE_SIMD OFF CACHE BOOL "Portable Windows WebP decoding" FORCE)
+endif()
 set(SDL2IMAGE_PNG_SAVE OFF CACHE BOOL "" FORCE)
 set(SDL2IMAGE_JPG_SAVE OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(editor_images GIT_REPOSITORY https://github.com/libsdl-org/SDL_image.git

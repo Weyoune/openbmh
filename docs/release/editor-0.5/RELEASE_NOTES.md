@@ -7,6 +7,9 @@ pinned RmlUI Direct3D 11 renderer with automatic WARP software fallback. No
 additional graphics runtime download is needed on the supported Windows systems.
 Linux/macOS retain their existing OpenGL rendering.
 
+Windows also uses the portable WebP decoder, avoiding illegal AVX instructions
+when displaying imported club images on older CPUs or virtual machines.
+
 Windows startup failures now produce a native dialog and a log in
 `%LOCALAPPDATA%/OpenBMH/OpenBMHEditor-startup.log`. Console redirection is
 retained and headless/MCP errors remain nonmodal. Native GUI startup, screenshots,
