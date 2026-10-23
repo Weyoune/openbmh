@@ -36,6 +36,19 @@ struct Renderer final : Rml::RenderInterface {
   void EnableScissorRegion(bool) override {}
   void SetScissorRegion(Rml::Rectanglei) override {}
 };
+struct System final : Rml::SystemInterface {
+  size_t stylesheet_errors = 0;
+  bool LogMessage(Rml::Log::Type type, const Rml::String &message) override {
+    if ((type == Rml::Log::LT_WARNING || type == Rml::Log::LT_ERROR) &&
+        (message.find("property") != message.npos ||
+         message.find("style") != message.npos ||
+         message.find("Syntax error") != message.npos)) {
+      ++stylesheet_errors;
+      std::cerr << message << '\n';
+    }
+    return true;
+  }
+};
 void text_centers(Rml::Element &node, float cx, float cy, bool horizontal,
                   size_t &lines) {
   if (auto *text = dynamic_cast<Rml::ElementText *>(&node)) {
@@ -72,7 +85,7 @@ int main(int argc, char **argv) try {
   require(argc == 2, "Pass the Modern asset directory");
   const auto root = std::filesystem::path(argv[1]);
   Renderer renderer;
-  Rml::SystemInterface system;
+  System system;
   Rml::SetRenderInterface(&renderer);
   Rml::SetSystemInterface(&system);
   require(Rml::Initialise(), "Rml initialization");
@@ -84,9 +97,13 @@ int main(int argc, char **argv) try {
                             Rml::Style::FontStyle::Normal,
                             Rml::Style::FontWeight::Bold),
           "Bold font missing");
-  std::ifstream input(root / "theme.rcss");
   std::ostringstream css;
-  css << input.rdbuf();
+  for (const auto *name : {"theme.rcss", "ticket.rcss", "sports.rcss",
+                            "calendar.rcss"}) {
+    std::ifstream input(root / name);
+    require(bool(input), "Production stylesheet missing");
+    css << input.rdbuf() << '\n';
+  }
   for (const auto *theme : {"midnight", "silver", "matchday"})
     for (float density : {1.f / 3, .5f, 1.f, 2.f}) {
       auto *context = Rml::CreateContext(
@@ -136,6 +153,8 @@ int main(int argc, char **argv) try {
           "<rml><head><style>" + css.str() + "</style></head><body class='" +
           theme + "'>" + content + "</body></rml>");
       require(doc, "Document missing");
+      require(system.stylesheet_errors == 0,
+              "Rml rejected a production stylesheet declaration");
       doc->Show();
       context->Update();
       context->Render();

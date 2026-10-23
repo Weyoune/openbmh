@@ -1,0 +1,32 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+.calendar-month {position:absolute;border:2dp var(--border);border-radius:16dp;background-color:var(--soft);}
+.calendar-month h2 {position:absolute;left:12dp;right:12dp;top:14dp;height:34dp;font-size:30dp;text-align:center;}
+.calendar-weekday {position:absolute;display:flex;align-items:center;font-size:24dp;font-weight:normal;color:var(--muted);}
+.calendar-weekday.sunday {color:var(--danger);}
+.calendar-day {position:absolute;display:flex;align-items:center;justify-content:center;padding:0;border:0dp;border-radius:8dp;background-color:transparent;font-size:30dp;}
+.calendar-day:hover {background-color:var(--hover);}
+.calendar-day.has-match {color:#e9cb86;}
+.calendar-day.selected-day {background-color:#7d9eb83b;color:#ffffff;}
+.calendar-outline {position:absolute;left:3dp;right:3dp;top:3dp;bottom:3dp;border:2dp #a8cde7;border-radius:8dp;pointer-events:none;}
+.calendar-day:focus-visible {font-effect:shadow(1dp 0dp var(--accent));}
+.calendar-info {position:absolute;left:0;right:0;bottom:140dp;height:34dp;line-height:34dp;text-align:center;font-size:30dp;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#calendar-country,#calendar-league {padding:12dp 24dp;padding-right:45dp;background-color:transparent;decorator:linear-gradient(180deg,#c1d1e31c,#869eb312);}
+body.midnight .calendar-month {border-color:#c5d9e71a;background-color:#101d2826;}
+body.midnight .calendar-month h2 {color:#dce5ee;}
+body.midnight .calendar-weekday {color:#97a8b7;}
+body.midnight .calendar-weekday.sunday {color:#eb9f98;}
+body.midnight .calendar-day {color:#c6d2dc;}
+body.midnight .calendar-day.has-match {color:#e9cb86;}
+body.midnight .calendar-day.selected-day {color:#ffffff;}
+body.midnight .calendar-info {color:#c6d2dc;}
+body.midnight #calendar-country,body.midnight #calendar-league {color:#e0e6ec;border-color:#d4e0ec29;}
+body.silver .calendar-month {background-color:#42627d09;}
+body.silver .calendar-day.has-match {color:#805b18;}
+body.silver .calendar-day.selected-day {background-color:#a3c3dd54;color:#193b52;}
+body.silver .calendar-outline {border-color:#356f966e;}
+body.silver #calendar-country,body.silver #calendar-league {decorator:linear-gradient(180deg,#ffffffb0,#bfd0e259);}
+body.matchday .calendar-month {background-color:#f8e7e00a;}
+body.matchday .calendar-day.has-match {color:#e1c68b;}
+body.matchday .calendar-day.selected-day {background-color:#d48c7b26;color:#ffe5de;}
+body.matchday .calendar-outline {border-color:#e5a19770;}
+body.matchday #calendar-country,body.matchday #calendar-league {decorator:linear-gradient(180deg,#e8d6dc12,#a1a0aa0d);}

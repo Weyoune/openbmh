@@ -23,6 +23,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: modern-ui-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   controls:
     strategy:

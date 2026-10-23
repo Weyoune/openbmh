@@ -35,6 +35,9 @@ wird ausdrücklich mit `OPENBMH_BUILD_MODERN_UI=ON` gebaut.
 - [Taktik](desktop/tactics/README.md): sieben interaktive Diagrammflächen,
   zyklische Einstellungen und Einsatzregler. Die Grafik aktualisiert sich
   unmittelbar und speichert ausschließlich UI-Vorschaueinstellungen.
+- [Kalender](desktop/calendar/README.md): zwölf Monate mit der originalen
+  Wochentagsanordnung, Tageswahl und Länder-/Ligavorschau; 18/20 Vereine,
+  Schaltjahre und gespeicherte Auswahl werden berücksichtigt.
 
 **Anstoß führt keine Aktion aus**, weder per Maus noch per Tastatur. Das gilt
 auch für die direkte Aktionsschnittstelle des Demoanbieters.
@@ -47,6 +50,8 @@ Der Einstellungsdialog, die vollständigen Widgetinhalte, Sortierung/Details,
 Mod-Importkomfort und dauerhafte globale Voreinstellungen sind noch nicht
 vollständig. Übersetzungen, echte Engine-Anbindung und Plattform-Abnahme
 unter Windows/macOS folgen später. Dies ist kein freigegebenes Test-Release.
+Die [QA-Befundliste](qa-findings.md) nennt insbesondere noch fehlende
+Sortierung und Detailpfade der ersten Tabellen-/Stärkenansichten.
 
 ## Architekturgrenze für die Engine
 

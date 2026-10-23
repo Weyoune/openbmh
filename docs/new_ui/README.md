@@ -11,12 +11,14 @@ Implementierung in der Spiel-Engine.
 | Nativer Stand | [Unterbau, erster Durchlauf und noch offene Übertragungen](NATIVE_STATUS.md) |
 | Schrift-QA | [Button-/Dropdown-Ausrichtung und unabhängiger Vergleich](typography-qa.md) |
 | Menü-QA | [Wiederholbarer Gesamtkatalog und Meilenstein-Abnahme](menu-qa.md) |
+| QA-Befunde | [Offene Abweichungen zur HTML-Referenz](qa-findings.md) |
 | Ressourcen | [GUI-Assets, Weltbilder und spätere Paketbereinigung](assets.md) |
 | Desktop | [Statusleiste, Gestaltung und Fenster](desktop/README.md) |
 | Eintrittspreis | [Kompakter Schieberegler im Konto-Widget](desktop/entry-price/README.md) |
 | Trainingslager | [Alle 18 Angebote, Qualitätswerte und Bedienung](desktop/trainingcamp/README.md) |
 | Training | [Übungen, Kader, Intensität und Demo-Automatik](desktop/training/README.md) |
 | Taktik | [Interaktive Diagramme und Einsatzregler](desktop/tactics/README.md) |
+| Kalender | [Zwölf Monate, transponierte Wochen und Ligavorschau](desktop/calendar/README.md) |
 | Transfers | [Ablöse-Kasten und Positionsfilter](desktop/transfers/README.md) |
 
 Jeder Bereich nennt die geprüfte Quelle, bestehende Funktionen und offene

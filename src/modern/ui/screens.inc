@@ -967,6 +967,8 @@ std::string App::render_menu(const std::string &key) {
     body = render_training();
   else if (key == "tactics")
     body = render_tactics();
+  else if (key == "calendar")
+    body = render_calendar();
   else if (key == "camp")
     body = render_camp();
   else if (key == "settings")

@@ -5,6 +5,7 @@
 #include "launch/rml_path.hpp"
 #include "launch/rml_video.hpp"
 #include "modern/ui/controls.hpp"
+#include "modern/ui/demo_calendar.hpp"
 #include "modern/ui/demo_sports.hpp"
 #include "modern/ui/desktop.hpp"
 #include "modern/ui/gui_assets.hpp"
@@ -598,6 +599,7 @@ class App final : public Rml::EventListener {
   std::string render_camp();
   std::string render_training();
   std::string render_tactics();
+  std::string render_calendar();
   std::string training_balls(const std::string &, int, int, bool,
                              const std::string &player = {}, int size = 56,
                              int gap = 10, bool overtraining = false);
@@ -627,6 +629,15 @@ class App final : public Rml::EventListener {
     }
   }
   void input(Rml::Element *);
+  void scale_chalk_shadow() {
+    // Pinned RmlUI font effects read integer pixels even for dp properties.
+    // Match the HTML's two logical pixels at the current stage density.
+    if (auto *label = doc_->QuerySelector(".tactic-effort-label")) {
+      const auto offset = std::to_string(int(std::round(2 * scale_)));
+      label->SetProperty("font-effect",
+                          "shadow(" + offset + "px " + offset + "px #386824)");
+    }
+  }
   void resize() {
     int w, h, pw, ph;
     SDL_GetWindowSize(video_.window, &w, &h);
@@ -644,6 +655,7 @@ class App final : public Rml::EventListener {
     element("canvas")->SetProperty("top", scalar(canvas_top_) + "px");
     if (ticket_)
       ticket_->resize(device_ratio_);
+    scale_chalk_shadow();
     dirty_ = true;
   }
   void render() {
@@ -685,6 +697,7 @@ class App final : public Rml::EventListener {
                                     : "saturate(0.34) brightness(0.70)");
     needs_render_ = false;
     last_rendered_menu_ = menu_;
+    scale_chalk_shadow();
     dirty_ = true;
     if (focus_ticket_) {
       if (auto *n = element("desktop-ticket"))
@@ -856,9 +869,10 @@ public:
       if (!doc_)
         throw std::runtime_error("Modern UI layout missing");
       for (const char *event :
-           {"click", "dblclick", "change", "input", "keydown", "mousedown",
+           {"click", "dblclick", "change", "input", "keydown", "blur", "mousedown",
             "mouseup", "mousemove", "contextmenu"})
-        doc_->AddEventListener(event, this);
+        doc_->AddEventListener(event, this, Rml::String(event) == "keydown" ||
+                                               Rml::String(event) == "blur");
       if (!config_.theme.empty())
         theme_ = config_.theme;
       if (theme_ != "midnight" && theme_ != "silver" && theme_ != "matchday")
@@ -980,6 +994,7 @@ public:
 #include "modern/ui/desktop_screens.inc"
 #include "modern/ui/screens.inc"
 #include "modern/ui/sports_screens.inc"
+#include "modern/ui/calendar_screen.inc"
 } // namespace
 bool is_modern_world(const fs::path &file) {
   try {

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "modern/ui/model.hpp"
+#include "modern/ui/demo_calendar.hpp"
 #include "modern/ui/demo_sports.hpp"
 #include "modern/ui/desktop.hpp"
 #include <algorithm>
@@ -76,9 +77,10 @@ DemoSource::DemoSource(std::shared_ptr<const Catalog> catalog)
       {"edits", Json::object()}};
   state_["training"] = demo_training(*catalog_, club);
   state_["tactics"] = demo_tactics();
-  saved_ = state_;
   if (!valid_date(state_.at("date")))
     throw editor::Error("invalid_demo_date");
+  state_["calendar"] = demo_calendar(*catalog_, state_.at("date"));
+  saved_ = state_;
 }
 Snapshot DemoSource::snapshot() const { return {revision_, catalog_, state_}; }
 ActionResult DemoSource::apply(const Action &action) {
@@ -120,6 +122,11 @@ ActionResult DemoSource::apply(const Action &action) {
         return {false, revision_, error};
     } else if (action.kind == "tactics") {
       const auto error = edit_demo_tactics(next["tactics"], action.value);
+      if (!error.empty())
+        return {false, revision_, error};
+    } else if (action.kind == "calendar") {
+      const auto error = edit_demo_calendar(next["calendar"], action.value,
+                                            *catalog_);
       if (!error.empty())
         return {false, revision_, error};
     } else if (action.kind == "camp.select") {
@@ -189,6 +196,10 @@ Json DemoSource::load(const fs::path &file) {
       !data.at("edits").is_object() || !data.at("opening").is_string() ||
       !camp_id(data.at("camp").at("selected")))
     throw editor::Error("invalid_demo_state");
+  if (!data.contains("calendar"))
+    data["calendar"] = demo_calendar(*catalog_, data.at("date"));
+  if (!valid_demo_calendar(data.at("calendar"), *catalog_))
+    throw editor::Error("invalid_demo_calendar");
   const auto &focus = data.at("camp").at("focus");
   if (!focus.is_array() || focus.size() != 3)
     throw editor::Error("invalid_focus");

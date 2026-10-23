@@ -135,12 +135,25 @@ void App::ProcessEvent(Rml::Event &event) try {
     keyboard_navigation_ = true;
   else if (type == "mousedown")
     keyboard_navigation_ = false;
+  if (type == "blur") {
+    if (auto *select = dynamic_cast<Rml::ElementFormControlSelect *>(
+            event.GetTargetElement());
+        select && select->IsSelectBoxVisible()) {
+      select->CancelSelectBox();
+      dirty_ = true;
+    }
+    return;
+  }
   for (auto *n = event.GetTargetElement(); n && n != doc_;
        n = n->GetParentNode())
     if (n->GetId() == "native-ticket-layer")
       return;
   if (type == "mouseup" && event.GetParameter<int>("button", 0) == 1) {
-    if (scene_ == "desktop" && menu_.empty() && popup_.empty()) {
+    if (scene_ == "desktop" && !menu_.empty() && popup_.empty()) {
+      menu_.clear();
+      draft_preferences_ = nullptr;
+      refresh();
+    } else if (scene_ == "desktop" && menu_.empty() && popup_.empty()) {
       std::string id;
       for (auto *n = event.GetTargetElement(); n && n != doc_;
            n = n->GetParentNode())
@@ -190,6 +203,38 @@ void App::ProcessEvent(Rml::Event &event) try {
   if (type == "keydown") {
     const auto key =
         Rml::Input::KeyIdentifier(event.GetParameter<int>("key_identifier", 0));
+    Rml::ElementFormControlSelect *select = nullptr;
+    for (auto *n = target; n && n != doc_; n = n->GetParentNode())
+      if ((select = dynamic_cast<Rml::ElementFormControlSelect *>(n)))
+        break;
+    if (select && !select->HasAttribute("disabled")) {
+      const bool open = select->IsSelectBoxVisible();
+      if (open && key == Rml::Input::KI_TAB) {
+        select->CancelSelectBox();
+        dirty_ = true;
+      }
+      if ((!open && (key == Rml::Input::KI_DOWN || key == Rml::Input::KI_UP)) ||
+          key == Rml::Input::KI_RETURN || key == Rml::Input::KI_SPACE) {
+        if (open)
+          select->HideSelectBox();
+        else {
+          select->ShowSelectBox();
+          if (key == Rml::Input::KI_UP)
+            select->SetSelection(select->GetNumOptions() - 1);
+        }
+        event.StopImmediatePropagation();
+        dirty_ = true;
+        return;
+      }
+      if (open && (key == Rml::Input::KI_HOME || key == Rml::Input::KI_END)) {
+        select->SetSelection(key == Rml::Input::KI_HOME
+                                 ? 0
+                                 : select->GetNumOptions() - 1);
+        event.StopImmediatePropagation();
+        dirty_ = true;
+        return;
+      }
+    }
     if (key == Rml::Input::KI_RETURN || key == Rml::Input::KI_SPACE) {
       for (auto *n = target; n && n != doc_; n = n->GetParentNode())
         if (n->GetTagName() == "button") {
@@ -887,7 +932,7 @@ void App::dispatch(const std::string &action, Rml::Element *target) {
     }
     static const std::set<std::string> available = {
         "tables", "strengths", "camp",     "settings",
-        "save",   "load",      "training", "tactics"};
+        "save",   "load",      "training", "tactics", "calendar"};
     if (!available.contains(route)) {
       message("Diese native Ansicht wird im nächsten Menüpaket übertragen.");
       return;
@@ -917,6 +962,13 @@ void App::dispatch(const std::string &action, Rml::Element *target) {
         change["player"] = target->GetAttribute<Rml::String>("data-player", "");
     }
     if (apply("training", change)) {
+      focus_after_render_ = target->GetId();
+      refresh();
+    }
+    return;
+  }
+  if (action == "calendar-select") {
+    if (apply("calendar", {{"kind", "select"}, {"value", std::stoi(id)}})) {
       focus_after_render_ = target->GetId();
       refresh();
     }
@@ -1100,6 +1152,26 @@ void App::change(Rml::Element *target) {
   if (auto *select = dynamic_cast<Rml::ElementFormControlSelect *>(target);
       select && select->IsSelectBoxVisible()) {
     pending_selects_.insert(target->GetId());
+    return;
+  }
+  if (kind == "calendar-country" || kind == "calendar-league") {
+    std::string league = value;
+    if (kind == "calendar-country") {
+      const auto current = snap().state.at("calendar").at("league").get<std::string>();
+      const auto *competition = world_->find("competitions", current);
+      if (competition && competition->value("nation", "") == value)
+        return;
+      const auto leagues = world_->leagues(value);
+      if (leagues.empty())
+        return;
+      league = leagues.front()->value("id", "");
+    }
+    if (snap().state.at("calendar").at("league") == league)
+      return;
+    if (apply("calendar", {{"kind", "league"}, {"value", league}})) {
+      focus_after_render_ = target->GetId();
+      refresh();
+    }
     return;
   }
   if (kind == "training-focus") {

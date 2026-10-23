@@ -28,6 +28,9 @@ Ausrichtungen waren überwiegend bereits korrekt.
   Der übergeordnete Dialog bleibt offen. Pfeiltasten dürfen mehrere Optionen
   durchlaufen; erst beim Schließen wird die Auswahl an die Ansicht übergeben.
   Anschließend kehrt der Fokus zum Auswahlfeld zurück.
+- Die Pfeiltasten öffnen eine geschlossene Auswahl wie HTML. Home/End in
+  der geöffneten Liste, Übernahme mit Enter/Leertaste und Verwerfen beim
+  Verlassen werden vor dem RmlUI-Standardverhalten behandelt.
 - Die Manager-Auswahlfelder entsprechen mit 88 logischen Pixeln Höhe und
   30 Pixeln Schrift der Referenz. Das Stärke-Feld nutzt die volle Spaltenbreite.
 - Das fehlende Kalendersymbol für den diagonalen Pfeil wird durch ein eigenes
@@ -48,6 +51,11 @@ das Produktions-RCSS mit synthetischen Daten. Der Test misst Text-/Pfeilmitten,
 prüft sichtbare Textzeilen, unveränderte Bildkarten und Popup-Schriftgrößen in
 drei Themes bei vier Pixeldichten. Er ergänzt den echten Renderer-/HTML-
 Vergleich und ersetzt ihn nicht.
+Der Test liest alle Produktions-Stylesheets und weist Parserfehler zurück.
+Ein negativer Test mit einer tatsächlich ungültigen Rml-Schattenangabe
+bestätigt diesen Schutz. Rml erwartet beim Diagrammfilter die Farbe zuerst;
+Fontschatten benötigen in der gepinnten Version ausdrücklich skalierte
+physische Pixel statt einer unverändert übernommenen `dp`-Angabe.
 
 Screenshots, DOM-Ausgaben, Messdaten und Wiederholungsabläufe liegen im privaten
 Mockup-Repository unter `docs/qa/native-rmlui-2026-10-23`. Die native Abnahme

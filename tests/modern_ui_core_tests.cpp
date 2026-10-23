@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "modern/ui/demo_sports.hpp"
+#include "modern/ui/demo_calendar.hpp"
 #include "modern/ui/desktop.hpp"
 #include "modern/ui/gui_assets.hpp"
 #include "modern/ui/model.hpp"
@@ -251,17 +252,85 @@ int main(int argc, char **argv) try {
   auto legacy = Json::parse(bmh::editor::read_file(root / "sports.ui.json"));
   legacy.erase("training");
   legacy.erase("tactics");
+  legacy.erase("calendar");
   write(root, "legacy-ui.json", legacy);
   restored_sports.load(root / "legacy-ui.json");
   require(valid_demo_training(restored_sports.snapshot().state["training"],
                               *world, "club:a"),
           "Older UI checkpoint did not migrate safely");
+  require(valid_demo_calendar(restored_sports.snapshot().state["calendar"],
+                              *world),
+          "Older UI checkpoint lost its season calendar");
   for (const auto *theme : {"midnight", "silver", "matchday"}) {
     const auto diagram = bmh::editor::images::decode(
         tactics_diagram(demo_tactics(), theme), ".svg", 256);
     require(diagram.width == 256 && diagram.height > 0,
             "Tactic SVG failed to decode");
   }
+  const auto leap_days = calendar_days("2027-07-01");
+  require(leap_days.size() == 366 && leap_days.front().weekday == 3 &&
+              leap_days.back().iso == "2028-06-30" &&
+              std::count_if(leap_days.begin(), leap_days.end(), [](const auto &d) {
+                return d.iso == "2028-02-29";
+              }) == 1,
+          "Season dates lost weekday alignment or leap day");
+  require(calendar_days("2026-07-01").size() == 365 &&
+              calendar_days("2099-07-01").size() == 365 &&
+              calendar_days("0000-07-01").empty() &&
+              calendar_days("2027-06-01").empty(),
+          "Season date validation or Gregorian century handling failed");
+  auto calendar_clubs = world->rows("clubs");
+  for (int i = 1; i < 20; ++i) {
+    if (i < 18)
+      calendar_clubs.push_back({{"id", "club:home" + std::to_string(i)},
+                                {"name", "Home " + std::to_string(i)},
+                                {"nation", "nation:de"},
+                                {"competition", "comp:home"}});
+    calendar_clubs.push_back({{"id", "club:other" + std::to_string(i)},
+                              {"name", "Other " + std::to_string(i)},
+                              {"nation", "nation:other"},
+                              {"competition", "comp:other"}});
+  }
+  table(root, "clubs", calendar_clubs);
+  auto calendar_world = Catalog::open(root);
+  DemoSource calendar_source(calendar_world);
+  auto calendar = calendar_source.snapshot().state.at("calendar");
+  const auto fixtures = calendar_fixtures(calendar, *calendar_world, "club:a");
+  require(fixtures.size() == 34, "Eighteen-team season needs 34 preview rounds");
+  std::map<std::string, int> opponents;
+  std::set<int> occupied;
+  for (const auto &fixture : fixtures) {
+    require(fixture.home == "club:a" || fixture.away == "club:a",
+            "Calendar fixture belongs to another career club");
+    require(fixture.home != fixture.away && occupied.insert(fixture.day).second,
+            "Preview generated self match or duplicate date");
+    ++opponents[fixture.home == "club:a" ? fixture.away : fixture.home];
+  }
+  require(opponents.size() == 17 &&
+              std::all_of(opponents.begin(), opponents.end(), [](const auto &p) {
+                return p.second == 2;
+              }),
+          "Preview must show two meetings per opponent");
+  const auto original_calendar = calendar_source.snapshot();
+  require(!calendar_source.apply({0, "calendar", {{"kind", "select"}, {"value", -1}}}).ok &&
+              !calendar_source.apply({0, "calendar", {{"kind", "select"}, {"value", 365}}}).ok &&
+              !calendar_source.apply({0, "calendar", {{"kind", "select"}, {"value", 1.5}}}).ok &&
+              calendar_source.snapshot().state == original_calendar.state &&
+              calendar_source.snapshot().revision == 0,
+          "Invalid calendar selection mutated the demo");
+  require(calendar_source.apply({0, "calendar", {{"kind", "select"}, {"value", 30}}}).ok &&
+              calendar_source.apply({1, "calendar", {{"kind", "league"}, {"value", "comp:other"}}}).ok,
+          "Calendar day or foreign preview league selection failed");
+  calendar = calendar_source.snapshot().state.at("calendar");
+  require(calendar_fixtures(calendar, *calendar_world, "club:a").size() == 38 &&
+              calendar["selected"] == 30 &&
+              calendar_source.snapshot().state["managers"] == original_calendar.state["managers"],
+          "Foreign calendar preview changed selection or career identity");
+  calendar_source.save(root / "calendar.ui.json", default_desktop());
+  DemoSource restored_calendar(calendar_world);
+  restored_calendar.load(root / "calendar.ui.json");
+  require(restored_calendar.snapshot().state["calendar"] == calendar,
+          "Calendar selection was lost on process restoration");
   GuiAssets absent(root / "missing-gui");
   require(!absent.available(),
           "World resources were mistaken for GUI resources");
