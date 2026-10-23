@@ -53,7 +53,7 @@ Für 0.3 gilt außerdem:
 |---|---|---|
 | M0 | Classic-Referenz festhalten, Datensatz lokal bereitstellen | erledigt (Classic-Regressionen des öffentlichen Codes: Issue #14) |
 | M1 | `WorldLayout`, Abzweig `src/modern/` | Abzweig und Layout erledigt; vereinsbezogene Speicherblöcke folgen mit M3 |
-| M2 | Spielpläne je Liga (Round-Robin), Kalender mit 38 Spieltagen | offen |
+| M2 | Spielpläne je Liga, Kalender mit 38 Spieltagen | Engine-Teil erledigt (Tabelle je Ligagröße, Ligatermine, Aussetzen); Test mit echten Daten in M3 |
 | M3 | Modern-Weltlader, Namen (Vor-/Nachname, UTF-8), Asset-Schlüssel | offen |
 | M4 | Trainingslager: 18 Lager, drei Regionen, 6-Sterne-Wirkung | offen |
 | M5 | Datenrevision 1.4 des Modern-Datensatzes (privat), Wirtschaftsprüfung | offen |

@@ -98,6 +98,9 @@ int team_league(int team);
 // LeagueTableTeams). The same as the league size except for the English fifth league (10 teams),
 // which belongs to no calendar group and is never played.
 int league_table_teams(int league);
+// Modern worlds play every league on the table of its own size (international leagues of
+// 20 and 18 clubs side by side). Classic leaves this off: leagues 5-8 share the table of league 5.
+inline bool kLeagueTablesPerLeague = false;
 
 struct Fixture {
     int home;  // team id

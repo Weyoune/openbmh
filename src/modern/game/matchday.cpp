@@ -719,6 +719,8 @@ void advance_league_rounds(ModernState& g, uint32_t competitions, WatcomRandom& 
         const int end = bit < 4 ? bit + 1 : 8;
         for (int c = bit; c < end; c++) {
             for (int league = kFirst[c]; league < kFirst[c] + kCount[c]; league++) {
+                // Modern: a league that has played all its rounds sits out (see setup_matchday).
+                if (g.league_rounds.at(size_t(league)) >= league_matchdays(league)) continue;
                 if (league == 0) {
                     for (size_t m = 0; m < g.manager_teams.size(); m++) {
                         modern::advance_youth_teams(g, int(m), rand);

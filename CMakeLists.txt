@@ -1139,6 +1139,10 @@ if(MSVC)
 endif()
 add_test(NAME quit_confirmation_unit_tests COMMAND quit_confirmation_unit_tests)
 
+add_executable(modern_calendar_tests tests/modern_calendar_tests.cpp)
+target_link_libraries(modern_calendar_tests PRIVATE bmh_season_modern)
+add_test(NAME modern_calendar_tests COMMAND modern_calendar_tests)
+
 add_executable(world_layout_tests tests/world_layout_tests.cpp)
 target_link_libraries(world_layout_tests PRIVATE bmhcore)
 add_test(NAME world_layout_tests COMMAND world_layout_tests)

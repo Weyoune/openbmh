@@ -13,8 +13,8 @@ Status: *geplant* (noch nicht in der Engine), *umgesetzt* (Engine liest/prüft e
 | Nr. | Bereich | Änderung | Phase | Status |
 |---|---|---|---|---|
 | F1 | Manifest | Laufzeit `runtime:modern-v1`, spielbare Modern-Welt | M3 | geplant |
-| F2 | Ligen | Größe je Liga frei (12–20), Generator je Liga | M2 | geplant |
-| F3 | Kalender | Ligatermine als Datumsliste | M2 | geplant |
+| F2 | Ligen | Größe je Liga frei (12–20), Generator je Liga | M2 | Engine: Größe je Liga umgesetzt; Generator vorerst Tabelle passender Größe |
+| F3 | Kalender | Ligatermine als Datumsliste | M2 | Engine-Funktion umgesetzt; Anbindung an den Weltlader mit M3 |
 | F4 | Trainingslager | Katalog mit Karte und X/Y-Lage, Ort, Bild, Qualität 0–6 | M4 | geplant |
 | F5 | Namen | Vor- und Nachname Pflicht, UTF-8 | M3 | geplant |
 | F6 | Kader | bis 24 Plätze je Verein, Mindestgröße | M3 | geplant |
@@ -32,6 +32,7 @@ Status: *geplant* (noch nicht in der Engine), *umgesetzt* (Engine liest/prüft e
 
 - `competitions[].stages[].teams` darf je Liga zwischen 12 und 20 liegen; die Mitgliederliste (`members`), `teams` und die Teams der Slots müssen übereinstimmen.
 - `generator`: `round-robin` für jede Größe; `legacy:<n>` nur, wenn `rule:legacy-fixtures` eine Tabelle für genau `n` Teams hat.
+- Stand 0.3: Die Engine spielt jede Liga mit der Spielplantabelle ihrer Größe (`rule:legacy-fixtures`, 12–20 Teams). `round-robin` wird gelesen, aber noch wie die gleich große Tabelle behandelt; nur die Reihenfolge der Paarungen unterscheidet sich. Ein eigener Round-Robin-Generator folgt bei Bedarf.
 - Spieltage einer Liga: `2 × (teams − 1)` bei `legs: 2`.
 - Die Classic-Zusatzfelder `x-legacy.league_index`, `calendar_bit`, `relegation_places`, `europe_places` bleiben und werden in 0.3 weiter gelesen.
 - **Editor:** Größe zwischen 12 und 20 zulassen; Generator `legacy:<n>` nur anbieten, wenn die Tabelle existiert; Warnung, wenn Mitglieder, `teams` und Slots nicht übereinstimmen.

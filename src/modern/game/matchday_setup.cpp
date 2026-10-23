@@ -562,6 +562,9 @@ std::vector<MatchGroup> setup_matchday(ModernState& g, uint32_t competitions, co
         for (int k = from; k < to; k++) {
             // FixturesFromGenerateFixtures(k)
             for (int league = kGroupLeague[k]; league < kGroupLeague[k] + kGroupLeagues[k]; league++) {
+                // Modern: leagues of different sizes share a calendar group; a league whose rounds
+                // are all played sits out the remaining dates of the group (docs/new_engine).
+                if (g.league_rounds.at(size_t(league)) >= league_matchdays(league)) continue;
                 turn_step = "setup: winter postponements";
                 winter_postponements(g, ctx.season_day, league, game, rand);
                 const int round = g.league_rounds.at(size_t(league));
