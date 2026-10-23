@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: GPL-3.0-only
+name: Modern UI controls
+on:
+  push:
+    branches: ['0.3']
+    paths:
+      - 'src/modern/ui/**'
+      - 'assets/modern/**'
+      - 'src/launch/rml_*'
+      - 'src/editor/archive.*'
+      - 'src/editor/images.*'
+      - 'src/editor/CMakeLists.txt'
+      - 'tests/modern_*'
+      - 'CMakeLists.txt'
+      - '.github/workflows/modern-ui.yml'
+  pull_request:
+    paths:
+      - 'src/modern/ui/**'
+      - 'assets/modern/**'
+      - 'tests/modern_*'
+      - 'CMakeLists.txt'
+      - '.github/workflows/modern-ui.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  controls:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      SDL_VIDEODRIVER: dummy
+      SDL_AUDIODRIVER: dummy
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y build-essential git cmake ninja-build pkg-config libgtk-3-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libasound2-dev libpulse-dev libgl1-mesa-dev libudev-dev
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@a102174a2b586eec2ea151a69e6fd14404a8ce7c # v1.13.0
+        with:
+          arch: x64
+      - name: Configure opt-in UI without external assets
+        run: cmake -S . -B build-ui -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENBMH_BUILD_MODERN_UI=ON -DOPENBMH_BUILD_EDITOR=OFF -DBMH_DATA=
+      - name: Compile native frontend and synthetic checks
+        run: cmake --build build-ui --target openbmh_play modern_ui_core_tests modern_ticket_document_tests modern_control_layout_tests --parallel 2
+      - name: Check controls, fonts, density and draft cancellation
+        run: ctest --test-dir build-ui -R "^modern_(ui_|ticket_|control_)" --output-on-failure --output-junit modern-ui-results.xml
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: modern-ui-tests-${{ matrix.os }}
+          path: build-ui/modern-ui-results.xml
+          if-no-files-found: warn
