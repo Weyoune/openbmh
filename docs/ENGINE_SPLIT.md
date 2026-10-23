@@ -137,6 +137,8 @@ Classic Extended is the **Classic season engine plus backported Modern features*
 
 ## 5. Modern
 
+> **Decision for 0.3 (October 2026):** Modern starts as a **fork of the Classic season core** in `src/modern/`, sharing formats, `GameState` (with a world layout) and the match core with Classic. It runs only on Modern data sets and moves away from Classic step by step; Classic stays unchanged. The typed engine described below remains the direction, reached gradually rather than by a rewrite. The 0.3 plan, status and UI interface are documented in German under [new_engine](new_engine/README.md).
+
 Modern is a new season engine on the typed OBW model (`docs/formats/OBW.md`):
 
 - **Data set:** an OBW world that goes beyond the original structure, for example foreign leagues with more than 12 teams, more leagues (up to 32) and real-world competition formats. It can start from an imported Classic world and be extended, or be a world of its own.
@@ -173,6 +175,8 @@ Each step keeps the game playable and the Classic regression (`tools/regression/
 | 9 | Classic → Modern conversion of worlds and careers | Converted careers playable |
 
 Steps 1 to 4 are the actual split and the risky part; they are pure refactoring and must be done in small commits with the regression after each. Classic improvements continue in parallel on `bmh_season_classic`.
+
+For 0.3 the order changes: the Modern fork (phases M0–M7 in [new_engine](new_engine/phasen.md)) comes first and shares the match core as it is; steps 1 to 4 follow later and then serve both season cores.
 
 ## 8. Tests
 

@@ -14,3 +14,7 @@ Implementierung in der Spiel-Engine.
 Jeder Bereich nennt die geprüfte Quelle, bestehende Funktionen und offene
 Entscheidungen für die Engine-Anbindung. Die Architekturgrundlage bleibt der
 [Engine-Split](../ENGINE_SPLIT.md).
+
+Was die Modern-Engine der Oberfläche liefert und ab welcher Phase, steht in der
+[UI-Schnittstelle der Modern-Engine](../new_engine/ui-schnittstelle.md); Plan
+und Stand der Engine in [new_engine](../new_engine/README.md).
