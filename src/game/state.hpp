@@ -24,6 +24,7 @@ namespace bmh {
 struct TransferOfferListView;
 struct TransferDecisionEvent;
 struct HumanBuyerSaleHooks;
+struct GameState;
 
 // Special team id used by the original for "no club" / the player pool (0x165).
 constexpr int kNoTeam = 0x165;
@@ -35,7 +36,19 @@ constexpr int kNoTeam = 0x165;
 constexpr uint16_t kEmptySlot = 0x0FFF;
 constexpr uint16_t kSlotInLineup = 0x8000;
 
+// Season functions the shared match core calls back into. Classic leaves the pointer in
+// GameState empty and the core calls its own season functions; the Modern season core
+// (src/modern) installs its versions, so one match core serves both season cores.
+struct SeasonHooks {
+    void (*player_statistic)(GameState& g, int competition_type, int player, int manager, int slot, int kind,
+                             int minute) = nullptr;
+    int (*table_prediction)(GameState& g, int team, int mode, std::array<uint8_t, 24>& buf,
+                            int* size_word) = nullptr;
+};
+
 struct GameState {
+    // Season core callbacks for the shared match core; nullptr = Classic (see SeasonHooks).
+    const SeasonHooks* season_hooks = nullptr;
     std::vector<uint16_t> squad_slots;  // *SquadSlots, all squads back to back (see squad_range)
     std::vector<Player> players;        // *PlayerConditionTechniqueForm / *PlayerSkillWords / *PlayerIdentityWords, names not filled
     std::vector<uint8_t> team_morale;   // *TeamMorale, per team: bits 0-5 morale / 2, bits 6-7 flags

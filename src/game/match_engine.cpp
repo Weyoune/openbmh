@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "game/match_engine.hpp"
 
 #include <algorithm>
@@ -18,6 +19,14 @@
 namespace bmh {
 
 namespace {
+
+// PlayerStatistic of the season core that owns the game (SeasonHooks; Classic by default).
+void player_statistic_hook(GameState& g, int type, int player, int manager, int slot, int kind, int minute) {
+    if (g.season_hooks && g.season_hooks->player_statistic)
+        g.season_hooks->player_statistic(g, type, player, manager, slot, kind, minute);
+    else
+        player_statistic(g, type, player, manager, slot, kind, minute);
+}
 
 // Goal threshold by chance quality index 5..24 (table at layout field).
 constexpr uint8_t kChanceTable[25] = {11, 12, 13, 14, 16, 18, 20, 21, 22, 22, 23, 25, 26,
@@ -78,7 +87,7 @@ MinuteReport MatchEngine::minute(int minute, int last_minute, int stoppage) {
 // Human teams use the places on their tactics board, also for the player's value.
 int MatchEngine::pick_player(int team, int mode, int exclude, MinuteReport& report, int preset) {
     mode &= 0x7F;  // 0x80 = reuse the squad of the previous call, same team here
-    if (team >= 138 && team != kNoTeam) return 0xFFF;  // clubs without squad: nobody, no draws
+    if (team >= world_layout().league_teams && team != no_team()) return 0xFFF;  // clubs without squad: nobody, no draws
     SquadRange range = squad_range(team);
     if (range.count == 0) return 0xFFF;
     RatingContext ctx{state.chance_rain, state.chance_temperature};
@@ -523,8 +532,8 @@ ForcedMatchEvent MatchEngine::event_impl(MatchGroup& g, int m, int s, int minute
     // national team (0x165, squad nominated on the national team days) only while manager
     // slot 0 holds it (CupDraw_FormatError_RuntimeField2 == 0x165: a Bundestrainer's match).
     if (!(team < 90 || rand.range(0, 1) == 0)) return result;
-    if (!(team < 138 || team == kNoTeam)) return result;
-    if (team == kNoTeam && (state.manager_teams.empty() || state.manager_teams[0] != kNoTeam)) return result;
+    if (!(team < world_layout().league_teams || team == no_team())) return result;
+    if (team == no_team() && (state.manager_teams.empty() || state.manager_teams[0] != no_team())) return result;
     const int manager = state.manager_of(team);  // FindManagerForClub, local_6c
     const bool human = manager >= 0;
     SquadRange range = squad_range(team);        // SquadRange4
@@ -944,7 +953,7 @@ void MatchEngine::side(MatchGroup& g, int m, int& s, int minute, int& own_att, i
     }
 
     // Goalkeeper of the opponent: the player in squad slot 0 if the formation puts it in goal.
-    if (!reality_played && (opp_team < 168 || opp_team == kNoTeam)) {
+    if (!reality_played && (opp_team < world_layout().first_foreign_cup() || opp_team == no_team())) {
         int x = 0, y = 0;
         state.formation_position(opp_team, 0, x, y);
         if (x == 0 && y == 4) keeper = state.squad_slots.at(squad_range(opp_team).first) & 0x0FFF;
@@ -979,7 +988,7 @@ void MatchEngine::side(MatchGroup& g, int m, int& s, int minute, int& own_att, i
         deflected = game.range(0, 5) == 0;
     }
     if (kind == 0) {
-        if (team >= 168 && team != kNoTeam) {
+        if (team >= world_layout().first_foreign_cup() && team != no_team()) {
             // clubs without squad: the attack rating (TeamRating, profile 3), drawn
             RatingContext drawn;
             drawn.rand = &rand;
@@ -989,7 +998,7 @@ void MatchEngine::side(MatchGroup& g, int m, int& s, int minute, int& own_att, i
         }
     }
     if (keeper == 0xFFF) {
-        if (opp_team >= 168 && opp_team != kNoTeam) {
+        if (opp_team >= world_layout().first_foreign_cup() && opp_team != no_team()) {
             // clubs without squad: the goalkeeping rating (profile 0), drawn
             RatingContext drawn;
             drawn.rand = &rand;
@@ -1111,9 +1120,9 @@ void MatchEngine::side(MatchGroup& g, int m, int& s, int minute, int& own_att, i
         }
         // PlayerStatistic: goal for the shooter, assist (open play and set pieces of kind 3).
         const int manager = state.manager_of(team);  // MatchEngineRuntimeField16
-        if (shooter != 0xFFF) player_statistic(state, g.desc.at(0), shooter, manager, last_shooter_slot, 1, minute);
+        if (shooter != 0xFFF) player_statistic_hook(state, g.desc.at(0), shooter, manager, last_shooter_slot, 1, minute);
         if ((kind == 0 || kind == 3) && assistant != 0xFFF)
-            player_statistic(state, g.desc.at(0), assistant, manager, last_assist_slot, 2, 0x5a);
+            player_statistic_hook(state, g.desc.at(0), assistant, manager, last_assist_slot, 2, 0x5a);
     } else if (live == 2 && button(::bmh::layout::MatchEngine_Side_ExecutableField5)) {
         live = 0;  // ticker mode shows misses only if this button is off
     }
@@ -1196,7 +1205,7 @@ void MatchEngine::penalty_shootout(MatchGroup& g, int m, MinuteReport& report) {
             const int side = order[k];
             const int team = pair[side];
             int player = 0xFFF;
-            if (team < 138 || team == kNoTeam) {
+            if (team < world_layout().league_teams || team == no_team()) {
                 // a player who has not taken a penalty yet (after 100 tries the list restarts)
                 int tries = 0;
                 bool fresh;

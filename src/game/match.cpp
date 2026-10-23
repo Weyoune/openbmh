@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "game/match.hpp"
+#include "game/world_layout.hpp"
 
 #include <cstdlib>
 #include <stdexcept>
@@ -73,7 +74,7 @@ int region_temperature(int region) { return region >= 0 && region < 48 ? kRegion
 int month_temperature(int month) { return kMonthTemperature[month >= 0 && month <= 12 ? month : 0]; }
 
 int team_region(int team) {
-    if (team == kNoTeam) return 0;
+    if (team == no_team()) return 0;
     int t = team;
     for (int league = 0; league < kLeagueCount; league++) {
         t -= kLeagueSizes[league];

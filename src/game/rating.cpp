@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "game/rating.hpp"
+#include "game/world_layout.hpp"
 
 #include <array>
 #include <cstdlib>
@@ -121,7 +122,7 @@ int human_correction(GameState& g, RatingContext& ctx, int manager, int rank, in
 }  // namespace
 
 int team_rating(GameState& g, int team, const RatingProfile& profile, RatingContext& ctx, int* keeper) {
-    if (team >= 168 && team != kNoTeam) {
+    if (team >= world_layout().first_foreign_cup() && team != no_team()) {
         // Clubs without squad: per group a random value around the level of the club
         // (ForeignClubStrength bits 5-7 -> RatingRuntimeField2), +2 if the group's strength bit is set
         // (bit 3, 3, 2, 1 for goal, defence, midfield, attack: RatingRuntimeField3) and a style
@@ -130,7 +131,7 @@ int team_rating(GameState& g, int team, const RatingProfile& profile, RatingCont
         static const uint8_t kStrongBit[4] = {3, 3, 2, 1};
         static const int8_t kStyle[8] = {0, 6, 0, -6, 0, -6, 0, 6};
         if (!ctx.rand) throw std::invalid_argument("team_rating: a team without squad needs the Watcom generator");
-        const uint8_t s = g.foreign_strength.at(size_t(team - 168));
+        const uint8_t s = g.foreign_strength.at(size_t(team - world_layout().first_foreign_cup()));
         int16_t total = 0;
         for (int i = 0; i < 4; i++) {
             const int level = kLevel[s >> 5];
@@ -143,7 +144,7 @@ int team_rating(GameState& g, int team, const RatingProfile& profile, RatingCont
     // Human managers: the predicted final rank (Void5 in mode 1 before the tenth
     // round of the manager's league, mode 2 after it) for the expected bonus. Mode 1 may
     // post the season goal messages.
-    const int manager = team == kNoTeam ? -1 : g.manager_of(team);  // local_5a
+    const int manager = team == no_team() ? -1 : g.manager_of(team);  // local_5a
     int rank = 0;                                                     // local_5e
     if (manager >= 0) {
         const size_t rec = size_t(manager) * 0xB0C;
@@ -151,7 +152,10 @@ int team_rating(GameState& g, int team, const RatingProfile& profile, RatingCont
         const int mode = (league < int(g.league_rounds.size()) && g.league_rounds[size_t(league)] > 9) + 1;
         std::array<uint8_t, 24> buf;
         int size_word = -1;
-        const int r = table_prediction(g, g.manager_teams.at(size_t(manager)), mode, buf, &size_word);
+        // TablePrediction of the season core that owns the game (SeasonHooks; Classic by default).
+        const int r = g.season_hooks && g.season_hooks->table_prediction
+            ? g.season_hooks->table_prediction(g, g.manager_teams.at(size_t(manager)), mode, buf, &size_word)
+            : table_prediction(g, g.manager_teams.at(size_t(manager)), mode, buf, &size_word);
         rank = r == 0 ? 0xB : r + 1;
         // Void5 (3 arguments) is called from the same frame as the player values
         // (PlayerValue, 6 arguments): its league size word (local_2c, [ESP+0xfc]) lands in

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "game/lineup.hpp"
 
 #include <cstdlib>
@@ -33,7 +34,7 @@ uint8_t formation_byte(const GameState& g, size_t index) {
 }
 
 bool pitch_context_valid(const GameState& g, int manager, int team) {
-    if (manager < 0 || manager > 3 || team < 0 || team >= 138 || g.lineups_frozen ||
+    if (manager < 0 || manager > 3 || team < 0 || team >= world_layout().league_teams || g.lineups_frozen ||
         !g.memory.has(::bmh::layout::ActiveManager) || !g.memory.has(::bmh::layout::GameMode) ||
         g.memory.u8(::bmh::layout::ActiveManager) != manager || g.memory.u8(::bmh::layout::GameMode) < 1 || g.memory.u8(::bmh::layout::GameMode) > 3 ||
         size_t(manager) >= g.manager_teams.size() || g.manager_teams[size_t(manager)] != team ||
@@ -318,7 +319,7 @@ bool save_pitch_formation_source(GameState& g, int manager_slot, int runtime_clu
 }
 
 static void auto_lineup_impl(GameState& g, int team, int mode, int manager) {
-    if (team >= 138 && team != kNoTeam) return;  // teams without squads
+    if (team >= world_layout().league_teams && team != no_team()) return;  // teams without squads
     if (g.lineups_frozen) return;  // LineupRuntimeField (the season change)
     const bool improve_from_reserves = (mode & 0x80) != 0;
     mode &= 0x7F;
@@ -594,12 +595,12 @@ void auto_lineup(GameState& g, int team, int mode) {
 
 void auto_lineup_parked_club_source(GameState& g, int team, int mode) {
     constexpr size_t record = 4*0xb0c+0x290;
-    if (team<0 || team>=138 || g.manager_teams.size()!=1 || g.manager_teams[0]!=kNoTeam ||
+    if (team<0 || team>=world_layout().league_teams || g.manager_teams.size()!=1 || g.manager_teams[0]!=no_team() ||
         !g.memory.has(::bmh::layout::CoachActive) || g.memory.u8(::bmh::layout::CoachActive)==0 ||
         !g.memory.has(::bmh::layout::ManagerCount) || g.memory.u8(::bmh::layout::ManagerCount)!=1 ||
         !g.memory.has(::bmh::layout::OriginalManagerCount) || g.memory.u8(::bmh::layout::OriginalManagerCount)<1 || g.memory.u8(::bmh::layout::OriginalManagerCount)>4 ||
         record+2>g.manager_records.size() ||
-        (int(g.manager_records[0x290]) | int(g.manager_records[0x291])<<8)!=kNoTeam ||
+        (int(g.manager_records[0x290]) | int(g.manager_records[0x291])<<8)!=no_team() ||
         (int(g.manager_records[record]) | int(g.manager_records[record+1])<<8)!=team ||
         g.tactics.size()<5*0x840)
         throw std::invalid_argument("auto_lineup: invalid FindManagerForClub parked club context");
@@ -630,7 +631,7 @@ void quicksort_by_key(int16_t* items, uint32_t* keys, int count, bool ascending)
 }
 
 bool substitute(GameState& g, int team, int off, int mode, WatcomRandom& rand) {
-    if (!(team < 138 || team == kNoTeam)) return false;
+    if (!(team < world_layout().league_teams || team == no_team())) return false;
     const int manager = g.manager_of(team);
     int used = g.team_flags.at(team) >> 5 & 7;  // substitutions so far
     if (mode == 10) {

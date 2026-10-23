@@ -219,6 +219,7 @@ add_library(bmhcore STATIC
     src/game/source_tip.cpp
     src/game/table_forecast.cpp
     src/game/state.cpp
+    src/game/world_layout.cpp
     src/game/rating.cpp
     src/game/match.cpp
     src/game/match_engine.cpp
@@ -271,6 +272,17 @@ if(MSVC)
     target_compile_options(bmhcore PRIVATE /W4 /utf-8)
 else()
     target_compile_options(bmhcore PRIVATE -Wall -Wextra)
+endif()
+
+# Modern season core: a fork of the Classic season sources (docs/new_engine) that shares
+# formats, GameState and the match core with Classic through bmhcore.
+file(GLOB BMH_SEASON_MODERN_SOURCES CONFIGURE_DEPENDS src/modern/game/*.cpp)
+add_library(bmh_season_modern STATIC ${BMH_SEASON_MODERN_SOURCES})
+target_link_libraries(bmh_season_modern PUBLIC bmhcore)
+if(MSVC)
+    target_compile_options(bmh_season_modern PRIVATE /W4 /utf-8 /bigobj)
+else()
+    target_compile_options(bmh_season_modern PRIVATE -Wall -Wextra)
 endif()
 
 add_executable(openbmh_inspect src/main.cpp)
@@ -326,6 +338,16 @@ endif()
 
 add_subdirectory(src/ui)
 add_subdirectory(src/import)
+
+# Modern session: fork of the Classic CareerSession on the Modern season core. It still
+# uses the Classic UI projections until the Modern projections exist (docs/new_engine).
+add_library(bmh_modern_session STATIC src/modern/app/modern_session.cpp)
+target_link_libraries(bmh_modern_session PUBLIC bmh_season_modern bmhui)
+if(MSVC)
+    target_compile_options(bmh_modern_session PRIVATE /W4 /utf-8 /bigobj)
+else()
+    target_compile_options(bmh_modern_session PRIVATE -Wall -Wextra)
+endif()
 option(OPENBMH_BUILD_EDITOR "Build the standalone OBW editor" OFF)
 if(OPENBMH_BUILD_EDITOR)
     add_subdirectory(src/editor)
@@ -615,6 +637,12 @@ add_executable(season_sim tests/season_sim.cpp ${BMH_APP_SESSION_SOURCE})
 target_link_libraries(season_sim PRIVATE bmhui)
 if(MSVC)
     target_compile_options(season_sim PRIVATE /utf-8)
+endif()
+# The Modern fork of season_sim; with Classic data its output must equal season_sim's.
+add_executable(modern_season_sim tests/modern_season_sim.cpp)
+target_link_libraries(modern_season_sim PRIVATE bmh_modern_session)
+if(MSVC)
+    target_compile_options(modern_season_sim PRIVATE /utf-8)
 endif()
 
 # Headless terminal/protocol client; owns no game logic and has no SDL dependency.
@@ -1110,6 +1138,10 @@ if(MSVC)
     target_compile_options(quit_confirmation_unit_tests PRIVATE /utf-8)
 endif()
 add_test(NAME quit_confirmation_unit_tests COMMAND quit_confirmation_unit_tests)
+
+add_executable(world_layout_tests tests/world_layout_tests.cpp)
+target_link_libraries(world_layout_tests PRIVATE bmhcore)
+add_test(NAME world_layout_tests COMMAND world_layout_tests)
 
 add_executable(fixture_table_tests tests/fixture_table_tests.cpp)
 target_link_libraries(fixture_table_tests PRIVATE bmhcore)

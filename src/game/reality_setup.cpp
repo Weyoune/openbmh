@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "game/reality_setup.hpp"
 
 #include <algorithm>
@@ -11,7 +12,7 @@ int manager(const GameState& state, int team) {
     const int found = state.manager_of(team);
     if (found >= 0) return found;
     // FindManagerForClub's separate national-manager record is not in manager_teams.
-    if (!state.manager_teams.empty() && state.manager_teams[0] == kNoTeam &&
+    if (!state.manager_teams.empty() && state.manager_teams[0] == no_team() &&
         state.manager_records.size() >= 4*0xb0c+0x292 &&
         le16(state.manager_records,4*0xb0c+0x290) == team) return 4;
     return -1;

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "game/sportschau_presentation.hpp"
 #include <algorithm>
 #include "game/matchday.hpp"
@@ -25,7 +26,7 @@ std::optional<MatchdayIntroView> matchday_intro_view(const GameState& state,
             if (league >= 9) throw FormatError("matchday intro: invalid Source league");
             // LeagueName with TeamStatistics_SourceLeagueName_RuntimeField=1 includes the secondary-league prefix.
             name = league < 5 ? league_name(state, int(league)) :
-                message_text(state, ::bmh::layout::SportschauAwards_MatchdayIntroView_TextPointer) + state.club_name(0x165 + int(league) - 4);
+                message_text(state, ::bmh::layout::SportschauAwards_MatchdayIntroView_TextPointer) + state.club_name(no_team() + int(league) - 4);
         } else {
             if (type > 14) throw FormatError("matchday intro: invalid Source competition type");
             name = message_text(state, ::bmh::layout::DeskState_FormatError_ExecutableField3 + uint32_t(type) * 4);
@@ -43,7 +44,7 @@ std::string sportschau_competition_title(const GameState& state, const MatchGrou
     if (id > 20) index = state.memory.u8(id + 0x18) + 9;
     else if (index >= 9) index = std::min(index + 12, 19);
     if (index < 5) return league_name(state, index);
-    if (index < 9) return state.club_name(0x165 + index - 4);
+    if (index < 9) return state.club_name(no_team() + index - 4);
     return message_text(state, ::bmh::layout::CupDraw_FormatError_ExecutableField6 + uint32_t(index - 9) * 4);
 }
 
