@@ -307,6 +307,7 @@ class App final : public Rml::EventListener {
   std::string last_rendered_menu_;
   std::optional<float> training_scroll_;
   std::optional<float> report_scroll_;
+  float fixture_half_width_ = -1.f;
   std::string last_report_state_, report_picker_, report_detail_kind_,
       report_detail_club_, report_detail_player_, report_detail_return_focus_,
       report_option_to_scroll_;
@@ -603,7 +604,7 @@ class App final : public Rml::EventListener {
   void init_desktop();
   std::string widget(const std::string &, const Json &);
   std::string render_reports(const std::string &);
-  std::string report_club_button(const std::string &, bool away = false);
+  std::string report_club_button(const std::string &, bool name_first = false);
   std::string render_report_detail();
   bool report_detail_action(const std::string &, Rml::Element *);
   std::string report_picker(const std::string &, double, double);
@@ -686,6 +687,7 @@ class App final : public Rml::EventListener {
     dirty_ = true;
   }
   void render() {
+    fixture_half_width_ = -1.f;
     // A window-close save prompt can leave a menu while its local dialog is
     // open. Never keep that menu's modal/input gate in the destination view.
     if (menu_ != last_rendered_menu_) {
@@ -790,6 +792,29 @@ class App final : public Rml::EventListener {
     if (auto *button = element("popup")->QuerySelector("button"))
       button->Focus();
   }
+  bool center_fixture_columns() {
+    auto *list = element("report-list");
+    if (!list || !list->IsClassSet("match-list"))
+      return false;
+    auto *score = list->QuerySelector(".report-cell.score");
+    if (!score)
+      return false;
+    const auto &box = list->GetBox();
+    // Rml rounds borders to physical pixels. Use the actual full inner width,
+    // independently of the scrollport, so fractional density cannot move scores.
+    const float inner = box.GetSize(Rml::BoxArea::Border).x -
+        box.GetEdge(Rml::BoxArea::Border, Rml::BoxEdge::Left) -
+        box.GetEdge(Rml::BoxArea::Border, Rml::BoxEdge::Right);
+    const float half = std::max(0.f, (inner - score->GetBox().GetSize(Rml::BoxArea::Border).x) / 2.f);
+    if (std::abs(half - fixture_half_width_) < .001f)
+      return false;
+    fixture_half_width_ = half;
+    Rml::ElementList sides;
+    list->QuerySelectorAll(sides, ".report-cell.first,.report-cell:last-child");
+    for (auto *side : sides)
+      side->SetProperty("width", scalar(half) + "px");
+    return true;
+  }
   void frame() {
     flush_selects();
     if (ticket_)
@@ -800,6 +825,8 @@ class App final : public Rml::EventListener {
     render_context();
     context_->Update();
     if (center_selects(*doc_))
+      context_->Update();
+    if (center_fixture_columns())
       context_->Update();
     if (training_scroll_) {
       if (auto *roster = element("training-roster"))

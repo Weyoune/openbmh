@@ -562,27 +562,17 @@ std::string App::render_opening() {
       const size_t a = size_t(index * 2), b = a + 1;
       if (b >= pool.size())
         return std::string();
-      const auto label_for = [&](const Json *c, bool home) {
-        return "<span class=\"club-label\" style=\"flex:1;justify-content:" +
-               std::string(home ? "flex-end" : "flex-start") + ";\">" +
-               (home ? "<span>" + esc(world_->name(*c)) + "</span>" +
-                           crest(c, size)
-                     : crest(c, size) + "<span>" + esc(world_->name(*c)) +
-                           "</span>") +
-               "</span>";
+      const auto label_for = [&](const Json *c, bool home, bool visible) {
+        const auto text = "<span class=\"opening-pair-name\">" +
+            (visible ? esc(world_->name(*c)) : home ? "Heim" : "Noch nicht gezogen") + "</span>";
+        const auto logo = visible ? crest(c, size) : "";
+        return "<span class=\"opening-pair-side " + std::string(home ? "home" : "away") + "\">" +
+            (home ? text + logo : logo + text) + "</span>";
       };
-      return "<div class=\"row\" style=\"height:100%;gap:18dp;\"><span "
-             "class=\"small\" style=\"width:40dp;text-align:right;\">" +
-             std::to_string(index + 1) + "</span>" +
-             (known > 0 ? label_for(pool[a], true)
-                        : "<span class=\"muted\" "
-                          "style=\"flex:1;text-align:right;\">Heim</span>") +
-             "<span class=\"muted\" "
-             "style=\"width:30dp;text-align:center;\">–</span>" +
-             (known > 1 ? label_for(pool[b], false)
-                        : "<span class=\"muted\" style=\"flex:1;\">Noch nicht "
-                          "gezogen</span>") +
-             "</div>";
+      return "<div class=\"opening-pair-row " + std::string(size == 36 ? "compact" : size == 66 ? "current" : "") +
+          "\"><span class=\"opening-pair-number\"><span>" + std::to_string(index + 1) + "</span></span>" +
+          label_for(pool[a], true, known > 0) + "<span class=\"opening-pair-versus\"><span>–</span></span>" +
+          label_for(pool[b], false, known > 1) + "<span class=\"opening-pair-counter\" aria-hidden=\"true\"></span></div>";
     };
     body = "<h2 style=\"font-size:46dp;\">" +
            std::string(opening_page_ == 3 ? "1. Runde" : "DFB-Pokal") +
@@ -600,13 +590,13 @@ std::string App::render_opening() {
       const int current = std::max(0, (draw_revealed_ - 1) / 2),
                 known = draw_revealed_ ? draw_revealed_ - current * 2 : 0;
       body += "<div class=\"panel\" style=\"position:absolute;" +
-              rect(130, 1026, 2348, 126) +
+              rect(130, 1026, 2352, 126) +
               "padding:10dp 28dp;font-size:38dp;\">" +
               pair(current, known, 66) + "</div>";
       for (int i = std::max(0, current - 3); i < current; ++i)
         body +=
             "<div style=\"position:absolute;" +
-            rect(158, 1190 + (i - std::max(0, current - 3)) * 155, 2292, 145) +
+            rect(158, 1190 + (i - std::max(0, current - 3)) * 155, 2296, 145) +
             "border-bottom:2dp var(--border);\">" + pair(i, 2, 42) + "</div>";
       body += "<div class=\"bottom-controls\" "
               "style=\"justify-content:flex-end;\">" +
@@ -618,7 +608,7 @@ std::string App::render_opening() {
     } else {
       for (int column = 0; column < 2; ++column) {
         body += "<div class=\"panel\" style=\"position:absolute;" +
-                rect(column * 1321, 154, 1287, 1500) + "padding:12dp 18dp;\">";
+                rect(column * 1323, 154, 1289, 1500) + "padding:12dp 18dp;\">";
         for (int row = 0; row < 16; ++row)
           body += "<div style=\"height:92dp;font-size:27dp;border-bottom:1dp "
                   "var(--border);\">" +

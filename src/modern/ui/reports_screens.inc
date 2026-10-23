@@ -18,15 +18,15 @@ std::string report_zone(int rank, int count, int tier) {
 }
 } // namespace
 
-std::string App::report_club_button(const std::string &id, bool away) {
+std::string App::report_club_button(const std::string &id, bool name_first) {
   const auto *c = world_->find("clubs", id);
   if (!c)
     return "<span>—</span>";
   const auto name = esc(world_->name(*c));
   const auto text = "<span class=\"report-club-name\" title=\"" + name +
                     "\">" + name + "</span>";
-  return btn("club-detail", away ? text + crest(c, 42) : crest(c, 42) + text,
-             std::string("report-club-button ") + (away ? "away " : "") +
+  return btn("club-detail", name_first ? text + crest(c, 42) : crest(c, 42) + text,
+             std::string("report-club-button ") + (name_first ? "name-first " : "") +
                  (manager(snap()).value("club", "") == id ? "current" : ""),
              "id=\"report-club-" + esc(id) + "\" data-id=\"" + esc(id) + "\"");
 }
@@ -55,7 +55,7 @@ std::string App::render_reports(const std::string &mode) {
                         {"points", "Punkte"}, {"gf", "Tore"}, {"diff", "Diff."}};
   std::vector<double> widths;
   if (matches)
-    widths = {1104, 400, 1104}; // Match card has two 2dp borders.
+    widths = {1224, 160, 1224}; // Match card has two 2dp borders.
   else if (strengths) {
     widths.push_back(2612 * .38);
     for (int i = 0; i < 5; ++i) widths.push_back(2612 * .62 / 5);
@@ -123,7 +123,7 @@ std::string App::render_reports(const std::string &mode) {
               (!matches && !strengths && column == 5 ? " form" : "") +
               "\" role=\"cell\" style=\"width:" + scalar(widths[column]) + "dp;\">";
       if (matches && column != 1)
-        body += report_club_button(row.at(column == 0 ? "home" : "away").get<std::string>(), column == 2);
+        body += report_club_button(row.at(column == 0 ? "home" : "away").get<std::string>(), column == 0);
       else if (!matches && column == 0) {
         if (!strengths) {
           const auto zone = report_zone(row.value("rank", 0), int(rows.size()), tier);

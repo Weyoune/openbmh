@@ -19,6 +19,7 @@ Implementierung in der Spiel-Engine.
 | Training | [Übungen, Kader, Intensität und Demo-Automatik](desktop/training/README.md) |
 | Taktik | [Interaktive Diagramme und Einsatzregler](desktop/tactics/README.md) |
 | Kalender | [Zwölf Monate, transponierte Wochen und Ligavorschau](desktop/calendar/README.md) |
+| Paarungsanordnung | [Mittige Ergebnisse und innenliegende Wappen](desktop/fixtures/README.md) |
 | Berichte | [Tabellen, Stärken, Ligaspiele, übrige Spiele und Profile](desktop/reports/README.md) |
 | Freundschaftsspiele | [Gegner, Austragungsort, Kostenbestätigung und Vormerkungen](desktop/friendlies/README.md) |
 | Verlegen | [Kalendergestützte Verlegung mit Rücknahme](desktop/postpone/README.md) |

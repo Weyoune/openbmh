@@ -221,3 +221,8 @@ Build; neun fehlende Matrixfälle und die finalen Aufnahmen wurden danach
 ergänzt. Die beiden Fokuskorrekturen wurden gezielt nachgeprüft. Diese
 Nachweise betreffen Linux/OpenGL und die beschriebenen Daten; sie sind
 keine vollständige Windows-/macOS-Laufzeitabnahme oder Freigabe aller Menüs.
+
+Die [gemeinsame Paarungsanordnung](../fixtures/README.md) ersetzt seit
+24. Oktober die weit auseinanderliegenden Mannschaftsseiten: Heimname und
+Heimwappen rechtsbündig zur schmalen Ergebnisspalte, danach Auswärtswappen
+und Auswärtsname linksbündig.
