@@ -109,6 +109,7 @@ PROJECT_ARTWORK = {
     "assets/launcher/stadium.tga": {
         "08f82783a357d5b0722f3737de54844150bc14d98036845f1aaee3211608e1c8",
         "fb8e5f1f86afe60de87b70a2f533690d1ef470241fa24ee4384ff000149edaab",
+        "8bd89b7db8dbd0e92707240c5367cb92f8f32c2903e08157d0f278ac2599d6cf",
     },
     "docs/qa/editor-poc/clubs-silver-de.png": {
         "3e557f68bf8d0e8186dc237f9e92f6b9c7743d7df79fd29c3a5838ba01c116f2",
