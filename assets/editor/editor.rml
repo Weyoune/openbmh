@@ -11,4 +11,5 @@
     <footer><div id="state"></div><div id="status-message"></div><div id="bottom-actions"></div></footer>
   </div>
   <div id="overlay"><div id="modal"><div class="modal-head"><h2 id="modal-title"></h2><button data-action="cancel-modal" class="close">×</button></div><div id="modal-content"></div><div id="modal-error"></div><div id="modal-buttons"></div></div></div>
+  <div id="history-overlay" data-action="history-close"><div id="history-menu"></div></div>
 </body></rml>

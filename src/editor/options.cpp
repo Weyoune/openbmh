@@ -91,6 +91,10 @@ std::string tr(const std::string &language, const std::string &key) {
     using Pair = std::pair<std::string, std::string>;
     static const std::map<std::string, Pair> words{
         {"data_areas", {"Datenbereiche", "World data"}},
+        {"navigation_back", {"Zurück", "Back"}},
+        {"navigation_forward", {"Vorwärts", "Forward"}},
+        {"navigation_left", {"Links", "Left"}},
+        {"navigation_right", {"Rechts", "Right"}},
         {"drill_nations", {"Doppelklick: Ligen anzeigen", "Double-click to view leagues"}},
         {"drill_competitions",
          {"Doppelklick auf eine Liga: Vereine anzeigen", "Double-click a league to view clubs"}},

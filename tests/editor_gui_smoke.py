@@ -209,7 +209,100 @@ def main():
                 before_view = tool('editor_info')
                 click(1100, 326); x('key', 'Escape'); time.sleep(.2)
                 assert tool('editor_info') == before_view
-                print('Native edit, comparisons, rules, drill-down, read-only image preview and asset links passed.')
+                # Browser navigation restores the selected league and its
+                # filters without editing data or advancing the undo cursor.
+                def history(direction):
+                    before = tool('editor_info')
+                    x('mousemove', '--window', window, 760, 300, 'click', 3)
+                    time.sleep(.15)
+                    click(850, 330 if direction == 'back' else 375)
+                    time.sleep(.2)
+                    assert tool('editor_info') == before, 'History must be read only'
+                click(100, 264); double_click(350, 385)
+                double_click(350, 335)
+                history('back')
+                edit_selected('clubs', 'club:south', 'History Team')
+                history('back')
+                edit_selected('competitions', 'comp:second', 'History League')
+                history('forward')
+                edit_selected('clubs', 'club:south', 'History Forward Team')
+                history('forward')
+                edit_selected('players', south_player, 'History Forward Player', True)
+                # Cancelling a pending property edit must keep the history
+                # cursor in place, so the next Back still visits the team.
+                click(1150, 443); x('key', 'ctrl+a'); x('type', '--clearmodifiers', 'History Draft')
+                history('back'); x('key', 'Escape'); time.sleep(.2)
+                click(1300, 741)
+                assert tool('editor_get', {'table': 'players', 'id': south_player})['record']['name']['first'] == 'History Draft'
+                tool('editor_undo'); time.sleep(.5)
+                history('back')
+                edit_selected('clubs', 'club:south', 'History After Cancel')
+                # A different destination after Back removes the forward
+                # branch. Alt+arrows and mouse side buttons share this history.
+                click(100, 313)
+                x('key', 'alt+Right'); time.sleep(.2)
+                edit_selected('clubs', 'club:north', 'History New Branch')
+                x('click', 8); time.sleep(.3)
+                edit_selected('clubs', 'club:south', 'History Side Back')
+                x('click', 9); time.sleep(.3)
+                edit_selected('clubs', 'club:north', 'History Side Forward')
+                # Preview -> exact asset is also a visit, not a data undo.
+                click(280, 385); click(985, 757)
+                history('back')
+                edit_selected('clubs', 'club:north', 'History Preview Back')
+                history('forward')
+                edit_selected('assets', 'asset:demo/south', 'History Preview Forward')
+                # External MCP opens invalidate navigation, including when the
+                # filename and all record IDs are unchanged.
+                click(100, 361); click(100, 313)
+                generation = tool('editor_info')['world_generation']
+                tool('editor_open', {'path': str(root / 'world.obw'), 'discard': True})
+                time.sleep(.6)
+                assert tool('editor_info')['world_generation'] > generation
+                x('key', 'alt+Left'); time.sleep(.2)
+                edit_selected('clubs', 'club:north', 'History New World')
+                # Modern dropdowns retain native values and keyboard input.
+                # Escape cancels just the open list, keeping Options open and
+                # restoring its prior value. Nothing applies before Apply.
+                before_options = tool('editor_info')
+                click(1370, 44)
+                click(690, 258); x('key', 'Down'); x('key', 'Escape')
+                time.sleep(.15)
+                assert json.loads(settings.read_text())['language'] == 'de'
+                click(690, 343); x('key', 'Down'); x('key', 'Return')
+                assert json.loads(settings.read_text())['theme'] == 'midnight'
+                click(950, 725)
+                assert json.loads(settings.read_text())['theme'] == 'silver'
+                assert json.loads(settings.read_text())['language'] == 'de'
+                click(1370, 44)
+                click(690, 258); x('key', 'Down'); x('key', 'Return')
+                click(690, 343); x('key', 'Down'); x('key', 'Return')
+                click(950, 725)
+                assert json.loads(settings.read_text())['theme'] == 'matchday'
+                assert json.loads(settings.read_text())['language'] == 'en'
+                click(1370, 44)
+                click(690, 258); x('key', 'Up'); x('key', 'Return')
+                click(690, 343); x('key', 'Up'); x('key', 'Up'); x('key', 'Return')
+                click(950, 725)
+                assert json.loads(settings.read_text())['theme'] == 'midnight'
+                assert json.loads(settings.read_text())['language'] == 'de'
+                assert tool('editor_info') == before_options
+                # An idle, unfocused form must not continuously render. The
+                # generous one-core CPU budget catches a software-render loop
+                # while allowing timer/MCP polling and slow CI machines.
+                click(700, 153); time.sleep(.5)
+                def cpu_seconds():
+                    fields = Path(f'/proc/{app.pid}/stat').read_text().rsplit(')', 1)[1].split()
+                    return (int(fields[11]) + int(fields[12])) / os.sysconf('SC_CLK_TCK')
+                before_idle = tool('editor_info')
+                cpu_start, wall_start = cpu_seconds(), time.monotonic()
+                time.sleep(3)
+                cpu_used, wall_used = cpu_seconds() - cpu_start, time.monotonic() - wall_start
+                assert cpu_used < .20 * wall_used, f'Idle CPU exceeded 20% of one core: {cpu_used / wall_used:.1%}'
+                assert tool('editor_info') == before_idle
+                assert 'Syntax error parsing property' not in (root / 'app.log').read_text()
+                print(f'Idle CPU: {cpu_used / wall_used:.1%} of one core.')
+                print('Native edits, comparisons, rules, drill-down, image previews, browser history and idle CPU passed.')
             except Exception:
                 log.flush()
                 print((root / 'app.log').read_text())

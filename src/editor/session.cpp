@@ -59,6 +59,7 @@ Json Session::info() const {
     Json result = world_ ? world_->statistics() : Json{{"title", ""}, {"counts", Json::object()}};
     result["loaded"] = bool(world_);
     result["revision"] = revision_;
+    result["world_generation"] = world_generation_;
     result["dirty"] = dirty();
     result["can_undo"] = cursor_ > 0;
     result["can_redo"] = cursor_ < history_.size();
@@ -67,6 +68,7 @@ Json Session::info() const {
 }
 void Session::replace(World value) {
     world_ = std::make_unique<World>(std::move(value));
+    ++world_generation_;
     history_.clear();
     cursor_ = 0;
     ++revision_;

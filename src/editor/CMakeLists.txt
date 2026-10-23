@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 include(FetchContent)
-set(OPENBMH_EDITOR_VERSION "0.5.3")
+set(OPENBMH_EDITOR_VERSION "0.5.4")
 file(WRITE "${CMAKE_BINARY_DIR}/editor-version.json" "{\"version\": \"${OPENBMH_EDITOR_VERSION}\"}\n")
 set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(editor_json GIT_REPOSITORY https://github.com/nlohmann/json.git

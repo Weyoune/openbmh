@@ -1,6 +1,6 @@
-# OpenBMH Editor 0.5.3
+# OpenBMH Editor 0.5.4
 
-Der eigenständige, native Editor verwendet **RmlUI und SDL2**, unter Windows mit Direct3D 11, unter Linux/macOS mit OpenGL. Er bearbeitet Startdatenbanken, keine laufenden Spielstände. Das Spiel und seine Classic-Prüfung bleiben unverändert. Editor 0.5.3 hat eine eigene Versionsreihe und den Release-Tag `editor-v0.5.3`; die Spielversion ist 0.2.1.
+Der eigenständige, native Editor verwendet **RmlUI und SDL2**, unter Windows mit Direct3D 11, unter Linux/macOS mit OpenGL. Er bearbeitet Startdatenbanken, keine laufenden Spielstände. Das Spiel und seine Classic-Prüfung bleiben unverändert. Editor 0.5.4 hat eine eigene Versionsreihe und den Release-Tag `editor-v0.5.4`; die Spielversion ist 0.2.1.
 
 ## Windows-Start und Diagnose
 
@@ -17,7 +17,7 @@ MCP-Aufrufe zeigen keinen modalen Fehlerdialog und behalten ihre Prozesscodes.
 
 ## Starten und Daten öffnen
 
-Das vollständige Paket `OpenBMHEditor-0.5.3-<plattform>.zip` entpacken und `OpenBMHEditor.exe` (Windows) beziehungsweise `OpenBMHEditor` (Linux/macOS) starten. `assets/editor` muss beim Programm bleiben. Auf macOS kann die unsignierte Anwendung über **Rechtsklick → Öffnen** gestartet werden. Eine Signatur/Notarisierung ist nicht Bestandteil dieser Version. `OpenBMHEditor --version` zeigt die Editorversion ohne Grafikstart.
+Das vollständige Paket `OpenBMHEditor-0.5.4-<plattform>.zip` entpacken und `OpenBMHEditor.exe` (Windows) beziehungsweise `OpenBMHEditor` (Linux/macOS) starten. `assets/editor` muss beim Programm bleiben. Auf macOS kann die unsignierte Anwendung über **Rechtsklick → Öffnen** gestartet werden. Eine Signatur/Notarisierung ist nicht Bestandteil dieser Version. `OpenBMHEditor --version` zeigt die Editorversion ohne Grafikstart.
 
 **Öffnen** bietet OBW-Dateien und entpackte Welten an. **BMH / FLTD importieren** liest einen Ordner mit einer unterstützten BMH- oder Football-Limited-Installation durch den bestehenden Konverter. Das Original wird nicht überschrieben. Eine bestehende Classic-OBW wird zunächst überprüft und dann in eine bearbeitbare Editorwelt übernommen.
 
@@ -39,6 +39,39 @@ Das vollständige Paket `OpenBMHEditor-0.5.3-<plattform>.zip` entpacken und `Ope
 **Speichern** erzeugt ausschließlich `.obw` im Profil **`editor-world-v1`, Format 1.1**. Editorwelten sind **noch nicht im Classic-Spiel startbar**. Die Bezeichnung ist im Editor sichtbar. Unbekannte Erweiterungen, nicht bearbeitete Dokumente, Quellnachweise und Bilder bleiben erhalten. Noch nicht im Formular angebotene Regeln, Kalender- und Finanzdaten werden erhalten, aber nicht als vollständig editierbare Bereiche ausgegeben.
 
 Shortcuts: Ctrl/Cmd+O, Ctrl/Cmd+S, Shift+Ctrl/Cmd+S, Ctrl/Cmd+Z und Shift+Ctrl/Cmd+Z. In Textfeldern gilt die lokale Text-Rückgängig-Funktion.
+
+## Zurück und Vorwärts
+
+Ein **Rechtsklick** an beliebiger Stelle öffnet **Zurück / Vorwärts**. Dieselbe
+Navigation funktioniert mit **Alt+Links / Alt+Rechts** und den beiden seitlichen
+Maustasten. Nicht verfügbare Richtungen sind ausgegraut. Escape oder ein Klick
+außerhalb schließt das Menü.
+
+Der Verlauf merkt Datenbereiche, Doppelklick-Absprünge, Vergleichsansichten und
+Asset-Verknüpfungen. Beim Zurückkehren werden Filter, Suche, Sortierung,
+Datensatzauswahl, Tabellenseite und Scrollpositionen wiederhergestellt.
+Filtereingaben und einfache Zeilenauswahl erzeugen keine einzelnen Verlaufsschritte.
+Offene Formulareingaben werden weiterhin vor dem Wechsel abgefragt; Abbrechen
+lässt die Position im Verlauf unverändert. Ein neuer Absprung nach Zurück ersetzt
+den bisherigen Vorwärtszweig. Das Öffnen einer anderen Welt, auch über MCP,
+setzt den Verlauf zurück. **Zurück** ist unabhängig von **Rückgängig** und ändert
+keine Daten.
+
+Die Dropdowns verwenden die Gestaltung der Modern-Desktop-Untermenüs:
+leichte Verläufe, runde Popup-Listen, ein Häkchen am gewählten Wert und dieselbe
+Schriftgröße in geschlossenem Feld und Auswahlliste. Escape schließt zuerst die
+offene Auswahlliste. [Native Vergleichsbilder](qa/editor-navigation/README.md)
+zeigen die Darstellung in allen drei Themes.
+
+## CPU im Leerlauf
+
+Ab 0.5.4 zeichnet der Editor nur bei Eingaben, sichtbaren Änderungen oder von
+RmlUI angeforderten Zeitereignissen. Ein unveränderter Bildschirm benötigt keine
+fortlaufenden Frames. Textcursor, Animationen, Scrollen und externe MCP-Änderungen
+bleiben aktiv; minimierte Fenster zeichnen nicht. Die vorherige Dauerschleife
+konnte insbesondere mit dem WARP-Softwarerenderer unter Remote Desktop einen
+erheblichen Teil der CPU belegen. Import, Bildverarbeitung und andere tatsächliche
+Datenarbeit benötigen weiterhin Rechenzeit.
 
 ## Stärken und Gehälter vergleichen
 
@@ -76,7 +109,7 @@ Unter **Darstellung** stehen die drei Farbwelten der modernen Untermenüs zur Au
 
 Der MCP-Server ist standardmäßig aktiviert und bindet ausschließlich `127.0.0.1`, standardmäßig Port `8765`. Port `0` wählt einen freien Port. Status und tatsächlicher Port sind in Optionen sichtbar. **Verbindung kopieren** kopiert eine JSON-Konfiguration einschließlich Bearer-Token für HTTP-fähige MCP-Clients. Das Token bleibt lokal im Benutzerprofil und wird nur auf ausdrückliches Kopieren/CLI-Anfordern ausgegeben. Ein anderer bereits laufender Editor kann den Standardport belegen; dann einen anderen Port wählen.
 
-Implementiert ist [MCP Streamable HTTP 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), mit Aushandlung von 2025-06-18; JSON-Antworten, ohne optionale SSE-Sitzungen. Neuere MCP-Versionen werden nicht als unterstützt beworben. Der Server prüft Token, Host und gegebenenfalls Origin. Oberfläche und Agent bearbeiten dieselbe Welt, verwenden dieselbe Validierung und dieselbe Undo-Historie. Für konkurrierende Änderungen `expected_revision` aus `editor_info`/`editor_get` mitsenden.
+Implementiert ist [MCP Streamable HTTP 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports), mit Aushandlung von 2025-06-18; JSON-Antworten, ohne optionale SSE-Sitzungen. Neuere MCP-Versionen werden nicht als unterstützt beworben. Der Server prüft Token, Host und gegebenenfalls Origin. Oberfläche und Agent bearbeiten dieselbe Welt, verwenden dieselbe Validierung und dieselbe Undo-Historie. Für konkurrierende Änderungen `expected_revision` aus `editor_info`/`editor_get` mitsenden. `editor_info.world_generation` kennzeichnet die aktuell geladene Welt innerhalb der Sitzung: Öffnen/Neu erhöht den Wert, Bearbeiten, Speichern und Rückgängig behalten ihn bei. Er wird nicht im OBW gespeichert.
 
 Werkzeuge: `editor_info`, `editor_open`, `editor_new`, `editor_list`, `editor_compare`, `editor_regulations`, `editor_get`, `editor_apply`, `editor_rules`, `editor_validate`, `editor_history`, `editor_save`, `editor_undo`, `editor_redo`, `editor_roster_move`, `editor_roster_swap`, `editor_roster_order`, `editor_review_resolve`, `editor_image_import`, `editor_image_edit`, `editor_image_preview`, `editor_image_export`. Die eingeblendeten Tools enthalten Parameterschemata und Beschreibungen. Öffnen einer anderen Welt verwirft ungespeicherte Änderungen nur mit `discard: true`.
 
@@ -135,4 +168,4 @@ Click a crest, portrait, trophy or list thumbnail to open a large read-only imag
 
 In **Options**, switch the interface to **English**, choose one of the three themes, and enable/disable the integrated local MCP server. **Copy connection** provides the authenticated configuration. The server defaults to loopback port 8765; use port 0 for a free port. GUI and MCP share the same world, validation and undo history. It supports MCP Streamable HTTP 2025-11-25/2025-06-18 and optional stdio mode. Use `expected_revision` for concurrent edits.
 
-Build with the three commands above, including `-DOPENBMH_BUILD_EDITOR=ON`. Windows uses Direct3D 11 with automatic WARP software fallback. Linux requires OpenGL 3.3; macOS requires OpenGL 4.1, plus the documented platform development dependencies. Editor 0.5.3 is unsigned and does not bundle any real-world dataset or proprietary game assets.
+Build with the three commands above, including `-DOPENBMH_BUILD_EDITOR=ON`. Windows uses Direct3D 11 with automatic WARP software fallback. Linux requires OpenGL 3.3; macOS requires OpenGL 4.1, plus the documented platform development dependencies. Editor 0.5.4 is unsigned and does not bundle any real-world dataset or proprietary game assets.

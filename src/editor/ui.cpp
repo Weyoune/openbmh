@@ -7,6 +7,7 @@
 #include <RmlUi/Core.h>
 #include <RmlUi/Core/Elements/ElementFormControl.h>
 #include <RmlUi/Core/Elements/ElementFormControlInput.h>
+#include <RmlUi/Core/Elements/ElementFormControlSelect.h>
 #include <RmlUi_Platform_SDL.h>
 #include <algorithm>
 #include <chrono>
@@ -109,8 +110,9 @@ class EditorUi final : public Rml::EventListener {
     Rml::Context *context_ = nullptr;
     Rml::ElementDocument *doc_ = nullptr;
     bool initialized_ = false, closed_ = false, busy_ = false, modal_ = false;
-    bool roster24_ = false, show_source_ = false, needs_refresh_ = true;
+    bool roster24_ = false, show_source_ = false, needs_refresh_ = true, redraw_ = true;
     uint64_t revision_ = uint64_t(-1);
+    uint64_t world_generation_ = uint64_t(-1);
     Json info_, selected_ = Json::object(), listed_ = Json::array();
     std::map<std::string, Json> lookup_;
     std::string page_ = "overview", selected_id_, search_, nation_, league_, team_, sort_ = "name", remembered_;
@@ -123,6 +125,27 @@ class EditorUi final : public Rml::EventListener {
     std::string regulation_id_, game_rule_id_;
     int offset_ = 0;
     size_t total_ = 0;
+    struct Location {
+        std::string page, selected, search, nation, league, team, sort;
+        bool descending, roster24, show_source;
+        int offset;
+        std::string comparison_table, comparison_set, comparison_sort;
+        bool comparison_descending, regulations_game, regulations_source;
+        std::string regulation_id, game_rule_id;
+        bool operator==(const Location &) const = default;
+    };
+    struct ScrollPosition {
+        std::string selector;
+        float left, top;
+    };
+    struct Visit {
+        Location location;
+        std::vector<ScrollPosition> scroll;
+    };
+    std::vector<Visit> navigation_;
+    size_t navigation_index_ = 0;
+    std::optional<std::vector<ScrollPosition>> restore_scroll_;
+    bool history_menu_open_ = false;
     struct Field {
         std::string id, pointer, kind, initial;
         Json original;
@@ -144,7 +167,20 @@ class EditorUi final : public Rml::EventListener {
             throw std::runtime_error("Missing editor element: " + id);
         return value;
     }
-    void html(const std::string &id, const std::string &value) { el(id)->SetInnerRML(value); }
+    void html(const std::string &id, const std::string &value) {
+        auto *container = el(id);
+        container->SetInnerRML(value);
+        Rml::ElementList controls;
+        container->QuerySelectorAll(controls, "select");
+        for (auto *element : controls)
+            if (auto *select = dynamic_cast<Rml::ElementFormControlSelect *>(element))
+                for (int i = 0; i < select->GetNumOptions(); ++i) {
+                    auto *option = select->GetOption(i);
+                    option->SetInnerRML("<span class=\"option-check\"></span><span class=\"option-label\">" +
+                                        option->GetInnerRML() + "</span>");
+                }
+        redraw_ = true;
+    }
     void label(const std::string &id, const std::string &value) { html(id, escaped(value)); }
     std::string value(const std::string &id) const {
         auto *field = dynamic_cast<Rml::ElementFormControl *>(el(id));
@@ -155,6 +191,136 @@ class EditorUi final : public Rml::EventListener {
             field->SetValue(value);
     }
     std::string table() const { return page_ == "roster" ? "players" : page_; }
+    Location location() const {
+        return {page_,
+                selected_id_,
+                search_,
+                nation_,
+                league_,
+                team_,
+                sort_,
+                descending_,
+                roster24_,
+                show_source_,
+                offset_,
+                comparison_table_,
+                comparison_set_,
+                comparison_sort_,
+                comparison_descending_,
+                regulations_game_,
+                regulations_source_,
+                regulation_id_,
+                game_rule_id_};
+    }
+    std::vector<ScrollPosition> scroll_positions() const {
+        std::vector<ScrollPosition> result;
+        for (const auto *selector :
+             {"#table-scroll", ".inspector-scroll", "#comparison-x", ".regulation-list .table-scroll",
+              ".regulation-scroll", ".dashboard", "#navigation"})
+            if (auto *element = doc_->QuerySelector(selector))
+                result.push_back({selector, element->GetScrollLeft(), element->GetScrollTop()});
+        return result;
+    }
+    void remember_location() {
+        if (!navigation_.empty())
+            navigation_[navigation_index_] = {location(), scroll_positions()};
+    }
+    void visit(std::function<void()> next) {
+        leave_fields([this, next] {
+            remember_location();
+            const auto previous = location();
+            next();
+            if (location() == previous)
+                return;
+            navigation_.resize(navigation_index_ + 1);
+            navigation_.push_back({location(), {}});
+            navigation_index_ = navigation_.size() - 1;
+            // Bound memory use during long editing sessions.
+            if (navigation_.size() > 200) {
+                navigation_.erase(navigation_.begin());
+                --navigation_index_;
+            }
+        });
+    }
+    bool can_navigate(int direction) const {
+        return !busy_ && !modal_ && !navigation_.empty() &&
+               (direction < 0 ? navigation_index_ > 0 : navigation_index_ + 1 < navigation_.size());
+    }
+    void navigate_history(int direction) {
+        if (!can_navigate(direction))
+            return;
+        leave_fields([this, direction] {
+            remember_location();
+            navigation_index_ = direction < 0 ? navigation_index_ - 1 : navigation_index_ + 1;
+            const auto &destination = navigation_[navigation_index_];
+            const auto &l = destination.location;
+            page_ = l.page;
+            selected_id_ = l.selected;
+            search_ = l.search;
+            nation_ = l.nation;
+            league_ = l.league;
+            team_ = l.team;
+            sort_ = l.sort;
+            descending_ = l.descending;
+            roster24_ = l.roster24;
+            show_source_ = l.show_source;
+            offset_ = l.offset;
+            comparison_table_ = l.comparison_table;
+            comparison_set_ = l.comparison_set;
+            comparison_sort_ = l.comparison_sort;
+            comparison_descending_ = l.comparison_descending;
+            regulations_game_ = l.regulations_game;
+            regulations_source_ = l.regulations_source;
+            regulation_id_ = l.regulation_id;
+            game_rule_id_ = l.game_rule_id;
+            restore_scroll_ = destination.scroll;
+            fields_.clear();
+            needs_refresh_ = true;
+        });
+    }
+    void close_history_menu() {
+        if (!history_menu_open_)
+            return;
+        el("history-overlay")->SetProperty("display", "none");
+        history_menu_open_ = false;
+        redraw_ = true;
+    }
+    void history_menu(int x, int y) {
+        Rml::ElementList controls;
+        doc_->QuerySelectorAll(controls, "select");
+        for (auto *element : controls)
+            if (auto *select = dynamic_cast<Rml::ElementFormControlSelect *>(element))
+                select->HideSelectBox();
+        std::string items;
+        for (const int direction : {-1, 1}) {
+            const auto action = direction < 0 ? "history-back" : "history-forward";
+            items += "<button id=\"" + std::string(action) + "\" data-action=\"" + action + "\" " +
+                     (can_navigate(direction) ? "" : "disabled") + "><span class=\"history-arrow\">" +
+                     icon(direction < 0 ? "back" : "forward") + "</span><span>" +
+                     escaped(t(direction < 0 ? "navigation_back" : "navigation_forward")) +
+                     "</span><small>Alt + " + t(direction < 0 ? "navigation_left" : "navigation_right") +
+                     "</small></button>";
+        }
+        html("history-menu", items);
+        el("history-overlay")->SetProperty("display", "block");
+        history_menu_open_ = true;
+        context_->Update();
+        const auto dimensions = context_->GetDimensions();
+        auto *menu = el("history-menu");
+        const float margin = 6 * context_->GetDensityIndependentPixelRatio();
+        menu->SetProperty(
+            "left", number(std::clamp(float(x), margin,
+                                      std::max(margin, dimensions.x - menu->GetOffsetWidth() - margin))) +
+                        "px");
+        menu->SetProperty(
+            "top", number(std::clamp(float(y), margin,
+                                     std::max(margin, dimensions.y - menu->GetOffsetHeight() - margin))) +
+                       "px");
+        if (can_navigate(-1))
+            el("history-back")->Focus();
+        else if (can_navigate(1))
+            el("history-forward")->Focus();
+    }
     static std::string identity(const Json &row, const std::string &table) {
         return str(row, table == "assets" ? "key" : "id");
     }
@@ -178,6 +344,8 @@ class EditorUi final : public Rml::EventListener {
     }
     std::string icon(const std::string &name) {
         static const std::map<std::string, std::string> paths{
+            {"back", "M19 12H5M12 5l-7 7 7 7"},
+            {"forward", "M5 12h14M12 5l7 7-7 7"},
             {"overview", "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"},
             {"nations", "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0M3 12h18M12 3c-5 5-5 "
                         "13 0 18M12 3c5 5 5 13 0 18"},
@@ -270,6 +438,8 @@ class EditorUi final : public Rml::EventListener {
         return result;
     }
     void resize() {
+        close_history_menu();
+        redraw_ = true;
         int w, h, pw, ph;
         SDL_GetWindowSize(video_.window, &w, &h);
         video_.drawable_size(pw, ph);
@@ -281,6 +451,7 @@ class EditorUi final : public Rml::EventListener {
                                                   std::clamp(std::min(w / 1440.f, h / 900.f), .78f, 1.8f));
     }
     void close_modal() {
+        redraw_ = true;
         el("overlay")->SetProperty("display", "none");
         if (image_view_open_) {
             html("modal-content", "");
@@ -292,6 +463,7 @@ class EditorUi final : public Rml::EventListener {
     }
     void modal(const std::string &title, const std::string &body, const std::string &accept,
                std::function<void()> callback, bool cancel = true, bool wide = false) {
+        close_history_menu();
         if (image_view_open_)
             close_modal();
         label("modal-title", title);
@@ -609,7 +781,7 @@ class EditorUi final : public Rml::EventListener {
         const auto record = session_.execute("get", {{"table", source}, {"id", id}})["record"];
         if (source == "competitions" && str(record, "type") != "league")
             return;
-        leave_fields([this, source, id] {
+        visit([this, source, id] {
             // Apply/discard decisions may have updated the source record.
             const auto row = session_.execute("get", {{"table", source}, {"id", id}})["record"];
             if (source == "competitions" && str(row, "type") != "league")
@@ -1233,6 +1405,31 @@ class EditorUi final : public Rml::EventListener {
             if (auto *input = dynamic_cast<Rml::ElementFormControlInput *>(context_->GetFocusElement()))
                 input->GetSelection(&selection_start, &selection_end, nullptr);
         info_ = session_.execute("info");
+        const auto generation = info_.value("world_generation", uint64_t(0));
+        if (generation != world_generation_) {
+            // An MCP client can also open a different world, even with the
+            // same filename and identifiers. Never replay an old view/draft.
+            world_generation_ = generation;
+            navigation_.clear();
+            navigation_index_ = 0;
+            restore_scroll_.reset();
+            selected_id_.clear();
+            fields_.clear();
+            search_.clear();
+            nation_.clear();
+            league_.clear();
+            team_.clear();
+            remembered_.clear();
+            comparison_set_.clear();
+            comparison_columns_.clear();
+            regulation_id_.clear();
+            game_rule_id_.clear();
+            offset_ = 0;
+            close_history_menu();
+            if (modal_)
+                close_modal();
+            discard_continuation_ = {};
+        }
         auto rev = info_.value("revision", uint64_t(0));
         renderer_.clear();
         if (revision_ != rev) {
@@ -1259,6 +1456,17 @@ class EditorUi final : public Rml::EventListener {
             input->Focus();
             input->SetSelectionRange(selection_start, selection_end);
         }
+        if (restore_scroll_) {
+            context_->Update();
+            for (const auto &position : *restore_scroll_)
+                if (auto *element = doc_->QuerySelector(position.selector)) {
+                    element->SetScrollLeft(position.left);
+                    element->SetScrollTop(position.top);
+                }
+            restore_scroll_.reset();
+        }
+        if (navigation_.empty())
+            navigation_.push_back({location(), {}});
         needs_refresh_ = false;
     }
     bool has_draft() const {
@@ -1333,7 +1541,8 @@ class EditorUi final : public Rml::EventListener {
         body += "<p class=\"form-help\">" + t("mcp_local") + " · " + t(server_.running() ? "online" : "offline") +
                 (server_.running() ? "<br/>http://127.0.0.1:" + std::to_string(server_.port()) + "/mcp" : "") + "</p>";
         if (server_.running())
-            body += button("copy-connection", t("copy_connection"));
+            body += "<div class=\"connection-actions\">" + button("copy-connection", t("copy_connection")) +
+                    "</div>";
         modal(t("options"), body, t("apply"), [this] {
             auto next = options_;
             next.apply({{"language", value("option-language")},
@@ -1546,10 +1755,16 @@ class EditorUi final : public Rml::EventListener {
               });
     }
     void dispatch(const std::string &action, const std::string &arg) {
+        if (action == "history-close" || action == "history-back" || action == "history-forward") {
+            close_history_menu();
+            if (action != "history-close")
+                navigate_history(action == "history-back" ? -1 : 1);
+            return;
+        }
         if (busy_)
             return;
         if (action == "navigate")
-            leave_fields([this, arg] {
+            visit([this, arg] {
                 page_ = arg;
                 fields_.clear();
                 selected_id_.clear();
@@ -1572,7 +1787,7 @@ class EditorUi final : public Rml::EventListener {
             regulations_source_ = !regulations_source_;
             needs_refresh_ = true;
         } else if (action == "compare-open" || action == "compare-scope")
-            leave_fields([this, action, arg] {
+            visit([this, action, arg] {
                 comparison_table_ =
                     action == "compare-open" ? (table() == "competitions" ? "leagues" : table()) : arg;
                 page_ = "comparison";
@@ -1609,14 +1824,16 @@ class EditorUi final : public Rml::EventListener {
                 offset_ = 0;
                 needs_refresh_ = true;
             }
-        } else if (action == "compare-edit") {
-            page_ = comparison_table_ == "leagues" ? "competitions" : comparison_table_;
-            selected_id_ = arg;
-            sort_ = "name";
-            offset_ = 0;
-            search_.clear();
-            needs_refresh_ = true;
-        } else if (action.starts_with("browse:"))
+        } else if (action == "compare-edit")
+            visit([this, arg] {
+                page_ = comparison_table_ == "leagues" ? "competitions" : comparison_table_;
+                selected_id_ = arg;
+                sort_ = "name";
+                offset_ = 0;
+                search_.clear();
+                needs_refresh_ = true;
+            });
+        else if (action.starts_with("browse:"))
             browse_related(action.substr(7), arg);
         else if (action.starts_with("select:")) {
             // The click following a double click still belongs to its old list.
@@ -1772,7 +1989,7 @@ class EditorUi final : public Rml::EventListener {
             view_image(arg);
         else if (action == "image-view-asset") {
             close_modal();
-            leave_fields([this, arg] {
+            visit([this, arg] {
                 page_ = "assets";
                 selected_id_ = search_ = arg;
                 offset_ = 0;
@@ -1897,7 +2114,8 @@ class EditorUi final : public Rml::EventListener {
     void ProcessEvent(Rml::Event &event) override {
         auto *target = event.GetTargetElement();
         const auto type = event.GetType();
-        if (type == "mousedown" && modal_ && doc_->GetElementById("crop-canvas")) {
+        if (type == "mousedown" && event.GetParameter<int>("button", 0) == 0 && modal_ &&
+            doc_->GetElementById("crop-canvas")) {
             for (auto *node = target; node; node = node->GetParentNode())
                 if (node->GetId() == "crop-canvas") {
                     crop_drag(event.GetParameter<float>("mouse_x", 0), event.GetParameter<float>("mouse_y", 0), true);
@@ -1941,10 +2159,32 @@ class EditorUi final : public Rml::EventListener {
             }
     }
     int run() {
+        using Clock = std::chrono::steady_clock;
+        using namespace std::chrono_literals;
         auto last_poll = start_;
+        auto next_update = start_;
+        auto observed_revision = revision_;
         while (!closed_) {
+            const auto before_wait = Clock::now();
+            const bool drawable =
+                !(SDL_GetWindowFlags(video_.window) & (SDL_WINDOW_MINIMIZED | SDL_WINDOW_HIDDEN));
+            auto wake = busy_ ? before_wait + 50ms : last_poll + 400ms;
+            if (drawable) {
+                wake = std::min(wake, next_update);
+                if (!busy_ && !config_.screenshot.empty())
+                    wake = std::min(wake, start_ + 1200ms);
+            }
+            if (config_.quit_after_ms > 0)
+                wake = std::min(wake, start_ + std::chrono::milliseconds(config_.quit_after_ms));
+            const auto timeout =
+                !pending_.empty() || (drawable && (redraw_ || (needs_refresh_ && !busy_)))
+                    ? 0
+                    : int(std::clamp(std::chrono::ceil<std::chrono::milliseconds>(wake - before_wait).count(),
+                                     int64_t(0), int64_t(400)));
             SDL_Event event;
-            while (SDL_PollEvent(&event)) {
+            int have_event = timeout > 0 ? SDL_WaitEventTimeout(&event, timeout) : SDL_PollEvent(&event);
+            for (; have_event; have_event = SDL_PollEvent(&event)) {
+                redraw_ = true;
                 if (event.type == SDL_QUIT) {
                     try {
                         leaving([this] { closed_ = true; });
@@ -1972,6 +2212,27 @@ class EditorUi final : public Rml::EventListener {
                     if (command && event.key.keysym.sym == SDLK_o) {
                         pending_.emplace_back("open", "");
                         continue;
+                    }
+                    if ((event.key.keysym.mod & KMOD_ALT) &&
+                        (event.key.keysym.sym == SDLK_LEFT || event.key.keysym.sym == SDLK_RIGHT)) {
+                        pending_.emplace_back(
+                            event.key.keysym.sym == SDLK_LEFT ? "history-back" : "history-forward", "");
+                        continue;
+                    }
+                    if (event.key.keysym.sym == SDLK_ESCAPE && history_menu_open_) {
+                        close_history_menu();
+                        continue;
+                    }
+                    if (event.key.keysym.sym == SDLK_ESCAPE) {
+                        auto *owner = focused;
+                        while (owner && owner->GetTagName() != "select")
+                            owner = owner->GetParentNode();
+                        if (auto *select = dynamic_cast<Rml::ElementFormControlSelect *>(owner);
+                            select && select->IsSelectBoxVisible()) {
+                            select->CancelSelectBox();
+                            select->Focus();
+                            continue;
+                        }
                     }
                     if (event.key.keysym.sym == SDLK_ESCAPE && modal_) {
                         close_modal();
@@ -2008,12 +2269,27 @@ class EditorUi final : public Rml::EventListener {
                             context_->ProcessMouseMove(event.button.x, event.button.y, RmlSDL::GetKeyModifierState());
                         }
                     }
+                    if (event.type == SDL_MOUSEBUTTONDOWN || event.type == SDL_MOUSEBUTTONUP) {
+                        if (event.button.button == SDL_BUTTON_RIGHT) {
+                            if (event.type == SDL_MOUSEBUTTONUP)
+                                history_menu(event.button.x, event.button.y);
+                            continue;
+                        }
+                        if (event.button.button == SDL_BUTTON_X1 || event.button.button == SDL_BUTTON_X2) {
+                            if (event.type == SDL_MOUSEBUTTONUP)
+                                pending_.emplace_back(
+                                    event.button.button == SDL_BUTTON_X1 ? "history-back" : "history-forward",
+                                    "");
+                            continue;
+                        }
+                    }
                     RmlSDL::InputEventHandler(context_, video_.window, event);
                 }
             }
             while (!pending_.empty()) {
                 auto [action, arg] = pending_.front();
                 pending_.pop_front();
+                redraw_ = true;
                 try {
                     dispatch(action, arg);
                 } catch (const std::exception &e) {
@@ -2032,15 +2308,19 @@ class EditorUi final : public Rml::EventListener {
                 }
                 completed_ = {};
             }
-            const auto now = std::chrono::steady_clock::now();
-            if (!busy_ && now - last_poll > std::chrono::milliseconds(400)) {
+            const auto now = Clock::now();
+            if (!busy_ && now - last_poll >= 400ms) {
                 auto info = session_.execute("info");
-                if (info.value("revision", uint64_t(0)) != revision_) {
-                    if (!has_draft() && !modal_)
+                const auto revision = info.value("revision", uint64_t(0));
+                if (info.value("world_generation", uint64_t(0)) != world_generation_)
+                    needs_refresh_ = true;
+                else if (info != info_) {
+                    if (!has_draft() && !modal_ && !history_menu_open_)
                         needs_refresh_ = true;
-                    else
+                    else if (revision != revision_ && revision != observed_revision)
                         label("status-message", t("stale_revision"));
                 }
+                observed_revision = revision;
                 last_poll = now;
             }
             if (needs_refresh_ && !busy_) {
@@ -2051,16 +2331,30 @@ class EditorUi final : public Rml::EventListener {
                     error(e);
                 }
             }
-            context_->Update();
-            renderer_.BeginFrame();
-            renderer_.Clear();
-            context_->Render();
-            renderer_.EndFrame();
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_).count();
-            if (!busy_ && elapsed > 1200 && !config_.screenshot.empty())
-                screenshot();
-            video_.present();
-            SDL_Delay(10);
+            const bool capture = !busy_ && elapsed >= 1200 && !config_.screenshot.empty();
+            if (drawable && (redraw_ || now >= next_update || capture)) {
+                const auto updated = Clock::now();
+                context_->Update();
+                // BeginFrame configures transparent clears for offscreen
+                // layers (popup shadows). Clear the output before that setup.
+                renderer_.Clear();
+                renderer_.BeginFrame();
+                context_->Render();
+                renderer_.EndFrame();
+                if (capture)
+                    screenshot();
+                video_.present();
+                redraw_ = false;
+                const double delay = context_->GetNextUpdateDelay();
+                // RmlUI requests timed updates for caret blink, animations and
+                // smooth scrolling. A static view needs no frames at all.
+                next_update =
+                    std::isfinite(delay)
+                        ? updated + std::chrono::duration_cast<Clock::duration>(
+                                        std::chrono::duration<double>(std::clamp(delay, .016, 3600.0)))
+                        : Clock::time_point::max();
+            }
             if (config_.quit_after_ms > 0 && elapsed >= config_.quit_after_ms)
                 closed_ = true;
         }

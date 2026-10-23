@@ -161,12 +161,21 @@ input[type=checkbox]:checked { background-color: var(--toggle-on); decorator: no
 input[type=range] { height: 24dp; padding: 0; }
 input[type=range] track { height: 4dp; background-color: var(--scrollbar); margin: 9dp 0; border-radius: 2dp; }
 input[type=range] bar { width: 16dp; height: 16dp; border-radius: 8dp; background-color: var(--accent); margin-top: 3dp; }
-select { padding-right: 25dp; }
+/* Modern Desktop pickers, in density-independent editor dimensions. The
+   native RmlUI controls retain their values, input and change events. */
+select { padding-right: 30dp; cursor: pointer; background-color: transparent; decorator: linear-gradient(var(--control-top), var(--control-bottom)); box-shadow: inset 0 1dp #eff6fc12, 0 1dp 2dp #0002; }
+select:hover { background-color: var(--hover); decorator: none; }
 select selectvalue { padding: 0; }
-select selectarrow { width: 9dp; height: 9dp; margin-right: 9dp; margin-top: 11dp; decorator: none; border-bottom: 2dp var(--muted); border-right: 2dp var(--muted); transform: rotate(45deg); }
-select selectbox { background-color: var(--popup); color: var(--text); border: 1dp var(--border); border-radius: 8dp; padding: 5dp; max-height: 290dp; overflow-y: auto; }
-select option { font-size: 14dp; padding: 8dp; border-radius: 4dp; }
-select option:hover, select option:checked { background-color: var(--selected); color: var(--selected-text); }
+select selectarrow { width: 8dp; height: 8dp; margin-right: 13dp; margin-top: 11dp; decorator: none; border-bottom: 1.5dp var(--muted); border-right: 1.5dp var(--muted); transform: rotate(45deg); }
+select selectbox { width: 100%; min-width: 180dp; background-color: var(--popup); color: var(--text); border: 1dp var(--border); border-radius: 9dp; padding: 5dp; margin-top: 7dp; margin-bottom: 7dp; max-height: 320dp; overflow-y: auto; box-shadow: 0 9dp 28dp #0008; }
+select option { display: flex; align-items: center; min-height: 34dp; padding: 5dp 7dp; border-radius: 5dp; white-space: nowrap; cursor: pointer; }
+select option:hover { background-color: var(--hover); }
+select option:disabled { opacity: 0.35; cursor: unavailable; }
+.option-check { width: 6dp; height: 10dp; margin: 0 12dp 3dp 3dp; flex-shrink: 0; border-right: 1.5dp var(--accent); border-bottom: 1.5dp var(--accent); transform: rotate(45deg); opacity: 0; }
+option:checked .option-check { opacity: 1; }
+selectvalue .option-check { display: none; }
+.option-label { overflow: hidden; text-overflow: ellipsis; }
+.option-label, .option-check { pointer-events: none; focus: none; }
 #search { width: 250dp; margin-right: auto; }
 #filter-nation, #filter-league { width: 205dp; }
 #filter-team { width: 240dp; }
@@ -220,6 +229,7 @@ select option:hover, select option:checked { background-color: var(--selected); 
 textarea { height: 110dp; font-size: 12dp; line-height: 1.5; }
 .form-section { padding-top: 8dp; margin-bottom: 15dp; font-size: 12dp; font-weight: bold; color: var(--accent); }
 .form-help { font-size: 11dp; color: var(--muted); line-height: 1.5; margin-top: 6dp; }
+.connection-actions { margin-top: 20dp; }
 .inspector-actions { padding: 16dp 20dp; border-top: 1dp var(--divider); display: flex; gap: 8dp; flex-shrink: 0; }
 .inspector-actions button { flex: 1; }
 .empty { margin: auto; padding: 45dp; text-align: center; color: var(--muted); line-height: 1.7; }
@@ -262,6 +272,12 @@ footer { height: 57dp; padding: 0 28dp; display: flex; align-items: center; gap:
 #modal-content { overflow-y: auto; line-height: 1.6; }
 #modal-buttons { margin-top: 23dp; display: flex; justify-content: flex-end; gap: 9dp; flex-shrink: 0; }
 #modal-error { color: var(--danger); font-size: 13dp; margin-top: 10dp; }
+#history-overlay { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 10; }
+#history-menu { position: absolute; width: 248dp; padding: 6dp; border: 1dp var(--border); border-radius: 10dp; background-color: var(--popup); }
+#history-menu button { width: 100%; display: flex; align-items: center; text-align: left; padding: 10dp; border-color: transparent; decorator: none; font-size: 15dp; }
+.history-arrow { width: 28dp; flex-shrink: 0; display: flex; align-items: center; }
+.history-arrow .glyph { width: 20dp; height: 20dp; }
+#history-menu small { margin: 0 0 0 auto; padding-left: 16dp; }
 .image-layout { display: flex; gap: 24dp; }
 .image-stage { flex: 1; min-height: 360dp; background-color: var(--image-stage); border: 1dp var(--border); border-radius: 10dp; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .hero-image, .mini-logo { cursor: pointer; }

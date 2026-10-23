@@ -30,7 +30,7 @@ class Session {
     std::unique_ptr<World> world_;
     std::vector<Frame> history_;
     size_t cursor_ = 0;
-    uint64_t revision_ = 0, state_ = 0, next_state_ = 1, saved_state_ = 0;
+    uint64_t revision_ = 0, world_generation_ = 0, state_ = 0, next_state_ = 1, saved_state_ = 0;
     fs::path saved_path_;
     fs::file_time_type saved_time_{};
     uint64_t saved_size_ = 0;

@@ -1,5 +1,27 @@
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
-# OpenBMH Editor 0.5.3
+# OpenBMH Editor 0.5.4
+
+Adds browser-style **Back / Forward** navigation. Right-click anywhere in the
+editor to open the context menu; Alt+Left/Right and mouse side buttons use the
+same history. Returning to a view restores its filters, selected record, sorting,
+page and scroll positions. Unapplied inspector entries retain their confirmation
+dialog. Opening another world clears navigation; it does not undo data edits.
+
+The editor now updates and renders on demand, instead of redrawing the entire
+window continuously while idle. Input, timed caret/animation updates and external
+MCP changes remain active. Minimized windows do not render. This is especially
+useful with Windows software rendering over Remote Desktop.
+
+Dropdowns follow the Modern Desktop pickers: rounded themed buttons and popup
+lists, equal label/option font sizes, a checkmark for the current selection and
+subtle hover surfaces. Escape closes the open list before its dialog. Options
+also gives **Copy connection** more space below the MCP URL. All three themes
+and both interface languages are supported.
+
+[Native screenshots and verification](../../qa/editor-navigation/README.md)
+include the controls and navigation.
+
+## Editor 0.5.3
 
 Fixes the Windows graphical startup on machines without an OpenGL 3.3 driver,
 including Windows Server / Remote Desktop. The editor and game launcher use the

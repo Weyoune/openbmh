@@ -48,6 +48,7 @@ int main() {
     try {
         Session s;
         s.execute("demo");
+        const auto generation = s.execute("info")["world_generation"];
         check(s.execute("list", {{"table", "players"}})["total"] == 52, "all squads retained");
         check(s.execute("list", {{"table", "players"}, {"team", "club:north"}, {"limit", 24}})["items"].size() == 24,
               "24 view");
@@ -63,6 +64,8 @@ int main() {
         s.execute("undo");
         check(row(s, "players", "player:demo-0") == initial, "undo complete row");
         check(s.execute("info")["revision"] > revision, "revision monotonic across undo");
+        check(s.execute("info")["world_generation"] == generation,
+              "edits and undo keep navigation world identity");
         s.execute("redo");
         check(row(s, "players", "player:demo-0")["attributes"]["strength"] == 99, "redo");
         rejects("validation_failed",
@@ -233,6 +236,17 @@ int main() {
         }
 #endif
         check(tr("de", "clubs") != tr("en", "clubs"), "bilingual labels");
+        {
+            Session reopened;
+            reopened.execute("demo");
+            const auto identity = reopened.execute("info")["world_generation"];
+            reopened.execute("save", {{"path", utf8(root / "navigation-world.obw")}});
+            check(reopened.execute("info")["world_generation"] == identity,
+                  "saving keeps navigation world identity");
+            reopened.execute("open", {{"path", utf8(root / "navigation-world.obw")}});
+            check(reopened.execute("info")["world_generation"] > identity,
+                  "reopening identical IDs resets navigation identity");
+        }
         McpServer mcp(s);
         mcp.start(options);
         httplib::Client client("127.0.0.1", mcp.port());
