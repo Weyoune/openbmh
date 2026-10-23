@@ -341,8 +341,19 @@ add_subdirectory(src/import)
 
 # Modern session: fork of the Classic CareerSession on the Modern season core. It still
 # uses the Classic UI projections until the Modern projections exist (docs/new_engine).
+# Modern world packages: the world tables and the Classic payload of a Modern data set.
+add_library(bmh_modern_content STATIC src/modern/content/world.cpp src/modern/content/world_package.cpp
+    src/modern/content/world_expand.cpp)
+target_link_libraries(bmh_modern_content PUBLIC bmh_content bmh_season_modern PRIVATE bmh_miniz)
+if(MSVC)
+    target_compile_options(bmh_modern_content PRIVATE /W4 /utf-8)
+endif()
+
+add_executable(modern_world_info tests/modern_world_info.cpp)
+target_link_libraries(modern_world_info PRIVATE bmh_modern_content)
+
 add_library(bmh_modern_session STATIC src/modern/app/modern_session.cpp)
-target_link_libraries(bmh_modern_session PUBLIC bmh_season_modern bmhui)
+target_link_libraries(bmh_modern_session PUBLIC bmh_season_modern bmh_modern_content bmhui)
 if(MSVC)
     target_compile_options(bmh_modern_session PRIVATE /W4 /utf-8 /bigobj)
 else()
@@ -1151,6 +1162,10 @@ if(MSVC)
     target_compile_options(quit_confirmation_unit_tests PRIVATE /utf-8)
 endif()
 add_test(NAME quit_confirmation_unit_tests COMMAND quit_confirmation_unit_tests)
+
+add_executable(modern_camp_tests tests/modern_camp_tests.cpp)
+target_link_libraries(modern_camp_tests PRIVATE bmh_season_modern)
+add_test(NAME modern_camp_tests COMMAND modern_camp_tests)
 
 add_executable(modern_calendar_tests tests/modern_calendar_tests.cpp)
 target_link_libraries(modern_calendar_tests PRIVATE bmh_season_modern)

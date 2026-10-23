@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/pending_offer.hpp"
 
 #include <algorithm>
@@ -20,7 +21,7 @@ int pending_offer_owner_team(const GameState& game, int manager) {
     // AdvanceTurn restores NextDeskManager[0] after the temporary one-manager national
     // desk. Records1..3 still exist even though they have no runtime desk.
     const bool retained = manager > 0 && manager < 4 &&
-        game.manager_teams.size() == 1 && game.manager_teams[0] == kNoTeam &&
+        game.manager_teams.size() == 1 && game.manager_teams[0] == no_team() &&
         game.memory.has(::bmh::layout::CoachActive) && game.memory.u8(::bmh::layout::CoachActive) != 0 &&
         game.memory.has(::bmh::layout::ManagerCount) && game.memory.u8(::bmh::layout::ManagerCount) == 1 &&
         game.memory.has(::bmh::layout::OriginalManagerCount) && game.memory.u8(::bmh::layout::OriginalManagerCount) <= 4 &&
@@ -40,7 +41,7 @@ int pending_offer_owner_team(const GameState& game, int manager) {
 
 bool pending_offer_spare_buyer(const GameState& game, int raw_offer_slot, int expected_team) {
     if (raw_offer_slot < 0 || raw_offer_slot >= 4 ||
-        game.manager_teams.size() != 1 || game.manager_teams[0] != kNoTeam ||
+        game.manager_teams.size() != 1 || game.manager_teams[0] != no_team() ||
         !game.memory.has(::bmh::layout::CoachActive) || game.memory.u8(::bmh::layout::CoachActive) == 0 ||
         !game.memory.has(::bmh::layout::ManagerCount) || game.memory.u8(::bmh::layout::ManagerCount) != 1 ||
         !game.memory.has(::bmh::layout::OriginalManagerCount) || game.memory.u8(::bmh::layout::OriginalManagerCount) < 1 || game.memory.u8(::bmh::layout::OriginalManagerCount) > 4 ||
@@ -59,7 +60,7 @@ bool pending_offer_spare_buyer(const GameState& game, int raw_offer_slot, int ex
     const uint32_t offer = ::bmh::layout::OfferSlots + uint32_t(raw_offer_slot) * 4;
     const uint32_t list = ::bmh::layout::EditorList + uint32_t(raw_offer_slot + 40) * 0x58;
     const size_t pool = 0xb70 + size_t(raw_offer_slot + 40);
-    if (team_at(0) != kNoTeam || buyer >= 138 || buyer != expected_team || !game.memory.has(offer + 3) ||
+    if (team_at(0) != no_team() || buyer >= 138 || buyer != expected_team || !game.memory.has(offer + 3) ||
         !game.memory.has(list + 0x57) || pool >= game.squad_slots.size())
         return false;
     const uint32_t word = game.memory.u32(offer);

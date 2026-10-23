@@ -15,4 +15,8 @@ void validate_classic(const Documents& out);
 // For an editor after deliberate changes. CRC32 detects damage, not authenticity.
 void refresh_classic_inventory(Documents& out);
 ClassicData load_classic(const Documents& out);
+// The Classic installation payload (x-classic, x-legacy, assets) of a world that is not a
+// sealed Classic package, such as a Modern world built on an imported installation. Only the
+// payload is checked; the world tables are the caller's business (docs/new_engine).
+ClassicData load_classic_payload(const Documents& out);
 } // namespace bmh::obw

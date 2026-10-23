@@ -2,6 +2,8 @@
 #include "formats/executable_layout.hpp"
 #include "modern/game/modern_state.hpp"
 #include "modern/app/modern_session.hpp"
+#include "modern/content/world_expand.hpp"
+#include "modern/content/world_package.hpp"
 #include "modern/game/balance_plan.hpp"
 #include "modern/game/bank_credit.hpp"
 #include "modern/game/career.hpp"
@@ -590,6 +592,10 @@ ModernSession::ModernSession(const std::filesystem::path& data, uint32_t watcom_
     session_id_ = next_session_id.fetch_add(1, std::memory_order_relaxed);
     initialize_club_modal_runtime();
     g_ = modern::startup_state(exe_, db_, read_file(data / "M3.MEN"), read_file(data / "M3.DAT"));
+    // A Modern world: give the Classic start the dimensions and data of the world (M3).
+    if (std::getenv("MODERN_DEBUG")) std::fprintf(stderr, "session: classic start built\n");
+    if (const World* world = current_world()) world_report_ = expand_to_world(g_, *world);
+    if (std::getenv("MODERN_DEBUG")) std::fprintf(stderr, "session: world expanded\n");
     if (const auto resource = content::find(data)) {
         g_.display_start_year = resource->content->start_year;
         content::set_display_start_year(data, g_.display_start_year);
@@ -598,6 +604,7 @@ ModernSession::ModernSession(const std::filesystem::path& data, uint32_t watcom_
     g_.texts = &texts_;
     g_.currency_suffix = exe_.cstring(::bmh::layout::CurrencySuffixText);  // CurrencySuffixText
     modern::configure_training_camp_data(g_, exe_);
+    if (const World* world = current_world()) install_training_camps(g_, *world);
     for (size_t i = 0; i < g_.credit_rate_table.size(); ++i) g_.credit_rate_table[i] = exe_.u8(::bmh::layout::BankCredit_BankCreditContext_RuntimeField3 + uint32_t(i));
     g_.credit_divisor = std::bit_cast<double>(uint64_t(exe_.u32(::bmh::layout::BankCredit_BankCreditContext_RuntimeField)) | uint64_t(exe_.u32(::bmh::layout::BankCredit_BankCreditContext_RuntimeField2)) << 32);
     g_.credit_rate_table_available = true;
@@ -606,10 +613,14 @@ ModernSession::ModernSession(const std::filesystem::path& data, uint32_t watcom_
         turn_driver_.desk_autosave = [this](const ModernState &state, WatcomRandom &random) {
             write_desk_autosave(state, random);
         };
+    const bool trace = std::getenv("MODERN_DEBUG") != nullptr;
+    if (trace) std::fprintf(stderr, "session: startup players\n");
     modern::startup_players(g_, game_, rand_);  // CareerFirstSteps2
     MinuteReport report;
+    if (trace) std::fprintf(stderr, "session: new career before dialog\n");
     if (!modern::new_career_before_dialog(g_, game_, rand_, report))  // InitializeCareer up to the dialog
         throw std::runtime_error("career start: " + report.reason);
+    if (trace) std::fprintf(stderr, "session: career prepared\n");
 }
 
 ModernSession::ModernSession(const std::filesystem::path &data, uint32_t watcom_seed,
@@ -686,6 +697,7 @@ ModernSession::ModernSession(const std::filesystem::path &data, uint32_t watcom_
     g_.texts = &texts_;
     g_.currency_suffix = exe_.cstring(::bmh::layout::CurrencySuffixText);  // CurrencySuffixText
     modern::configure_training_camp_data(g_, exe_);
+    if (const World* world = current_world()) install_training_camps(g_, *world);
     for (size_t i = 0; i < g_.credit_rate_table.size(); ++i) g_.credit_rate_table[i] = exe_.u8(::bmh::layout::BankCredit_BankCreditContext_RuntimeField3 + uint32_t(i));
     g_.credit_divisor = std::bit_cast<double>(uint64_t(exe_.u32(::bmh::layout::BankCredit_BankCreditContext_RuntimeField)) | uint64_t(exe_.u32(::bmh::layout::BankCredit_BankCreditContext_RuntimeField2)) << 32);
     g_.credit_rate_table_available = true;

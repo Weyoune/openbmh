@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/live_matchday.hpp"
 
 #include <algorithm>
@@ -51,7 +52,7 @@ std::string original(std::string_view utf8) {
 int placed_players(const GameState& state, int team) {
     // SquadRange3 returns 11 for every non-league field team, except the special no-team squad.
     const SquadRange range = squad_range(team);
-    if (range.count == 0 && team != kNoTeam) return 11;
+    if (range.count == 0 && team != no_team()) return 11;
     uint8_t count = 0;
     const size_t end = std::min(state.squad_slots.size(), range.first + range.count);
     for (size_t slot = range.first; slot < end; ++slot) {

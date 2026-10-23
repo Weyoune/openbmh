@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/other_games_state.hpp"
 
 #include <algorithm>
@@ -164,7 +165,7 @@ int source_league(const LeImage& exe, int team) {
 }
 
 uint8_t source_country(const LeImage& exe, int team) {
-    if (team == kNoTeam) return 0;
+    if (team == no_team()) return 0;
     if (team < 0) invalid("negative team for Source country lookup");
     int remaining = team;
     const int domestic_cutoff = exe.u8(::bmh::layout::LeaguePairings_LeaguePairingsConstants_RuntimeField);

@@ -21,7 +21,7 @@ Quelle: `src/game/desk_actions.cpp` (`training_camp_price`, `book_training_camp`
 ## Modern: Katalog aus den Daten
 
 Der Katalog steht im Modern-Datensatz unter `rules.training_camps`. Fehlt er,
-gilt die öffentliche Vorgabe `assets/modern/rules/training_camps.json` mit den
+gilt die in die Engine eingebaute Vorgabe (`src/modern/game/training_camps.cpp`) mit den
 18 fiktiven Lagern der Oberfläche.
 
 Der Katalog erweitert die bestehende Regel `rule:training-camps` (Liste
@@ -62,6 +62,15 @@ Prüfung in M4 und M7: Ein Spitzenteam, das pro Saison dreimal ein
 6-Sterne-Lager bucht, verbessert sich gegenüber drei 5-Sterne-Aufenthalten im
 Schnitt höchstens um etwa einen Tabellenplatz. Andernfalls werden die Punkte 2
 und 3 abgeschwächt. Das Ergebnis wird hier und in [DIFFERENCES](../DIFFERENCES.md) festgehalten.
+
+## Umsetzung (M4, Stand 24. Oktober 2026)
+
+- Katalog in `ModernState::camp_maps` und `ModernState::training_camps` (`src/modern/game/training_camps.hpp`); Index = Lager-Index der Buchung.
+- Preis, Buchung und Wirkung in `src/modern/game/desk_actions.cpp` (`training_camp_price`, `book_training_camp`, `training_camp_effect`).
+- Die 6-Sterne-Regeln sind wie oben umgesetzt: Stufenindex auf das Tabellenende gedeckelt, Leistungsdach +1 ab Platz 5 und +1 bei Platz und Fitness 6, Verpflegung 6 bis +1 Kondition, Unterkunft 6 eine Woche weniger Verletzung.
+- Mit Classic-Daten unverändert: Nur die Original-Lager 6 und 7 haben Platz 5, das alte Kriterium „Index ab 6“ trifft dieselben Lager.
+- Test: `modern_camp_tests` (Katalog, Deckelung, Verpflegung, Unterkunft).
+- Offen: Messung der Saisonwirkung (M7) und die Projektion für die UI (M6).
 
 ## Für die Oberfläche
 

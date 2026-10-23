@@ -19,6 +19,11 @@
 #include <string>
 
 #include "modern/app/modern_session.hpp"
+#include "modern/content/world_package.hpp"
+#include <chrono>
+#include <memory>
+#include <thread>
+#include "game/trace.hpp"
 #include "modern/game/desk_actions.hpp"
 #include "game/lineup.hpp"
 #include "modern/game/matchday.hpp"
@@ -142,6 +147,16 @@ void check_results(const TurnResultSnapshot& r, const std::string& when, Checks&
 }  // namespace
 
 int main(int argc, char** argv) {
+    // MODERN_WATCH=seconds: report the engine step periodically (finding endless loops).
+    if (const char* watch = std::getenv("MODERN_WATCH")) {
+        const int seconds = std::max(1, std::atoi(watch));
+        std::thread([seconds] {
+            for (;;) {
+                std::this_thread::sleep_for(std::chrono::seconds(seconds));
+                std::fprintf(stderr, "watch: %s (club %d)\n", bmh::turn_step.load(), bmh::turn_team.load());
+            }
+        }).detach();
+    }
     if (argc < 2) {
         std::printf("usage: season_sim <BMH data dir> [turns] [master club] [watcom seed] [strength]\n");
         return 2;
@@ -151,6 +166,13 @@ int main(int argc, char** argv) {
     std::string gap;
     int played = 0, goals = 0, matches = 0, seasons = 0;
     try {
+        // A Modern world package (.obw) is opened, mounted and expanded by the session.
+        std::unique_ptr<content::Mount> mount;
+        if (std::string(argv[1]).size() > 4 && std::string(argv[1]).substr(std::string(argv[1]).size() - 4) == ".obw") {
+            auto package = modern::open_world_package(argv[1]);
+            mount = std::make_unique<content::Mount>(argv[1], package.classic);
+            modern::set_current_world(package.world);
+        }
         modern::app::ModernSession session(argv[1], argc > 4 ? uint32_t(std::stoul(argv[4])) : 1u);
         ui::SetupOptions options;  // 5 seasons, level 2, one manager, mode III, league and world
         ui::ManagerChoice choice;
@@ -158,6 +180,12 @@ int main(int argc, char** argv) {
         choice.master_club = argc > 3 ? std::atoi(argv[3]) : 0;
         choice.strength = argc > 5 ? std::atoi(argv[5]) : 2;
         std::string error;
+        if (modern::current_world()) {
+            const auto& r = session.world_report();
+            std::printf("modern world: %d league clubs (%d added), %d added players, %d free agents, %d fallback nationalities\n",
+                        r.league_clubs, r.added_clubs, r.added_players, r.free_agents, r.fallback_nationalities);
+            for (const auto& note : r.notes) std::printf("  league date moved: %s\n", note.c_str());
+        }
         if (!session.confirm_manager(options, choice, error)) throw std::runtime_error("manager: " + error);
         ui::CareerInitializationResult init;
         if (!session.finish(init, error)) throw std::runtime_error("career start: " + error);
@@ -327,6 +355,12 @@ int main(int argc, char** argv) {
                         modern::table_position(g, g.manager_teams.at(0)), money(g, 0));
             if (r.kind == TurnDeskKind::SeasonEndDesk) {
                 print_first_league_results(g, "season end");
+                if (modern::current_world()) {  // rounds played per league against its matchdays
+                    std::printf("season end rounds:");
+                    for (int l = 0; l < kLeagueCount; ++l)
+                        std::printf(" %d:%d/%d", l, int(g.league_rounds.at(size_t(l))), league_matchdays(l));
+                    std::printf("\n");
+                }
                 ++seasons;
             }  // (the next kickoff runs the season change)
         }
@@ -353,6 +387,7 @@ int main(int argc, char** argv) {
     if (matches >= 500 && (double(goals) / matches < 2.0 || double(goals) / matches > 4.0))
         checks.fail("goals per match outside 2.0-4.0", std::to_string(double(goals) / matches));
     for (const auto& [kind, n] : checks.counts) std::printf("VIOLATION %-32s %4d x, first: %s\n", kind.c_str(), n, checks.first[kind].c_str());
-    if (!gap.empty()) std::printf("STOPPED: %s\n", gap.c_str());
+    if (!gap.empty())
+        std::printf("STOPPED: %s (engine step: %s, club %d)\n", gap.c_str(), bmh::turn_step.load(), bmh::turn_team.load());
     return !gap.empty() ? 2 : checks.counts.empty() ? 0 : 1;
 }

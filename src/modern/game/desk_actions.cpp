@@ -507,13 +507,23 @@ void configure_training_camp_data(ModernState& g, const LeImage& exe) {
     }
     g.training_camp_base_prices = prices;
     g.training_camp_quality = quality;
+    // The Modern catalogue starts as the eight original resorts; a Modern world replaces it.
+    g.camp_maps.clear();
+    g.training_camps.clear();
+    for (size_t resort = 0; resort < prices.size(); ++resort) {
+        TrainingCamp camp;
+        camp.id = "resort:" + std::to_string(resort);
+        camp.base_price = prices[resort];
+        camp.quality = quality[resort];
+        g.training_camps.push_back(std::move(camp));
+    }
 }
 
 int32_t training_camp_price(const ModernState& g, int manager, int resort) {
-    if (manager < 0 || size_t(manager) >= g.manager_teams.size() || resort < 0 || resort >= kTrainingCampResorts)
+    if (manager < 0 || size_t(manager) >= g.manager_teams.size() || resort < 0 || size_t(resort) >= g.training_camps.size())
         throw FormatError("training camp: invalid manager or resort");
     const int team = int8_t(g.manager_records.at(size_t(manager) * kRecordSize + kTeam));
-    return g.training_camp_base_prices[size_t(resort)] + team_average(g, team, 0xff).players * 5000;
+    return g.training_camps[size_t(resort)].base_price + team_average(g, team, 0xff).players * 5000;
 }
 
 bool set_training_camp_focus(ModernState& g, int manager, const std::array<uint8_t, 4>& focus) {
@@ -1450,7 +1460,7 @@ TrainingCampBookingBlock training_camp_booking_block(const ModernState& g, int m
 }
 
 bool book_training_camp(ModernState& g, int manager, int resort, WatcomRandom& rand) {
-    if (resort < 0 || resort >= kTrainingCampResorts ||
+    if (resort < 0 || size_t(resort) >= g.training_camps.size() ||
         modern::training_camp_booking_block(g, manager) != TrainingCampBookingBlock::none) return false;
     const int32_t cost = modern::training_camp_price(g, manager, resort);
     if (!modern::book_money(g, manager, cost, false)) return false;
@@ -1465,7 +1475,7 @@ bool book_training_camp(ModernState& g, int manager, int resort, WatcomRandom& r
 void training_camp_effect(ModernState& g, int manager, int resort, WatcomRandom& rand) {
     const size_t rec = size_t(manager) * kRecordSize;
     const int team = int8_t(g.manager_records.at(rec + kTeam));
-    const auto& grade = g.training_camp_quality[size_t(resort)];
+    const auto& grade = g.training_camps.at(size_t(resort)).quality;
 
     // Morale (bits 0-5) + 12 * grade * 20 %, clamped to 0..0x2f (ClampSignedWord with a word
     // sum of the sign extended byte); the flag bits 6-7 are kept.
@@ -1496,14 +1506,25 @@ void training_camp_effect(ModernState& g, int manager, int resort, WatcomRandom&
         for (int i = 0; i < 5; i++) {
             const int lo = delta[i] < 0 ? 0 : 8;
             if (rand.range(0, 100) <= chance) {
-                // values below 83..87 (88 in the better resorts 6 and 7) can still improve
-                const int limit = rand.range(0x53, 0x57) + (resort >= 6 ? 1 : 0);
+                // OpenBMH deviates from the original: Modern training camps have grades up to six stars with a capped step, a higher limit and recovery extras.
+                // values below 83..87 can still improve. Classic raises the limit by 1 in its two best
+                // resorts (6 and 7, the only ones with pitch grade 5); Modern ties it to the grades:
+                // pitch 5 or more +1, pitch and fitness both 6 one more (docs/new_engine/trainingslager.md).
+                const int limit = rand.range(0x53, 0x57) + (grade[0] >= 5 ? 1 : 0) + (grade[0] >= 6 && grade[1] >= 6 ? 1 : 0);
                 if (v[i] < limit) {
-                    const int k = rand.range(lo, delta[i] + 8);
+                    // Grade 6 can draw beyond the step table; its top step (+5) is the maximum.
+                    const int k = std::min(rand.range(lo, delta[i] + 8), 23);
                     v[i] = int8_t(v[i] + int8_t(kStep[k] * kDirection[i]));
                 }
             }
             v[i] = std::clamp<int8_t>(v[i], 0, 0x63);  // Int8T
+        }
+        // Six-star extras (Modern): catering 6 adds up to one point of condition, lodging 6 shortens
+        // a running injury (w364 bits 16-20, weeks) by one week, never below one.
+        if (grade[2] >= 6) v[0] = std::min<int8_t>(int8_t(v[0] + 1), 0x63);
+        if (grade[3] >= 6) {
+            const uint32_t weeks = p.w364 >> 16 & 0x1f;
+            if (weeks > 1) p.w364 = (p.w364 & ~(0x1fu << 16)) | (weeks - 1) << 16;
         }
         p.w35c = (p.w35c & 0xffe00000u) | uint32_t(v[0]) << 14 | uint32_t(v[1]) << 7 | uint32_t(v[2]);
         board[0xf] = uint8_t(v[3]);

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "ui/flow.hpp"
+#include "game/world_layout.hpp"
 #include "ui/source_hold.hpp"
 
 #include <algorithm>
@@ -93,7 +94,7 @@ void validate_confirmed_desk(const std::vector<ManagerChoice>& choices,
                              const std::vector<DeskManagerIdentity>& previous_national_roster,
                              bool allow_turn_handoff, const DeskState& desk) {
     validate_desk_state(desk);
-    const bool previous_national = previous.size() == 1 && previous[0].runtime_club == kNoTeam &&
+    const bool previous_national = previous.size() == 1 && previous[0].runtime_club == no_team() &&
         (desk.options.world || previous_national_coach_takeover);
     const bool incoming_national = desk.national_team &&
         (desk.options.world || desk.national_coach_takeover);

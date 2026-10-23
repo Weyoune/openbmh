@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/flow.hpp"
 
 #include <algorithm>
@@ -319,9 +320,9 @@ void StartupFlow::show_national_friendly_picker(WorldCupStatisticsProjection pro
     if (!desktop_ || !engine_attached_ || in_preparation_menu() || in_readonly_view() || matchday_results_ ||
         !desktop_->pending() || *desktop_->pending() != owner || owner.kind != DeskRequestKind::open_menu ||
         owner.menu_kind != 6 || owner.revision != desktop_->state().revision ||
-        owner.manager_slot != desktop_->state().manager_slot || runtime_team != bmh::kNoTeam ||
+        owner.manager_slot != desktop_->state().manager_slot || runtime_team != bmh::no_team() ||
         size_t(owner.manager_slot) >= desktop_->state().manager_teams.size() ||
-        desktop_->state().manager_teams[size_t(owner.manager_slot)] != bmh::kNoTeam ||
+        desktop_->state().manager_teams[size_t(owner.manager_slot)] != bmh::no_team() ||
         !projection.can_select_opponent || next_friendly_request_id_ == UINT64_MAX)
         throw FormatError("national friendly: expected the active menu-6 national caller");
     NationalFriendlyUiOwner ui_owner{6, owner.manager_slot, runtime_team,
@@ -361,7 +362,7 @@ void StartupFlow::show_national_friendly_calendar(FriendlyMatchState state,
        booking.quote.terms.status!=FriendlyQuoteStatus::quoted||
        national_friendly_desk_owner_.revision!=desktop_->state().revision||
        national_friendly_desk_owner_.manager_slot!=state.manager_slot||
-       state.runtime_team!=bmh::kNoTeam||!state.national_team||state.revision!=desktop_->state().revision||
+       state.runtime_team!=bmh::no_team()||!state.national_team||state.revision!=desktop_->state().revision||
        state.manager_slot!=desktop_->state().manager_slot||quote.request_id!=booking.owner.request_id||
        quote.revision!=booking.owner.revision||quote.opponent!=booking.quote.terms.opponent||
        quote.manager_slot!=booking.owner.manager||state.manager_name!=original_to_utf8(desktop_->state().manager_name)||

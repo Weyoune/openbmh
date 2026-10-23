@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/cup_draw.hpp"
 
 #include <algorithm>
@@ -51,7 +52,7 @@ void source_frame(Image& out,int x,int y) {
     for(int yy=y-1;yy<=y+38;++yy)if(yy>=0&&yy<out.height&&x+38>=0&&x+38<out.width)out.at(x+38,yy)=0x40;
 }
 int region_for_team(int id) {
-    if(id==kNoTeam)return 0;
+    if(id==no_team())return 0;
     int t=id;
     for(int league=0;league<kLeagueCount;++league){t-=kLeagueSizes[league];if(t<0)return league>=5?league-5+1:0;}
     if(t-kCupOnlyTeams>=0)return (t-kCupOnlyTeams)/7-5+10;
@@ -152,7 +153,7 @@ CupDrawProjection cup_draw_from_game(const GameState& game,const SeasonCupDrawEv
             context+=original_to_utf8(exe.cstring(::bmh::layout::CupDraw_FormatError_ExecutableField));
         } else {
             std::array<int,5> values{};
-            if(id>=168&&id!=kNoTeam) {
+            if(id>=168&&id!=no_team()) {
                 const auto snapshot=std::find_if(event.group_average_snapshots.begin(),event.group_average_snapshots.end(),
                     [&](const auto& v){return v.runtime_id==id;});
                 if(snapshot==event.group_average_snapshots.end())

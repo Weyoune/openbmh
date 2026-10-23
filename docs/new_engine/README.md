@@ -54,8 +54,8 @@ Für 0.3 gilt außerdem:
 | M0 | Classic-Referenz festhalten, Datensatz lokal bereitstellen | erledigt (Classic-Regressionen des öffentlichen Codes: Issue #14) |
 | M1 | `WorldLayout`, Abzweig `src/modern/` | Abzweig und Layout erledigt; vereinsbezogene Speicherblöcke folgen mit M3 |
 | M2 | Spielpläne je Liga, Kalender mit 38 Spieltagen | Engine-Teil erledigt (Tabelle je Ligagröße, Ligatermine, Aussetzen); Test mit echten Daten in M3 |
-| M3 | Modern-Weltlader, Namen (Vor-/Nachname, UTF-8), Asset-Schlüssel | offen |
-| M4 | Trainingslager: 18 Lager, drei Regionen, 6-Sterne-Wirkung | offen |
+| M3 | Modern-Weltlader, Namen (Vor-/Nachname, UTF-8), Asset-Schlüssel | Weltlader erledigt: Modern-Datensatz spielt zwei Saisons; Namen/Assets für die UI liegen in `ModernState`, Spielstände folgen mit M6 |
+| M4 | Trainingslager: 18 Lager, drei Karten, 6-Sterne-Wirkung | Engine erledigt (Katalog, Preis, 6-Sterne-Wirkung, Test); Saisonwirkung wird in M7 gemessen |
 | M5 | Datenrevision 1.4 des Modern-Datensatzes (privat), Wirtschaftsprüfung | offen |
 | M6 | Modern-Spielstände (`modern-career-v1`), Projektionen für die UI | offen |
 | M7 | Balance-Läufe und Anpassungen | offen |

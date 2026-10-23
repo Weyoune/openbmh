@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/environment.hpp"
 
 #include <algorithm>
@@ -59,7 +60,7 @@ EnvironmentView environment_from_game(const bmh::GameState& game, uint64_t revis
     if (manager < 0 || size_t(manager) >= game.manager_teams.size())
         throw FormatError("environment: active manager is outside the source roster");
     const int team = game.manager_teams[size_t(manager)];
-    if (team < 0 || team == kNoTeam) throw FormatError("environment: no club environment for this manager");
+    if (team < 0 || team == no_team()) throw FormatError("environment: no club environment for this manager");
     EnvironmentView view;
     view.manager_slot = manager;
     view.runtime_club = team;

@@ -43,6 +43,19 @@ public:
         if (!has(address)) blocks_[address].assign(size, 0);
     }
 
+    // Enlarges the block starting at `address` to `size` bytes (new bytes zero) when the space
+    // up to the next block is free; a Modern world uses it for tables per club that have
+    // room behind them. Throws std::out_of_range when the block is missing or too close.
+    void grow_block(uint32_t address, size_t size) {
+        auto it = blocks_.find(address);
+        if (it == blocks_.end()) throw std::out_of_range("static memory: no block at " + hex(address));
+        if (size <= it->second.size()) return;
+        auto next = std::next(it);
+        if (next != blocks_.end() && address + size > next->first)
+            throw std::out_of_range("static memory: block " + hex(address) + " cannot grow into " + hex(next->first));
+        it->second.resize(size, 0);
+    }
+
     bool has(uint32_t address) const {
         auto it = blocks_.upper_bound(address);
         if (it == blocks_.begin()) return false;

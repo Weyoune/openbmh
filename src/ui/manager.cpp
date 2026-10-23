@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/manager.hpp"
 
 #include <algorithm>
@@ -150,7 +151,7 @@ ManagerScreen::ManagerScreen(const std::filesystem::path& data, int slot, const 
         if (exe_.u8(::bmh::layout::Manager_FormatError_RuntimeField + i * 2) < 'B') ++text_id;
         if (last_[i] - first_[i] >= 20) throw FormatError("manager: league exceeds picker grid");
     }
-    first_[5] = exe_.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField); last_[5] = first_[5] + 19;
+    first_[5] = world_layout().league_teams; last_[5] = first_[5] + 19;
     first_[6] = first_[5] + 20; last_[6] = first_[5] + exe_.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6) - 1;
     leagues_[5] = texts_[(::bmh::layout::Manager_FormatError_TextPointer - ::bmh::layout::TextPointerTable) / 4]; leagues_[6] = leagues_[5];
     if (leagues_[6].empty()) throw FormatError("manager: missing extra-team label");

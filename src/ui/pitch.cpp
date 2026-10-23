@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/pitch.hpp"
 
 #include <algorithm>
@@ -58,7 +59,7 @@ PitchExtras extras(const StaticMemory& memory,const Bytes& managers,const Bytes&
     const int count=memory.u8(::bmh::layout::ManagerCount);
     if(count<1||count>4||e.manager_slot>=count||teams.size()!=size_t(count))throw FormatError("pitch: invalid active manager");
     e.runtime_club=teams.at(e.manager_slot);
-    if(e.runtime_club<0||e.runtime_club>=exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField))throw FormatError("pitch: unsupported club");
+    if(e.runtime_club<0||e.runtime_club>=world_layout().league_teams)throw FormatError("pitch: unsupported club");
     const size_t m=size_t(e.manager_slot)*0xb0c,f=size_t(e.manager_slot)*0x160;
     if(managers.size()<m+0xb0c||formations.size()<f+0x160||badges.size()<size_t(e.runtime_club+1)*2)
         throw FormatError("pitch: truncated manager/formations/badges");

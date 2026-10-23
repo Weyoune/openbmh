@@ -44,6 +44,9 @@ struct WorldLayout {
     int no_team() const { return first_foreign_cup() + foreign_cup_teams; }
     int total_teams() const { return no_team() + national_teams; }
     bool has_squad(int team) const { return (team >= 0 && team < league_teams) || team == no_team(); }
+    // The team whose squad holds `slot`: a league club, no_team() for the no-club squad, -1 for
+    // the pools and the reserve.
+    int team_of_slot(int slot) const;
 };
 
 // The original dimensions (V2.24 and the supported German and English editions).

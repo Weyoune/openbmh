@@ -830,7 +830,7 @@ void change_places(ModernState& g, int a, int b) {
             const uint16_t w = v == uint16_t(a) ? uint16_t(b) : v == uint16_t(b) ? uint16_t(a) : v;
             g.manager_records.at(at) = uint8_t(w), g.manager_records.at(at + 1) = uint8_t(w >> 8);
         }
-        swap_bytes(g.manager_results, size_t(a) * 10 + m * 0x690, size_t(b) * 10 + m * 0x690, 10);
+        swap_bytes(g.manager_results, size_t(a) * 10 + m * manager_history_stride(), size_t(b) * 10 + m * manager_history_stride(), 10);
     }
 }
 

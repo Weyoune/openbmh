@@ -32,10 +32,7 @@ int source_manager(const ModernState& g, int club) {
 
 int club_of_slot(int slot) {
     if (slot < 0) return -1;
-    if (slot < 90 * 24) return slot / 24;
-    if (slot < 90 * 24 + 48 * 16) return (slot - 90 * 8) / 16;
-    if (slot >= pool_end_slot() && slot < pool_end_slot() + 24) return no_team();
-    return -1;
+    return world_layout().team_of_slot(slot);  // squads, no-club squad, else -1
 }
 
 std::array<uint8_t, kBoardRow> board_copy(const ModernState& g, int manager, int row) {

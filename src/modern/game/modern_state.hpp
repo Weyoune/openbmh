@@ -9,10 +9,13 @@
 // Modern-only data (world layout, UTF-8 names, ...) is added here, never to GameState.
 
 #include <cstddef>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include "game/state.hpp"
 #include "game/world_layout.hpp"
+#include "modern/game/training_camps.hpp"
 
 namespace bmh::modern {
 
@@ -31,7 +34,21 @@ inline size_t total_squad_slots() { return world_layout().total_slots; }
 // The callbacks the shared match core uses for season functions (SeasonHooks).
 const SeasonHooks& season_hooks();
 
+// The form history per manager (manager_results) holds 10 bytes per club with a record
+// (Classic: 168 clubs, stride 0x690).
+inline size_t manager_history_stride() { return size_t(first_foreign_cup()) * 10; }
+
 struct ModernState : GameState {
+    // --- Modern world (docs/new_engine, M3); empty when the game runs on Classic data -------
+    // UTF-8 names and OBW identities by runtime index. The single-byte name pools of
+    // GameState stay for the engine texts; interfaces show these.
+    std::vector<std::string> world_club_id, world_club_name, world_club_short;   // per team
+    std::vector<std::string> world_player_id, player_first, player_last;         // per player
+    std::vector<std::string> player_nation;                                       // nation id per player
+    // Training camps (M4): Classic data gives the eight original resorts, a Modern world its catalogue.
+    std::vector<CampMap> camp_maps;
+    std::vector<TrainingCamp> training_camps;
+
     ModernState() { season_hooks = &modern::season_hooks(); }
     // Takes over a state built by shared code (save loading, career setup).
     ModernState(GameState&& g) : GameState(std::move(g)) { season_hooks = &modern::season_hooks(); }

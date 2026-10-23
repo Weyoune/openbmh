@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/club_info.hpp"
 
 #include <algorithm>
@@ -46,7 +47,7 @@ int source_manager_of(const GameState& game, int team) {
     const int manager = game.manager_of(team);
     if (manager >= 0) return manager;
     constexpr size_t fifth_team_offset = size_t(4) * 0xb0c + 0x290;
-    if (!game.manager_teams.empty() && game.manager_teams.front() == kNoTeam &&
+    if (!game.manager_teams.empty() && game.manager_teams.front() == no_team() &&
         game.manager_records.size() >= fifth_team_offset + 2) {
         const uint16_t fifth_team = uint16_t(game.manager_records[fifth_team_offset] |
             uint16_t(game.manager_records[fifth_team_offset + 1]) << 8);
@@ -59,14 +60,14 @@ int source_manager_of(const GameState& game, int team) {
 ClubInfoProjection club_info_from_game(const GameState& g, int team,
                                        const ClubInfoEntry& entry, const LeImage& exe,
                                        const TextDb&) {
-    if (team < 0 || team > kNoTeam) throw FormatError("club info: runtime team outside Original range");
+    if (team < 0 || team > no_team()) throw FormatError("club info: runtime team outside Original range");
     ClubInfoProjection out;
     out.runtime_team = team;
     out.original_club_name = g.club_name(team);
     out.gradient_text = g.memory.u8(::bmh::layout::TextGradientDisabled) == 0 && exe.u8(::bmh::layout::TextGradientMode) == 2;
     out.decorated_background = g.memory.u8(::bmh::layout::PlainBackground) == 0;
-    out.has_squad = team == kNoTeam || team < exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
-    if (team != kNoTeam && team >= exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField)) {
+    out.has_squad = team == no_team() || team < world_layout().league_teams;
+    if (team != no_team() && team >= world_layout().league_teams) {
         out.has_squad = false;
         out.category = team >= 0 && size_t(team) < g.team_morale.size()
             ? uint8_t((g.team_morale[size_t(team)] >> 6) & 3) : 0;
@@ -80,7 +81,7 @@ ClubInfoProjection club_info_from_game(const GameState& g, int team,
         ? uint8_t((g.team_morale[size_t(team)] >> 6) & 3) : 0;
     const int manager = source_manager_of(g, team);
     std::vector<int> loan_records;
-    if (manager >= 0 && team != kNoTeam &&
+    if (manager >= 0 && team != no_team() &&
         g.memory.has(::bmh::layout::Career_CareerManagersEnd_RuntimeField + 0x17) && g.memory.has(::bmh::layout::ClubInfo_FormatError_RuntimeField2 + 0x0b) && g.memory.has(::bmh::layout::ClubInfo_FormatError_RuntimeField + 0x41f)) {
         for (int loan = 0; loan < 12; ++loan)
             if (g.memory.u16(::bmh::layout::Career_CareerManagersEnd_RuntimeField + uint32_t(loan) * 2) != 0x0fff &&
@@ -120,7 +121,7 @@ ClubInfoProjection club_info_from_game(const GameState& g, int team,
                 }
             }
         }
-        if (player.player_id >= 0 && manager >= 0 && team != kNoTeam) {
+        if (player.player_id >= 0 && manager >= 0 && team != no_team()) {
             for (int offer = 0; offer < 4; ++offer) {
                 const uint32_t address = ::bmh::layout::OfferSlots + uint32_t(offer) * 4;
                 if (g.memory.has(address + 3)) {

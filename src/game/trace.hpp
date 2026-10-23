@@ -9,5 +9,7 @@
 namespace bmh {
 
 inline std::atomic<const char*> turn_step{"start"};
+// The club the current step works on (diagnostics only; -1 = none).
+inline std::atomic<int> turn_team{-1};
 
 }  // namespace bmh

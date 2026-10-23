@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #pragma once
+#include "modern/content/world_expand.hpp"
 // The engine side of the UI's career handoff (src/ui/flow.hpp, ENGINE_BINDING.md).
 //
 // The original starts a career at program start (game/career.hpp): the data files are
@@ -879,7 +880,11 @@ public:
     ui::SettingsState settings_projection(int manager, uint64_t revision) const {
         return ui::settings_from_game(state(), manager, revision, exe_, sound_capabilities_);
     }
+    // What expanding the Classic start into the Modern world did (empty for Classic data).
+    const ExpandReport& world_report() const { return world_report_; }
+
 private:
+    ExpandReport world_report_;
     std::optional<ui::SettingsSoundCapabilities> sound_capabilities_;
     std::optional<std::filesystem::path> autosave_directory_;
     std::string autosave_error_;

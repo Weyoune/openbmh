@@ -38,6 +38,17 @@ Referenz aus M0.
 
 **Abnahme:** Der Modern-Datensatz startet eine Karriere mit einem deutschen Verein; Kader, Namen und Ligen stimmen mit den Welttabellen überein.
 
+**Umsetzung (Stand 24. Oktober 2026):**
+
+- `src/modern/content/world.*`: typisierte Sicht auf die Welttabellen (Ligen, Vereine, Spieler, Nationen, Ligatermine).
+- `src/modern/content/world_package.*`: liest aus dem Paket nur, was die Engine braucht (Manifest, Welttabellen, Classic-Nutzdaten, Classic-Grafiken); HD-Wappen und -Porträts bleiben im Archiv. Der Classic-Startzustand entsteht aus den unveränderten `x-classic`/`x-legacy`-Daten.
+- `src/modern/content/world_expand.*`: bringt den Classic-Start auf die Welt. Vereins-IDs folgen den Ligamitgliedern (die vergrößerten internationalen Ligen verschieben alle IDs dahinter um 30); Tabellen pro Verein werden umgerechnet, neue Vereine übernehmen die Startwerte eines Originalvereins derselben Liga; neue Spieler erhalten ihre Werte aus den `bmh-classic@1`-Attributen; jeder Ligaverein hat 24 Kaderplätze; die Pools hinter den Kadern (Transferliste, vereinslos, Ausland, Nationalteam, 54 Reservespieler) behalten Inhalt und Reihenfolge.
+- Namen und OBW-IDs für die UI liegen in `ModernState` (`world_club_name`, `player_first`, `player_last`, …); die Engine-Texte nutzen weiter die Einzelbyte-Namenspools, in die neue Namen angehängt werden.
+- Probelauf: `modern_season_sim <Welt.obw> [Spielzüge] [Verein] [Startwert]`; `MODERN_DEBUG=1` zeigt die Ladeschritte, `MODERN_WATCH=<Sekunden>` meldet regelmäßig den Engine-Schritt (Endlosschleifen finden).
+- Ergebnis mit dem Modern-Datensatz 1.3: zwei Saisons, rund 5.300 Spiele; alle Ligen spielen ihre Runden vollständig (deutsche Ligen 34, LaLiga/Premier League/Serie A 38, Ligue 1 34).
+- Dabei gefunden und behoben: der Schiedsrichterpool (49) reicht nicht für Tage mit deutschen und vergrößerten internationalen Ligen (Modern-Abweichung), die Fairplay-Tabelle pro Ligaverein ist mitgewachsen, Kaderzuordnung über das Layout statt fester 24/16-Arithmetik.
+- Offen für M6: Modern-Spielstände; die Session nutzt übergangsweise die Classic-UI-Projektionen, die dafür auf das Layout umgestellt sind.
+
 ## M4 · Trainingslager
 
 Siehe [Trainingslager](trainingslager.md): Katalog aus den Daten, drei Regionen, Qualitätswerte 0–6, unveränderte Preisformel und Aufenthaltsgrenzen, begrenzte 6-Sterne-Wirkung.
@@ -46,7 +57,7 @@ Siehe [Trainingslager](trainingslager.md): Katalog aus den Daten, drei Regionen,
 
 ## M5 · Datenrevision 1.4 (privat)
 
-- Neue, nummerierte Migration des Modern-Datensatzes nach dem bestehenden Migrationsvertrag (Eingangs-Hash, Bericht, unabhängige Prüfung, Editor-Roundtrip): `runtime:modern-v1`, spielbar, Trainingslager-Katalog, Kalenderangaben für 38 Spieltage, Finanzangaben auch für die 30 neuen Vereine.
+- Neue, nummerierte Migration des Modern-Datensatzes nach dem bestehenden Migrationsvertrag (Eingangs-Hash, Bericht, unabhängige Prüfung, Editor-Roundtrip): `runtime:modern-v1`, spielbar, Trainingslager-Katalog, Kalenderangaben für 38 Spieltage, Finanzangaben auch für die 30 neuen Vereine, ein größerer Schiedsrichter-Pool (mindestens 100, [Datenformat F9](datenformat.md#f9--schiedsrichter)) samt Engine-Anbindung.
 - Werkzeug: C++ (`openbmh_world_migrate`) oder das bestehende Migrationswerkzeug der Datenpflege; vor Beginn abstimmen.
 
 **Abnahme:** Prüfbericht ohne Fehler; Editor öffnet und speichert verlustfrei.

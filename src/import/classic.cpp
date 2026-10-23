@@ -281,7 +281,9 @@ void refresh_classic_inventory(Documents& out) {
     put(out, "x-classic/inventory.json", O{{"schema", "classic-inventory@1.0"}, {"entries", std::move(inventory)}});
 }
 
-static ClassicData decode_classic(const Documents& out) {
+// `extended`: the world may hold players the data set added on top of the installation (a
+// Modern world); they carry no x-legacy words and are left to the Modern world loader.
+static ClassicData decode_classic(const Documents& out, bool extended = false) {
     using namespace detail;
     const auto startup = parse(out, "x-classic/startup.json");
     if (str(get(startup, "schema")) != "classic-startup@1.0" || str(get(startup, "layout")) != layout_id)
@@ -340,6 +342,7 @@ static ClassicData decode_classic(const Documents& out) {
     db.players.resize(2574);
     std::set<size_t> player_ids;
     for (const auto &player : items(out, "players")) {
+        if (extended && player.object() && !player.object()->contains("x-legacy")) continue;
         const auto &raw = get(player, "x-legacy");
         const auto id = num(get(raw, "player_index"));
         if (id < 0 || id >= 2574 || !player_ids.insert(size_t(id)).second)
@@ -529,4 +532,5 @@ ClassicData load_classic(const Documents& out) {
     validate(out);
     return decode_classic(out);
 }
+ClassicData load_classic_payload(const Documents& out) { return decode_classic(out, true); }
 } // namespace bmh::obw

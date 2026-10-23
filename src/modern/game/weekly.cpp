@@ -153,9 +153,8 @@ int squad_count(const ModernState& g, int team, int flags) {
 
 // SlotTeam: club of an absolute squad slot (-1 for the pool).
 int slot_team(int slot) {
-    if (slot < german_clubs() * 24) return slot / 24;
-    if (slot < int(transfer_list_slot())) return (slot - german_clubs() * 24) / 16 + german_clubs();
-    return -1;
+    // WorldLayout: Classic gives 24 slots to the German clubs and 16 to the international ones.
+    return slot >= 0 && uint32_t(slot) < transfer_list_slot() ? world_layout().team_of_slot(slot) : -1;
 }
 
 // Add32 / FacilityRating2: the club's rating of its facilities.
@@ -968,7 +967,7 @@ static bool remove_from_seller_impl(ModernState& g, int seller, int player, Minu
         report.fail("transfer: the player is not in the seller's squad (internal error 0x21)");
         return false;
     }
-    for (size_t s = transfer_list_slot(); s < 2972; s++)  // CareerRuntimeField .. CareerRuntimeField2
+    for (size_t s = transfer_list_slot(); s < free_agent_slot(); s++)  // CareerRuntimeField .. CareerRuntimeField2
         if ((g.squad_slots[s] & 0xFFF) == player) g.squad_slots[s] = 0xFFF;
     for (size_t s = at; s + 1 < range.first + range.count; s++) g.squad_slots[s] = g.squad_slots[s + 1];
     g.squad_slots[range.first + range.count - 1] = 0xFFF;

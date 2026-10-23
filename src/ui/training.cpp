@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/training.hpp"
 
 #include <algorithm>
@@ -56,10 +57,11 @@ TrainingState project(const StaticMemory& memory, const Bytes& records, const By
     if (manager_count < 1 || manager_count > 4 || s.manager_slot >= manager_count || teams.size() != size_t(manager_count))
         throw FormatError("training: inconsistent active manager");
     s.runtime_club = teams.at(s.manager_slot);
-    const int max24 = exe.u16(::bmh::layout::TeamsWithSquads), max16 = exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
+    const int max16 = world_layout().league_teams;  // WorldLayout: Classic = executable DispatchLineup value
     if (s.runtime_club < 0 || s.runtime_club >= max16) throw FormatError("training: national/cup-only squad unsupported");
-    s.squad_capacity = s.runtime_club < max24 ? 24 : 16;
-    const size_t first = size_t(s.runtime_club < max24 ? s.runtime_club * 24 : s.runtime_club * 16 + max24 * 8);
+    const SquadRange squad_slots = squad_range(s.runtime_club);
+    s.squad_capacity = int(squad_slots.count);
+    const size_t first = squad_slots.first;
     const size_t manager = size_t(s.manager_slot) * 0xb0c, board = size_t(s.manager_slot) * 0x840;
     if (records.size() < manager + 0xb0c || tactics.size() < board + size_t(s.squad_capacity) * 0x58 ||
         options.size() < size_t(s.manager_slot + 1) * 5 || squads.size() < first + size_t(s.squad_capacity))

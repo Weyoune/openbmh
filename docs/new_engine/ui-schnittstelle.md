@@ -23,6 +23,19 @@ und womit die UI bis dahin arbeitet.
 
 Der bestehende POC (`modern::Model` mit `Snapshot`, gesichert unter Tag `archive/modern-poc-0.2`) kann weitergeführt werden. Er hängt künftig an der `ModernSession` statt an der Classic-`CareerSession`. Wird der POC übernommen, wandert er nach `src/modern/ui/`.
 
+## Modern-Welt laden (ab M3)
+
+```cpp
+auto package = bmh::modern::open_world_package(path);           // modern/content/world_package.hpp
+bmh::content::Mount mount(path, package.classic);               // Original-Datenbereiche unter dem Paketpfad
+bmh::modern::set_current_world(package.world);                  // eine Welt pro Prozess
+bmh::modern::app::ModernSession session(path, seed);            // erweitert den Start auf die Welt
+```
+
+- `ModernState` (`session.state()`) hält pro Laufzeit-Index die UTF-8-Namen und OBW-IDs: `world_club_id`, `world_club_name`, `world_club_short` (pro Verein), `world_player_id`, `player_first`, `player_last`, `player_nation` (pro Spieler). Die Bildschlüssel stehen in der Welt (`current_world()->clubs[...].crest`, Spieler `photo`).
+- HD-Bilder liest die UI selbst aus dem Paket; die Engine lädt sie nicht.
+- Bis die Projektionen unten fertig sind, liefert die Session noch die Classic-UI-Projektionen; sie sind auf variable Ligagrößen umgestellt.
+
 ## Projektionen und Aktionen
 
 | Bereich | Projektion | Aktionen | Ab Phase |

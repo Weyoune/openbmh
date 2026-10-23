@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/achievements.hpp"
 
 #include <algorithm>
@@ -184,7 +185,7 @@ Image AchievementsScreen::render()const{
     for(int season=0;season<state_.season_count;++season){
         const auto& row=state_.seasons[size_t(season)];const int x=0x41+season*4;
         if(row.league_result<0xfe){
-            int remaining=(int(exe_.u16(::bmh::layout::TeamsWithSquads))-0x12)-row.league_result;
+            int remaining=(world_layout().german_teams-0x12)-row.league_result;
             int y=baselines[0]-1, color_index=0, step_index=4;
             while(remaining>=0){
                 const int step=exe_.u8(::bmh::layout::LeagueSizes+uint32_t(step_index));

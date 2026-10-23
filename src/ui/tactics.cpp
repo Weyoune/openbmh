@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/tactics.hpp"
 
 #include <algorithm>
@@ -34,11 +35,11 @@ TacticsState project(const StaticMemory& memory, const Bytes& managers, const By
         throw FormatError("tactics: truncated manager/board/options");
     TacticsState s;
     s.manager_slot = slot; s.runtime_club = teams.at(slot); s.revision = revision;
-    const bool national = s.runtime_club == kNoTeam && slot == 0 && count == 1 &&
+    const bool national = s.runtime_club == no_team() && slot == 0 && count == 1 &&
                           ((memory.u32(::bmh::layout::CompetitionSelection) & 2) != 0 ||
                            (memory.has(::bmh::layout::CoachActive) && memory.u8(::bmh::layout::CoachActive) != 0));
     if (s.runtime_club < 0 || s.runtime_club >= int(offsets.size()) ||
-        (s.runtime_club == kNoTeam && !national))
+        (s.runtime_club == no_team() && !national))
         throw FormatError("tactics: unsupported runtime club");
     s.manager_name = bounded_string(managers, manager + 0xa8, 26);
     s.club_name = bounded_string(names, offsets.at(s.runtime_club), names.size());

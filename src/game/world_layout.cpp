@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "game/world_layout.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 #include <utility>
 
@@ -27,6 +28,16 @@ WorldLayout classic_world_layout() {
         w.squad_size[size_t(team)] = german ? 24 : 16;
     }
     return w;
+}
+
+int WorldLayout::team_of_slot(int slot) const {
+    if (slot < 0) return -1;
+    if (uint32_t(slot) < transfer_list) {
+        const auto it = std::upper_bound(squad_start.begin(), squad_start.end(), uint32_t(slot));
+        return int(it - squad_start.begin()) - 1;
+    }
+    if (uint32_t(slot) >= pool_end && uint32_t(slot) < pool_end + no_team_slots) return no_team();
+    return -1;
 }
 
 const WorldLayout& world_layout() { return current(); }

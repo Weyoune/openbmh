@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/desk_state.hpp"
 
 #include <algorithm>
@@ -82,7 +83,7 @@ void project_drawer_rows(DeskState& d, const LeImage& exe, const Bytes& managers
             // TablePosition returns rank 2 for this special national row;
             // QuoteNationalFriendlyMatch uses its native no-team squad (no random rating).
             curve.current_position = 2;
-            if (game) curve.strength = team_average(*game, kNoTeam, 0x1ff).value;
+            if (game) curve.strength = team_average(*game, no_team(), 0x1ff).value;
             return;
         }
         const int league = executable_league(exe, team);
@@ -186,7 +187,7 @@ DeskState project(const StaticMemory& memory, const Tables& t, const LeImage& ex
         identity.league = t.managers.at(manager_base + 0x210);
         identity.portrait = t.managers.at(manager_base + 0x221);
         identity.badge = word(t.badges, size_t(team) * 2) & 0x1ff;
-        if ((team != kNoTeam && identity.league > 8) || identity.portrait > 11)
+        if ((team != no_team() && identity.league > 8) || identity.portrait > 11)
             throw FormatError("desk: invalid manager identity");
         d.managers.push_back(std::move(identity));
     }
@@ -194,7 +195,7 @@ DeskState project(const StaticMemory& memory, const Tables& t, const LeImage& ex
     if (t.managers.size() < base + 0xb0c || t.options.size() < size_t(d.manager_slot + 1) * 5)
         throw FormatError("desk: truncated manager records/options");
     d.runtime_club = t.teams.at(d.manager_slot);
-    d.national_team = d.runtime_club == kNoTeam;
+    d.national_team = d.runtime_club == no_team();
     d.national_coach_takeover = memory.has(::bmh::layout::CoachActive) && memory.u8(::bmh::layout::CoachActive) != 0;
     if (d.national_team && d.national_coach_takeover) {
         const int saved_manager_count = memory.has(::bmh::layout::OriginalManagerCount) ? memory.u8(::bmh::layout::OriginalManagerCount) : 0;
@@ -209,7 +210,7 @@ DeskState project(const StaticMemory& memory, const Tables& t, const LeImage& ex
             if (t.managers.size() < manager_base + 0x292)
                 throw FormatError("desk: truncated saved manager roster during national takeover");
             const int team = word(t.managers, manager_base + 0x290);
-            if (team < 0 || team >= int(t.name_offsets.size()) || team == kNoTeam ||
+            if (team < 0 || team >= int(t.name_offsets.size()) || team == no_team() ||
                 t.badges.size() < size_t(team + 1) * 2)
                 throw FormatError("desk: invalid home club in national return roster");
             DeskManagerIdentity original;
@@ -303,10 +304,11 @@ DeskState project(const StaticMemory& memory, const Tables& t, const LeImage& ex
     uint8_t remaining = 18;
     for (size_t kind = 6; kind < 13; ++kind) remaining = uint8_t(remaining - t.managers.at(base + 0xc5 + kind));
     d.warnings[3] = remaining < 4;
-    const int max24 = exe.u16(::bmh::layout::TeamsWithSquads), league_teams = exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
-    if (!d.national_team && d.runtime_club >= league_teams) throw FormatError("desk: cup-only squad projection not supported");
-    const size_t first = d.national_team ? 3072 : size_t(d.runtime_club < max24 ? d.runtime_club * 24 : d.runtime_club * 16 + max24 * 8);
-    const size_t count = d.national_team ? 24 : (d.runtime_club < max24 ? 24 : 16);
+    const int league_teams = world_layout().league_teams;  // WorldLayout: Classic = executable TeamsWithSquads/DispatchLineup values
+    if (!d.national_team && d.runtime_club >= league_teams) throw FormatError("desk: cup-only squad projection not supported (club " + std::to_string(d.runtime_club) + ")");
+    const SquadRange squad_slots = squad_range(d.national_team ? no_team() : d.runtime_club);
+    const size_t first = squad_slots.first;
+    const size_t count = squad_slots.count;
     if (t.squads.size() < first + count || t.tactics.size() < size_t(d.manager_slot) * 0x840 + count * 0x58)
         throw FormatError("desk: truncated squad/tactics");
     int lineup = 0, reserve = 0, condition = 0, technique = 0, form = 0, morale = 0;
@@ -425,10 +427,10 @@ void validate_desk_state(const DeskState& d) {
         if (team < 0 || !unique.insert(team).second || manager.runtime_club != team ||
             manager.club_identity_key < 0 || !unique_identities.insert(manager.club_identity_key).second ||
             manager.portrait < 0 || manager.portrait > 11 ||
-            (team != kNoTeam && (manager.league < 0 || manager.league > 8)))
+            (team != no_team() && (manager.league < 0 || manager.league > 8)))
             throw FormatError("desk: invalid or duplicate manager runtime club");
     }
-    const bool national = d.runtime_club == kNoTeam;
+    const bool national = d.runtime_club == no_team();
     if (d.table_position && (*d.table_position < 0 || *d.table_position > 31))
         throw FormatError("desk: invalid Source table position");
     if (d.national_team != national ||
@@ -440,7 +442,7 @@ void validate_desk_state(const DeskState& d) {
             throw FormatError("desk: missing national return roster");
         std::set<int> return_keys;
         for (const auto& manager : d.national_return_roster)
-            if (manager.runtime_club < 0 || manager.runtime_club >= kNoTeam ||
+            if (manager.runtime_club < 0 || manager.runtime_club >= no_team() ||
                 manager.club_identity_key < 0 || !return_keys.insert(manager.club_identity_key).second ||
                 manager.portrait < 0 || manager.portrait > 11 || manager.league < 0 || manager.league > 8)
                 throw FormatError("desk: invalid national return roster identity");
@@ -516,7 +518,7 @@ DeskState desk_from_game(const GameState& g, const LeImage& exe, uint64_t revisi
                      exe, g.level, g.date, g.season_day(), g.season, revision);
     // DeskDate only auto-opens for an ordinary club manager; the national
     // runtime (0x165) suppresses this consumer while manual mailbox access remains valid.
-    if (d.runtime_club != kNoTeam && d.manager_slot >= 0 && d.manager_slot < 32 && g.memory.has(::bmh::layout::MailboxRecipientMask))
+    if (d.runtime_club != no_team() && d.manager_slot >= 0 && d.manager_slot < 32 && g.memory.has(::bmh::layout::MailboxRecipientMask))
         d.mailbox_notification_pending = (g.memory.u32(::bmh::layout::MailboxRecipientMask) & (uint32_t(1) << d.manager_slot)) != 0;
     d.date.year += g.display_start_year - exe.display_start_year();
     project_table_position(d, g);

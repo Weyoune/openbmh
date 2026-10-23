@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/lineup.hpp"
 
 #include <algorithm>
@@ -37,14 +38,15 @@ LineupState project(const StaticMemory& memory, const LeImage& exe, const std::v
     if (out.manager_slot < 0 || out.manager_slot > 3 || size_t(out.manager_slot) >= teams.size())
         throw FormatError("lineup: unsupported active manager");
     out.runtime_club = teams.at(out.manager_slot);
-    const int split = exe.u16(::bmh::layout::TeamsWithSquads), limit = exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
-    const bool national = out.runtime_club == kNoTeam && out.manager_slot == 0 && teams.size() == 1 &&
+    const int limit = world_layout().league_teams;  // WorldLayout: Classic = executable DispatchLineup value
+    const bool national = out.runtime_club == no_team() && out.manager_slot == 0 && teams.size() == 1 &&
                           ((memory.u32(::bmh::layout::CompetitionSelection) & 2) != 0 ||
                            (memory.has(::bmh::layout::CoachActive) && memory.u8(::bmh::layout::CoachActive) != 0));
     if (out.runtime_club < 0 || (out.runtime_club >= limit && !national))
         throw FormatError("lineup: only domestic league squads are supported");
-    const size_t count = national || out.runtime_club < split ? 24 : 16;
-    const size_t first = national ? 3072 : out.runtime_club < split ? size_t(out.runtime_club) * 24 : size_t(out.runtime_club) * 16 + split * 8;
+    const SquadRange squad_slots = squad_range(national ? no_team() : out.runtime_club);
+    const size_t count = squad_slots.count;
+    const size_t first = squad_slots.first;
     const size_t board_base = size_t(out.manager_slot) * 0x840;
     if (first + count > squad.size() || board_base + count * 0x58 > tactics.size() || size_t(out.manager_slot) * 5 >= options.size())
         throw FormatError("lineup: truncated squad/tactics/options");

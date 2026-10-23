@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/contracts.hpp"
 #include "ui/game_end.hpp"
 
@@ -88,7 +89,7 @@ ContractsState contracts_from_game(const GameState& game, int manager_slot, uint
         size_t(manager_slot) * kManagerRecord + kManagerRecord > game.manager_records.size())
         throw FormatError("contracts: invalid manager slot");
     const int team = game.manager_teams[size_t(manager_slot)];
-    if (team == kNoTeam) throw FormatError("contracts: Vereinsverträge sind für Nationalteams nicht verfügbar");
+    if (team == no_team()) throw FormatError("contracts: Vereinsverträge sind für Nationalteams nicht verfügbar");
     const SquadRange range = squad_range(team);
     const size_t board = size_t(manager_slot) * kBoard;
     if (range.count > 24 || range.first + range.count > game.squad_slots.size() || board + range.count * kBoardSlot > game.tactics.size())

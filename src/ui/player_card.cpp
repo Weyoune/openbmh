@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/player_card.hpp"
 
 #include <algorithm>
@@ -45,7 +46,7 @@ PlayerCardState project(LineupState lineup,const LeImage& exe,int row,const Byte
     const int nation=p.attributes.nationality()+((p.bonus&0x80)?32:0);
     const size_t nation_club=exe.u16(::bmh::layout::ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField3)+exe.u16(::bmh::layout::NoTeamSquadStart)+nation;
     out.nationality_name=pool_name(names,offsets.at(nation_club));
-    if (out.lineup.runtime_club == kNoTeam) {
+    if (out.lineup.runtime_club == no_team()) {
         // The national runtime slot is absent from the ordinary short-name
         // table; its projected club name is already the full country label.
         out.club_short_name=out.lineup.club_name;

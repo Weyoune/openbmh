@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "game/world_layout.hpp"
 #include "ui/incoming_transfer.hpp"
 #include "ui/game_end.hpp"
 
@@ -95,7 +96,7 @@ IncomingTransferDecisionState incoming_transfer_decision_from_game_impl(
         : view.list_entry >= 0 && view.list_entry < (view.source_outgoing_editor_context ? 44 : 40);
     if (!view.valid || !entry_valid ||
         view.player < 0 || size_t(view.player) >= game.players.size() ||
-        (view.seller != 0x0fff && view.seller != kNoTeam && (view.seller < 0 || size_t(view.seller) >= game.club_ids.size())) ||
+        (view.seller != 0x0fff && view.seller != no_team() && (view.seller < 0 || size_t(view.seller) >= game.club_ids.size())) ||
         view.seller_manager < -1 || view.viewer_manager < -1 ||
         view.preferred_bid_index < -1 || view.preferred_bid_index >= 4)
         throw FormatError("incoming transfer: invalid decision context");
@@ -113,10 +114,10 @@ IncomingTransferDecisionState incoming_transfer_decision_from_game_impl(
     out.has_preferred_bid = view.has_preferred_bid;
     out.preferred_bid_passed_random_check = view.preferred_bid_passed_random_check;
     out.player_name = game.player_name(view.player);
-    out.seller_name = (view.seller == 0x0fff || view.seller == kNoTeam) ? std::string() : game.club_name(view.seller);
+    out.seller_name = (view.seller == 0x0fff || view.seller == no_team()) ? std::string() : game.club_name(view.seller);
     // ClubName2 derives this label from the seller team token. A club is
     // named directly; the player-pool token resolves to the original adviser.
-    out.negotiator_name = (view.seller == 0x0fff || view.seller == kNoTeam)
+    out.negotiator_name = (view.seller == 0x0fff || view.seller == no_team())
         ? (game.texts ? (*game.texts)[925] : "SPIELERBERATER")
         : out.seller_name;
     out.age = game.players[size_t(view.player)].age();

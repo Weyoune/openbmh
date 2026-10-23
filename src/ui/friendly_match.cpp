@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "ui/friendly_match.hpp"
+#include "game/world_layout.hpp"
 
 #include <algorithm>
 #include <array>
@@ -78,7 +79,7 @@ FriendlyMatchScreen::FriendlyMatchScreen(const std::filesystem::path& data, Frie
       font_(load_font(asset_path(data / "F", "BMH2.FNT"))),
       exe_(load_le(asset_path(data, "BMH.exe"))),
       data_(data), next_request_id_(state_.first_request_id) {
-    const bool valid_national_slot = state_.national_team && state_.runtime_team == bmh::kNoTeam;
+    const bool valid_national_slot = state_.national_team && state_.runtime_team == bmh::no_team();
     if (state_.manager_slot < 0 || state_.manager_slot > 3 || state_.runtime_team < 0 ||
         (state_.runtime_team >= 168 && !valid_national_slot) ||
         state_.revision == UINT64_MAX || !state_.first_request_id || state_.planner_count < 0 ||
@@ -87,7 +88,7 @@ FriendlyMatchScreen::FriendlyMatchScreen(const std::filesystem::path& data, Frie
     if (!state_.mode_three) {
         stage_ = FriendlyStage::unavailable;
         feedback_ = "Freundschaftsspiele sind nur in Modus III verfuegbar.";
-    } else if (state_.national_team || state_.runtime_team == bmh::kNoTeam) {
+    } else if (state_.national_team || state_.runtime_team == bmh::no_team()) {
         stage_ = FriendlyStage::unavailable;
         feedback_ = "Freundschaftsspiele fuer die Nationalmannschaft sind hier nicht verfuegbar.";
     } else if (desk_menu_kind_ != 6) {
@@ -108,14 +109,14 @@ FriendlyMatchScreen::FriendlyMatchScreen(const std::filesystem::path& data, Frie
         FriendlyQuoteProjection national_quote, NationalFriendlyBookingRequest national_booking,
         int desk_menu_kind)
     : FriendlyMatchScreen(data, std::move(state), desk_menu_kind) {
-    const bool source_owner = desk_menu_kind == 6 && national_quote.runtime_team == bmh::kNoTeam &&
+    const bool source_owner = desk_menu_kind == 6 && national_quote.runtime_team == bmh::no_team() &&
         national_booking.owner.menu_kind == 6 && national_booking.owner.manager == national_quote.manager_slot &&
-        national_booking.owner.runtime_team == bmh::kNoTeam &&
+        national_booking.owner.runtime_team == bmh::no_team() &&
         national_booking.owner.revision == national_quote.revision &&
         national_booking.quote.terms.opponent == national_quote.opponent &&
         national_booking.quote.terms.manager_home == national_quote.manager_home &&
         national_booking.quote.terms.planner_count == national_quote.planner_count;
-    if (!source_owner || !state_.national_team || state_.runtime_team != bmh::kNoTeam ||
+    if (!source_owner || !state_.national_team || state_.runtime_team != bmh::no_team() ||
         state_.manager_slot != national_quote.manager_slot || state_.revision != national_quote.revision ||
         national_quote.dates.size() != 366 || national_quote.cost < 0 ||
         national_booking.quote.terms.status != bmh::FriendlyQuoteStatus::quoted ||
@@ -124,8 +125,8 @@ FriendlyMatchScreen::FriendlyMatchScreen(const std::filesystem::path& data, Frie
         feedback_ = "Diese Freundschaftsspielanfrage ist nicht mehr aktuell.";
         return;
     }
-    const int expected_home = national_quote.manager_home ? bmh::kNoTeam : national_quote.opponent;
-    const int expected_away = national_quote.manager_home ? national_quote.opponent : bmh::kNoTeam;
+    const int expected_home = national_quote.manager_home ? bmh::no_team() : national_quote.opponent;
+    const int expected_away = national_quote.manager_home ? national_quote.opponent : bmh::no_team();
     if (national_quote.home_team != expected_home || national_quote.away_team != expected_away ||
         national_quote.payer_manager != national_booking.quote.terms.payer_manager ||
         national_quote.opponent_manager != national_booking.quote.terms.opponent_manager ||

@@ -670,7 +670,7 @@ void manager_match_record(ModernState& g, const MatchGroup& grp, int m, int home
             modern::rate_manager(g, int(k), rating, 0);
         }
         if (opp < first_foreign_cup()) {
-            size_t at = k * 0x690 + size_t(opp) * 10 + (side == 1 ? 5 : 0);
+            size_t at = k * manager_history_stride() + size_t(opp) * 10 + (side == 1 ? 5 : 0);
             std::copy_backward(g.manager_results.begin() + at, g.manager_results.begin() + at + 4,
                                g.manager_results.begin() + at + 5);
             g.manager_results.at(at) = uint8_t(own + (against << 4));

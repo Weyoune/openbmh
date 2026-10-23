@@ -177,10 +177,16 @@ void match_weather(MatchGroup& grp, int m, const MatchdayContext& ctx, GameRando
     if (int16_t(home) < no_team() && uint16_t(away) < no_team() && !(grp.desc.at(1) & 0x80)) {
         // Range(1): a referee not yet chosen today
         std::vector<uint8_t>& refs = *ctx.referees;
+        // OpenBMH deviates from the original: in Modern worlds a referee may take a second match on a day with more matches than referees.
+        // Modern: a day can have more matches than the 49 referees (larger international
+        // leagues on the dates of the German leagues). Once every referee has a match, one
+        // may referee a second match that day (DIFFERENCES.md); Classic draws until a free one.
+        bool free_referee = false;
+        for (int k = 1; k <= 0x31 && !free_referee; ++k) free_referee = !(refs.at(size_t(k)) & 0x80);
         int r;
         do {
             r = game.range(1, 0x31);
-        } while (refs.at(size_t(r)) & 0x80);
+        } while (free_referee && (refs.at(size_t(r)) & 0x80));
         refs.at(size_t(r)) |= 0x80;
         grp.desc.at(0x10 + size_t(m)) = uint8_t(r);
     }
@@ -601,8 +607,11 @@ std::vector<MatchGroup> setup_matchday(ModernState& g, uint32_t competitions, co
         for (int i = 0; i < grp.matches() * 2; i++) {
             if (i < grp.matches()) modern::match_weather(grp, i, ctx, game, rand);
             const int team = grp.fixtures.at(size_t(i));
+            turn_team = team;
+            turn_step = "setup: prepare team";
             modern::prepare_team(g, team, cls, i);
             try {
+                turn_step = "setup: line-up";
                 auto_lineup(g, team, 100);
             } catch (const std::invalid_argument& e) {
                 report.fail(e.what());

@@ -196,7 +196,7 @@ bool new_career_players(ModernState& g, GameRandom& game, WatcomRandom& rand, Mi
         p.w364 |= uint32_t(rand.range(4, 0x10)) << 21;
         p.w368 = (p.w368 & 0xffffc000u) + uint32_t(rand.range(0, 0x3fff));
     }
-    for (int slot = 3096; slot < 3096 + 0x36; slot++)
+    for (int slot = int(pool_end_slot() + 24); slot < int(pool_end_slot() + 24) + 0x36; slot++)
         if (!modern::release_player(g, slot, game, rand, report)) return false;
     return !report.unsupported;
 }
@@ -412,7 +412,7 @@ bool career_add_manager(ModernState& g, const LeImage& exe, int m, const CareerM
         choice.portrait < 0 || choice.portrait > 11 || choice.name.size() > 24 ||
         g.tactics.size() < size_t(m + 1) * 0x840 ||
         g.manager_ratings.size() < size_t(m + 1) * 0x3c ||
-        g.manager_results.size() < g.manager_teams.size() * 0x690 ||
+        g.manager_results.size() < g.manager_teams.size() * manager_history_stride() ||
         g.squad_slots.size() < total_squad_slots() || g.club_ids.size() < size_t(first_foreign_cup()) ||
         g.team_morale.size() < size_t(first_foreign_cup()) || g.team_flags.size() < size_t(first_foreign_cup()) ||
         g.club_heap_bc.size() < size_t(first_foreign_cup()) * 2 || g.club_heap_78.size() < size_t(first_foreign_cup()) * 2 ||
@@ -530,7 +530,7 @@ bool career_add_manager(ModernState& g, const LeImage& exe, int m, const CareerM
             modern::new_board_entry(g, m, int(i), int(slot), rand);
             g.tactics.at(size_t(m) * 0x840 + i * 0x58 + 0xd) = 100;
         }
-    for (size_t i = 0; i < 0x690; i++) g.manager_results.at(size_t(m) * 0x690 + i) = 0xff;
+    for (size_t i = 0; i < manager_history_stride(); i++) g.manager_results.at(size_t(m) * manager_history_stride() + i) = 0xff;
     const uint8_t level = mem.u8(::bmh::layout::Difficulty);
     const uint32_t money = level == 0 ? 50000000u : 4000000u - level * 200000u;
     put32(r, rec + 0x314, money);

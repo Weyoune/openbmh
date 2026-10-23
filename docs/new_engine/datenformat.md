@@ -12,14 +12,15 @@ Status: *geplant* (noch nicht in der Engine), *umgesetzt* (Engine liest/prüft e
 
 | Nr. | Bereich | Änderung | Phase | Status |
 |---|---|---|---|---|
-| F1 | Manifest | Laufzeit `runtime:modern-v1`, spielbare Modern-Welt | M3 | geplant |
+| F1 | Manifest | Laufzeit `runtime:modern-v1`, spielbare Modern-Welt | M3 | Engine: lädt `runtime:modern-v1` und vorerst auch `editor:world-v1`; lehnt Classic-Pakete ab |
 | F2 | Ligen | Größe je Liga frei (12–20), Generator je Liga | M2 | Engine: Größe je Liga umgesetzt; Generator vorerst Tabelle passender Größe |
 | F3 | Kalender | Ligatermine als Datumsliste | M2 | Engine-Funktion umgesetzt; Anbindung an den Weltlader mit M3 |
-| F4 | Trainingslager | Katalog mit Karte und X/Y-Lage, Ort, Bild, Qualität 0–6 | M4 | geplant |
-| F5 | Namen | Vor- und Nachname Pflicht, UTF-8 | M3 | geplant |
-| F6 | Kader | bis 24 Plätze je Verein, Mindestgröße | M3 | geplant |
+| F4 | Trainingslager | Katalog mit Karte und X/Y-Lage, Ort, Bild, Qualität 0–6 | M4 | Engine: liest den erweiterten Katalog; ohne Katalog gilt die eingebaute Vorgabe (18 Lager) |
+| F5 | Namen | Vor- und Nachname Pflicht, UTF-8 | M3 | Engine: gelesen, in `ModernState` |
+| F6 | Kader | bis 24 Plätze je Verein, Mindestgröße | M3 | Engine: 24 Plätze je Ligaverein; mehr als 24 Spieler werden abgelehnt |
 | F7 | Finanzen | Finanzangaben für Vereine ohne Classic-Startregel | M5 | geplant |
 | F8 | Spielstand | `save_profile: modern-career-v1` | M6 | geplant |
+| F9 | Schiedsrichter | eigener Schiedsrichter-Pool der Welt, mehr als 49 | M5 | geplant (Engine nutzt bis dahin 49 und lässt Doppeleinsätze zu) |
 
 ## F1 · Manifest
 
@@ -79,7 +80,7 @@ Die bestehende Regel `rule:training-camps` (Typ `training_camps`) bleibt und wir
 - Weitere Pflichtfelder für Modern: `name`, `place`, `country`. Geografische Koordinaten werden nicht gespeichert.
 - Standardkarten und Resortbilder sind GUI-Ressourcen und werden anhand von Karten-/Lager-ID zugeordnet; sie sind keine Pflichtinhalte der Welt. `image` ist optional und nur für ein ausdrücklich in der Welt geliefertes Bild vorgesehen. Wenn gesetzt, muss der Asset-Schlüssel im normalen OBW-Asset-Index auflösbar sein. Siehe [GUI-/Welt-Trennung](../new_ui/assets.md).
 - Die IDs `resort:0` bis `resort:17` entsprechen den IDs 0–17 der Oberfläche und werden nicht umsortiert.
-- Fehlt die Regel in einer Modern-Welt, gilt die öffentliche Vorgabe `assets/modern/rules/training_camps.json` mit den 18 fiktiven Lagern.
+- Fehlt die Regel in einer Modern-Welt, gilt die in die Engine eingebaute Vorgabe (`src/modern/game/training_camps.cpp`) mit den 18 fiktiven Lagern.
 - **Editor:** Kartenliste und Lager bearbeiten: Karte (Pflicht), `x`/`y` (leer erlaubt, solange die Karte keine Maße hat), vier Qualitätswerte (0–6), Preis, Ort, Land und optionales datensatzspezifisches Bild. Prüfung auf eindeutige IDs, gültige Karte und Nation, Qualitäten im Bereich, auflösbare explizite Bildreferenzen und Koordinaten innerhalb der Kartenmaße, sobald diese gesetzt sind. Ein fehlendes `image` ist kein Fehler; feste GUI-Motive müssen nicht in den Datensatz kopiert werden.
 
 ## F5 · Namen
@@ -105,6 +106,14 @@ Die bestehende Regel `rule:training-camps` (Typ `training_camps`) bleibt und wir
 
 - Modern-Spielstände sind `.obs` mit `save_profile: modern-career-v1`; Aufbau wie Classic-Spielstände (`state/…`, Integritätsdatei), aber mit dem Modern-Zustand und den Dimensionen der Welt.
 - **Editor:** öffnet keine Spielstände; keine Änderung.
+
+## F9 · Schiedsrichter
+
+- Heute kommen die 49 Schiedsrichter (plus Platzhalter 0) aus der Original-Datenbank: Namen im Namenspool, je ein Eigenschaftsbyte (`RefereeProperties`). Pro Spieltag erhält jedes Spiel einen noch freien Schiedsrichter. Mit den vergrößerten internationalen Ligen gibt es Tage mit bis zu 84 Ligaspielen; die Engine lässt deshalb vorübergehend Doppeleinsätze zu.
+- Geplant für Datenrevision 1.4: Die Welt führt Schiedsrichter als `staff`-Zeilen mit `role: referee`, Name (Vor- und Nachname), Nation und `x-legacy.referee_index` für die Originale. Neu ist ein Eigenschaftswert `strictness` (0–255, Bedeutung wie das Original-Eigenschaftsbyte).
+- Empfehlung: mindestens 100 Schiedsrichter, damit auch Tage mit Pokalspielen ohne Doppeleinsatz auskommen.
+- **Engine (mit M5):** Poolgröße aus der Welt statt fest 49; Eigenschaften und Namen aus den `staff`-Zeilen; Doppeleinsatz nur noch als Rückfall, wenn der Pool trotzdem erschöpft ist.
+- **Editor:** Schiedsrichterliste anzeigen und bearbeiten (Name, Nation, Strenge), neue Schiedsrichter anlegen; Prüfung auf eindeutige IDs und Strenge im Bereich.
 
 ## Modern-Prüfung (Engine und Editor)
 
