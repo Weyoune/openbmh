@@ -343,6 +343,7 @@ add_subdirectory(src/import)
 # uses the Classic UI projections until the Modern projections exist (docs/new_engine).
 # Modern world packages: the world tables and the Classic payload of a Modern data set.
 add_library(bmh_modern_content STATIC src/modern/content/world.cpp src/modern/content/world_package.cpp
+    src/modern/content/world_save.cpp
     src/modern/content/world_expand.cpp)
 target_link_libraries(bmh_modern_content PUBLIC bmh_content bmh_season_modern PRIVATE bmh_miniz)
 if(MSVC)

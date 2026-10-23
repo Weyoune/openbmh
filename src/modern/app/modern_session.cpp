@@ -4,6 +4,7 @@
 #include "modern/app/modern_session.hpp"
 #include "modern/content/world_expand.hpp"
 #include "modern/content/world_package.hpp"
+#include "modern/content/world_save.hpp"
 #include "modern/game/balance_plan.hpp"
 #include "modern/game/bank_credit.hpp"
 #include "modern/game/career.hpp"
@@ -584,6 +585,8 @@ ModernSession::ModernSession(const std::filesystem::path& data, uint32_t watcom_
       db_(load_database(data / "M3D.MAN")),
       texts_(load_textd(data / "TEXTD.BLK")),
       rand_(watcom_seed) {
+    set_world_layout(classic_world_layout());  // a previous game in this process may have left a world
+    kLeagueTablesPerLeague = false;
     install_league_sizes(exe_);
     turn_driver_.alternate_match_event_roll = exe_.u8(::bmh::layout::AlternateEventRoll) != 0;
     turn_driver_.disable_match_events = exe_.u8(::bmh::layout::MatchEventsDisabled) != 0;
@@ -627,6 +630,8 @@ ModernSession::ModernSession(const std::filesystem::path &data, uint32_t watcom_
                              const std::filesystem::path &save_path, bool importing_legacy)
     : data_directory_(data), exe_(load_le(data / "BMH.exe")), db_(load_database(data / "M3D.MAN")),
       texts_(load_textd(data / "TEXTD.BLK")), rand_(watcom_seed) {
+    set_world_layout(classic_world_layout());  // a previous game in this process may have left a world
+    kLeagueTablesPerLeague = false;
     install_league_sizes(exe_);
     turn_driver_.alternate_match_event_roll = exe_.u8(::bmh::layout::AlternateEventRoll) != 0;
     turn_driver_.disable_match_events = exe_.u8(::bmh::layout::MatchEventsDisabled) != 0;
@@ -639,10 +644,23 @@ ModernSession::ModernSession(const std::filesystem::path &data, uint32_t watcom_
     if (const auto resource = content::find(data); resource && !importing_legacy) {
         if (content::key(save_path.extension()) != ".obs")
             throw FormatError("0.2 loads native OBS saves; use Add to migrate legacy games");
-        native = content::load_career(save_path, *resource->content);
-        g_ = std::move(native->state);
-        rand_ = native->random;
-        game_ = native->game;
+        if (const World* world = current_world()) {
+            // A Modern career: the save names its world; the dimensions come from the world.
+            auto saved = load_world_career(save_path, *world);
+            install_world_dimensions(*world);
+            g_ = std::move(saved.state);
+            rand_ = saved.random;
+            game_ = saved.game;
+            native.emplace();
+            native->driver = std::move(saved.driver);
+            native->session = std::move(saved.session);
+            native->header = std::move(saved.header);
+        } else {
+            native = content::load_career(save_path, *resource->content);
+            g_ = std::move(native->state);
+            rand_ = native->random;
+            game_ = native->game;
+        }
     } else {
         const Savegame file = load_savegame(save_path);
         original_english_save = file.version == "V2.20";
@@ -7791,8 +7809,12 @@ void ModernSession::flush_native_autosave() {
         const auto resource = content::find(data_directory_);
         if (!resource)
             throw FormatError("Native content unavailable");
-        content::save_career(*autosave_directory_ / "AUTOSAVE.obs", *resource->content, g_, rand_, game_,
-                             turn_driver_, true, native_session_context());
+        if (const World* world = current_world())
+            save_world_career(*autosave_directory_ / "AUTOSAVE.obs", *world, g_, rand_, game_, turn_driver_, true,
+                              native_session_context());
+        else
+            content::save_career(*autosave_directory_ / "AUTOSAVE.obs", *resource->content, g_, rand_, game_,
+                                 turn_driver_, true, native_session_context());
     } catch (const std::exception &e) {
         autosave_error_ = e.what();
     }
@@ -7825,8 +7847,11 @@ bool ModernSession::save_game(const std::filesystem::path& path, int manager_slo
     if (ec || (exists && !overwrite)) { error = exists ? "overwrite_confirmation_required" : "save_target_unavailable"; return false; }
     try {
         if (const auto resource = content::find(data_directory_)) {
-            content::save_career(path, *resource->content, g_, rand_, game_, turn_driver_, overwrite,
-                                 native_session_context());
+            if (const World* world = current_world())
+                save_world_career(path, *world, g_, rand_, game_, turn_driver_, overwrite, native_session_context());
+            else
+                content::save_career(path, *resource->content, g_, rand_, game_, turn_driver_, overwrite,
+                                     native_session_context());
             return true;
         }
         WatcomRandom staged_rand = rand_;

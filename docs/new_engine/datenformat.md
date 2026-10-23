@@ -19,7 +19,7 @@ Status: *geplant* (noch nicht in der Engine), *umgesetzt* (Engine liest/prüft e
 | F5 | Namen | Vor- und Nachname Pflicht, UTF-8 | M3 | Engine: gelesen, in `ModernState` |
 | F6 | Kader | bis 24 Plätze je Verein, Mindestgröße | M3 | Engine: 24 Plätze je Ligaverein; mehr als 24 Spieler werden abgelehnt |
 | F7 | Finanzen | Finanzangaben für Vereine ohne Classic-Startregel | M5 | geplant |
-| F8 | Spielstand | `save_profile: modern-career-v1` | M6 | geplant |
+| F8 | Spielstand | `save_profile: modern-career-v1` | M6 | Engine erledigt: Spielstand nennt seine Welt (ID, Revision), enthält nur die Karriere |
 | F9 | Schiedsrichter | eigener Schiedsrichter-Pool der Welt, mehr als 49 | M5 | geplant (Engine nutzt bis dahin 49 und lässt Doppeleinsätze zu) |
 
 ## F1 · Manifest
@@ -105,6 +105,9 @@ Die bestehende Regel `rule:training-camps` (Typ `training_camps`) bleibt und wir
 ## F8 · Spielstand
 
 - Modern-Spielstände sind `.obs` mit `save_profile: modern-career-v1`; Aufbau wie Classic-Spielstände (`state/…`, Integritätsdatei), aber mit dem Modern-Zustand und den Dimensionen der Welt.
+- Anders als ein Classic-Spielstand enthält ein Modern-Spielstand **nicht** die Welt (sie ist samt HD-Bildern mehrere hundert MB groß). Das Manifest nennt sie unter `world` (`id`, `data_revision`, `title`); geladen wird nur mit genau dieser Welt.
+- Einträge: `state/career.json` (Spielzustand), `state/modern.json` (Schema `modern-state@1.0`: Vereins- und Spieler-IDs, UTF-8-Namen, Nationen je Laufzeit-Index), `state/rng.json`, `state/driver.json`, `state/session.json`, `state/information.json`, `state/integrity.json`. Rund 210 KB.
+- Ändert sich die Datenrevision, passt ein alter Spielstand nicht mehr; eine Spielstand-Migration ist noch nicht vorgesehen.
 - **Editor:** öffnet keine Spielstände; keine Änderung.
 
 ## F9 · Schiedsrichter

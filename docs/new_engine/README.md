@@ -57,7 +57,7 @@ Für 0.3 gilt außerdem:
 | M3 | Modern-Weltlader, Namen (Vor-/Nachname, UTF-8), Asset-Schlüssel | Weltlader erledigt: Modern-Datensatz spielt zwei Saisons; Namen/Assets für die UI liegen in `ModernState`, Spielstände folgen mit M6 |
 | M4 | Trainingslager: 18 Lager, drei Karten, 6-Sterne-Wirkung | Engine erledigt (Katalog, Preis, 6-Sterne-Wirkung, Test); Saisonwirkung wird in M7 gemessen |
 | M5 | Datenrevision 1.4 des Modern-Datensatzes (privat), Wirtschaftsprüfung | offen |
-| M6 | Modern-Spielstände (`modern-career-v1`), Projektionen für die UI | offen |
+| M6 | Modern-Spielstände (`modern-career-v1`), Projektionen für die UI | Spielstände erledigt (Rundreise identisch); Projektionen offen |
 | M7 | Balance-Läufe und Anpassungen | offen |
 
 Details und Abnahmekriterien stehen in [Phasen](phasen.md).

@@ -168,6 +168,22 @@ std::string legacy_encoding(const std::string& utf8) {
     return out;
 }
 
+void install_world_dimensions(const World& world) {
+    int league_clubs = 0, german_clubs = 0;
+    uint8_t sizes[kLeagueCount] = {};
+    for (const WorldLeague& l : world.leagues) {
+        sizes[l.index] = uint8_t(l.members.size());
+        league_clubs += int(l.members.size());
+        if (l.index < 5) german_clubs += int(l.members.size());
+    }
+    WorldLayout layout = modern_layout(league_clubs, german_clubs);
+    // The league sizes are checked against the layout and need the per-league fixture tables.
+    kLeagueTablesPerLeague = true;
+    set_world_layout(layout);
+    set_league_sizes(sizes);
+    kNewcomerFirst = world_layout().first_amateur();
+}
+
 ExpandReport expand_to_world(ModernState& g, const World& world) {
     const WorldLayout old = world_layout();
     if (old.league_teams != 138 || old.total_teams() != 419) fail("the world expands a Classic start state only");
@@ -355,10 +371,7 @@ ExpandReport expand_to_world(ModernState& g, const World& world) {
     g.squad_slots = std::move(slots);
 
     stage("squads");
-    set_world_layout(layout);
-    kLeagueTablesPerLeague = true;
-    set_league_sizes(sizes);
-    kNewcomerFirst = layout.first_amateur();
+    install_world_dimensions(world);
 
     stage("layout and league sizes");
     // --- league dates of the international group (calendar bit 4) -------------------------

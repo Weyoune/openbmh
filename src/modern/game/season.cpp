@@ -788,6 +788,9 @@ void change_places(ModernState& g, int a, int b) {
         }
     if (!g.club_table.empty() && a < first_foreign_cup() && b < first_foreign_cup()) swap_bytes(g.club_table, size_t(a) * 0x4a, size_t(b) * 0x4a, 0x4a);
     std::swap(g.club_ids.at(size_t(a)), g.club_ids.at(size_t(b)));
+    // Modern world names and identities move with the club (empty with Classic data).
+    for (auto* names : {&g.world_club_id, &g.world_club_name, &g.world_club_short})
+        if (size_t(std::max(a, b)) < names->size()) std::swap((*names)[size_t(a)], (*names)[size_t(b)]);
     swap_bytes(g.club_heap_bc, size_t(a) * 2, size_t(b) * 2, 2);
     std::swap(g.team_morale.at(size_t(a)), g.team_morale.at(size_t(b)));
     swap_mem8(::bmh::layout::ClubShortNameOffsets);

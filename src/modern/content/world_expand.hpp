@@ -28,6 +28,11 @@ struct ExpandReport {
 // league sizes and calendar. Throws FormatError when the world does not fit.
 ExpandReport expand_to_world(ModernState& g, const World& world);
 
+// Installs the dimensions of the world for a running Modern game: layout, league sizes, the
+// per-league fixture tables and the first newcomer club. A new career gets them from
+// expand_to_world, a loaded one from the session.
+void install_world_dimensions(const World& world);
+
 // Installs the world's training camp catalogue, or the built-in one when the world has none
 // (docs/new_engine/trainingslager.md). Classic data keeps the eight original resorts.
 void install_training_camps(ModernState& g, const World& world);

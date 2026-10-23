@@ -69,6 +69,13 @@ Siehe [Trainingslager](trainingslager.md): Katalog aus den Daten, drei Regionen,
 
 **Abnahme:** Speichern und Laden mitten in der Saison setzt identisch fort; UI-Projektionen haben Tests mit synthetischen Welten.
 
+**Umsetzung Spielstände (erledigt):**
+- `src/modern/content/world_save.*`: `save_world_career` / `load_world_career`. Der Spielstand nennt seine Welt (ID und Datenrevision) und enthält nur die Karriere (Format siehe [Datenformat F8](datenformat.md)).
+- Laden: `ModernSession` setzt zuerst das Classic-Layout zurück, liest den Spielstand und ruft dann `install_world_dimensions(world)` auf (aus `expand_to_world` herausgelöst), damit Layout, Ligagrößen und Kalender wieder zur Welt passen.
+- Autosave und `save_game` schreiben über `save_world_career`, sobald eine Welt geladen ist (`current_world()`).
+- Fehler behoben: Beim Auf- und Abstieg (`ClubsChangePlaces`) wurden die Modern-Namen (`world_club_id/name/short`) nicht mitgetauscht.
+- Prüfung: `MODERN_SAVE_CHECK=N modern_season_sim …` speichert nach Zug N, lädt in eine zweite Session und vergleicht Zustand, Namen und Layout. Nach Zug 30 und 58 identisch; zwei Saisons mit `SIM_CONTRACTS=1`: 0 von 168 Vereinsnamen falsch.
+
 ## M7 · Balance
 
 - Konsolen-Langläufe mit dem Modern-Datensatz (mehrere Startkonstellationen, je zehn Saisons): Tore pro Spiel, Punkteverteilung je Liga, Ermüdung und Verletzungen bei 38 statt 22 Spieltagen, Marktwerte und Gehälter, Finanzen des menschlichen Vereins, Wirkung der Trainingslager.

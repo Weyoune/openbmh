@@ -24,6 +24,10 @@
 #include <memory>
 #include <thread>
 #include "game/trace.hpp"
+#include <filesystem>
+#include "cli/json.hpp"
+#include "formats/native_state.hpp"
+#include "game/world_layout.hpp"
 #include "modern/game/desk_actions.hpp"
 #include "game/lineup.hpp"
 #include "modern/game/matchday.hpp"
@@ -356,6 +360,15 @@ int main(int argc, char** argv) {
             if (r.kind == TurnDeskKind::SeasonEndDesk) {
                 print_first_league_results(g, "season end");
                 if (modern::current_world()) {  // rounds played per league against its matchdays
+                    // The Modern names must move with the clubs (promotion swaps club places): the
+                    // pairs of engine name and world name recorded at the start stay together.
+                    static std::map<std::string, std::string> pairs;
+                    if (pairs.empty())
+                        for (int t = 0; t < modern::league_clubs(); ++t) pairs[g.club_name(t)] = g.world_club_name.at(size_t(t));
+                    int mismatched = 0;
+                    for (int t = 0; t < modern::league_clubs(); ++t)
+                        if (pairs.count(g.club_name(t)) && pairs[g.club_name(t)] != g.world_club_name.at(size_t(t))) ++mismatched;
+                    std::printf("season end names: %d of %d league clubs mismatched\n", mismatched, modern::league_clubs());
                     std::printf("season end rounds:");
                     for (int l = 0; l < kLeagueCount; ++l)
                         std::printf(" %d:%d/%d", l, int(g.league_rounds.at(size_t(l))), league_matchdays(l));
@@ -363,6 +376,28 @@ int main(int argc, char** argv) {
                 }
                 ++seasons;
             }  // (the next kickoff runs the season change)
+            // MODERN_SAVE_CHECK=<turn>: save at that desk, load the save into a second session and
+            // compare the complete state (native state, Modern names, generators, dimensions).
+            if (const char* at = std::getenv("MODERN_SAVE_CHECK"); at && played == std::atoi(at)) {
+                const auto file = std::filesystem::temp_directory_path() / "modern_save_check.obs";
+                std::string save_error;
+                if (!session.save_game(file, int(g.memory.u8(::bmh::layout::ActiveManager)), true, save_error)) {
+                    std::printf("save check: save failed (%s)\n", save_error.c_str());
+                } else {
+                    const auto before = cli::dump_json(encode_native_state(g));
+                    const WorldLayout layout = world_layout();
+                    modern::app::ModernSession loaded(argv[1], argc > 4 ? uint32_t(std::stoul(argv[4])) : 1u, file, false);
+                    const auto& h = loaded.state();
+                    const bool same_state = cli::dump_json(encode_native_state(h)) == before;
+                    const bool same_names = h.world_club_name == g.world_club_name && h.player_first == g.player_first &&
+                                            h.player_last == g.player_last && h.world_player_id == g.world_player_id;
+                    const bool same_layout = world_layout().league_teams == layout.league_teams &&
+                                             world_layout().total_slots == layout.total_slots;
+                    std::printf("save check at turn %d: state %s, names %s, layout %s, %ju bytes\n", played,
+                                same_state ? "same" : "DIFFERS", same_names ? "same" : "DIFFER",
+                                same_layout ? "same" : "DIFFERS", uintmax_t(std::filesystem::file_size(file)));
+                }
+            }
         }
         print_first_league_results(g, "run end");
         if (std::getenv("SIM_ADVERTISING")) std::printf("%d advertising contracts accepted (SIM_ADVERTISING=1)\n", ad_contracts);
