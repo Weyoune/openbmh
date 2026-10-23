@@ -148,6 +148,24 @@ void App::ProcessEvent(Rml::Event &event) try {
        n = n->GetParentNode())
     if (n->GetId() == "native-ticket-layer")
       return;
+  if (!planning_dialog_.empty() && popup_.empty()) {
+    const bool key_event = type == "keydown";
+    const auto key = key_event ? Rml::Input::KeyIdentifier(event.GetParameter<int>("key_identifier", 0)) : Rml::Input::KI_UNKNOWN;
+    if ((key_event && key == Rml::Input::KI_ESCAPE) ||
+        (type == "mouseup" && event.GetParameter<int>("button", 0) == 1)) {
+      planning_action("planning-close", nullptr);
+      event.StopImmediatePropagation();
+      return;
+    }
+    bool inside = false;
+    for (auto *node = event.GetTargetElement(); node && node != doc_; node = node->GetParentNode())
+      if (node->GetId() == "planning-layer") inside = true;
+    if (!inside && (type == "click" || type == "dblclick" || type == "mousedown" ||
+                   type == "mouseup" || (key_event && key != Rml::Input::KI_TAB))) {
+      event.StopImmediatePropagation();
+      return;
+    }
+  }
   if (!report_detail_kind_.empty() && popup_.empty()) {
     const bool keyboard = type == "keydown";
     const auto key = keyboard
@@ -167,8 +185,16 @@ void App::ProcessEvent(Rml::Event &event) try {
       event.StopImmediatePropagation();
       return;
     }
-  } else if (report_detail_kind_.empty() && popup_.empty() && report_picker_event(event))
+  } else if (report_detail_kind_.empty() && planning_dialog_.empty() && popup_.empty() && report_picker_event(event))
     return;
+  if (menu_ == "friendlies" && planning_dialog_.empty() && popup_.empty() &&
+      snap().state.at("calendar").at("friendly_stage") == 1 &&
+      ((type == "keydown" && event.GetParameter<int>("key_identifier", 0) == Rml::Input::KI_ESCAPE) ||
+       (type == "mouseup" && event.GetParameter<int>("button", 0) == 1))) {
+    planning_action("friendly-back", nullptr);
+    event.StopImmediatePropagation();
+    return;
+  }
   if (type == "mouseup" && event.GetParameter<int>("button", 0) == 1) {
     if (scene_ == "desktop" && !menu_.empty() && popup_.empty()) {
       menu_.clear();
@@ -313,10 +339,11 @@ void App::ProcessEvent(Rml::Event &event) try {
         (!menu_.empty() || !popup_.empty() || scene_ != "desktop")) {
       Rml::ElementList controls;
       auto *root = !popup_.empty() ? element("popup")
+                   : !planning_dialog_.empty() ? element("planning-layer")
                    : !report_detail_kind_.empty() ? element("report-detail-layer")
                                                    : element("canvas");
       root->QuerySelectorAll(
-          controls, !popup_.empty() || !report_detail_kind_.empty()
+          controls, !popup_.empty() || !report_detail_kind_.empty() || !planning_dialog_.empty()
                         ? "button,input,select"
                         : ".window button,.window input,.window select");
       controls.erase(std::remove_if(controls.begin(), controls.end(),
@@ -334,7 +361,8 @@ void App::ProcessEvent(Rml::Event &event) try {
                           int(controls.size());
         controls[size_t(next)]->Focus(true);
         if (controls[size_t(next)]->GetId().starts_with("report-detail-player-") ||
-            controls[size_t(next)]->GetId().starts_with("report-club-"))
+            controls[size_t(next)]->GetId().starts_with("report-club-") ||
+            controls[size_t(next)]->GetId().starts_with("friendly-opponent-"))
           controls[size_t(next)]->ScrollIntoView(
               Rml::ScrollIntoViewOptions(Rml::ScrollAlignment::Nearest));
         event.StopImmediatePropagation();
@@ -374,6 +402,7 @@ void App::ProcessEvent(Rml::Event &event) try {
 void App::dispatch(const std::string &action, Rml::Element *target) {
   const auto id =
       target ? target->GetAttribute<Rml::String>("data-id", "") : std::string();
+  if (planning_action(action, target) || indoor_action(action, target)) return;
   if (report_detail_action(action, target)) {
     close_report_picker(false);
     return;
@@ -984,7 +1013,7 @@ void App::dispatch(const std::string &action, Rml::Element *target) {
     }
     static const std::set<std::string> available = {
         "tables", "strengths", "camp",     "settings",
-        "save",   "load",      "training", "tactics", "calendar", "league", "other"};
+        "save",   "load",      "training", "tactics", "calendar", "league", "other", "postpone", "friendlies", "indoor"};
     if (!available.contains(route)) {
       message("Diese native Ansicht wird im nächsten Menüpaket übertragen.");
       return;
@@ -992,6 +1021,7 @@ void App::dispatch(const std::string &action, Rml::Element *target) {
     menu_ = route;
     report_picker_.clear();
     report_detail_kind_.clear();
+    planning_dialog_.clear();
     if (route == "settings") {
       settings_category_ = "display";
       draft_preferences_ = nullptr;
@@ -1362,6 +1392,7 @@ void App::script() {
             Json{{"scene", scene_},
                  {"menu", menu_},
                  {"report_picker", report_picker_},
+                 {"planning_dialog", planning_dialog_},
                  {"report_detail", {{"kind", report_detail_kind_},
                                      {"club", report_detail_club_},
                                      {"player", report_detail_player_}}},

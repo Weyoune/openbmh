@@ -1,0 +1,6 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* HTML Hallentabellen: 78/22 percent columns, 66dp heading and row tracks. */
+.indoor-list .report-row {height:66dp;}
+.indoor-list .report-cell {width:22%;}
+.indoor-list .report-cell.first {width:78%;}
+.indoor-info {display:flex;align-items:center;justify-content:center;left:0;right:0;width:100%;}

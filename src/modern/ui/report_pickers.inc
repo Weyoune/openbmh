@@ -2,7 +2,7 @@
 namespace {
 bool report_picker_menu(const std::string &menu) {
   return menu == "tables" || menu == "strengths" || menu == "league" ||
-         menu == "other";
+         menu == "other" || menu == "calendar" || menu == "friendlies";
 }
 bool report_picker_kind(const std::string &kind) {
   return kind == "country" || kind == "league" || kind == "filter" ||
@@ -46,8 +46,7 @@ App::report_picker_items(const std::string &kind) const {
     });
     return items;
   }
-  const auto reports = snap().state.at("reports");
-  const auto *league = world_->find("competitions", reports.at("league").get<std::string>());
+  const auto *league = world_->find("competitions", report_picker_value("league"));
   if (league)
     for (const auto *candidate : world_->leagues(league->value("nation", "")))
       items.emplace_back(candidate->value("id", ""), world_->name(*candidate));
@@ -60,7 +59,9 @@ std::string App::report_picker_value(const std::string &kind) const {
   const auto reports = snap().state.at("reports");
   if (kind == "filter" || kind == "competition")
     return std::to_string(reports.at(kind).get<int>());
-  const auto league = reports.at("league").get<std::string>();
+  const auto league = menu_ == "friendlies" ? snap().state.at("calendar").at("friendly_league").get<std::string>()
+                    : menu_ == "calendar" ? snap().state.at("calendar").at("league").get<std::string>()
+                    : reports.at("league").get<std::string>();
   if (kind == "league")
     return league;
   const auto *row = world_->find("competitions", league);
@@ -170,7 +171,14 @@ bool App::report_picker_action(const std::string &action, Rml::Element *target) 
                              ? Json(std::stoi(value)) : Json(value);
   close_report_picker(false);
   // Commit even an unchanged country: the Gold resets its first league.
-  apply("reports", {{"kind", kind}, {"value", selection}});
+  if (menu_ == "friendlies")
+    apply("calendar", {{"kind", "friendly-" + kind}, {"value", selection}});
+  else if (menu_ == "calendar") {
+    const auto leagues = kind == "country" ? world_->leagues(value) : std::vector<const Json *>{};
+    const auto league = kind == "country" && !leagues.empty() ? leagues.front()->value("id", "") : value;
+    apply("calendar", {{"kind", "league"}, {"value", league}});
+  } else
+    apply("reports", {{"kind", kind}, {"value", selection}});
   focus_after_render_ = "report-picker-" + kind;
   refresh();
   return true;

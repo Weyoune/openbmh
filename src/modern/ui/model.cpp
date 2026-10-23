@@ -81,7 +81,7 @@ DemoSource::DemoSource(std::shared_ptr<const Catalog> catalog)
   state_["tactics"] = demo_tactics();
   if (!valid_date(state_.at("date")))
     throw editor::Error("invalid_demo_date");
-  state_["calendar"] = demo_calendar(*catalog_, state_.at("date"));
+  state_["calendar"] = demo_calendar(*catalog_, state_.at("date"), club);
   state_["reports"] = demo_reports(*catalog_);
   saved_ = state_;
 }
@@ -118,6 +118,10 @@ ActionResult DemoSource::apply(const Action &action) {
       if (next.at("training").at("club") != first) {
         next["training"] = demo_training(*catalog_, first);
         next["tactics"] = demo_tactics();
+        next["calendar"] = demo_calendar(*catalog_, next.at("date"), first);
+        const auto error = edit_demo_reports(next["reports"],
+            {{"kind", "league"}, {"value", next["calendar"]["league"]}}, *catalog_);
+        if (!error.empty()) return {false, revision_, error};
       }
     } else if (action.kind == "training") {
       const auto error = edit_demo_training(next["training"], action.value);
@@ -129,7 +133,7 @@ ActionResult DemoSource::apply(const Action &action) {
         return {false, revision_, error};
     } else if (action.kind == "calendar") {
       const auto error = edit_demo_calendar(next["calendar"], action.value,
-                                            *catalog_);
+                                            *catalog_, next["managers"][0]["club"]);
       if (!error.empty())
         return {false, revision_, error};
       if (action.value.value("kind", "") == "league") {
@@ -216,8 +220,8 @@ Json DemoSource::load(const fs::path &file) {
       !camp_id(data.at("camp").at("selected")))
     throw editor::Error("invalid_demo_state");
   if (!data.contains("calendar"))
-    data["calendar"] = demo_calendar(*catalog_, data.at("date"));
-  if (!valid_demo_calendar(data.at("calendar"), *catalog_))
+    data["calendar"] = demo_calendar(*catalog_, data.at("date"), club);
+  if (!migrate_demo_calendar(data["calendar"], *catalog_, club))
     throw editor::Error("invalid_demo_calendar");
   if (!data.contains("reports")) {
     data["reports"] = demo_reports(*catalog_);
@@ -228,7 +232,7 @@ Json DemoSource::load(const fs::path &file) {
   }
   if (!data.contains("opening_created"))
     data["opening_created"] = false;
-  if (!valid_demo_reports(data.at("reports"), *catalog_) ||
+  if (!migrate_demo_reports(data["reports"], *catalog_) ||
       !data.at("opening_created").is_boolean())
     throw editor::Error("invalid_demo_reports");
   data["calendar"]["league"] = data["reports"]["league"];

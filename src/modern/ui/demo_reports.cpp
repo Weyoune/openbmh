@@ -72,11 +72,13 @@ bool sort_key(const std::string &view, const std::string &key) {
   static const std::set<std::string> table_keys = {
       "original", "rank", "played", "wins", "draw", "loss", "form",
       "points", "gf", "diff"};
+  static const std::set<std::string> indoor_keys = {"original", "rank", "points"};
   static const std::set<std::string> strength_keys = {
       "original", "club", "keeper", "defence", "midfield", "attack",
       "strength"};
   return view == "tables" ? table_keys.contains(key)
-         : view == "strengths" && strength_keys.contains(key);
+         : view == "strengths" ? strength_keys.contains(key)
+         : view == "indoor" && indoor_keys.contains(key);
 }
 std::vector<Fixture> fixtures(size_t club_count, int league) {
   if (club_count < 2 || club_count > size_t(std::numeric_limits<int>::max() / 2 - 1))
@@ -211,7 +213,8 @@ Json demo_reports(const Catalog &world) {
           {"round", std::min(26, league_rounds(world, league) - 1)},
           {"filter", 0}, {"competition", 0},
           {"sorts", {{"tables", {{"key", "points"}, {"desc", true}}},
-                     {"strengths", {{"key", "original"}, {"desc", false}}}}}};
+                     {"strengths", {{"key", "original"}, {"desc", false}}},
+                     {"indoor", {{"key", "points"}, {"desc", true}}}}}};
 }
 bool valid_demo_reports(const Json &state, const Catalog &world) {
   try {
@@ -224,9 +227,9 @@ bool valid_demo_reports(const Json &state, const Catalog &world) {
     const int count = std::max(league_rounds(world, state.at("league")),
                                state.at("competition") == 0 ? 1 : other_rounds);
     if (!integer(state.at("round"), 0, count - 1) ||
-        !keys(state.at("sorts"), {"tables", "strengths"}))
+        !keys(state.at("sorts"), {"tables", "strengths", "indoor"}))
       return false;
-    for (const auto *view : {"tables", "strengths"}) {
+    for (const auto *view : {"tables", "strengths", "indoor"}) {
       const auto &sort = state.at("sorts").at(view);
       if (!keys(sort, {"key", "desc"}) || !sort.at("key").is_string() ||
           !sort.at("desc").is_boolean() || !sort_key(view, sort.at("key")))
@@ -236,6 +239,19 @@ bool valid_demo_reports(const Json &state, const Catalog &world) {
   } catch (const Json::exception &) {
     return false;
   }
+}
+bool migrate_demo_reports(Json &state, const Catalog &world) {
+  if (valid_demo_reports(state, world))
+    return true;
+  if (!state.is_object() || !state.contains("sorts") ||
+      !state.at("sorts").is_object() || state.at("sorts").contains("indoor"))
+    return false;
+  auto next = state;
+  next["sorts"]["indoor"] = {{"key", "points"}, {"desc", true}};
+  if (!valid_demo_reports(next, world))
+    return false;
+  state = std::move(next);
+  return true;
 }
 int report_round_count(const Catalog &world, const Json &state, bool other) {
   if (!valid_demo_reports(state, world))
@@ -388,6 +404,19 @@ Json report_strength_rows(const Catalog &world, const Json &state) {
                     {"attack", average(squad, "fwd")}, {"strength", average(squad, "")}});
   }
   return sorted(std::move(rows), state.at("sorts").at("strengths"));
+}
+Json report_indoor_rows(const Catalog &world, const Json &state) {
+  if (!valid_demo_reports(state, world))
+    return Json::array();
+  const auto leagues = world.leagues("nation:de");
+  if (leagues.empty())
+    return Json::array();
+  const auto clubs = world.clubs(leagues.front()->at("id"));
+  std::vector<Json> rows;
+  for (size_t i = 0; i < std::min(size_t(16), clubs.size()); ++i)
+    rows.push_back({{"club", clubs[i]->at("id")}, {"original", i},
+                    {"rank", i + 1}, {"points", 324 - int(i) * 19}});
+  return sorted(std::move(rows), state.at("sorts").at("indoor"));
 }
 Json report_match_rows(const Catalog &world, const Json &state, bool other) {
   Json result = Json::array();

@@ -86,6 +86,84 @@ std::map<std::string, Json> by_club(const Json &rows) {
   for (const auto &r : rows) result.emplace(r.at("club").get<std::string>(), r);
   return result;
 }
+void check_indoor(const Catalog &world) {
+  auto state = demo_reports(world);
+  require(state["sorts"]["indoor"] == Json({{"key", "points"}, {"desc", true}}),
+          "Indoor default sort must be points descending");
+  const auto ranked = report_indoor_rows(world, state);
+  require(ranked.size() == 16, "Indoor preview must cap the first German league at16 clubs");
+  for (size_t i = 0; i < ranked.size(); ++i)
+    require(ranked[i]["club"] == club(1, int(i)) && ranked[i]["rank"] == i + 1 &&
+            ranked[i]["original"] == i && ranked[i]["points"] == 324 - int(i) * 19,
+            "Indoor projection changed catalog IDs, ranks or Gold points");
+  edit(state, {{"kind", "league"}, {"value", league(0)}}, world);
+  edit(state, {{"kind", "filter"}, {"value", 4}}, world);
+  edit(state, {{"kind", "competition"}, {"value", 8}}, world);
+  state["round"] = 37;
+  require(report_indoor_rows(world, state) == ranked,
+          "Indoor preview must ignore selected foreign league, round and report filters");
+  const auto table_sort = state["sorts"]["tables"];
+  const auto strength_sort = state["sorts"]["strengths"];
+  edit(state, {{"kind", "sort"}, {"view", "indoor"}, {"key", "points"}}, world);
+  auto reversed = ranked;
+  std::reverse(reversed.begin(), reversed.end());
+  require(state["sorts"]["indoor"]["desc"] == false &&
+          report_indoor_rows(world, state) == reversed,
+          "Indoor points toggle must reverse numeric order without renumbering places");
+  edit(state, {{"kind", "sort"}, {"view", "indoor"}, {"key", "rank"}}, world);
+  require(state["sorts"]["indoor"]["desc"] == false && report_indoor_rows(world, state) == ranked,
+          "Indoor rank selection must start ascending");
+  edit(state, {{"kind", "sort"}, {"view", "indoor"}, {"key", "rank"}}, world);
+  require(state["sorts"]["indoor"]["desc"] == true && report_indoor_rows(world, state) == reversed,
+          "Indoor rank toggle must descend");
+  edit(state, {{"kind", "sort"}, {"view", "indoor"}, {"key", "original"}}, world);
+  require(state["sorts"]["indoor"]["desc"] == false && report_indoor_rows(world, state) == ranked,
+          "Indoor original order must follow catalog order");
+  edit(state, {{"kind", "sort"}, {"view", "indoor"}, {"key", "original"}}, world);
+  require(report_indoor_rows(world, state) == reversed,
+          "Indoor original order must honor its direction");
+  require(state["sorts"]["tables"] == table_sort && state["sorts"]["strengths"] == strength_sort,
+          "Indoor sorting must not alter other report sorts");
+  const auto indoor_sort = state["sorts"]["indoor"];
+  edit(state, {{"kind", "reset"}}, world);
+  require(state["sorts"]["indoor"] == indoor_sort,
+          "Table reset must retain independent indoor sort");
+
+  const auto current = state;
+  require(migrate_demo_reports(state, world) && state == current,
+          "Current reports migration must be idempotent");
+  auto legacy = current;
+  legacy["sorts"].erase("indoor");
+  require(!valid_demo_reports(legacy, world), "Missing indoor sort must require migration");
+  require(migrate_demo_reports(legacy, world) && valid_demo_reports(legacy, world),
+          "Legacy reports did not acquire indoor default");
+  auto expected = current;
+  expected["sorts"]["indoor"] = {{"key", "points"}, {"desc", true}};
+  require(legacy == expected, "Migration altered existing report choices");
+  auto legacy_invalid = legacy;
+  legacy_invalid["sorts"].erase("indoor");
+  legacy_invalid["sorts"]["tables"]["desc"] = 1;
+  const std::vector<Json> invalid = {
+    nullptr, Json::array(), Json{{"sorts", Json::object()}}, legacy_invalid,
+    [&] { auto v = legacy; v["sorts"]["indoor"] = nullptr; return v; }(),
+    [&] { auto v = legacy; v["sorts"]["indoor"]["key"] = "club"; return v; }(),
+    [&] { auto v = legacy; v["sorts"]["indoor"]["desc"] = "false"; return v; }(),
+    [&] { auto v = legacy; v["sorts"]["indoor"]["extra"] = 1; return v; }(),
+    [&] { auto v = legacy; v["sorts"]["indoor"] = Json::array(); return v; }(),
+    [&] { auto v = legacy; v["sorts"].erase("indoor"); v["round"] = -1; return v; }(),
+    [&] { auto v = legacy; v["sorts"].erase("indoor"); v["sorts"]["extra"] = 1; return v; }()};
+  for (auto value : invalid) {
+    const auto before = value;
+    require(!valid_demo_reports(value, world) && !migrate_demo_reports(value, world) && value == before &&
+            report_indoor_rows(world, value).empty(),
+            "Malformed indoor/legacy reports were repaired or partially mutated");
+  }
+  for (const auto &key : {"club", "strength", "name"}) {
+    const auto before = state;
+    require(!edit_demo_reports(state, {{"kind", "sort"}, {"view", "indoor"}, {"key", key}}, world).empty() &&
+            state == before, "Invalid indoor sort mutated reports");
+  }
+}
 void check_league(const Catalog &world, const std::string &id, int count) {
   auto state = demo_reports(world); edit(state, {{"kind", "league"}, {"value", id}}, world);
   const int rounds = report_round_count(world, state);
@@ -169,6 +247,7 @@ int main() try {
   auto state = demo_reports(world);
   require(valid_demo_reports(state, world) && state.at("league") == league(1) &&
           state.at("round") == 26, "Default state did not choose first German league");
+  check_indoor(world);
   check_league(world, league(1), 18); check_league(world, league(0), 20);
   auto first = state; first["round"] = 0;
   const auto first_match = report_match_rows(world, first, false).front();
@@ -295,13 +374,17 @@ int main() try {
   for (const auto &v : bad_states) require(!valid_demo_reports(v, world), "Malformed reports state accepted");
   Fixture tiny(2); auto small = demo_reports(*tiny.world);
   require(small["round"] == 1, "Default round did not clamp for two clubs");
+  const auto tiny_indoor = report_indoor_rows(*tiny.world, small);
+  require(tiny_indoor.size() == 2 && tiny_indoor.back()["points"] == 305,
+          "Indoor preview invented clubs in a tiny German league");
   edit(small, {{"kind", "competition"}, {"value", 1}}, *tiny.world); small["round"] = 33;
   require(report_match_rows(*tiny.world, small, false)[0]["round"] == 1, "Local league projection did not clamp shared round");
   edit(small, {{"kind", "competition"}, {"value", 0}}, *tiny.world);
   require(small["round"] == 1, "Switching back to league clamped to the wrong round");
   Fixture empty(0, false); const auto none = demo_reports(*empty.world);
   require(valid_demo_reports(none, *empty.world) && report_round_count(*empty.world, none) == 1 &&
-          report_table_rows(*empty.world, none).empty() && report_opening_pairs(*empty.world).empty(),
+          report_table_rows(*empty.world, none).empty() && report_opening_pairs(*empty.world).empty() &&
+          report_indoor_rows(*empty.world, none).empty(),
           "Empty presentation catalogue is unsafe");
   require(world.rows("clubs") == immutable_clubs && world.rows("players") == immutable_players,
           "Report projection mutated immutable world data");

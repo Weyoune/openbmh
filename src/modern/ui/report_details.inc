@@ -121,7 +121,18 @@ std::string App::render_report_detail() {
                "id=\"report-detail-close\"");
   };
   std::string title, body, actions;
-  if (report_detail_kind_ == "club" && club) {
+  if (report_detail_kind_ == "indoor-info") {
+    title = "Hallenmasters";
+    std::string season = "—";
+    if (const auto date = report_detail_date(current_date)) {
+      const int start = (*date)[0] - ((*date)[1] < 7 ? 1 : 0);
+      const auto next = std::to_string((start + 1) % 100);
+      season = std::to_string(start) + "/" + (next.size() < 2 ? "0" : "") + next;
+    }
+    body = "<p class=\"report-detail-info-text\">Fiktive Ergebnisse und Platzierungen zur Saison " +
+           esc(season) + ".</p>";
+    actions = close("Zurück");
+  } else if (report_detail_kind_ == "club" && club) {
     title = display_name(club);
     const Json *stadium = nullptr;
     if (const auto id = club->find("stadium");

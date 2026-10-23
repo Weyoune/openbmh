@@ -66,3 +66,9 @@ deshalb nicht ins öffentliche Quellcode-Repository. Öffentliche Zusammenfassun
 - [Berichte](desktop/reports/README.md): Tabellen/Stärken und zwei Spielübersichten
   als gemeinsames Paket; eigenständiger HTML-/Renderervergleich einschließlich
   20 Vereinen, Sortierung, Footerpickern und Vereins-/Spielerprofilen.
+
+- [Verlegen](desktop/postpone/README.md),
+  [Freundschaftsspiele](desktop/friendlies/README.md) und
+  [Hallentabellen](desktop/indoor/README.md): ein gemeinsames Paket mit
+  18 Rendererläufen, 43 Bedienzuständen und gesondertem OS-Beenden-/
+  Speichern-Nachtest. Aktueller Gesamtkatalog: 18 native und 18 offene Routen.

@@ -1,5 +1,5 @@
 <rml>
-<head><title>OpenBMH</title><link type="text/rcss" href="theme.rcss"/><link type="text/rcss" href="ticket.rcss"/><link type="text/rcss" href="sports.rcss"/><link type="text/rcss" href="calendar.rcss"/><link type="text/rcss" href="reports.rcss"/><link type="text/rcss" href="report_details.rcss"/><link type="text/rcss" href="report_pickers.rcss"/></head>
+<head><title>OpenBMH</title><link type="text/rcss" href="theme.rcss"/><link type="text/rcss" href="ticket.rcss"/><link type="text/rcss" href="sports.rcss"/><link type="text/rcss" href="calendar.rcss"/><link type="text/rcss" href="reports.rcss"/><link type="text/rcss" href="report_details.rcss"/><link type="text/rcss" href="report_pickers.rcss"/><link type="text/rcss" href="indoor.rcss"/><link type="text/rcss" href="planning.rcss"/></head>
 <body class="midnight">
 <div id="background"></div>
 <div id="canvas"></div>

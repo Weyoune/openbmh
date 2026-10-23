@@ -1,0 +1,106 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+.planning-heading {position:absolute;left:0;right:0;top:0;height:118dp;}
+.planning-heading h2 {position:absolute;left:0;right:780dp;top:16dp;font-size:38dp;font-weight:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.planning-heading p {position:absolute;left:0;right:780dp;top:71dp;font-size:26dp;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.friendlies-layout .planning-heading h2 .club-label {height:58dp;}
+.friendlies-layout .planning-heading.booking h2 {top:8.5dp;}
+.friendlies-layout .planning-heading.booking p {top:78.5dp;}
+.planning-progress {position:absolute;right:0;top:34dp;display:flex;align-items:center;gap:32dp;font-size:28dp;color:var(--muted);}
+.planning-step {display:flex;align-items:center;gap:14dp;}
+.planning-step-number {display:flex;align-items:center;justify-content:center;width:48dp;height:48dp;border:2dp var(--border);border-radius:24dp;font-size:25dp;}
+.planning-step.current {color:var(--accent);}
+.planning-step.current .planning-step-number {background-color:var(--selected);border-color:var(--accent);}
+.planning-footer {position:absolute;left:0;right:0;bottom:0;height:94dp;display:flex;gap:20dp;}
+.planning-footer button {flex:1;min-width:0;height:94dp;font-size:30dp;padding:12dp 24dp;border-radius:12dp;background-color:transparent;decorator:linear-gradient(180deg,#c1d1e31c,#869eb312);}
+.postpone-summary {position:absolute;padding:22dp 28dp;top:1526dp;width:1293dp;height:200dp;border:2dp var(--border);border-radius:16dp;background-color:var(--soft);}
+.postpone-summary.source {left:0;}
+.postpone-summary.target {right:0;}
+.postpone-summary h3 {display:block;margin:0 0 12dp;height:32dp;line-height:32dp;font-size:28dp;font-weight:normal;}
+.postpone-summary p {display:block;margin:0;font-size:26dp;line-height:1.35;}
+.postpone-summary small {display:block;margin-top:10dp;font-size:23dp;line-height:27dp;color:var(--muted);}
+.postpone-summary small.valid,.friendly-date-summary .valid {color:var(--accent);}
+.postpone-cancel {position:absolute;right:16dp;top:16dp;width:52dp;height:52dp;padding:0;font-size:36dp;background-color:transparent;border:0dp;}
+.calendar-day.friendly-date {color:#a9dccb;}
+.calendar-day .source-outline {border-color:#a9dccb;}
+.friendlies-layout .calendar-day[disabled] {opacity:0.3;}
+.friendlies-layout .calendar-day.has-match[disabled] {opacity:0.7;}
+.friendly-opponents {position:absolute;left:0;right:0;top:148dp;bottom:132dp;border:2dp var(--border);border-radius:18dp;background-color:var(--soft);overflow-x:hidden;overflow-y:auto;}
+.friendly-row {display:flex;height:78dp;font-size:35dp;}
+.friendly-row.head {height:66dp;font-size:27dp;color:var(--muted);border-bottom:2dp var(--border);}
+.friendly-row.striped {background-color:var(--soft);}
+.friendly-row.selected {background-color:var(--selected);}
+.friendly-cell {display:flex;align-items:center;justify-content:center;flex-shrink:0;width:14%;padding:8dp 24dp;overflow:hidden;}
+.friendly-cell:first-child {width:58%;justify-content:flex-start;}
+.friendly-opponent {display:flex;align-items:center;justify-content:flex-start;width:100%;min-width:0;padding:4dp 0;border:0dp;border-radius:6dp;background-color:transparent;font-size:35dp;}
+.friendly-opponent .club-label {min-width:0;white-space:nowrap;}
+.friendly-opponent .club-label .image-frame {flex-shrink:0;}
+.friendly-row.selected .friendly-opponent {color:var(--accent);}
+.friendly-date-summary {position:absolute;left:0;right:0;top:1606dp;height:132dp;border-top:2dp var(--border);}
+.friendly-date-summary .date-side,.friendly-date-summary .status-side {position:absolute;top:8dp;width:1268dp;height:114dp;}
+.friendly-date-summary .date-side {left:20dp;}
+.friendly-date-summary .status-side {left:1324dp;}
+.friendly-date-summary .date-side>span {position:absolute;top:22dp;font-size:24dp;color:var(--muted);}
+.friendly-date-summary .date-side p {position:absolute;top:69dp;left:0;right:0;font-size:29dp;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.friendly-key {display:flex;align-items:center;gap:12dp;font-size:24dp;color:var(--muted);}
+.friendly-key .league-dot,.friendly-key .friendly-dot {display:block;width:12dp;height:12dp;flex-shrink:0;border-radius:6dp;background-color:#e9cb86;}
+.friendly-key .friendly-dot {margin-left:20dp;background-color:#a9dccb;}
+.friendly-date-summary .status-side p {position:absolute;top:42dp;font-size:27dp;}
+.planning-layer {position:absolute;left:0;right:0;top:0;bottom:0;z-index:30;display:flex;align-items:center;justify-content:center;background-color:#08101980;}
+.planning-dialog {position:relative;width:1840dp;flex-shrink:0;border:2dp #e1ecf429;border-radius:22dp;background-color:#283542f5;font-size:30dp;}
+.planning-dialog h2 {position:absolute;left:52dp;right:52dp;top:40dp;height:45dp;line-height:45dp;font-size:40dp;text-align:center;font-weight:bold;}
+.friendly-dialog-club {position:absolute;top:121dp;left:52dp;right:52dp;height:209dp;display:flex;flex-direction:column;align-items:center;gap:30dp;padding:20dp 0 34dp;font-size:38dp;}
+.friendly-dialog-club>.club-label {display:flex;align-items:center;justify-content:center;gap:18dp;}
+.friendly-dialog-club>span:last-child {font-size:29dp;color:var(--muted);}
+.planning-badge {display:block;width:92dp;height:92dp;padding:10dp;border-radius:14dp;background-color:#f4f6f8;}
+.friendly-quote-amount {position:absolute;left:52dp;right:52dp;top:365dp;height:111dp;display:flex;align-items:center;justify-content:space-between;border:2dp var(--border);border-radius:16dp;background-color:var(--soft);padding:32dp;font-size:32dp;}
+.friendly-quote-amount strong {font-size:38dp;font-weight:normal;color:var(--accent);}
+.friendly-quote-note {position:absolute;left:52dp;right:52dp;top:511dp;font-size:29dp;line-height:43.5dp;text-align:center;color:var(--muted);}
+.planning-dialog-actions {position:absolute;left:52dp;right:52dp;bottom:40dp;height:82dp;display:flex;gap:24dp;}
+.planning-dialog-actions button {flex:1;min-width:0;height:82dp;font-size:30dp;padding:12dp 24dp;border-radius:12dp;background-color:transparent;decorator:linear-gradient(180deg,#c1d1e31c,#869eb312);}
+.friendly-bookings {position:absolute;left:52dp;right:52dp;top:121dp;bottom:162dp;overflow-y:auto;overflow-x:hidden;}
+.friendly-bookings>p {font-size:29dp;line-height:43.5dp;text-align:center;}
+.friendly-booking-row {display:flex;height:80dp;font-size:29dp;}
+.friendly-booking-row.head {font-size:26dp;color:var(--muted);border-bottom:2dp var(--border);}
+.friendly-booking-row>span {display:flex;align-items:center;flex-shrink:0;width:24%;padding:12dp 16dp;}
+.friendly-booking-row>span:nth-child(2) {width:58%;}
+.friendly-booking-row>span:nth-child(3) {width:18%;justify-content:center;}
+.planning-notice {position:absolute;left:52dp;right:52dp;top:121dp;font-size:36dp;line-height:54dp;}
+body.midnight .planning-heading h2 {color:#e0eaf2;}
+body.midnight .planning-heading p {color:#a2b8c9;}
+body.midnight .planning-dialog h2 {color:#e3ecf3;}
+body.midnight .friendly-opponents {background-color:#12243140;border-color:#c5d9e726;}
+body.midnight .friendly-row {color:#d4e0e9;}
+body.midnight .friendly-row.head {color:#9fb7c8;}
+body.midnight .friendly-row.striped {background-color:#e3edf605;}
+body.midnight .friendly-row.selected {background-color:#9acbb21a;}
+body.silver .planning-dialog {background-color:#eaf1f7fc;border-color:var(--border);}
+body.matchday .planning-dialog {background-color:#2c2c32fc;border-color:var(--border);}
+body.silver .planning-footer button,body.silver .planning-dialog-actions button {decorator:linear-gradient(180deg,#ffffffb0,#bfd0e259);}
+body.matchday .planning-footer button,body.matchday .planning-dialog-actions button {decorator:linear-gradient(180deg,#e8d6dc12,#a1a0aa0d);}
+body.silver .calendar-day.friendly-date {color:#256a4f;}
+body.silver .calendar-day .source-outline {border-color:#256a4f;}
+
+.postpone-layout .planning-heading {height:100dp;}
+.postpone-layout .planning-heading h2 {top:11dp;font-size:34dp;}
+.postpone-layout .planning-heading p {top:60dp;font-size:25dp;}
+.postpone-layout .planning-progress {top:26dp;font-size:29dp;gap:34dp;}
+.postpone-layout .planning-step-number {font-size:26dp;}
+.postpone-summary.selected-source {padding-right:90dp;border-color:var(--accent);}
+.postpone-layout .planning-footer button {font-size:29dp;}
+#postpone-move:not([disabled]) {color:var(--accent);background-color:var(--selected);border-color:var(--accent);}
+body.midnight .postpone-layout .planning-heading h2 {color:#dce8f1;}
+body.midnight .postpone-layout .planning-heading p {color:#9fb8ca;}
+body.midnight .postpone-summary {border-color:#c5d9e726;background-color:#12243140;}
+body.midnight .postpone-summary h3 {color:#c9dce9;}
+body.midnight .postpone-summary p {color:#afc5d5;}
+body.midnight .postpone-summary small {color:#8faabc;}
+body.midnight .postpone-summary .valid {color:#a9dccb;}
+body.midnight .postpone-summary.selected-source {border-color:#a9dccb57;}
+body.midnight .friendly-quote-amount strong {color:#f7e7ac;}
+
+.planning-dialog.undo-blocked {width:2484dp;}
+.planning-dialog.undo-blocked h2 {font-size:42dp;height:48dp;line-height:48dp;color:var(--text);}
+.planning-dialog.undo-blocked .planning-notice {top:124dp;}
+.planning-dialog.undo-blocked .planning-dialog-actions {height:65dp;}
+.planning-dialog.undo-blocked .planning-dialog-actions button {height:65dp;font-size:32dp;}
+body.midnight .planning-dialog.undo-blocked h2 {color:#eff0d6;}

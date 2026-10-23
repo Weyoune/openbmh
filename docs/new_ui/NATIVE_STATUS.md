@@ -1,6 +1,6 @@
 # Native Modern UI · erster Umsetzungsstand
 
-Stand: 23. Oktober 2026. **Experimenteller RmlUI-Unterbau und erster
+Stand: 24. Oktober 2026. **Experimenteller RmlUI-Unterbau und erster
 bedienbarer Durchlauf. Noch keine vollständige Umsetzung des HTML-Mockups.**
 Die normale Classic-Konfiguration bleibt unverändert; die neue Oberfläche
 wird ausdrücklich mit `OPENBMH_BUILD_MODERN_UI=ON` gebaut.
@@ -44,6 +44,15 @@ wird ausdrücklich mit `OPENBMH_BUILD_MODERN_UI=ON` gebaut.
   Rundennavigation. Gemeinsame Auswahlmenüs sowie Vereins-, Kader- und
   Spielerprofile einschließlich Wappen und Porträts. Ergebnisse, Tabellen
   und Qualifikationsfarben bleiben ausdrücklich Demo-Projektionen.
+
+- [Freundschaftsspiele](desktop/friendlies/README.md): inländische und
+  ausländische Gegner, Austragungsort und Kostenbestätigung, freier Termin,
+  bis zu 20 lokale Vormerkungen und sortierte Übersicht.
+- [Verlegen](desktop/postpone/README.md): Ausgangsspiel und neuer Termin,
+  Originaltag als stabile Identität, erneute Verlegung und Rücknahme mit
+  belegtem Originaltermin als Sperrfall. Änderungen erscheinen im Kalender.
+- [Hallentabellen](desktop/indoor/README.md): bis zu 16 Vereine aus der ersten
+  deutschen Liga, unabhängige Platz-/Punktesortierung, Vereinsprofile und Info.
 
 **Anstoß führt keine Aktion aus**, weder per Maus noch per Tastatur. Das gilt
 auch für die direkte Aktionsschnittstelle des Demoanbieters.

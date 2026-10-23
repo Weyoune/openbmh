@@ -372,6 +372,51 @@ int main(int argc, char **argv) try {
                                         {{"kind", "league"}, {"value", "missing"}}}).ok &&
               restored_reports.snapshot().state == accepted_reports.state,
           "Rejected report load/action partially mutated the session");
+  const auto planning_before = restored_reports.snapshot();
+  const auto plan_action = [&](const Json &change) {
+    return restored_reports.apply({restored_reports.snapshot().revision, "calendar", change}).ok;
+  };
+  require(plan_action({{"kind", "friendly-league"}, {"value", "comp:other"}}) &&
+              plan_action({{"kind", "friendly-opponent"}, {"value", "club:b"}}) &&
+              plan_action({{"kind", "friendly-venue"}, {"value", true}}) &&
+              plan_action({{"kind", "friendly-stage"}, {"value", 1}}) &&
+              plan_action({{"kind", "select"}, {"value", 7}}) &&
+              plan_action({{"kind", "friendly-book"}}),
+          "Planning through the shared source failed");
+  require(restored_reports.snapshot().state["cash"] == planning_before.state["cash"] &&
+              restored_reports.snapshot().state["managers"] == planning_before.state["managers"] &&
+              restored_reports.snapshot().state["training"] == planning_before.state["training"],
+          "Presentation planning mutated finances, managers or training");
+  require(plan_action({{"kind", "select"}, {"value", 30}}) &&
+              plan_action({{"kind", "postpone-source"}}) &&
+              plan_action({{"kind", "select"}, {"value", 8}}) &&
+              plan_action({{"kind", "postpone-move"}}),
+          "Rescheduling used the foreign preview instead of the manager schedule");
+  restored_reports.save(root / "planning.ui.json", default_desktop());
+  DemoSource restored_planning(calendar_world);
+  restored_planning.load(root / "planning.ui.json");
+  require(restored_planning.snapshot().state == restored_reports.snapshot().state,
+          "Bookings or moves were lost on source round-trip");
+  const auto planning_accepted = restored_planning.snapshot();
+  auto colliding_plan = Json::parse(bmh::editor::read_file(root / "planning.ui.json"));
+  colliding_plan["calendar"]["friendlies"][0]["day"] = 8;
+  write(root, "colliding-plan.ui.json", colliding_plan);
+  rejected = false;
+  try { restored_planning.load(root / "colliding-plan.ui.json"); }
+  catch (const std::exception &) { rejected = true; }
+  require(rejected && restored_planning.snapshot().state == planning_accepted.state &&
+              restored_planning.snapshot().revision == planning_accepted.revision,
+          "Conflicting plan partially loaded");
+  auto old_planning = Json::parse(bmh::editor::read_file(root / "calendar.ui.json"));
+  for (const auto *key : {"source_day", "friendly_league", "opponent", "home", "friendly_stage"})
+    old_planning["calendar"].erase(key);
+  old_planning["reports"]["sorts"].erase("indoor");
+  write(root, "old-planning.ui.json", old_planning);
+  restored_planning.load(root / "old-planning.ui.json");
+  require(restored_planning.snapshot().state["calendar"]["league"] == "comp:other" &&
+              restored_planning.snapshot().state["calendar"]["friendly_league"] == "comp:home" &&
+              restored_planning.snapshot().state["reports"]["sorts"]["indoor"]["key"] == "points",
+          "Old checkpoint lost league preview or failed planning/indoor migration");
   GuiAssets absent(root / "missing-gui");
   require(!absent.available(),
           "World resources were mistaken for GUI resources");

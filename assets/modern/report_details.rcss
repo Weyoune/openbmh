@@ -48,3 +48,6 @@ body.silver .report-detail-actions .report-detail-action:hover,body.matchday .re
 body.silver .report-detail-table,body.matchday .report-detail-table {color:var(--text);}
 body.silver .report-detail-striped {background-color:#42627d09;}
 body.matchday .report-detail-striped {background-color:#f8e7e00a;}
+
+.report-detail-indoor-info {height:332dp;}
+.report-detail-info-text {position:absolute;left:52dp;right:52dp;top:124dp;height:54dp;line-height:54dp;margin:0;font-size:36dp;}

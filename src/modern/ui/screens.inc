@@ -885,6 +885,12 @@ std::string App::render_menu(const std::string &key) {
   std::string body;
   if (key == "tables" || key == "strengths" || key == "league" || key == "other")
     body = render_reports(key);
+  else if (key == "postpone")
+    body = render_postpone();
+  else if (key == "friendlies")
+    body = render_friendlies();
+  else if (key == "indoor")
+    body = render_indoor();
   else if (key == "training")
     body = render_training();
   else if (key == "tactics")
@@ -903,5 +909,5 @@ std::string App::render_menu(const std::string &key) {
   else
     throw editor::Error("Diese native Ansicht ist noch nicht verfügbar.");
   return "<div class=\"fill\" style=\"z-index:100;\">" +
-         window(title(key), body) + "</div>";
+         window(key == "postpone" ? "Spiel verlegen" : title(key), body) + "</div>";
 }

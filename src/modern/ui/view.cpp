@@ -310,6 +310,7 @@ class App final : public Rml::EventListener {
   std::string last_report_state_, report_picker_, report_detail_kind_,
       report_detail_club_, report_detail_player_, report_detail_return_focus_,
       report_option_to_scroll_;
+  std::string planning_dialog_, planning_notice_, planning_return_focus_;
   float device_ratio_ = 1.f;
   Json desktop_ = Json::object(), saved_desktop_ = Json::object(),
        options_ = Json::object();
@@ -616,6 +617,16 @@ class App final : public Rml::EventListener {
   std::string render_training();
   std::string render_tactics();
   std::string render_calendar();
+  Json planning_calendar() const;
+  std::string calendar_day_info(const Json &) const;
+  std::string calendar_grid(const Json &, double, double, double, double, bool, bool);
+  std::string render_postpone();
+  std::string render_friendlies();
+  std::string render_planning_dialog();
+  std::string planning_progress(bool, bool);
+  bool planning_action(const std::string &, Rml::Element *);
+  std::string render_indoor();
+  bool indoor_action(const std::string &, Rml::Element *);
   std::string training_balls(const std::string &, int, int, bool,
                              const std::string &player = {}, int size = 56,
                              int gap = 10, bool overtraining = false);
@@ -675,6 +686,13 @@ class App final : public Rml::EventListener {
     dirty_ = true;
   }
   void render() {
+    // A window-close save prompt can leave a menu while its local dialog is
+    // open. Never keep that menu's modal/input gate in the destination view.
+    if (menu_ != last_rendered_menu_) {
+      planning_dialog_.clear();
+      report_detail_kind_.clear();
+      report_picker_.clear();
+    }
     training_scroll_.reset();
     if (menu_ == "training" && last_rendered_menu_ == "training")
       if (auto *roster = element("training-roster"))
@@ -705,7 +723,7 @@ class App final : public Rml::EventListener {
     if (!menu_.empty())
       markup += render_menu(menu_);
     element("canvas")->SetInnerRML(markup);
-    if (!report_detail_kind_.empty()) {
+    if (!report_detail_kind_.empty() || !planning_dialog_.empty()) {
       Rml::ElementList behind;
       doc_->QuerySelectorAll(behind,
           "#report-underlay button,#report-underlay input,#report-underlay select,.window .titlebar button");
@@ -736,7 +754,8 @@ class App final : public Rml::EventListener {
     if (!focus_after_render_.empty()) {
       if (auto *node = element(focus_after_render_))
         node->Focus(keyboard_navigation_);
-      if (focus_after_render_.starts_with("report-option-"))
+      if (focus_after_render_.starts_with("report-option-") ||
+          focus_after_render_.starts_with("friendly-opponent-"))
         report_option_to_scroll_ = focus_after_render_;
       focus_after_render_.clear();
     }
@@ -1039,6 +1058,9 @@ public:
 #include "modern/ui/report_pickers.inc"
 #include "modern/ui/report_details.inc"
 #include "modern/ui/reports_screens.inc"
+#include "modern/ui/indoor_screen.inc"
+#include "modern/ui/planning_screens.inc"
+#include "modern/ui/planning_controls.inc"
 } // namespace
 bool is_modern_world(const fs::path &file) {
   try {

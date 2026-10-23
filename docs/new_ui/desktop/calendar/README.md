@@ -1,7 +1,7 @@
 # Kalender · native Modern UI
 
-Stand: 23. Oktober 2026. Quelle ist das unveränderte private HTML-Mockup
-`bmh_4k_ui`, Produktrevision `0bf0f2afd2ff8d5dabb96c795db2a5d0abaaf278`:
+Stand: 24. Oktober 2026. Quelle ist das unveränderte private HTML-Mockup
+`bmh_4k_ui`, Referenzrevision `a7f8e39c8cb562a09d85dabae81e62a981afeb85`:
 `desktop/management-menus.js`, `league-preview.js`, `table-window.css` und
 `menu-themes.css`. Native Ansicht: `src/modern/ui/calendar_screen.inc`.
 
@@ -28,8 +28,10 @@ Wiederöffnen und Laden eines UI-Demostands erhalten.
 ## Daten und Enginegrenze
 
 Der Demoanbieter liefert `calendar` mit Saisonbeginn, gewähltem Tagesindex,
-Liga-ID und reservierten leeren Projektionen für Freundschaftsspiele und
-Verlegungen. `calendar`-Aktionen erlauben nur `select` und `league`.
+Liga-ID sowie die lokale Planung aus [Freundschaftsspielen](../friendlies/README.md)
+und [Verlegen](../postpone/README.md). Die Vormerkungen und Verlegungen
+ändern die angezeigten Termine der eigenen Liga; bei fremder Ligavorschau
+bleiben deren Vorschautermine unverändert.
 Unbekannte Ligen, ungültige Tagesindizes und nicht ganzzahlige Eingaben
 werden atomar abgewiesen. Die Saison stammt aus dem Demodatum; sie ist
 nicht auf das Jahr der HTML-Vorschau festgelegt.
@@ -43,9 +45,9 @@ angezeigten Liga. Die Manageridentität wird dadurch nicht geändert.
 **Dies ist keine Spielplanerzeugung für die Engine.** Es gibt weder Zufall
 noch Sessionzugriffe. Der spätere Sessionadapter ersetzt die Terminvorschau
 durch echte Spieltage, Pokale, Verlegungen und Freundschaftsspiele. Die
-zugehörigen nativen Planungsmenüs und farbigen Freundschaftsmarkierungen sind
-in diesem Meilenstein noch nicht angebunden; deren gespeicherte Aktionen
-werden nicht stillschweigend vorgetäuscht.
+zugehörigen nativen Planungsmenüs und farbigen Freundschaftsmarkierungen
+sind als reine UI-Vorschau angebunden. Bestätigte Vormerkungen sind grün
+markiert und erscheinen mit Gegner in der Terminzeile.
 
 ## QA
 
@@ -60,5 +62,6 @@ Synthetische Regression prüft Gregorianische Schaltjahre einschließlich
 2100, Wochentagspositionen, zwei Begegnungen je Gegner, 18-/20-Vereinsgrößen,
 atomare Ablehnung und Wiederherstellung. Die Renderer-QA prüft zusätzlich
 sichtbare Wochentage, Auswahlrahmen, Terminzeilen, Tastatur/Fokus und
-Länder-/Ligawechsel. Gemeinsame Dropdown-Optik bleibt in der
-[Befundliste](../../qa-findings.md) erfasst.
+Länder-/Ligawechsel. Land und Liga verwenden jetzt die gemeinsamen Footerpicker mit identischer
+Popupschrift und separater Markierungsspalte. Das bewusste erneute Wählen
+des gleichen Landes setzt seine erste Liga zurück; Escape verwirft die Auswahl.
