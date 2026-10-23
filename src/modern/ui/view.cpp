@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-only
-#include "modern/ui/view.hpp"
 #include "content/package.hpp"
 #include "launch/game_data.hpp"
 #include "launch/process.hpp"
@@ -10,6 +9,7 @@
 #include "modern/ui/gui_assets.hpp"
 #include "modern/ui/model.hpp"
 #include "modern/ui/ticket_popover.hpp"
+#include "modern/ui/view.hpp"
 #include "version.hpp"
 #include <RmlUi/Core.h>
 #include <RmlUi/Core/Elements/ElementFormControl.h>
@@ -18,6 +18,7 @@
 #include <SDL.h>
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <fstream>
 #include <functional>
@@ -136,7 +137,9 @@ public:
   Picture local_image(const fs::path &file, int pixels) {
     const auto identity =
         editor::utf8(file) + ":" +
-        std::to_string(fs::last_write_time(file).time_since_epoch().count());
+        std::to_string(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                           fs::last_write_time(file).time_since_epoch())
+                           .count());
     if (!keys_.contains(identity)) {
       auto raster = editor::images::decode(
           editor::read_file(file), editor::utf8(file.extension()), pixels);
@@ -199,17 +202,17 @@ public:
       const auto largest = std::max(raster.width, raster.height);
       if (largest > pixels) {
         const double scale = double(pixels) / largest;
-        editor::images::Raster small{
+        editor::images::Raster thumbnail{
             std::max(1, int(std::round(raster.width * scale))),
             std::max(1, int(std::round(raster.height * scale))),
             {}};
-        small.pixels.resize(size_t(small.width) * small.height * 4);
+        thumbnail.pixels.resize(size_t(thumbnail.width) * thumbnail.height * 4);
         SDL_Surface *source = SDL_CreateRGBSurfaceWithFormatFrom(
             raster.pixels.data(), raster.width, raster.height, 32,
             raster.width * 4, SDL_PIXELFORMAT_RGBA32);
         SDL_Surface *destination = SDL_CreateRGBSurfaceWithFormatFrom(
-            small.pixels.data(), small.width, small.height, 32, small.width * 4,
-            SDL_PIXELFORMAT_RGBA32);
+            thumbnail.pixels.data(), thumbnail.width, thumbnail.height, 32,
+            thumbnail.width * 4, SDL_PIXELFORMAT_RGBA32);
         if (!source || !destination) {
           if (source)
             SDL_FreeSurface(source);
@@ -221,7 +224,7 @@ public:
         SDL_BlitScaled(source, nullptr, destination, nullptr);
         SDL_FreeSurface(source);
         SDL_FreeSurface(destination);
-        raster = std::move(small);
+        raster = std::move(thumbnail);
       }
       entries_[token] = {key, world, pixels, std::move(raster)};
       keys_[identity] = token;
