@@ -1,0 +1,24 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* Coordinates are local to the report footer, not to the complete menu. */
+.report-picker-wrapper {position:absolute;bottom:0;height:94dp;overflow:visible;}
+.report-picker-wrapper .report-picker-trigger {display:flex;align-items:center;justify-content:space-between;gap:20dp;width:100%;height:94dp;padding:12dp 24dp;border:2dp #d4e0ec29;border-radius:12dp;background-color:transparent;decorator:linear-gradient(180deg,#c1d1e31c,#869eb312);color:#e0e6ec;font-size:32dp;font-weight:normal;text-align:left;}
+.report-picker-label {display:block;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.report-picker-arrow {display:block;position:relative;flex-shrink:0;width:32dp;height:32dp;pointer-events:none;}
+.report-picker-arrow span {display:block;position:absolute;left:10dp;top:6dp;width:12dp;height:12dp;border-bottom:3dp #a8b8c8;border-right:3dp #a8b8c8;transform:rotate(45deg);}
+.report-picker-wrapper .report-picker-trigger:hover {decorator:none;background-color:#d0e2f226;}
+.report-picker-popup {position:absolute;left:0;right:0;bottom:108dp;z-index:20;max-height:740dp;overflow-y:auto;overflow-x:hidden;padding:10dp;border:2dp #d9e8f13d;border-radius:18dp;background-color:#293744fa;}
+.report-picker-popup .report-picker-option {display:flex;align-items:center;justify-content:flex-start;gap:12dp;flex:none;width:100%;height:72dp;min-height:72dp;padding:10dp 14dp;border:0dp;border-radius:10dp;background-color:transparent;color:#e0e6ec;font-size:32dp;line-height:1.3;text-align:left;white-space:nowrap;}
+.report-picker-option-label {display:block;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.report-picker-check-slot {display:block;position:relative;flex-shrink:0;width:34dp;height:42dp;pointer-events:none;}
+.report-picker-check {display:block;position:absolute;left:12dp;top:8.5dp;width:10dp;height:18dp;border-right:3dp #afdccf;border-bottom:3dp #afdccf;transform:rotate(45deg);}
+.report-picker-popup .report-picker-option:hover {background-color:#d0e2f226;}
+.report-picker-popup .report-picker-option:focus {background-color:#6286a855;}
+body.silver .report-picker-wrapper .report-picker-trigger {border-color:var(--border);color:var(--text);decorator:linear-gradient(180deg,#ffffffb0,#bfd0e259);}
+body.matchday .report-picker-wrapper .report-picker-trigger {border-color:var(--border);color:var(--text);decorator:linear-gradient(180deg,#e8d6dc12,#a1a0aa0d);}
+body.silver .report-picker-arrow span,body.matchday .report-picker-arrow span {border-color:var(--muted);}
+body.silver .report-picker-popup {border-color:var(--border);background-color:#f3f7fcfc;}
+body.matchday .report-picker-popup {border-color:var(--border);background-color:#303037fc;}
+body.silver .report-picker-popup .report-picker-option,body.matchday .report-picker-popup .report-picker-option {color:var(--text);}
+body.silver .report-picker-check,body.matchday .report-picker-check {border-color:var(--accent);}
+body.silver .report-picker-wrapper .report-picker-trigger:hover,body.matchday .report-picker-wrapper .report-picker-trigger:hover {decorator:none;background-color:var(--hover);}
+body.silver .report-picker-popup .report-picker-option:hover,body.silver .report-picker-popup .report-picker-option:focus,body.matchday .report-picker-popup .report-picker-option:hover,body.matchday .report-picker-popup .report-picker-option:focus {background-color:var(--hover);}

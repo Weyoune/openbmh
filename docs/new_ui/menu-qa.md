@@ -62,3 +62,7 @@ deshalb nicht ins öffentliche Quellcode-Repository. Öffentliche Zusammenfassun
 - [Nativer Stand](NATIVE_STATUS.md)
 - [Typografie-Befunde](typography-qa.md)
 - [Training](desktop/training/README.md) und [Taktik](desktop/tactics/README.md)
+
+- [Berichte](desktop/reports/README.md): Tabellen/Stärken und zwei Spielübersichten
+  als gemeinsames Paket; eigenständiger HTML-/Renderervergleich einschließlich
+  20 Vereinen, Sortierung, Footerpickern und Vereins-/Spielerprofilen.

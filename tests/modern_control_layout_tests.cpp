@@ -99,7 +99,8 @@ int main(int argc, char **argv) try {
           "Bold font missing");
   std::ostringstream css;
   for (const auto *name : {"theme.rcss", "ticket.rcss", "sports.rcss",
-                            "calendar.rcss"}) {
+                            "calendar.rcss", "reports.rcss", "report_details.rcss",
+                            "report_pickers.rcss"}) {
     std::ifstream input(root / name);
     require(bool(input), "Production stylesheet missing");
     css << input.rdbuf() << '\n';

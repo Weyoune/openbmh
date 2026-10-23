@@ -635,84 +635,6 @@ std::string App::render_opening() {
   return window(opening_page_ < 3 ? "Deutsche Teams" : "DFB-Pokal", body,
                 false);
 }
-std::string App::render_table(bool strengths, bool indoor) {
-  auto leagues = world_->leagues(country_);
-  if (std::none_of(leagues.begin(), leagues.end(),
-                   [&](auto *r) { return r->value("id", "") == league_; }))
-    league_ = leagues.empty() ? "" : leagues.front()->value("id", "");
-  const auto clubs = world_->clubs(league_);
-  std::string body = "<div class=\"list\" "
-                     "style=\"position:absolute;left:0;right:0;top:0;bottom:"
-                     "160dp;\"><div class=\"table\"><div class=\"tr\"><div "
-                     "class=\"th\" style=\"width:42%;\">" +
-                     btn("table-sort", "Pl. / Verein", {}, "data-id=\"rank\"") +
-                     "</div>";
-  const std::vector<std::string> headers =
-      strengths ? std::vector<std::string>{"Tor", "Abwehr", "Mittelfeld",
-                                           "Sturm", "Gesamt"}
-                : std::vector<std::string>{"Sp.",    "S",    "U",    "N",
-                                           "Punkte", "Tore", "Diff."};
-  for (const auto &h : headers)
-    body += "<div class=\"th center\">" +
-            btn("table-sort", esc(h), {}, "data-id=\"" + esc(h) + "\"") +
-            "</div>";
-  body += "</div>";
-  for (size_t i = 0; i < clubs.size(); ++i) {
-    auto *c = clubs[i];
-    body += "<div class=\"tr " + std::string(i % 2 ? "" : "odd") +
-            "\"><div class=\"td\">" +
-            btn("club-detail",
-                "<span class=\"club-label\"><span class=\"rank\">" +
-                    std::to_string(i + 1) + ".</span>" + crest(c, 40) +
-                    "<span>" + esc(world_->name(*c)) + "</span></span>",
-                {}, "data-id=\"" + esc(c->value("id", "")) + "\"") +
-            "</div>";
-    if (strengths) {
-      const auto players = world_->squad(c->value("id", ""));
-      for (const auto &position : {"gk", "def", "mid", "fwd", "all"}) {
-        int sum = 0, n = 0;
-        for (auto *p : players) {
-          const auto positions = p->value("positions", Json::array());
-          if (std::string(position) == "all" ||
-              std::find(positions.begin(), positions.end(), position) !=
-                  positions.end()) {
-            sum += p->value("attributes", Json::object()).value("strength", 0);
-            ++n;
-          }
-        }
-        body += "<div class=\"td center\">" +
-                (n ? std::to_string(sum / n) : "–") + "</div>";
-      }
-    } else
-      for (int n = 0; n < 7; ++n)
-        body += "<div class=\"td center\">" +
-                std::string(n == 5 ? "0:0" : "0") + "</div>";
-    body += "</div>";
-  }
-  body += "</div></div><div class=\"bottom-controls\">";
-  if (!strengths && !indoor)
-    body += btn("table-overall", "Gesamt") + select("table-scope",
-                                                    {{"all", "Alle Spiele"},
-                                                     {"first", "Hinrunde"},
-                                                     {"second", "Rückrunde"},
-                                                     {"home", "Heim"},
-                                                     {"away", "Auswärts"}},
-                                                    selections_["table-scope"],
-                                                    "table-scope");
-  std::vector<std::pair<std::string, std::string>> countries, league_rows;
-  std::set<std::string> seen;
-  for (auto *l : world_->leagues()) {
-    const auto id = l->value("nation", "");
-    if (seen.insert(id).second)
-      countries.emplace_back(id, world_->nation_name(id));
-    if (id == country_)
-      league_rows.emplace_back(l->value("id", ""), world_->name(*l));
-  }
-  body += select("table-country", countries, country_, "table-country") +
-          select("table-league", league_rows, league_, "table-league") +
-          "</div>";
-  return body;
-}
 std::string App::render_camp() {
   const auto index_file =
       Json::parse(editor::read_file(gui_.root() / "gui-assets.json"));
@@ -961,8 +883,8 @@ std::string App::render_save(bool save) {
 }
 std::string App::render_menu(const std::string &key) {
   std::string body;
-  if (key == "tables" || key == "strengths")
-    body = render_table(key == "strengths", false);
+  if (key == "tables" || key == "strengths" || key == "league" || key == "other")
+    body = render_reports(key);
   else if (key == "training")
     body = render_training();
   else if (key == "tactics")

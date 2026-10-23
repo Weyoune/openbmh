@@ -1,0 +1,70 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+.report-underlay {position:absolute;left:0;right:0;top:0;bottom:0;}
+.report-list {position:absolute;left:0;right:0;top:0;bottom:150dp;overflow-y:auto;overflow-x:hidden;}
+.report-list.standings-list {bottom:182dp;}
+.report-row {display:flex;align-items:stretch;font-size:36dp;color:var(--text);}
+.report-row.striped {background-color:var(--soft);}
+.report-row:hover {background-color:var(--hover);}
+.report-head {font-size:30dp;color:var(--muted);border-bottom:2dp var(--border);}
+.report-cell {display:flex;align-items:center;justify-content:flex-end;flex-shrink:0;padding:7dp 14dp;overflow:hidden;}
+.report-cell.first {justify-content:flex-start;}
+.report-cell.score {justify-content:center;}
+.report-cell.form {font-size:33dp;letter-spacing:1dp;}
+.report-value {display:block;white-space:nowrap;}
+.report-club-button {display:flex;align-items:center;gap:14dp;max-width:100%;min-width:0;padding:2dp 6dp;border:0dp;border-radius:0dp;background-color:transparent;font-size:36dp;}
+.report-club-button .image-frame {flex-shrink:0;}
+.report-club-name {display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.report-club-button.current {color:var(--accent);}
+.report-club-button:hover {background-color:transparent;}
+.report-club-button:focus-visible {background-color:var(--hover);}
+.report-sort {display:flex;align-items:center;justify-content:flex-end;gap:8dp;padding:4dp 0;border:0dp;border-radius:6dp;background-color:transparent;font-size:30dp;color:var(--muted);}
+.report-cell.first .report-sort {justify-content:flex-start;}
+.report-sort-symbol {display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4dp;width:18dp;height:26dp;flex-shrink:0;}
+.report-sort-arrow {display:block;width:0;height:0;border-left:6dp transparent;border-right:6dp transparent;}
+.report-sort-arrow.up {border-bottom:7dp var(--muted);}
+.report-sort-arrow.down {border-top:7dp var(--muted);}
+.report-cell[aria-sort=ascending] .report-sort,.report-cell[aria-sort=descending] .report-sort {color:var(--text);}
+.report-cell[aria-sort=ascending] .report-sort-arrow.up {border-bottom-color:var(--text);}
+.report-cell[aria-sort=descending] .report-sort-arrow.down {border-top-color:var(--text);}
+.report-rank {display:flex;align-items:center;justify-content:flex-end;flex-shrink:0;width:64dp;margin-right:14dp;}
+.report-zone {display:block;flex-shrink:0;width:9dp;height:48dp;margin-right:20dp;border-radius:5dp;background-color:transparent;}
+.report-zone.champions {background-color:#79b8ed;}
+.report-zone.europa {background-color:#e6a566;}
+.report-zone.conference {background-color:#8bc493;}
+.report-zone.relegation {background-color:#e8757e;}
+.report-zone.promotion {background-color:#8ac9b0;}
+.report-zone.playoff {background-color:#d8b879;}
+.report-legend {position:absolute;left:0;right:0;bottom:127dp;display:flex;align-items:center;justify-content:center;gap:38dp;font-size:25dp;}
+.report-legend-item {display:flex;align-items:center;gap:14dp;}
+.report-legend .report-zone {width:7dp;height:22dp;margin:0;}
+.report-footer {position:absolute;left:0;right:0;bottom:0;height:94dp;}
+.report-reset,.report-round {position:absolute;height:94dp;padding:12dp 24dp;border-radius:12dp;font-size:32dp;decorator:linear-gradient(180deg,#c1d1e31c,#869eb312);background-color:transparent;}
+.report-round {font-size:56dp;padding:0;}
+.report-match-heading {position:absolute;left:0;right:0;top:0;text-align:center;}
+.report-match-heading h2 {font-size:46dp;font-weight:normal;}
+.report-match-heading p {margin-top:16dp;font-size:28dp;}
+.report-list.match-list {top:150dp;bottom:160dp;border:2dp var(--border);border-radius:18dp;background-color:var(--soft);}
+.match-list .report-row,.match-list .report-club-button {font-size:34dp;}
+.match-list .report-head {font-size:34dp;color:var(--muted);}
+.match-list .report-cell {padding:12dp 28dp;}
+body.midnight .report-row {color:#d8e0e8;}
+body.midnight .report-head,body.midnight .report-sort {color:#a0aebc;}
+body.midnight .report-cell[aria-sort=ascending] .report-sort,body.midnight .report-cell[aria-sort=descending] .report-sort {color:#dae6f0;}
+body.midnight .report-cell[aria-sort=ascending] .report-sort-arrow.up {border-bottom-color:#b5d6ee;}
+body.midnight .report-cell[aria-sort=descending] .report-sort-arrow.down {border-top-color:#b5d6ee;}
+body.midnight .report-row.striped {background-color:#e3edf605;}
+body.midnight .report-row:hover {background-color:#bad5f20d;}
+body.midnight .report-head {border-color:#d5e3ed26;}
+body.midnight .report-club-button.current {color:#a9dccb;}
+body.midnight .report-legend {color:#a9bdcd;}
+body.midnight .report-reset,body.midnight .report-round {color:#e0e6ec;border-color:#d4e0ec29;}
+body.midnight .report-match-heading h2 {color:#e4edf2;}
+body.midnight .report-match-heading p {color:#a9becd;}
+body.midnight .report-list.match-list {border-color:#c5d9e720;background-color:#13263526;}
+body.midnight .match-list .report-row {color:#d4e0e9;}
+body.midnight .match-list .report-head {color:#a8bdcc;border-color:#c5d9e72b;}
+body.midnight .match-list .report-cell.score {color:#bddedc;}
+body.silver .report-row.striped,body.silver .report-list.match-list {background-color:#42627d09;}
+body.silver .report-reset,body.silver .report-round {decorator:linear-gradient(180deg,#ffffffb0,#bfd0e259);}
+body.matchday .report-row.striped,body.matchday .report-list.match-list {background-color:#f8e7e00a;}
+body.matchday .report-reset,body.matchday .report-round {decorator:linear-gradient(180deg,#e8d6dc12,#a1a0aa0d);}

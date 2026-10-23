@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "modern/ui/model.hpp"
 #include "modern/ui/demo_calendar.hpp"
+#include "modern/ui/demo_reports.hpp"
 #include "modern/ui/demo_sports.hpp"
 #include "modern/ui/desktop.hpp"
 #include <algorithm>
@@ -72,6 +73,7 @@ DemoSource::DemoSource(std::shared_ptr<const Catalog> catalog)
       {"camp",
        {{"selected", "resort:4"}, {"confirmed", ""}, {"focus", {5, 4, 6}}}},
       {"opening", "complete"},
+      {"opening_created", false},
       {"preferences",
        {{"theme", "midnight"}, {"volume", 80}, {"effects", true}}},
       {"edits", Json::object()}};
@@ -80,6 +82,7 @@ DemoSource::DemoSource(std::shared_ptr<const Catalog> catalog)
   if (!valid_date(state_.at("date")))
     throw editor::Error("invalid_demo_date");
   state_["calendar"] = demo_calendar(*catalog_, state_.at("date"));
+  state_["reports"] = demo_reports(*catalog_);
   saved_ = state_;
 }
 Snapshot DemoSource::snapshot() const { return {revision_, catalog_, state_}; }
@@ -129,6 +132,18 @@ ActionResult DemoSource::apply(const Action &action) {
                                             *catalog_);
       if (!error.empty())
         return {false, revision_, error};
+      if (action.value.value("kind", "") == "league") {
+        const auto report_error = edit_demo_reports(next["reports"],
+            {{"kind", "league"}, {"value", next["calendar"]["league"]}}, *catalog_);
+        if (!report_error.empty())
+          return {false, revision_, report_error};
+      }
+    } else if (action.kind == "reports") {
+      const auto error = edit_demo_reports(next["reports"], action.value,
+                                           *catalog_);
+      if (!error.empty())
+        return {false, revision_, error};
+      next["calendar"]["league"] = next["reports"]["league"];
     } else if (action.kind == "camp.select") {
       if (!camp_id(action.value))
         return {false, revision_, "camp_unknown"};
@@ -142,9 +157,13 @@ ActionResult DemoSource::apply(const Action &action) {
       next["camp"]["focus"] = action.value;
     } else if (action.kind == "camp.remember")
       next["camp"]["confirmed"] = next["camp"]["selected"];
-    else if (action.kind == "opening")
+    else if (action.kind == "opening") {
+      if (!action.value.is_string())
+        return {false, revision_, "invalid_opening_state"};
       next["opening"] = action.value;
-    else if (action.kind == "preferences") {
+      if (action.value == "complete")
+        next["opening_created"] = true;
+    } else if (action.kind == "preferences") {
       if (!preferences(action.value))
         return {false, revision_, "invalid_preferences"};
       next["preferences"] = action.value;
@@ -200,6 +219,19 @@ Json DemoSource::load(const fs::path &file) {
     data["calendar"] = demo_calendar(*catalog_, data.at("date"));
   if (!valid_demo_calendar(data.at("calendar"), *catalog_))
     throw editor::Error("invalid_demo_calendar");
+  if (!data.contains("reports")) {
+    data["reports"] = demo_reports(*catalog_);
+    const auto error = edit_demo_reports(data["reports"],
+        {{"kind", "league"}, {"value", data["calendar"]["league"]}}, *catalog_);
+    if (!error.empty())
+      throw editor::Error(error);
+  }
+  if (!data.contains("opening_created"))
+    data["opening_created"] = false;
+  if (!valid_demo_reports(data.at("reports"), *catalog_) ||
+      !data.at("opening_created").is_boolean())
+    throw editor::Error("invalid_demo_reports");
+  data["calendar"]["league"] = data["reports"]["league"];
   const auto &focus = data.at("camp").at("focus");
   if (!focus.is_array() || focus.size() != 3)
     throw editor::Error("invalid_focus");

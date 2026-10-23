@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "modern/ui/demo_sports.hpp"
 #include "modern/ui/demo_calendar.hpp"
+#include "modern/ui/demo_reports.hpp"
 #include "modern/ui/desktop.hpp"
 #include "modern/ui/gui_assets.hpp"
 #include "modern/ui/model.hpp"
@@ -331,6 +332,46 @@ int main(int argc, char **argv) try {
   restored_calendar.load(root / "calendar.ui.json");
   require(restored_calendar.snapshot().state["calendar"] == calendar,
           "Calendar selection was lost on process restoration");
+  require(restored_calendar.snapshot().state["reports"]["league"] == "comp:other",
+          "Calendar and report league selection diverged");
+  require(restored_calendar.apply({restored_calendar.snapshot().revision, "reports",
+                                   {{"kind", "league"}, {"value", "comp:home"}}}).ok &&
+              restored_calendar.snapshot().state["calendar"]["league"] == "comp:home" &&
+              restored_calendar.snapshot().state["calendar"]["selected"] == 30,
+          "Report selection failed to sync without losing the calendar day");
+  require(restored_calendar.apply({restored_calendar.snapshot().revision, "opening", "complete"}).ok &&
+              restored_calendar.snapshot().state["opening_created"] == true,
+          "Completed opening lost its cup preview marker");
+  restored_calendar.save(root / "reports.ui.json", default_desktop());
+  DemoSource restored_reports(calendar_world);
+  restored_reports.load(root / "reports.ui.json");
+  require(restored_reports.snapshot().state == restored_calendar.snapshot().state,
+          "Report state or completed opening failed to round-trip");
+  auto old_reports = Json::parse(bmh::editor::read_file(root / "calendar.ui.json"));
+  old_reports.erase("reports");
+  old_reports.erase("opening_created");
+  write(root, "old-reports.ui.json", old_reports);
+  restored_reports.load(root / "old-reports.ui.json");
+  require(valid_demo_reports(restored_reports.snapshot().state["reports"], *calendar_world) &&
+              restored_reports.snapshot().state["reports"]["league"] == "comp:other" &&
+              restored_reports.snapshot().state["opening_created"] == false,
+          "Old checkpoint migration lost the selected league or invented a draw");
+  const auto accepted_reports = restored_reports.snapshot();
+  auto bad_reports = Json::parse(bmh::editor::read_file(root / "reports.ui.json"));
+  bad_reports["reports"]["round"] = -1;
+  write(root, "bad-reports.ui.json", bad_reports);
+  rejected = false;
+  try {
+    restored_reports.load(root / "bad-reports.ui.json");
+  } catch (const std::exception &) {
+    rejected = true;
+  }
+  require(rejected && restored_reports.snapshot().state == accepted_reports.state &&
+              restored_reports.snapshot().revision == accepted_reports.revision &&
+              !restored_reports.apply({accepted_reports.revision, "reports",
+                                        {{"kind", "league"}, {"value", "missing"}}}).ok &&
+              restored_reports.snapshot().state == accepted_reports.state,
+          "Rejected report load/action partially mutated the session");
   GuiAssets absent(root / "missing-gui");
   require(!absent.available(),
           "World resources were mistaken for GUI resources");

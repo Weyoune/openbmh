@@ -148,6 +148,27 @@ void App::ProcessEvent(Rml::Event &event) try {
        n = n->GetParentNode())
     if (n->GetId() == "native-ticket-layer")
       return;
+  if (!report_detail_kind_.empty() && popup_.empty()) {
+    const bool keyboard = type == "keydown";
+    const auto key = keyboard
+        ? Rml::Input::KeyIdentifier(event.GetParameter<int>("key_identifier", 0))
+        : Rml::Input::KI_UNKNOWN;
+    if ((keyboard && key == Rml::Input::KI_ESCAPE) ||
+        (type == "mouseup" && event.GetParameter<int>("button", 0) == 1)) {
+      report_detail_action("report-detail-close", nullptr);
+      event.StopImmediatePropagation();
+      return;
+    }
+    bool inside = false;
+    for (auto *n = event.GetTargetElement(); n && n != doc_; n = n->GetParentNode())
+      if (n->GetId() == "report-detail-layer") inside = true;
+    if (!inside && (type == "click" || type == "dblclick" || type == "mousedown" ||
+                    type == "mouseup" || (keyboard && key != Rml::Input::KI_TAB))) {
+      event.StopImmediatePropagation();
+      return;
+    }
+  } else if (report_detail_kind_.empty() && popup_.empty() && report_picker_event(event))
+    return;
   if (type == "mouseup" && event.GetParameter<int>("button", 0) == 1) {
     if (scene_ == "desktop" && !menu_.empty() && popup_.empty()) {
       menu_.clear();
@@ -291,14 +312,16 @@ void App::ProcessEvent(Rml::Event &event) try {
     if (key == Rml::Input::KI_TAB &&
         (!menu_.empty() || !popup_.empty() || scene_ != "desktop")) {
       Rml::ElementList controls;
-      auto *root = !popup_.empty() ? element("popup") : element("canvas");
+      auto *root = !popup_.empty() ? element("popup")
+                   : !report_detail_kind_.empty() ? element("report-detail-layer")
+                                                   : element("canvas");
       root->QuerySelectorAll(
-          controls, !popup_.empty()
+          controls, !popup_.empty() || !report_detail_kind_.empty()
                         ? "button,input,select"
                         : ".window button,.window input,.window select");
       controls.erase(std::remove_if(controls.begin(), controls.end(),
                                     [](auto *n) {
-                                      return !n->IsVisible() ||
+                                      return !n->IsVisible(true) ||
                                              n->HasAttribute("disabled");
                                     }),
                      controls.end());
@@ -310,6 +333,10 @@ void App::ProcessEvent(Rml::Event &event) try {
         const auto next = (old + (backwards ? -1 : 1) + int(controls.size())) %
                           int(controls.size());
         controls[size_t(next)]->Focus(true);
+        if (controls[size_t(next)]->GetId().starts_with("report-detail-player-") ||
+            controls[size_t(next)]->GetId().starts_with("report-club-"))
+          controls[size_t(next)]->ScrollIntoView(
+              Rml::ScrollIntoViewOptions(Rml::ScrollAlignment::Nearest));
         event.StopImmediatePropagation();
       }
       return;
@@ -347,6 +374,31 @@ void App::ProcessEvent(Rml::Event &event) try {
 void App::dispatch(const std::string &action, Rml::Element *target) {
   const auto id =
       target ? target->GetAttribute<Rml::String>("data-id", "") : std::string();
+  if (report_detail_action(action, target)) {
+    close_report_picker(false);
+    return;
+  }
+  if (report_picker_action(action, target))
+    return;
+  if (action == "report-sort" || action == "report-reset" || action == "report-round") {
+    Json change;
+    if (action == "report-sort")
+      change = {{"kind", "sort"}, {"view", menu_}, {"key", id}};
+    else if (action == "report-reset")
+      change = {{"kind", "reset"}};
+    else {
+      if (menu_ == "other" && snap().state.value("opening_created", false) &&
+          snap().state.at("reports").value("competition", 0) == 3)
+        return;
+      change = {{"kind", "round"}, {"step", std::stoi(id)}, {"other", menu_ == "other"}};
+    }
+    if (apply("reports", change)) {
+      close_report_picker(false);
+      focus_after_render_ = target->GetId();
+      refresh();
+    }
+    return;
+  }
   if (action == "popup-close") {
     popup_.clear();
     confirm_ = {};
@@ -932,12 +984,14 @@ void App::dispatch(const std::string &action, Rml::Element *target) {
     }
     static const std::set<std::string> available = {
         "tables", "strengths", "camp",     "settings",
-        "save",   "load",      "training", "tactics", "calendar"};
+        "save",   "load",      "training", "tactics", "calendar", "league", "other"};
     if (!available.contains(route)) {
       message("Diese native Ansicht wird im nächsten Menüpaket übertragen.");
       return;
     }
     menu_ = route;
+    report_picker_.clear();
+    report_detail_kind_.clear();
     if (route == "settings") {
       settings_category_ = "display";
       draft_preferences_ = nullptr;
@@ -1124,19 +1178,6 @@ void App::dispatch(const std::string &action, Rml::Element *target) {
     });
     return;
   }
-  if (action == "player-detail") {
-    if (const auto *p = world_->find("players", id))
-      message(world_->name(*p) + " · Stärke " +
-              std::to_string(
-                  p->value("attributes", Json::object()).value("strength", 0)));
-    return;
-  }
-  if (action == "club-detail") {
-    if (const auto *c = world_->find("clubs", id))
-      message(world_->name(*c) + " · " +
-              std::to_string(world_->squad(id).size()) + " Spieler");
-    return;
-  }
   if (action == "squad-tactics") {
     menu_ = "tactics";
     refresh();
@@ -1187,13 +1228,11 @@ void App::change(Rml::Element *target) {
     }
     return;
   }
-  if ((kind == "manager-country" || kind == "table-country") &&
-      value == country_)
+  if (kind == "manager-country" && value == country_)
     return;
-  if ((kind == "manager-league" || kind == "table-league") && value == league_)
+  if (kind == "manager-league" && value == league_)
     return;
-  if (kind == "manager-country" || kind == "manager-league" ||
-      kind == "table-country" || kind == "table-league")
+  if (kind == "manager-country" || kind == "manager-league")
     focus_after_render_ = target->GetId();
   if (kind == "manager-country" || kind == "manager-league") {
     if (!manager_picker_)
@@ -1206,15 +1245,6 @@ void App::change(Rml::Element *target) {
     refresh();
   } else if (kind == "manager-strength") {
     selections_["manager-strength"] = value;
-  } else if (kind == "table-country") {
-    country_ = value;
-    league_.clear();
-    refresh();
-  } else if (kind == "table-league") {
-    league_ = value;
-    refresh();
-  } else if (kind == "table-scope") {
-    selections_["table-scope"] = value;
   }
 }
 void App::input(Rml::Element *target) {
@@ -1331,6 +1361,10 @@ void App::script() {
             editor::path(command.at("path").get<std::string>()),
             Json{{"scene", scene_},
                  {"menu", menu_},
+                 {"report_picker", report_picker_},
+                 {"report_detail", {{"kind", report_detail_kind_},
+                                     {"club", report_detail_club_},
+                                     {"player", report_detail_player_}}},
                  {"desktop", desktop_},
                  {"demo", source_ ? snap().state : Json()}}
                 .dump(2));

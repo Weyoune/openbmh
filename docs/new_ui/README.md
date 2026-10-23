@@ -19,6 +19,7 @@ Implementierung in der Spiel-Engine.
 | Training | [Übungen, Kader, Intensität und Demo-Automatik](desktop/training/README.md) |
 | Taktik | [Interaktive Diagramme und Einsatzregler](desktop/tactics/README.md) |
 | Kalender | [Zwölf Monate, transponierte Wochen und Ligavorschau](desktop/calendar/README.md) |
+| Berichte | [Tabellen, Stärken, Ligaspiele, übrige Spiele und Profile](desktop/reports/README.md) |
 | Transfers | [Ablöse-Kasten und Positionsfilter](desktop/transfers/README.md) |
 
 Jeder Bereich nennt die geprüfte Quelle, bestehende Funktionen und offene

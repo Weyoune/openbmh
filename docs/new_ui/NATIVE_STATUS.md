@@ -26,8 +26,8 @@ wird ausdrücklich mit `OPENBMH_BUILD_MODERN_UI=ON` gebaut.
 - Eintrittspreis-Popover: 330 × 196 Punkte, Entwurf, gesonderte Bestätigung,
   Abbrechen, Fehler-/Revisionsschutz und Tastaturbedienung.
 - Trainingslager: drei Karten, 18 Angebote, eigene GUI-Bilder und lokale
-  Vormerkung. Tabellen/Stärken sowie Speichern/Laden sind als erste native
-  Ansichten vorhanden; ihr vollständiger Bedienungsabgleich bleibt offen.
+  Vormerkung. Speichern/Laden sind als erste native Ansichten vorhanden;
+  ihr vollständiger Bedienungsabgleich bleibt offen.
 - Separate UI-Demostände und Desktopansichten. Ansichten speichern zusätzlich
   einen Screenshot; die Standardansicht kann nicht gelöscht werden.
 - [Training](desktop/training/README.md): neun Übungen, vier Arten, Kader mit
@@ -39,19 +39,24 @@ wird ausdrücklich mit `OPENBMH_BUILD_MODERN_UI=ON` gebaut.
   Wochentagsanordnung, Tageswahl und Länder-/Ligavorschau; 18/20 Vereine,
   Schaltjahre und gespeicherte Auswahl werden berücksichtigt.
 
+- [Berichte](desktop/reports/README.md): Tabellen und Stärken mit Sortierung,
+  Länder-/Ligaauswahl und 18/20 Zeilen; Ligaspiele und übrige Spiele mit
+  Rundennavigation. Gemeinsame Auswahlmenüs sowie Vereins-, Kader- und
+  Spielerprofile einschließlich Wappen und Porträts. Ergebnisse, Tabellen
+  und Qualifikationsfarben bleiben ausdrücklich Demo-Projektionen.
+
 **Anstoß führt keine Aktion aus**, weder per Maus noch per Tastatur. Das gilt
 auch für die direkte Aktionsschnittstelle des Demoanbieters.
 
 ## Noch offen
 
-Die übrigen Desktop-Untermenüs werden anschließend einzeln vom HTML-Mockup
-übertragen. Für sie erscheinen derzeit keine vereinfachten Ersatzlayouts.
-Der Einstellungsdialog, die vollständigen Widgetinhalte, Sortierung/Details,
+Die übrigen Desktop-Untermenüs werden in zusammengehörigen Paketen vom
+HTML-Mockup übertragen. Für sie erscheinen derzeit keine vereinfachten Ersatzlayouts.
+Der Einstellungsdialog, die vollständigen Widgetinhalte,
 Mod-Importkomfort und dauerhafte globale Voreinstellungen sind noch nicht
 vollständig. Übersetzungen, echte Engine-Anbindung und Plattform-Abnahme
 unter Windows/macOS folgen später. Dies ist kein freigegebenes Test-Release.
-Die [QA-Befundliste](qa-findings.md) nennt insbesondere noch fehlende
-Sortierung und Detailpfade der ersten Tabellen-/Stärkenansichten.
+Die [QA-Befundliste](qa-findings.md) hält die noch offenen Abweichungen nach.
 
 ## Architekturgrenze für die Engine
 
@@ -77,8 +82,8 @@ python3 tools/modern_ui/prepare_gui_assets.py \
   --mockup /path/to/bmh_4k_ui --output /path/to/gui-resources
 cmake -S . -B build-modern -DOPENBMH_BUILD_MODERN_UI=ON \
   -DBMH_MODERN_GUI_ASSETS=/path/to/gui-resources
-cmake --build build-modern --target openbmh_play modern_ui_core_tests modern_ticket_document_tests
-ctest --test-dir build-modern -R '^modern_(ui_core|ticket_)' --output-on-failure
+cmake --build build-modern --target openbmh_play modern_ui_core_tests modern_reports_tests modern_ticket_document_tests
+ctest --test-dir build-modern -R '^modern_(ui_core|reports_|ticket_)' --output-on-failure
 ./build-modern/OpenBMH --modern-ui-demo --mod /path/to/Diamond_Modern.obw
 ```
 

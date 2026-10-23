@@ -6,6 +6,7 @@
 #include "launch/rml_video.hpp"
 #include "modern/ui/controls.hpp"
 #include "modern/ui/demo_calendar.hpp"
+#include "modern/ui/demo_reports.hpp"
 #include "modern/ui/demo_sports.hpp"
 #include "modern/ui/desktop.hpp"
 #include "modern/ui/gui_assets.hpp"
@@ -27,6 +28,7 @@
 #include <iomanip>
 #include <nfd.hpp>
 #include <optional>
+#include <RmlUi/Core/ScrollTypes.h>
 #include <sstream>
 
 namespace bmh::modern_ui {
@@ -304,6 +306,10 @@ class App final : public Rml::EventListener {
   bool keyboard_navigation_ = false;
   std::string last_rendered_menu_;
   std::optional<float> training_scroll_;
+  std::optional<float> report_scroll_;
+  std::string last_report_state_, report_picker_, report_detail_kind_,
+      report_detail_club_, report_detail_player_, report_detail_return_focus_,
+      report_option_to_scroll_;
   float device_ratio_ = 1.f;
   Json desktop_ = Json::object(), saved_desktop_ = Json::object(),
        options_ = Json::object();
@@ -595,7 +601,17 @@ class App final : public Rml::EventListener {
   std::string render_desktop();
   void init_desktop();
   std::string widget(const std::string &, const Json &);
-  std::string render_table(bool strengths = false, bool indoor = false);
+  std::string render_reports(const std::string &);
+  std::string report_club_button(const std::string &, bool away = false);
+  std::string render_report_detail();
+  bool report_detail_action(const std::string &, Rml::Element *);
+  std::string report_picker(const std::string &, double, double);
+  std::vector<std::pair<std::string, std::string>>
+      report_picker_items(const std::string &) const;
+  std::string report_picker_value(const std::string &) const;
+  bool report_picker_event(Rml::Event &);
+  bool report_picker_action(const std::string &, Rml::Element *);
+  void close_report_picker(bool focus = false);
   std::string render_camp();
   std::string render_training();
   std::string render_tactics();
@@ -663,6 +679,11 @@ class App final : public Rml::EventListener {
     if (menu_ == "training" && last_rendered_menu_ == "training")
       if (auto *roster = element("training-roster"))
         training_scroll_ = roster->GetScrollTop();
+    report_scroll_.reset();
+    const auto report_state = source_ ? snap().state.at("reports").dump() : "";
+    if (menu_ == last_rendered_menu_ && report_state == last_report_state_)
+      if (auto *list = element("report-list"))
+        report_scroll_ = list->GetScrollTop();
     if (ticket_)
       ticket_->close(false);
     context_open_ = false;
@@ -684,6 +705,13 @@ class App final : public Rml::EventListener {
     if (!menu_.empty())
       markup += render_menu(menu_);
     element("canvas")->SetInnerRML(markup);
+    if (!report_detail_kind_.empty()) {
+      Rml::ElementList behind;
+      doc_->QuerySelectorAll(behind,
+          "#report-underlay button,#report-underlay input,#report-underlay select,.window .titlebar button");
+      for (auto *node : behind)
+        node->SetProperty("pointer-events", "none");
+    }
     const auto size = context_->GetDimensions();
     const auto background =
         img("background", size.x / scale_, size.y / scale_, false, true, 2048);
@@ -697,6 +725,7 @@ class App final : public Rml::EventListener {
                                     : "saturate(0.34) brightness(0.70)");
     needs_render_ = false;
     last_rendered_menu_ = menu_;
+    last_report_state_ = report_state;
     scale_chalk_shadow();
     dirty_ = true;
     if (focus_ticket_) {
@@ -707,6 +736,8 @@ class App final : public Rml::EventListener {
     if (!focus_after_render_.empty()) {
       if (auto *node = element(focus_after_render_))
         node->Focus(keyboard_navigation_);
+      if (focus_after_render_.starts_with("report-option-"))
+        report_option_to_scroll_ = focus_after_render_;
       focus_after_render_.clear();
     }
   }
@@ -755,6 +786,16 @@ class App final : public Rml::EventListener {
       if (auto *roster = element("training-roster"))
         roster->SetScrollTop(*training_scroll_);
       training_scroll_.reset();
+    }
+    if (report_scroll_) {
+      if (auto *list = element("report-list"))
+        list->SetScrollTop(*report_scroll_);
+      report_scroll_.reset();
+    }
+    if (!report_option_to_scroll_.empty()) {
+      if (auto *node = element(report_option_to_scroll_))
+        node->ScrollIntoView(Rml::ScrollIntoViewOptions(Rml::ScrollAlignment::Nearest));
+      report_option_to_scroll_.clear();
     }
     renderer_.Clear();
     renderer_.BeginFrame();
@@ -995,6 +1036,9 @@ public:
 #include "modern/ui/screens.inc"
 #include "modern/ui/sports_screens.inc"
 #include "modern/ui/calendar_screen.inc"
+#include "modern/ui/report_pickers.inc"
+#include "modern/ui/report_details.inc"
+#include "modern/ui/reports_screens.inc"
 } // namespace
 bool is_modern_world(const fs::path &file) {
   try {
