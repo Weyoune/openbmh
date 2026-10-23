@@ -5,6 +5,19 @@ und Dropdowns unabhängig mit dem privaten HTML-Mockup. Die Prüfung betrifft
 die bereits übertragenen nativen Ansichten; sie nimmt noch ausstehende Menüs
 nicht vorweg.
 
+## Maßstab für weitere Ansichten
+
+Die sichtbaren Texte müssen innerhalb ihrer tatsächlichen Zellen und Boxen
+liegen. Ein passendes Containermaß allein ist kein Nachweis. Namensspalten
+verwenden eine gemeinsame linke Kante für Überschrift und Inhalt mit
+Innenabstand. Zentrierte Bedienelemente werden auf beiden Achsen geprüft;
+links ausgerichtete Felder behalten die Ausrichtung der Vorlage.
+
+Bei Layoutänderungen gehören lange Namen, die längste Dropdownoption, Pfeile,
+Scrollleisten sowie die vertikale Textlage zu den tatsächlichen Renderer-
+Aufnahmen. Kürzung darf nur innerhalb der vorgesehenen Textzelle erfolgen.
+Ein Schatten oder Padding darf keine Überlappung mit der Nachbarspalte verdecken.
+
 ## Behobene Abweichungen
 
 Bei Full HD lagen die Fontboxen der acht Plus-/Minus-Buttons 8,4 Pixel über

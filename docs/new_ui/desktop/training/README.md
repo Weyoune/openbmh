@@ -1,9 +1,18 @@
 # Training · native Modern UI
 
 Stand: 23. Oktober 2026. Verbindliche Quelle: privates HTML-Mockup
-`bmh_4k_ui`, Revision `0bf0f2afd2ff8d5dabb96c795db2a5d0abaaf278`,
+`bmh_4k_ui`, Revision `a349d0a47733c8f5b0c330b0c60b31c86e5a2106`,
 `desktop/squad-menus.js`, `squad-menus.css` und `table-window.css`.
 Der native Port liegt in `src/modern/ui/sports_screens.inc`.
+
+Die Nutzerkorrektur vom 23. Oktober 2026 erweitert diese Vorlage: Die
+Namensspalte nutzt nun 760 statt 300 logische Pixel. Dafür werden Schwerpunkt
+(510 → 330) und Intensität (497 → 217) schmaler; Positions- und Stärkespalte
+behalten ihre Breite. Das HTML-Mockup und der native Port erhalten dieselbe
+Aufteilung. Der Namensinhalt steht mit 20 Pixeln Innenabstand an derselben
+linken Kante wie „Spieler“ im Kopf. Ein eigener 720 Pixel breiter Textbereich
+hält lange Namen innerhalb ihrer Zelle; drei Intensitätsbälle und die
+Schwerpunktauswahl bleiben vollständig bedienbar.
 
 ## Darstellung und Bedienung
 
@@ -44,6 +53,15 @@ Die Referenz hat 16 fiktive Spieler, der geprüfte Diamond-Kader 20.
 Diese Datenabweichung wird nicht durch Entfernen von Spielern kaschiert.
 
 ## QA
+
+Die Spaltenkorrektur ist in allen drei Themes bei 720p und 1080p mit echten
+Rendererbildern geprüft. Überschrift und Namen beginnen an derselben Kante;
+die Namens-, Select- und Pfeilmitten sowie die geöffneten Optionszeilen sind
+vertikal ausgerichtet. Alle 20 Namen des Prüfkaders passen vollständig.
+Auch nach Scrollen bleiben die drei Intensitätsbälle vor der Scrollleiste.
+Ein zusätzlicher Inline-Baseline-Abstand im nativen Select wurde durch
+Blockdarstellung beseitigt; die Optionszeilen nutzen ihren vollständigen
+Inhaltsbereich zur vertikalen Zentrierung.
 
 Zwölf tatsächliche Trainings-/Taktikläufe decken drei Themes und zwei Größen
 (1280 × 720, 1920 × 1080) ab. Geprüft: Budgets, Überlastungsfarbe,

@@ -96,9 +96,10 @@ std::string App::render_training() {
           "training-header\">";
   const std::array<const char *, 5> headings = {"Pos.", "Spieler", "Stärke",
                                                 "Schwerpunkt", "Intensität"};
-  const std::array<int, 5> widths = {90, 300, 95, 510, 497};
+  const std::array<int, 5> widths = {90, 760, 95, 330, 217};
   for (size_t i = 0; i < 5; ++i)
-    body += "<div style=\"width:" + std::to_string(widths[i]) + "dp;\">" +
+    body += "<div class=\"" + std::string(i == 1 ? "training-player-heading" : "") +
+            "\" style=\"width:" + std::to_string(widths[i]) + "dp;\">" +
             headings[i] + "</div>";
   body += "</div>";
   const auto players = world_->squad(t.value("club", ""));
@@ -116,19 +117,20 @@ std::string App::render_training() {
                     : pos == "mid" ? "MIT"
                     : pos == "fwd" ? "STU"
                                    : pos) +
-        "</div><div class=\"training-name\" style=\"width:300dp;\" title=\"" +
+        "</div><div class=\"training-name\" style=\"width:760dp;\"><span "
+        "class=\"training-name-text\" title=\"" +
         esc(world_->name(*p)) + "\">" + esc(world_->name(*p)) +
-        "</div><div style=\"width:95dp;\">" +
+        "</span></div><div style=\"width:95dp;\">" +
         std::to_string(
             p->value("attributes", Json::object()).value("strength", 0)) +
-        "</div><div style=\"width:510dp;\">";
+        "</div><div style=\"width:330dp;\">";
     auto selector =
         select("training-focus-" + std::to_string(i), focuses,
                std::to_string(row.value("focus", 0)), "training-focus");
     const auto end = selector.find('>');
     selector.insert(end, " data-player=\"" + esc(id) + "\" " +
                              (automatic[3] == true ? "disabled" : ""));
-    body += selector + "</div><div style=\"width:497dp;\">" +
+    body += selector + "</div><div style=\"width:217dp;\">" +
             training_balls("player", int(i), row.value("intensity", 0),
                            automatic[3].get<bool>(), id, 50, 9) +
             "</div></div>";
