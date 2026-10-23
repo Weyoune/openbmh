@@ -597,7 +597,10 @@ ModernSession::ModernSession(const std::filesystem::path& data, uint32_t watcom_
     g_ = modern::startup_state(exe_, db_, read_file(data / "M3.MEN"), read_file(data / "M3.DAT"));
     // A Modern world: give the Classic start the dimensions and data of the world (M3).
     if (std::getenv("MODERN_DEBUG")) std::fprintf(stderr, "session: classic start built\n");
-    if (const World* world = current_world()) world_report_ = expand_to_world(g_, *world);
+    if (const World* world = current_world()) {
+        world_report_ = expand_to_world(g_, *world);
+        install_world_referees(db_.raw_referee_properties, *world);
+    }
     if (std::getenv("MODERN_DEBUG")) std::fprintf(stderr, "session: world expanded\n");
     if (const auto resource = content::find(data)) {
         g_.display_start_year = resource->content->start_year;
@@ -648,6 +651,9 @@ ModernSession::ModernSession(const std::filesystem::path &data, uint32_t watcom_
             // A Modern career: the save names its world; the dimensions come from the world.
             auto saved = load_world_career(save_path, *world);
             install_world_dimensions(*world);
+            install_world_referees(db_.raw_referee_properties, *world);
+            if (saved.state.master_database_metadata.size() != db_.raw_referee_properties.size() * 2)
+                throw FormatError("the save and its world disagree on the referees");
             g_ = std::move(saved.state);
             rand_ = saved.random;
             game_ = saved.game;

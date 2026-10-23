@@ -21,6 +21,7 @@ namespace bmh::modern {
 struct ExpandReport {
     int league_clubs = 0, added_clubs = 0, added_players = 0, free_agents = 0;
     int fallback_nationalities = 0;      // players whose nation has no Classic code
+    int added_referees = 0;              // referees behind the 49 Classic ones (data format F9)
     std::vector<std::string> notes;      // moved league dates and similar remarks
 };
 
@@ -36,6 +37,11 @@ void install_world_dimensions(const World& world);
 // Installs the world's training camp catalogue, or the built-in one when the world has none
 // (docs/new_engine/trainingslager.md). Classic data keeps the eight original resorts.
 void install_training_camps(ModernState& g, const World& world);
+
+// Adds the property bytes of the referees the world added to the referee properties of the
+// Classic database (indexed by referee; the turn driver draws from them). Needed for a new
+// career after expand_to_world and for a loaded one; the names live in the game state.
+void install_world_referees(std::vector<uint8_t>& properties, const World& world);
 
 // The UTF-8 text of a name in the single-byte encoding of the engine texts (ISO 646-DE;
 // letters outside it lose their accents, other characters become '?').

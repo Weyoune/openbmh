@@ -184,6 +184,27 @@ World read_world(const obw::Documents& documents) {
         }
         w.players.push_back(std::move(pl));
     }
+    // Referees (data format F9): staff rows with role referee. Imported ones keep their
+    // Classic index and property byte; added ones follow the Classic ones in table order.
+    if (documents.contains("world/staff.json"))
+        for (const J& s : items(documents, "staff")) {
+            if (text(find(s, "role")) != "referee") continue;
+            WorldReferee r;
+            r.id = str(get(s, "id"));
+            r.name = text(find(s, "name"));
+            if (const J* a = find(s, "attributes")) {
+                r.strictness = integer(find(*a, "strictness"), 1);
+                r.perception = integer(find(*a, "perception"), 1);
+            }
+            if (r.strictness < 0 || r.strictness > 3 || r.perception < 0 || r.perception > 3)
+                fail("referee strictness or perception outside 0-3: " + r.id);
+            if (const J* legacy = find(s, "x-legacy")) {
+                r.legacy_index = integer(find(*legacy, "referee_index"), -1);
+                r.property = integer(find(*legacy, "property"), -1);
+                if (r.property > 0x7f) fail("referee property outside 0-127: " + r.id);
+            }
+            w.referees.push_back(std::move(r));
+        }
     return w;
 }
 

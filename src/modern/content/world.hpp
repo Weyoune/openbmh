@@ -53,6 +53,19 @@ struct WorldPlayer {
     uint32_t w35c = 0, w368 = 0, w364 = 0;
 };
 
+// A referee (staff row with role referee). The Classic property byte holds the perception
+// (bits 0-1: offside calls, fouls let go) and the strictness (bits 3-4: cards).
+struct WorldReferee {
+    std::string id, name;
+    int strictness = 1, perception = 1;  // 0-3 each
+    int legacy_index = -1;               // Classic referee 0-49, -1 for referees added by the data set
+    int property = -1;                   // the original property byte of an imported referee
+
+    uint8_t property_byte() const {
+        return property >= 0 ? uint8_t(property) : uint8_t(strictness << 3 | perception);
+    }
+};
+
 struct World {
     std::string id, title, data_revision;
     std::vector<std::string> requires_;
@@ -61,6 +74,7 @@ struct World {
     std::vector<WorldLeague> leagues;          // by league index 0-8
     std::vector<WorldClub> clubs;
     std::vector<WorldPlayer> players;
+    std::vector<WorldReferee> referees;         // in table order (data format F9)
     std::map<std::string, int> nationality;    // nation id -> Classic nationality code (0 = Germany)
     std::map<std::string, size_t> club_by_id;  // club id -> index in clubs
     // rule:training-camps with maps and camp details (data format F4); empty = built-in catalogue.

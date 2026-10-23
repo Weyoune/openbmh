@@ -175,6 +175,20 @@ int main(int argc, char** argv) {
         if (std::string(argv[1]).size() > 4 && std::string(argv[1]).substr(std::string(argv[1]).size() - 4) == ".obw") {
             auto package = modern::open_world_package(argv[1]);
             mount = std::make_unique<content::Mount>(argv[1], package.classic);
+            // MODERN_EXTRA_REFEREES=N: N synthetic referees behind the world's own (data format F9),
+            // until a data set brings its own larger pool.
+            if (const char* extra = std::getenv("MODERN_EXTRA_REFEREES")) {
+                auto world = std::make_shared<modern::World>(*package.world);
+                for (int i = 0; i < std::atoi(extra); ++i) {
+                    modern::WorldReferee r;
+                    r.id = "staff:sim-" + std::to_string(i);
+                    r.name = "Schiri " + std::to_string(i);
+                    r.strictness = i % 4;
+                    r.perception = (i / 4) % 4;
+                    world->referees.push_back(std::move(r));
+                }
+                package.world = world;
+            }
             modern::set_current_world(package.world);
         }
         modern::app::ModernSession session(argv[1], argc > 4 ? uint32_t(std::stoul(argv[4])) : 1u);
@@ -186,8 +200,8 @@ int main(int argc, char** argv) {
         std::string error;
         if (modern::current_world()) {
             const auto& r = session.world_report();
-            std::printf("modern world: %d league clubs (%d added), %d added players, %d free agents, %d fallback nationalities\n",
-                        r.league_clubs, r.added_clubs, r.added_players, r.free_agents, r.fallback_nationalities);
+            std::printf("modern world: %d league clubs (%d added), %d added players, %d free agents, %d fallback nationalities, %d added referees\n",
+                        r.league_clubs, r.added_clubs, r.added_players, r.free_agents, r.fallback_nationalities, r.added_referees);
             for (const auto& note : r.notes) std::printf("  league date moved: %s\n", note.c_str());
         }
         if (!session.confirm_manager(options, choice, error)) throw std::runtime_error("manager: " + error);

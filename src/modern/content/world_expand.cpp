@@ -411,7 +411,23 @@ ExpandReport expand_to_world(ModernState& g, const World& world) {
             g.player_last[i] = p->last;
             g.player_nation[i] = p->nation;
         }
+    // Referees the data set added (data format F9): their names go to the referee pool and
+    // their name offsets behind the Classic ones in MasterDatabaseMetadata (u16 per referee).
+    // install_world_referees adds the matching property bytes to the database.
+    for (const WorldReferee& r : world.referees) {
+        if (r.legacy_index >= 0) continue;
+        const uint16_t at = append_name(g.referee_names, legacy_encoding(r.name));
+        g.master_database_metadata.push_back(uint8_t(at));
+        g.master_database_metadata.push_back(uint8_t(at >> 8));
+        ++report.added_referees;
+    }
+    if (g.master_database_metadata.size() / 2 > 0xff) fail("more than 255 referees");
     return report;
+}
+
+void install_world_referees(std::vector<uint8_t>& properties, const World& world) {
+    for (const WorldReferee& r : world.referees)
+        if (r.legacy_index < 0) properties.push_back(r.property_byte());
 }
 
 }  // namespace bmh::modern

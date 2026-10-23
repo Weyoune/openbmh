@@ -178,14 +178,16 @@ void match_weather(MatchGroup& grp, int m, const MatchdayContext& ctx, GameRando
         // Range(1): a referee not yet chosen today
         std::vector<uint8_t>& refs = *ctx.referees;
         // OpenBMH deviates from the original: in Modern worlds a referee may take a second match on a day with more matches than referees.
-        // Modern: a day can have more matches than the 49 referees (larger international
-        // leagues on the dates of the German leagues). Once every referee has a match, one
-        // may referee a second match that day (DIFFERENCES.md); Classic draws until a free one.
+        // Modern: a day can have more matches than referees (larger international leagues on
+        // the dates of the German leagues). Once every referee has a match, one may referee a
+        // second match that day (DIFFERENCES.md); Classic draws until a free one.
+        // The pool is the world's (data format F9): referees 1..size-1, 49 with Classic data.
+        const int last = int(refs.size()) - 1;
         bool free_referee = false;
-        for (int k = 1; k <= 0x31 && !free_referee; ++k) free_referee = !(refs.at(size_t(k)) & 0x80);
+        for (int k = 1; k <= last && !free_referee; ++k) free_referee = !(refs.at(size_t(k)) & 0x80);
         int r;
         do {
-            r = game.range(1, 0x31);
+            r = game.range(1, last);
         } while (free_referee && (refs.at(size_t(r)) & 0x80));
         refs.at(size_t(r)) |= 0x80;
         grp.desc.at(0x10 + size_t(m)) = uint8_t(r);

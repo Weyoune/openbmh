@@ -20,7 +20,7 @@ Status: *geplant* (noch nicht in der Engine), *umgesetzt* (Engine liest/prüft e
 | F6 | Kader | bis 24 Plätze je Verein, Mindestgröße | M3 | Engine: 24 Plätze je Ligaverein; mehr als 24 Spieler werden abgelehnt |
 | F7 | Finanzen | Finanzangaben für Vereine ohne Classic-Startregel | M5 | geplant |
 | F8 | Spielstand | `save_profile: modern-career-v1` | M6 | Engine erledigt: Spielstand nennt seine Welt (ID, Revision), enthält nur die Karriere |
-| F9 | Schiedsrichter | eigener Schiedsrichter-Pool der Welt, mehr als 49 | M5 | geplant (Engine nutzt bis dahin 49 und lässt Doppeleinsätze zu) |
+| F9 | Schiedsrichter | eigener Schiedsrichter-Pool der Welt, mehr als 49 | M5 | Engine erledigt (Pool aus `staff`, neu: `perception`); Daten folgen mit 1.4 |
 
 ## F1 · Manifest
 
@@ -113,10 +113,19 @@ Die bestehende Regel `rule:training-camps` (Typ `training_camps`) bleibt und wir
 ## F9 · Schiedsrichter
 
 - Heute kommen die 49 Schiedsrichter (plus Platzhalter 0) aus der Original-Datenbank: Namen im Namenspool, je ein Eigenschaftsbyte (`RefereeProperties`). Pro Spieltag erhält jedes Spiel einen noch freien Schiedsrichter. Mit den vergrößerten internationalen Ligen gibt es Tage mit bis zu 84 Ligaspielen; die Engine lässt deshalb vorübergehend Doppeleinsätze zu.
-- Geplant für Datenrevision 1.4: Die Welt führt Schiedsrichter als `staff`-Zeilen mit `role: referee`, Name (Vor- und Nachname), Nation und `x-legacy.referee_index` für die Originale. Neu ist ein Eigenschaftswert `strictness` (0–255, Bedeutung wie das Original-Eigenschaftsbyte).
+- Die Welt führt Schiedsrichter schon heute als `staff`-Zeilen mit `role: referee` (Revision 1.3: die 50 Originale mit `x-legacy.referee_index` 0–49 und `x-legacy.property`, dem Original-Eigenschaftsbyte).
+- Das Eigenschaftsbyte hat zwei Werte, die die Spiele beeinflussen:
+  - `perception` (Bits 0–1, 0–3): Abseits-Entscheidungen und übersehene Fouls;
+  - `strictness` (Bits 3–4, 0–3): Karten.
+- **Neue Schiedsrichter (ab Revision 1.4):** `staff`-Zeilen ohne `x-legacy`, Pflichtfelder sind `id`, `name` und `role: referee`. Dazu `attributes.strictness` und `attributes.perception` (je 0–3, fehlend = 1); eine Nation ist optional. Sie folgen in Tabellenreihenfolge auf die Originale (Index 50, 51, …), höchstens 255 insgesamt. Die Originale behalten ihr Eigenschaftsbyte aus `x-legacy.property`.
 - Empfehlung: mindestens 100 Schiedsrichter, damit auch Tage mit Pokalspielen ohne Doppeleinsatz auskommen.
-- **Engine (mit M5):** Poolgröße aus der Welt statt fest 49; Eigenschaften und Namen aus den `staff`-Zeilen; Doppeleinsatz nur noch als Rückfall, wenn der Pool trotzdem erschöpft ist.
-- **Editor:** Schiedsrichterliste anzeigen und bearbeiten (Name, Nation, Strenge), neue Schiedsrichter anlegen; Prüfung auf eindeutige IDs und Strenge im Bereich.
+- **Engine: erledigt.**
+  - Die Poolgröße kommt aus der Welt.
+  - Namen gehen in den Namenspool (Einzelbyte-Kodierung wie bei den Vereinen), das Eigenschaftsbyte ist `strictness << 3 | perception`.
+  - Ein Doppeleinsatz ist nur noch der Rückfall, wenn der Pool erschöpft ist.
+  - Ein Spielstand passt nur zu einer Welt mit gleich vielen Schiedsrichtern.
+  - Test ohne neuen Datensatz: `MODERN_EXTRA_REFEREES=N modern_season_sim …`.
+- **Editor:** Schiedsrichterliste anzeigen und bearbeiten (Name, Nation, Strenge, Wahrnehmung), neue Schiedsrichter anlegen; Prüfung auf eindeutige IDs, Werte 0–3 und höchstens 255 Schiedsrichter.
 
 ## Modern-Prüfung (Engine und Editor)
 
