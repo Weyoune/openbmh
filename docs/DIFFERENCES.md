@@ -31,6 +31,7 @@ describe deliberate changes; they are not a list of every known compatibility li
 - [src/modern/app/modern_session.cpp](../src/modern/app/modern_session.cpp): supports designated set-piece record initialization and validation.
 - [src/modern/app/modern_session.cpp](../src/modern/app/modern_session.cpp): native saves do not consume gameplay randomness for encryption.
 - [src/modern/content/world_expand.cpp](../src/modern/content/world_expand.cpp): Modern worlds have league sizes, clubs and players of their own; players whose nation has no single-byte nationality code carry a substitute foreign code.
+- [src/modern/game/career.cpp](../src/modern/game/career.cpp): in a Modern world a club's place in the strength band of its league follows the data set's ranking of the squads instead of the table place, and its players keep their relative values (balance.md).
 - [src/modern/game/career.cpp](../src/modern/game/career.cpp): skips reserved calendar positions when assigning a joining manager to a club.
 - [src/modern/game/career.hpp](../src/modern/game/career.hpp): uses the supported player-generation ranges and excludes reserved calendar positions when assigning managers.
 - [src/modern/game/desk_actions.cpp](../src/modern/game/desk_actions.cpp): uses the supported transfer-fee arithmetic and designated set-piece fields.
@@ -45,6 +46,7 @@ describe deliberate changes; they are not a list of every known compatibility li
 - [src/modern/game/week.hpp](../src/modern/game/week.hpp): uses the enhanced assistant-training rules, retaining the selected skill until it reaches its maximum.
 - [src/modern/game/weekly.cpp](../src/modern/game/weekly.cpp): uses the supported weekly-event configuration, with its rule switch disabled.
 - [src/modern/game/weekly.hpp](../src/modern/game/weekly.hpp): uses the supported weekly processing and transfer rule profile.
+- [src/modern/ui/demo_calendar.cpp](../src/modern/ui/demo_calendar.cpp): the native season follows its saved start year (including leap days), rather than the HTML's fixed 2027/28.
 - [src/ui/league_table.hpp](../src/ui/league_table.hpp): uses three points for a win in the supported rule profile.
 - [src/ui/pitch.cpp](../src/ui/pitch.cpp): supports owner-bound designated set-piece selection in the extended manager record.
 - [src/ui/save_load.cpp](../src/ui/save_load.cpp): focuses the host save filename on entry and selects an existing name for replacement.

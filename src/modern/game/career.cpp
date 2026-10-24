@@ -4,6 +4,9 @@
 #include "modern/game/career.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <utility>
+#include <vector>
 
 #include "game/messages.hpp"
 #include "game/schedule.hpp"
@@ -48,10 +51,88 @@ std::vector<uint16_t> startup_squad_list(const Database& db) {
     return slots;
 }
 
+namespace {
+
+// --- Modern worlds: the data set's players on the engine's strength scale (balance.md) --------
+// The values of a data set were never part of the play in the original (it draws new ones at
+// the career start), so their scale differs from club to club. Modern keeps who is strong:
+// the clubs of a league take the places of the league's strength band in the order of the
+// data set, and within a squad the players keep their distances to the club's level.
+
+// The club takes part when its squad has a player of the data set.
+bool world_club(const ModernState& g, int team) {
+    const SquadRange r = squad_range(team);
+    for (size_t s = r.first; s < r.first + r.count; s++)
+        if (keeps_world_values(g, g.squad_slots.at(s) & 0x0fff)) return true;
+    return false;
+}
+
+// The players of a squad by their mean of condition and technique, best first.
+std::vector<double> squad_values(const ModernState& g, int team) {
+    std::vector<double> v;
+    const SquadRange r = squad_range(team);
+    for (size_t s = r.first; s < r.first + r.count; s++) {
+        const int id = g.squad_slots.at(s) & 0x0fff;
+        if (id != 0x0fff) v.push_back((g.players.at(size_t(id)).condition() + g.players.at(size_t(id)).technique()) / 2.0);
+    }
+    std::sort(v.rbegin(), v.rend());
+    return v;
+}
+
+// The club's level in the data set: the mean of its best 14 players.
+double club_anchor(const ModernState& g, int team) {
+    const auto v = squad_values(g, team);
+    const size_t n = std::min<size_t>(14, v.size());
+    double sum = 0;
+    for (size_t i = 0; i < n; ++i) sum += v[i];
+    return n ? sum / double(n) : 0;
+}
+
+// Moves the data set's players of a squad to `level`: each keeps his distance to the club's
+// anchor, compressed (compress) to the spread of generated players (W(level +- 10 %), sd about
+// 5.8 % of the level) where the squad is wider. Condition and technique 10-99 as GeneratePlayer.
+void place_club(ModernState& g, int team, int level, bool compress) {
+    const double anchor = club_anchor(g, team);
+    double k = 1.0;
+    if (compress) {
+        const auto v = squad_values(g, team);
+        const size_t n = std::min<size_t>(14, v.size());
+        double var = 0;
+        for (size_t i = 0; i < n; ++i) var += (v[i] - anchor) * (v[i] - anchor);
+        const double sd = n > 1 ? std::sqrt(var / double(n)) : 0;
+        const double target = level * 0.2 / std::sqrt(12.0);
+        if (sd > target) k = target / sd;
+    }
+    auto place = [&](int value) {
+        return std::clamp(int(std::lround(level + (value - anchor) * k)), 10, 0x63);
+    };
+    const SquadRange r = squad_range(team);
+    for (size_t s = r.first; s < r.first + r.count; s++) {
+        const int id = g.squad_slots.at(s) & 0x0fff;
+        if (!keeps_world_values(g, id)) continue;
+        Player& p = g.players.at(size_t(id));
+        const uint32_t condition = uint32_t(place(p.condition())), technique = uint32_t(place(p.technique()));
+        p.w35c = (p.w35c & 0xffe0007fu) | condition << 14 | technique << 7;
+    }
+}
+
+}  // namespace
+
 void startup_players(ModernState& g, GameRandom& game, WatcomRandom& rand) {
     for (size_t i = 0; i < 0x36; i++) {
         const int level = rand.range(i < 0x16 ? 0x14 : 0x46, 0x5a);
-        modern::generate_player(g, int16_t(g.squad_slots.at((pool_end_slot() + 24) + i)), int16_t(level), game, rand);
+        const int id = int16_t(g.squad_slots.at((pool_end_slot() + 24) + i));
+        if (!keeps_world_values(g, id)) modern::generate_player(g, id, int16_t(level), game, rand);
+    }
+    // OpenBMH deviates from the original: in a Modern world a club's place in the strength band of its league follows the data set's ranking of the squads instead of the table place, and its players keep their relative values (balance.md).
+    std::vector<int> ranked(size_t(league_clubs()), -1);
+    for (int league = 0; league < kLeagueCount; ++league) {
+        std::vector<std::pair<double, int>> clubs;
+        const int first = league_first_team(league);
+        for (int team = first; team < first + int(kLeagueSizes[league]) && team < league_clubs(); ++team)
+            if (world_club(g, team)) clubs.emplace_back(-club_anchor(g, team), team);
+        std::stable_sort(clubs.begin(), clubs.end());
+        for (size_t i = 0; i < clubs.size(); ++i) ranked[size_t(clubs[i].second)] = int(i);
     }
     int previous = 0, index = -1;  // local_18, local_1c
     for (int team = 0; team < league_clubs(); team++) {
@@ -60,11 +141,13 @@ void startup_players(ModernState& g, GameRandom& game, WatcomRandom& rand) {
         previous = league;
         const uint32_t count = uint32_t(kLeagueSizes[league]);
         const uint32_t range = uint32_t(kLeagueStrength[league][1] - kLeagueStrength[league][0]);
-        const int level = int16_t(int((count - uint32_t(index)) * range * 100) / int(count) / 100) + kLeagueStrength[league][0];
+        const uint32_t place = ranked[size_t(team)] >= 0 ? uint32_t(ranked[size_t(team)]) : uint32_t(index);
+        const int level = int16_t(int((count - place) * range * 100) / int(count) / 100) + kLeagueStrength[league][0];
+        if (ranked[size_t(team)] >= 0) place_club(g, team, level, true);
         const SquadRange r = squad_range(team);
         for (size_t s = r.first; s < r.first + r.count; s++) {
             const int id = g.squad_slots.at(s) & 0x0fff;
-            if (id != 0x0fff) modern::generate_player(g, id, level | 0x1000, game, rand);
+            if (id != 0x0fff && !keeps_world_values(g, id)) modern::generate_player(g, id, level | 0x1000, game, rand);
         }
     }
 }
@@ -328,6 +411,11 @@ void set_club_strength(ModernState& g, int team, int mode, WatcomRandom& rand) {
         default: break;
     }
     level = int16_t(level);
+    // Modern world: the squad moves to the level as a whole, its players keep their distances.
+    if (world_club(g, team)) {
+        place_club(g, team, level, false);
+        return;
+    }
     const SquadRange r = squad_range(team);
     for (size_t s = r.first; s < r.first + r.count; s++) {
         const int id = g.squad_slots.at(s) & 0x0fff;

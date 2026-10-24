@@ -59,4 +59,11 @@ struct ModernState : GameState {
     ModernState(const GameState& g) : GameState(g) { season_hooks = &modern::season_hooks(); }
 };
 
+// A player who came from the data set (not a new person the engine made of his index): his
+// values are the data set's (docs/new_engine/balance.md). Without a world: nobody.
+inline bool keeps_world_values(const ModernState& g, int player) {
+    return player >= 0 && size_t(player) < g.world_player_id.size() && !g.world_player_id[size_t(player)].empty() &&
+           !g.world_player_id[size_t(player)].starts_with("player:gen-");
+}
+
 }  // namespace bmh::modern

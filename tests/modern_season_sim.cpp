@@ -11,6 +11,7 @@
 // Usage: season_sim <BMH data dir> [turns=60] [master club=0] [watcom seed=1] [strength=2]
 // Exit code: 0 no violation, 1 violations found, 2 the run stopped early (engine gap).
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <map>
@@ -260,6 +261,32 @@ int main(int argc, char** argv) {
             std::printf("modern world: %d league clubs (%d added), %d added players, %d free agents, %d fallback nationalities, %d added referees\n",
                         r.league_clubs, r.added_clubs, r.added_players, r.free_agents, r.fallback_nationalities, r.added_referees);
             for (const auto& note : r.notes) std::printf("  league date moved: %s\n", note.c_str());
+        }
+        // MODERN_SPREAD=1: strength of every league club (mean of condition and technique of its
+        // best 14 players) per league at the career start, for the balance (balance.md)
+        if (std::getenv("MODERN_SPREAD") && modern::current_world()) {
+            const auto& st = session.state();
+            for (int league = 0; league < 9; ++league) {
+                std::vector<double> clubs;
+                const int first = league_first_team(league);
+                for (int t = first; t < first + int(kLeagueSizes[league]); ++t) {
+                    std::vector<int> v;
+                    const auto r = squad_range(t);
+                    for (size_t s = r.first; s < r.first + r.count; ++s) {
+                        const int id = st.squad_slots[s] & 0xfff;
+                        if (id != 0xfff) v.push_back(st.players[size_t(id)].technique() + st.players[size_t(id)].condition());
+                    }
+                    std::sort(v.rbegin(), v.rend());
+                    double sum = 0; int n = 0;
+                    for (size_t i = 0; i < std::min<size_t>(14, v.size()); ++i) sum += v[i] / 2.0, ++n;
+                    clubs.push_back(n ? sum / n : 0);
+                    if (league < 2 && n && (sum / n < 60 || sum / n > 85)) std::printf("spread   club %d %s %.1f (%d players)\n", t, st.world_club_name.size() > size_t(t) ? st.world_club_name[size_t(t)].c_str() : "?", sum / n, int(v.size()));
+                }
+                double mean = 0; for (double c : clubs) mean += c; mean /= double(clubs.size());
+                double var = 0; for (double c : clubs) var += (c - mean) * (c - mean); var /= double(clubs.size());
+                std::printf("spread league %d: club strength (best 14) mean %.1f sd %.1f min %.1f max %.1f\n", league, mean, std::sqrt(var),
+                            *std::min_element(clubs.begin(), clubs.end()), *std::max_element(clubs.begin(), clubs.end()));
+            }
         }
         if (!session.confirm_manager(options, choice, error)) throw std::runtime_error("manager: " + error);
         ui::CareerInitializationResult init;

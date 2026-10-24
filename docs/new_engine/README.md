@@ -58,7 +58,7 @@ Für 0.3 gilt außerdem:
 | M4 | Trainingslager: 18 Lager, drei Karten, 6-Sterne-Wirkung | Engine erledigt (Katalog, Preis, 6-Sterne-Wirkung, Test); Saisonwirkung wird in M7 gemessen |
 | M5 | Datenrevision 1.4 des Modern-Datensatzes (privat), Wirtschaftsprüfung | offen |
 | M6 | Modern-Spielstände (`modern-career-v1`), Projektionen für die UI | Spielstände erledigt (Rundreise identisch); Projektionen offen |
-| M7 | Balance-Läufe und Anpassungen | offen |
+| M7 | Balance-Läufe und Anpassungen | begonnen: Spielerwerte des Datensatzes nach Rangfolge ([Balance](balance.md)); Langläufe offen |
 | M8 | Fußball-Almanach: alle Spiele mit Ereignissen und Aufstellungen ([Almanach](almanach.md)) | Engine erledigt (Aufzeichnung, Spielstand, IDs); UI und Projektionen offen |
 
 Details und Abnahmekriterien stehen in [Phasen](phasen.md).
