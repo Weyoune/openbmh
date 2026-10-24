@@ -539,12 +539,7 @@ static void install_league_sizes(const LeImage& exe) {
     kNewcomerFirst = exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
     kNewcomerCount = exe.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6);
     // EXE strings the engine posts (messages.hpp)
-    kContractEndsSoonText = exe.cstring(kEnglishCompetitions ? ::bmh::layout::EnglishContractExpiryWarningText : ::bmh::layout::ContractExpiryWarningText);
-    kMastersQualificationText = kEnglishCompetitions ? "Masters entry confirmed. Your participation bonus has been credited." : exe.cstring(::bmh::layout::MastersQualificationText);
-    kMastersWinnerText = kEnglishCompetitions ? "Masters title won. Your prize money has been credited." : exe.cstring(::bmh::layout::MastersWinnerText);
-    kIndoorInvitationText = kEnglishCompetitions ? "Indoor event entry bonus credited for " : exe.cstring(::bmh::layout::IndoorInvitationText);
-    kChampionshipBonusText = kEnglishCompetitions ? "League title bonus credited." : exe.cstring(::bmh::layout::ChampionshipBonusText);
-    kFriendlyPayerPrefixText = kEnglishCompetitions ? "Your share: " : exe.cstring(::bmh::layout::NationalFriendlyPayerPrefixText);
+    install_message_texts(exe);
 }
 
 CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_seed)
