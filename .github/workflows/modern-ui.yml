@@ -52,9 +52,9 @@ jobs:
       - name: Configure opt-in UI without external assets
         run: cmake -S . -B build-ui -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENBMH_BUILD_MODERN_UI=ON -DOPENBMH_BUILD_EDITOR=OFF -DBMH_DATA=
       - name: Compile native frontend and synthetic checks
-        run: cmake --build build-ui --target openbmh_play modern_ui_core_tests modern_ticket_document_tests modern_control_layout_tests modern_reports_tests modern_planning_tests modern_almanac_ui_tests modern_finance_ui_tests --parallel 2
+        run: cmake --build build-ui --target openbmh_play modern_ui_core_tests modern_ticket_document_tests modern_control_layout_tests modern_reports_tests modern_planning_tests modern_almanac_ui_tests modern_finance_ui_tests modern_environment_ui_tests modern_advertising_ui_tests modern_toto_ui_tests --parallel 2
       - name: Check controls, fonts, density and draft cancellation
-        run: ctest --test-dir build-ui -R "^modern_(ui_|ticket_|control_|reports_|planning_|almanac_ui_|finance_ui_)" --output-on-failure --output-junit modern-ui-results.xml
+        run: ctest --test-dir build-ui -R "^modern_(ui_|ticket_|control_|reports_|planning_|almanac_ui_|finance_ui_|environment_ui_|advertising_ui_|toto_ui_)" --output-on-failure --output-junit modern-ui-results.xml
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

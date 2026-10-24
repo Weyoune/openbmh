@@ -6,7 +6,11 @@
 #include "modern/ui/desktop.hpp"
 #include "modern/ui/gui_assets.hpp"
 #include "modern/ui/model.hpp"
+#include "modern/ui/demo_environment.hpp"
+#include "modern/ui/demo_advertising.hpp"
+#include "modern/ui/demo_toto.hpp"
 #include <chrono>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 
@@ -24,6 +28,42 @@ void table(const fs::path &root, const std::string &name, const Json &rows) {
   write(root,
         name == "assets" ? "assets/index.json" : "world/" + name + ".json",
         {{"schema", name + "@1.0"}, {"items", rows}});
+}
+void check_club_views(const fs::path &root, std::shared_ptr<const Catalog> world) {
+  DemoSource source(world);
+  auto initial = source.snapshot();
+  require(valid_demo_environment(initial.state, *world) && valid_demo_advertising(initial.state, *world) && valid_demo_toto(initial.state, *world), "Club preview initialization invalid");
+  require(source.apply({initial.revision, "environment", {{"kind", "level"}, {"index", 0}, {"value", 6}}}).ok, "Environment action failed");
+  auto changed = source.snapshot();
+  int slot = -1;
+  for (int i = 0; i < 16; ++i) if (changed.state["advertising"]["contracts"][size_t(i)]["sponsor"] == -1) {slot=i;break;}
+  require(slot >= 0, "No test offer slot");
+  const Json offer = {{"kind", "accept"}, {"slot", slot}, {"offer", 2}};
+  require(!source.apply({initial.revision, "advertising", offer}).ok && source.snapshot().state == changed.state && source.snapshot().revision == changed.revision, "Stale advertising quote changed source");
+  require(source.apply({changed.revision, "advertising", offer}).ok, "Valid advertising offer rejected");
+  changed = source.snapshot();
+  require(!source.apply({changed.revision, "advertising", offer}).ok && source.snapshot().state == changed.state, "Active advertising contract overwritten");
+  require(source.apply({changed.revision, "advertising", {{"kind", "spending"}, {"index", 2}, {"value", 7000}}}).ok, "Advertising budget rejected");
+  changed = source.snapshot();
+  for (const auto *key : {"cash", "deposit", "debt", "training", "tactics", "calendar", "reports", "finance", "contracts"})
+    require(changed.state.at(key) == initial.state.at(key), "Club previews changed unrelated state");
+  const auto saved = root / "club-preview-checkpoint.json";
+  source.save(saved, default_desktop());
+  source.apply({source.snapshot().revision, "environment", {{"kind", "level"}, {"index", 0}, {"value", 0}}});
+  source.load(saved);
+  require(source.snapshot().state == changed.state && !source.dirty(), "Club preview checkpoint did not roundtrip");
+  auto malformed = changed.state; malformed["desktop"] = default_desktop();
+  malformed["advertising"]["spending"][0] = "invalid";
+  {std::ofstream out(saved);out << malformed.dump();}
+  const auto before = source.snapshot(); bool threw = false;
+  try {source.load(saved);} catch (const std::exception &) {threw = true;}
+  require(threw && source.snapshot().state == before.state && source.snapshot().revision == before.revision, "Malformed club checkpoint partially loaded");
+  auto legacy = changed.state; legacy["desktop"] = default_desktop();
+  legacy.erase("environment"); legacy.erase("advertising"); legacy.erase("toto");
+  {std::ofstream out(saved);out << legacy.dump();}
+  source.load(saved); const auto migrated = source.snapshot().state;
+  require(migrated["environment"] == initial.state["environment"] && migrated["advertising"] == initial.state["advertising"] && migrated["toto"] == initial.state["toto"], "Legacy club fields not initialized");
+  require(migrated["cash"] == changed.state["cash"] && migrated["finance"] == changed.state["finance"], "Legacy migration reset wallet");
 }
 void check_finance_source(const fs::path &root,
                           const std::shared_ptr<const Catalog> &base) {
@@ -579,6 +619,7 @@ int main(int argc, char **argv) try {
               restored_planning.snapshot().state["reports"]["sorts"]["indoor"]["key"] == "points",
           "Old checkpoint lost league preview or failed planning/indoor migration");
   check_finance_source(root, world);
+  check_club_views(root, world);
   GuiAssets absent(root / "missing-gui");
   require(!absent.available(),
           "World resources were mistaken for GUI resources");

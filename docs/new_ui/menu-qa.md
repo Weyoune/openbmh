@@ -87,7 +87,22 @@ deshalb nicht ins öffentliche Quellcode-Repository. Öffentliche Zusammenfassun
   Die 20 ausgewählten Regressionstests bestehen nach Übernahme der parallel
   eingetroffenen Engineänderungen. Screenshots, UI-Demostände und Eingabeskripte
   liegen privat unter `docs/qa/finance-batch-2026-10-24/`.
-  Aktueller Katalog: **22 native und 15 noch offene Routen**.
+  Nach diesem Paket: **22 native und 15 noch offene Routen**.
 
 Die Finanzprüfung umfasst echte Linux-/OpenGL-Aufnahmen. Windows-/macOS-
 Laufzeitdarstellung wird dadurch nicht als abgenommen ausgegeben.
+
+- [Umfeld](desktop/environment/README.md), [Werbung](desktop/advertising/README.md)
+  und [TOTO](desktop/toto/README.md): weiteres gemeinsames Paket mit drei
+  Themes bei 720p/1080p. Direkte Förderstufen, Angebotsannahme, Geldentwürfe,
+  TOTO-Spalten und letzter Schein wurden durch die native Ereignisverarbeitung
+  geprüft. TOTO: 138 erfolgreiche Zustandsprüfungen, 18 vermessene
+  Layoutzustände und gezielte Schlussaufnahmen der korrigierten Elemente.
+  Echte Checkpoints und Neustarts ergänzen die Browser-/Rendererprüfung.
+  Die 24 Regressionstests bestehen. Private Nachweise:
+  `docs/qa/club-batch-2026-10-24/`.
+  Aktueller Katalog: **25 native und 12 noch offene Routen**.
+
+CSS-Hintergrundbilder werden in der HTML-QA zusätzlich vollständig dekodiert,
+bevor Screenshots entstehen. Das verhindert falsche Meldungen über fehlende
+oder abgeschnittene Atlaskacheln im Umfeld beziehungsweise in Werbung.

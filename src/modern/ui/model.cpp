@@ -2,6 +2,9 @@
 #include "modern/ui/model.hpp"
 #include "modern/ui/demo_almanac.hpp"
 #include "modern/ui/demo_finance.hpp"
+#include "modern/ui/demo_environment.hpp"
+#include "modern/ui/demo_advertising.hpp"
+#include "modern/ui/demo_toto.hpp"
 #include "modern/ui/demo_calendar.hpp"
 #include "modern/ui/demo_reports.hpp"
 #include "modern/ui/demo_sports.hpp"
@@ -87,6 +90,8 @@ DemoSource::DemoSource(std::shared_ptr<const Catalog> catalog)
   state_["reports"] = demo_reports(*catalog_);
   if (!migrate_demo_finance(state_, *catalog_, club))
     throw editor::Error("invalid_demo_finance");
+  if (!migrate_demo_environment(state_, *catalog_) || !migrate_demo_advertising(state_, *catalog_) || !migrate_demo_toto(state_, *catalog_))
+    throw editor::Error("invalid_demo_club");
   saved_ = state_;
 }
 Snapshot DemoSource::snapshot() const { return {revision_, catalog_, state_}; }
@@ -131,6 +136,11 @@ ActionResult DemoSource::apply(const Action &action) {
             {{"kind", "league"}, {"value", next["calendar"]["league"]}}, *catalog_);
         if (!error.empty()) return {false, revision_, error};
       }
+    } else if (action.kind == "environment" || action.kind == "advertising" || action.kind == "toto") {
+      const auto error = action.kind == "environment" ? edit_demo_environment(next, action.value, *catalog_)
+          : action.kind == "advertising" ? edit_demo_advertising(next, action.value, *catalog_)
+                                        : edit_demo_toto(next, action.value, *catalog_);
+      if (!error.empty()) return {false, revision_, error};
     } else if (action.kind == "finance") {
       const auto error = edit_demo_finance(next, action.value, *catalog_, next["managers"][0]["club"]);
       if (!error.empty()) return {false, revision_, error};
@@ -255,6 +265,8 @@ Json DemoSource::load(const fs::path &file) {
       throw editor::Error("invalid_focus");
   if (!migrate_demo_finance(data, *catalog_, club))
     throw editor::Error("invalid_demo_finance");
+  if (!migrate_demo_environment(data, *catalog_) || !migrate_demo_advertising(data, *catalog_) || !migrate_demo_toto(data, *catalog_))
+    throw editor::Error("invalid_demo_club");
   auto next = data;
   auto desktop = next.value("desktop", Json::object());
   if (!migrate_desktop(desktop))

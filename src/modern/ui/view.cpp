@@ -7,6 +7,9 @@
 #include "modern/ui/controls.hpp"
 #include "modern/ui/demo_calendar.hpp"
 #include "modern/ui/demo_finance.hpp"
+#include "modern/ui/demo_environment.hpp"
+#include "modern/ui/demo_advertising.hpp"
+#include "modern/ui/demo_toto.hpp"
 #include "modern/ui/demo_reports.hpp"
 #include "modern/ui/demo_sports.hpp"
 #include "modern/ui/desktop.hpp"
@@ -343,6 +346,12 @@ class App final : public Rml::EventListener {
   int contracts_tab_ = 2;
   uint64_t contracts_revision_ = 0;
   std::shared_ptr<const Catalog> contracts_world_;
+  int advertising_selected_ = -1, advertising_offer_ = 0;
+  uint64_t advertising_revision_ = 0;
+  std::shared_ptr<const Catalog> advertising_world_;
+  int toto_column_ = 0;
+  std::array<std::pair<int, int>, 6> toto_focus_{{{0,1},{0,1},{0,1},{0,1},{0,1},{0,1}}};
+  std::string toto_dialog_, toto_return_focus_;
   float device_ratio_ = 1.f;
   Json desktop_ = Json::object(), saved_desktop_ = Json::object(),
        options_ = Json::object();
@@ -556,6 +565,9 @@ class App final : public Rml::EventListener {
     renderer_.world(next);
     world_ = std::move(next);
     source_ = std::move(demo);
+    advertising_selected_ = -1; advertising_offer_ = 0; advertising_revision_ = 0; advertising_world_.reset();
+    toto_column_ = 0; toto_dialog_.clear();
+    for (auto &focus : toto_focus_) focus = {0, 1};
     amount_.reset();
     amount_select_all_ = amount_caret_end_ = false;
     contracts_dialog_.clear();
@@ -694,6 +706,14 @@ class App final : public Rml::EventListener {
   bool contracts_action(const std::string &, Rml::Element *);
   bool contracts_event(Rml::Event &);
   void close_contracts(bool restore = true);
+  std::string render_environment();
+  bool environment_action(const std::string &, Rml::Element *);
+  std::string render_advertising();
+  bool advertising_action(const std::string &, Rml::Element *);
+  bool advertising_event(Rml::Event &);
+  std::string render_toto();
+  bool toto_action(const std::string &, Rml::Element *);
+  bool toto_event(Rml::Event &);
   std::string render_almanac();
   bool almanac_action(const std::string &, Rml::Element *);
   std::string render_indoor();
@@ -763,6 +783,12 @@ class App final : public Rml::EventListener {
     // open. Never keep that menu's modal/input gate in the destination view.
     if (menu_ != last_rendered_menu_) {
       planning_dialog_.clear();
+      toto_dialog_.clear();
+      if (menu_ == "toto" && source_)
+        for (size_t c = 0; c < toto_focus_.size(); ++c) {
+          const int pick = snap().state.at("toto").at("columns")[c][0];
+          toto_focus_[c] = {0, pick < 0 ? 1 : pick};
+        }
       amount_.reset();
       contracts_dialog_.clear();
       contract_draft_ = Json();
@@ -799,10 +825,10 @@ class App final : public Rml::EventListener {
     if (!menu_.empty())
       markup += render_menu(menu_);
     element("canvas")->SetInnerRML(markup);
-    if (!report_detail_kind_.empty() || !planning_dialog_.empty() || !contracts_dialog_.empty()) {
+    if (!report_detail_kind_.empty() || !planning_dialog_.empty() || !contracts_dialog_.empty() || !toto_dialog_.empty()) {
       Rml::ElementList behind;
       doc_->QuerySelectorAll(behind,
-          "#report-underlay button,#report-underlay input,#report-underlay select,#contracts-underlay button,.window .titlebar button");
+          "#report-underlay button,#report-underlay input,#report-underlay select,#contracts-underlay button,#toto-underlay button,.window .titlebar button");
       for (auto *node : behind)
         node->SetProperty("pointer-events", "none");
     }
@@ -1206,6 +1232,12 @@ public:
 #include "modern/ui/finance_controls.inc"
 #include "modern/ui/contracts_screens.inc"
 #include "modern/ui/contracts_controls.inc"
+#include "modern/ui/environment_screens.inc"
+#include "modern/ui/environment_controls.inc"
+#include "modern/ui/advertising_screens.inc"
+#include "modern/ui/advertising_controls.inc"
+#include "modern/ui/toto_screens.inc"
+#include "modern/ui/toto_controls.inc"
 } // namespace
 bool is_modern_world(const fs::path &file) {
   try {

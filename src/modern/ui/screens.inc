@@ -883,6 +883,12 @@ std::string App::render_menu(const std::string &key) {
     body = render_friendlies();
   else if (key == "indoor")
     body = render_indoor();
+  else if (key == "environment")
+    body = render_environment();
+  else if (key == "advertising")
+    body = render_advertising();
+  else if (key == "toto")
+    body = render_toto();
   else if (key == "bank")
     body = render_bank();
   else if (key == "balance")

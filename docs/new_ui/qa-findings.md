@@ -32,7 +32,7 @@ gemeinsamen Controländerungen zusätzlich in mehreren Menüs nachgeprüft.
 Die erste Gesamterfassung enthält 36 Routen, davon zwölf native Aufnahmen
 und 24 ausstehende Ports. Diese historische Matrix bleibt unverändert.
 Der anschließend übertragene Kalender bekommt einen eigenen Vergleich;
-der aktuelle Runner erfasst 22 native Routen und 15 offene Ports.
+der aktuelle Runner erfasst 25 native Routen und 12 offene Ports.
 Spätere Meilensteine erfassen denselben Gesamtkatalog erneut.
 
 Siehe [QA-Ablauf](menu-qa.md), [Typografie](typography-qa.md) und
@@ -45,3 +45,9 @@ Das immobilienspezifische HTML-Seitenverhältnis war verzerrt und wurde auf
 die ursprüngliche 2×3-Atlaskachel korrigiert. Native Bilder bleiben proportional;
 der HTML-Randbeschnitt von 1 % ist als kleine verbleibende Bildabweichung
 im privaten Nachweis dokumentiert.
+
+Das Paket Umfeld/Werbung/TOTO wurde mit 24 Regressionstests sowie den drei
+Themes bei 720p/1080p geprüft. Korrigiert sind die Bandennummernausrichtung,
+der Abstand der Werbehinweise, die TOTO-Saisonzeile und die Bildbox der
+Kreuze. Die Referenzaufnahme wartet jetzt auch auf vollständig dekodierte
+CSS-Hintergrundbilder; frühe Teilbilder gelten nicht als Produktabweichung.

@@ -152,6 +152,7 @@ void App::ProcessEvent(Rml::Event &event) try {
   if (amount_event(event)) return;
   if (popup_.empty() && amount_trigger_event(event)) return;
   if (popup_.empty() && contracts_event(event)) return;
+  if (popup_.empty() && (advertising_event(event) || toto_event(event))) return;
   if (popup_.empty() && (bank_event(event) || finance_event(event))) return;
   if (!planning_dialog_.empty() && popup_.empty()) {
     const bool key_event = type == "keydown";
@@ -435,6 +436,7 @@ void App::ProcessEvent(Rml::Event &event) try {
 void App::dispatch(const std::string &action, Rml::Element *target) {
   const auto id =
       target ? target->GetAttribute<Rml::String>("data-id", "") : std::string();
+  if (environment_action(action, target) || advertising_action(action, target) || toto_action(action, target)) return;
   if (amount_action(action, target) || bank_action(action, target) || finance_action(action, target) || contracts_action(action, target)) return;
   if (almanac_action(action, target) || planning_action(action, target) || indoor_action(action, target)) return;
   if (report_detail_action(action, target)) {
@@ -1047,7 +1049,7 @@ void App::dispatch(const std::string &action, Rml::Element *target) {
     }
     static const std::set<std::string> available = {
         "tables", "strengths", "camp",     "settings",
-        "save",   "load",      "training", "tactics", "calendar", "league", "other", "postpone", "friendlies", "indoor", "almanac", "bank", "balance", "contracts"};
+        "save",   "load",      "training", "tactics", "calendar", "league", "other", "postpone", "friendlies", "indoor", "almanac", "bank", "balance", "contracts", "environment", "advertising", "toto"};
     if (!available.contains(route)) {
       message("Diese native Ansicht wird im nächsten Menüpaket übertragen.");
       return;
@@ -1434,6 +1436,8 @@ void App::script() {
                  {"planning_dialog", planning_dialog_},
                  {"bank_view", bank_view_}, {"bank_property", bank_property_}, {"bank_stock", bank_stock_},
                  {"balance_future", balance_future_},
+                 {"advertising_view", {{"selected", advertising_selected_}, {"offer", advertising_offer_}}},
+                 {"toto_view", {{"column", toto_column_}, {"dialog", toto_dialog_}}},
                  {"contracts_view", {{"dialog", contracts_dialog_}, {"player", contracts_player_}, {"tab", contracts_tab_}, {"draft", contract_draft_}}},
                  {"amount_editor", amount_ ? Json{{"title", amount_->request.title}, {"raw", amount_->raw}, {"review", amount_->review}, {"error", amount_error()}} : Json()},
                  {"source_revision", source_ ? Json(snap().revision) : Json()},

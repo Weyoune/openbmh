@@ -1,0 +1,36 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* Diamond 3.6: six budgets surrounding the club's crest, no additional footer. */
+.environment-ring {position:absolute;left:0;top:0;width:2612dp;height:1864dp;}
+.environment-card {position:absolute;padding:18dp;border:2dp var(--border);border-radius:20dp;background-color:var(--panel);color:var(--text);text-align:center;box-shadow:0dp 10dp 28dp #0002;}
+.environment-card h2 {position:absolute;left:18dp;right:18dp;top:18dp;height:36dp;margin:0;font-size:30dp;line-height:36dp;font-weight:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.environment-stars {position:absolute;left:18dp;right:18dp;top:66dp;height:58dp;padding:4dp;border:2dp var(--border);border-radius:12dp;background-color:var(--panel);display:flex;align-items:center;justify-content:center;}
+.environment-level {position:relative;display:flex;align-items:center;justify-content:center;flex:1;min-width:0;height:46dp;margin:0;padding:0;border:0dp;border-radius:7dp;background-color:transparent;font-size:40dp;}
+.environment-level.zero {flex:0.65;font-size:30dp;color:var(--muted);}
+.environment-level-icon {display:block;flex-shrink:0;width:40dp;height:40dp;}
+.environment-level-icon .image-frame {width:40dp;height:40dp;}
+.environment-zero-label {display:block;min-width:0;width:100%;max-width:100%;font-size:30dp;line-height:30dp;white-space:nowrap;text-align:center;}
+.environment-level.selected {background-color:var(--selected);}
+.environment-level:hover {background-color:var(--hover);}
+.environment-level:focus-visible {border:2dp var(--accent);}
+.environment-selection-line {position:absolute;left:0;right:0;bottom:0;height:2dp;display:block;pointer-events:none;background-color:#e5cd8c;}
+.environment-picture {position:absolute;overflow:hidden;border-radius:12dp;}
+.environment-caption {position:absolute;left:18dp;right:18dp;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text);}
+.environment-cost {display:block;min-width:0;width:100%;max-width:100%;height:37.8dp;font-size:28dp;line-height:37.8dp;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;}
+.environment-standing {display:block;min-width:0;width:100%;max-width:100%;height:36.75dp;padding-top:3dp;line-height:33.75dp;font-size:25dp;white-space:nowrap;text-align:center;color:var(--muted);}
+.environment-card.youth-a .environment-standing {color:var(--danger);}
+.environment-emblem {position:absolute;left:1106dp;top:640dp;width:400dp;height:400dp;pointer-events:none;}
+.environment-ball {position:absolute;left:0;top:0;width:400dp;height:400dp;filter:drop-shadow(#0005 0dp 12dp 18dp);}
+.environment-crest {position:absolute;left:112dp;top:112dp;width:176dp;height:176dp;padding:7dp;border:0dp;border-radius:88dp;background-color:#ffffff;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.environment-crest .image-frame {flex-shrink:0;}
+.environment-crest>span {display:block;font-size:30dp;line-height:36dp;color:#526779;}
+.environment-unavailable {position:absolute;left:40dp;right:40dp;top:700dp;font-size:32dp;line-height:46dp;text-align:center;color:var(--muted);}
+body.midnight .environment-card {border-color:#c5d9e726;background-color:#12243166;color:#dce6ee;}
+body.midnight .environment-stars {border-color:#c5d9e726;background-color:#111e2b66;}
+body.midnight .environment-level.zero {color:#a2b5c5;}
+body.midnight .environment-level.selected {background-color:#9cb9c52b;}
+body.midnight .environment-level:hover {background-color:#bfd6e32b;}
+body.midnight .environment-cost {color:#bad7df;}
+body.midnight .environment-standing {color:#a1b7c8;}
+body.midnight .environment-card.youth-a .environment-standing {color:#dfa69d;}
+body.silver .environment-card,body.silver .environment-stars {background-color:#f1f6fa80;}
+body.matchday .environment-card,body.matchday .environment-stars {background-color:#1d1e2466;}

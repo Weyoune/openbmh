@@ -1,6 +1,6 @@
 <rml>
 <head><title>OpenBMH</title><link type="text/rcss" href="theme.rcss"/><link type="text/rcss" href="ticket.rcss"/><link type="text/rcss" href="sports.rcss"/><link type="text/rcss" href="calendar.rcss"/><link type="text/rcss" href="reports.rcss"/><link type="text/rcss" href="report_details.rcss"/><link type="text/rcss" href="report_pickers.rcss"/><link type="text/rcss" href="indoor.rcss"/><link type="text/rcss" href="planning.rcss"/><link type="text/rcss" href="almanac.rcss"/><link type="text/rcss" href="finance.rcss"/>
-<link type="text/rcss" href="bank.rcss"/><link type="text/rcss" href="contracts.rcss"/><link type="text/rcss" href="amount.rcss"/></head>
+<link type="text/rcss" href="bank.rcss"/><link type="text/rcss" href="contracts.rcss"/><link type="text/rcss" href="amount.rcss"/><link type="text/rcss" href="environment.rcss"/><link type="text/rcss" href="advertising.rcss"/><link type="text/rcss" href="toto.rcss"/></head>
 <body class="midnight">
 <div id="background"></div>
 <div id="canvas"></div>

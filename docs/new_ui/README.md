@@ -20,6 +20,9 @@ Implementierung in der Spiel-Engine.
 | Taktik | [Interaktive Diagramme und Einsatzregler](desktop/tactics/README.md) |
 | Kalender | [Zwölf Monate, transponierte Wochen und Ligavorschau](desktop/calendar/README.md) |
 | Zahleneingabe | [Entwurf, Vorschläge und Bestätigung](desktop/number-entry/README.md) |
+| Umfeld | [Förderstufen, Betreuung und Jugend](desktop/environment/README.md) |
+| Werbung | [Banden, Trikot, TV und Budgets](desktop/advertising/README.md) |
+| TOTO | [Sechs Tipp-Spalten und Vormerkung](desktop/toto/README.md) |
 | Bank | [Sparbuch, Immobilien, Aktien und Kredit](desktop/bank/README.md) |
 | Bilanz | [Aktuelle Bilanz und Zukunftsplanung](desktop/balance/README.md) |
 | Verträge | [Kaderdaten, Angebote, Versicherung und Prämien](desktop/contracts/README.md) |

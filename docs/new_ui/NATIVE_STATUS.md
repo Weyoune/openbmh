@@ -69,6 +69,13 @@ wird ausdrücklich mit `OPENBMH_BUILD_MODERN_UI=ON` gebaut.
   Die gemeinsame Zahleneingabe bietet sechs Vorschlagswerte, Tastaturbedienung,
   lokale Entwürfe und eine zweite Bestätigung vor Geldänderungen.
 
+- [Umfeld](desktop/environment/README.md): sechs Förderbereiche mit jeweils
+  0–6 Sternen, Monatskostenvorschau, Jugendständen und eigenem Vereinswappen.
+- [Werbung](desktop/advertising/README.md): 14 Banden, Trikot- und TV-Verträge,
+  je drei Angebotsvarianten, drei Budgets und Vorschau der Gesamtsummen.
+- [TOTO](desktop/toto/README.md): roter Elferwette-Schein mit sechs unabhängigen
+  Spalten, Gesamteinsatz, Tippvorschlag, Vormerkung und letztem Schein.
+
 **Anstoß führt keine Aktion aus**, weder per Maus noch per Tastatur. Das gilt
 auch für die direkte Aktionsschnittstelle des Demoanbieters.
 

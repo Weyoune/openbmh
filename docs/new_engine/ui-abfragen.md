@@ -1,8 +1,8 @@
 # Abfragen für die neue Oberfläche (M6)
 
-Michaels Entscheidung: Die neue Oberfläche wird **je Menü** an die Modern-Engine angebunden. Jedes Menü bekommt feste Abfragen (und später Aktionen), die die Engine baut und hier dokumentiert; Codex stellt Menü für Menü vom Demo auf die Abfrage um. Die Demo bleibt nutzbar.
+Vereinbarter Ablauf: Die neue Oberfläche wird **je Menü** an die Modern-Engine angebunden. Jedes Menü bekommt feste Abfragen (und später Aktionen), die die Engine baut und hier dokumentiert; Codex stellt Menü für Menü vom Demo auf die Abfrage um. Die Demo bleibt nutzbar.
 
-**Reihenfolge (Michael):** Zuerst wird die GUI mit Demodaten fertig gebaut. Danach legt Codex je Menü fest, welche Daten es braucht, und die Engine liefert die passende Abfrage. Später soll alles auf ein durchgehendes JSON-Format umgestellt werden; die Antworten verwenden deshalb schon jetzt überall dieselben Teilobjekte, damit sie sich zu einem gemeinsamen JSON-Zustand zusammensetzen lassen.
+**Reihenfolge:** Zuerst wird die GUI mit Demodaten fertig gebaut. Danach legt Codex je Menü fest, welche Daten es braucht, und die Engine liefert die passende Abfrage. Später soll alles auf ein durchgehendes JSON-Format umgestellt werden; die Antworten verwenden deshalb schon jetzt überall dieselben Teilobjekte, damit sie sich zu einem gemeinsamen JSON-Zustand zusammensetzen lassen.
 
 ## Vertrag
 
