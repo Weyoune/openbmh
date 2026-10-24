@@ -40,6 +40,7 @@
 #include <stdexcept>
 #include <system_error>
 #include <algorithm>
+#include <set>
 #include <array>
 #include <atomic>
 #include <cctype>
@@ -798,6 +799,28 @@ ui::SelectionContext ModernSession::selection_context_for(const ModernState& sta
             }
         c.club_order.push_back(master);
     }
+    // A Modern world has more clubs than the original's master ids, and the clubs it added have
+    // none. The human chooses German clubs only (docs/new_engine); those keep their master ids.
+    // The picker needs the order up to its extra-team tabs (the amateur clubs behind all league
+    // clubs). A club without a valid unique master id there (one the world added) gets an unused
+    // one, so the order stays unique; only German clubs can be confirmed (confirm_manager).
+    if (current_world()) {
+        const size_t needed = size_t(world_layout().league_teams) +
+                              exe_.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6);
+        const int masters = int(db_.club_names.size());
+        c.club_order.resize(std::min(c.club_order.size(), needed));
+        std::set<int> used;
+        std::vector<size_t> invalid;
+        for (size_t t = 0; t < c.club_order.size(); ++t)
+            if (c.club_order[t] < 0 || c.club_order[t] >= masters || !used.insert(c.club_order[t]).second) invalid.push_back(t);
+        int spare = 0;
+        for (size_t t : invalid) {
+            while (spare < masters && used.count(spare)) ++spare;
+            if (spare >= masters) throw FormatError("manager selection: not enough master ids for the world's clubs");
+            c.club_order[t] = spare;
+            used.insert(spare);
+        }
+    }
     return c;
 }
 
@@ -976,6 +999,11 @@ bool ModernSession::confirm_manager(const ui::SetupOptions& options, const ui::M
     CareerManager c;
     c.name = choice.name;
     c.team = runtime_club(choice.master_club);
+    // Modern 0.3: a human manages a German club only (docs/new_engine)
+    if (current_world() && (c.team < 0 || c.team >= modern::german_clubs())) {
+        error = "only German clubs can be managed";
+        return false;
+    }
     c.league = choice.start_league;
     c.strength = choice.strength;
     c.portrait = choice.portrait;

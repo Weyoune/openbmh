@@ -10,7 +10,7 @@
 #include <sstream>
 #include <string_view>
 
-#include "app/career_session.hpp"
+#include "app/session.hpp"
 #include "formats/m3d.hpp"
 #include "game/messages.hpp"
 #include "game/schedule.hpp"

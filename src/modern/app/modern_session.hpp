@@ -53,6 +53,8 @@
 #include "ui/opportunities.hpp"
 #include "ui/other_games_state.hpp"
 
+namespace bmh::app { class TransferActions; }
+
 namespace bmh::modern::app {
 
 ui::OutgoingTransferEditorState loan_return_offer_editor_projection(
@@ -116,6 +118,8 @@ struct AutomationRequest {
 
 class ModernSession {
     friend class TransferActions;
+    // the console's transfer actions, compiled against this session (openbmh_modern_cli, app/session.hpp)
+    friend class ::bmh::app::TransferActions;
 public:
     struct LineupCheckpoint {
         ModernState state;

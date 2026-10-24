@@ -28,7 +28,7 @@
 #include <string_view>
 #include <vector>
 
-#include "app/career_session.hpp"
+#include "app/session.hpp"
 #include "game/balance_plan.hpp"
 #include "game/bank_credit.hpp"
 #include "game/desk_actions.hpp"

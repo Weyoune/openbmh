@@ -697,6 +697,42 @@ add_executable(openbmh_cli
     src/cli/json.cpp
     ${BMH_APP_SESSION_SOURCE})
 target_link_libraries(openbmh_cli PRIVATE bmh_launcher bmhui bmhlaunch)
+
+# The same console on the Modern session (docs/new_engine): play a Modern world in the text
+# console until the new interface is connected. The console and its desk/window actions are
+# compiled a second time with OPENBMH_MODERN_SESSION (src/app/session.hpp).
+add_executable(openbmh_modern_cli
+    src/cli/main.cpp
+    src/cli/protocol.cpp
+    src/cli/console/console.cpp
+    src/cli/console/parser.cpp
+    src/cli/console/windows_start.cpp
+    src/cli/console/windows_desk.cpp
+    src/cli/console/windows_tables.cpp
+    src/cli/console/windows_club.cpp
+    src/cli/console/windows_money.cpp
+    src/cli/console/windows_office.cpp
+    src/cli/console/windows_squad.cpp
+    src/cli/console/windows_transfer.cpp
+    src/cli/console/windows_info.cpp
+    src/cli/console/windows_match.cpp
+    src/cli/console/windows_friendly.cpp
+    src/cli/console/windows_reschedule.cpp
+    src/cli/console/windows_balance.cpp
+    src/cli/console/windows_environment.cpp
+    src/cli/console/windows_state.cpp
+    src/cli/seat_hub.cpp
+    src/cli/json.cpp
+    src/app/window_actions.cpp
+    src/app/desktop_actions.cpp)
+target_compile_definitions(openbmh_modern_cli PRIVATE OPENBMH_MODERN_SESSION)
+target_link_libraries(openbmh_modern_cli PRIVATE bmh_launcher bmhui bmhlaunch bmh_modern_session)
+if(WIN32)
+    target_link_libraries(openbmh_modern_cli PRIVATE ws2_32)
+endif()
+if(MSVC)
+    target_compile_options(openbmh_modern_cli PRIVATE /utf-8 /bigobj)
+endif()
 if(WIN32)
     target_link_libraries(openbmh_cli PRIVATE ws2_32)  # --listen (Winsock)
 endif()

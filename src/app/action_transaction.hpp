@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #pragma once
 
-#include "app/career_session.hpp"
+#include "app/session.hpp"
 
 namespace bmh::app::detail {
 
@@ -30,7 +30,8 @@ bool apply_window(CareerSession& session, uint64_t& revision, Checkpoint before,
 
 inline bool apply_native(CareerSession& session, uint64_t& revision, const std::function<bool()>& action) {
     return apply_window(session, revision, session.state(),
-        [&](GameState before) { session.state() = std::move(before); }, action);
+        // the whole session state (the Modern one carries more than GameState)
+        [&](SessionState before) { session.state() = std::move(before); }, action);
 }
 
 } // namespace bmh::app::detail

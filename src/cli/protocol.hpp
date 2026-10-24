@@ -7,7 +7,11 @@
 #include <memory>
 #include <string>
 
+#ifdef OPENBMH_MODERN_SESSION
+#include "app/session.hpp"  // CareerSession names the Modern session there
+#else
 namespace bmh::app { class CareerSession; }
+#endif
 namespace bmh::cli {
 
 class Protocol {

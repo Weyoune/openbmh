@@ -86,7 +86,7 @@ struct Console::EngineRun {
     bool loan_question = false;
     // These capabilities refer to the month caller's staged transaction, never
     // CareerSession's live state. They live only while its synchronous hook waits.
-    GameState* loan_state = nullptr;
+    app::SessionState* loan_state = nullptr;
     GameRandom* loan_game = nullptr;
     WatcomRandom* loan_random = nullptr;
     app::ClubModalServices* loan_services = nullptr;
@@ -154,12 +154,12 @@ void Console::start_matchday(const ui::DeskRequest& request, const ui::DeskState
     run_->before = before;
     EngineRun* run = run_.get();
     if (options_.time == TimeMode::instant) run->quiet = run->to_end = true;
-    session_->set_loan_return_presenter([run](GameState&, WatcomRandom&, int manager, const std::string& question) {
+    session_->set_loan_return_presenter([run](app::SessionState&, WatcomRandom&, int manager, const std::string& question) {
         run->loan_question = true;
         struct Reset { bool& flag; ~Reset() { flag = false; } } reset{run->loan_question};
         return run->ask(manager + 1, utf8(question), {"Yes", "No"}, "No") == "Yes" ? 1 : 0;
     });
-    session_->set_loan_return_offer_presenter([run](GameState& state, GameRandom& game, WatcomRandom& random,
+    session_->set_loan_return_offer_presenter([run](app::SessionState& state, GameRandom& game, WatcomRandom& random,
             app::ClubModalServices& services, int manager, int source_slot, int list_entry,
             const HumanBuyerSaleHooks& hooks) -> int {
         if (run->aborted || manager < 0 || size_t(manager) >= state.manager_teams.size() ||
@@ -204,7 +204,7 @@ void Console::start_matchday(const ui::DeskRequest& request, const ui::DeskState
     // that synchronous Source callback through the same engine-question pause
     // used by the kickoff's transfer questions. Offers are the actual four
     // Source demands; no guessed renewal term or salary is applied.
-    session_->set_contract_expiry_presenter([run](GameState& state, WatcomRandom& random, int manager, int row) {
+    session_->set_contract_expiry_presenter([run](app::SessionState& state, WatcomRandom& random, int manager, int row) {
         if (manager < 0 || size_t(manager) >= state.manager_teams.size())
             throw std::runtime_error("contract expiry: invalid manager owner");
         const SquadRange squad = squad_range(state.manager_teams[size_t(manager)]);
@@ -217,7 +217,7 @@ void Console::start_matchday(const ui::DeskRequest& request, const ui::DeskState
         if (player == 0x0fff || size_t(player) >= state.players.size())
             throw std::runtime_error("contract expiry: missing player");
         const std::string player_name = utf8(state.player_name(player));
-        const GameState before = state;
+        const app::SessionState before = state;  // the whole state (Modern carries more)
         const WatcomRandom before_random = random;
 
         std::array<uint32_t, 4> demands{};

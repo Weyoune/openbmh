@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #pragma once
 
-#include "app/career_session.hpp"
+#include "app/session.hpp"
 
 namespace bmh::app {
 

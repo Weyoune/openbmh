@@ -36,6 +36,10 @@
 #include "launch/process.hpp"
 #include "launch/mods.hpp"
 #include "version.hpp"
+#ifdef OPENBMH_MODERN_SESSION
+#include "content/digest.hpp"
+#include "modern/content/world_package.hpp"
+#endif
 
 namespace {
 using namespace bmh::cli;
@@ -746,7 +750,17 @@ int main(int argc, char** argv) {
         if (!args.data.empty()) {
             if (std::filesystem::is_directory(args.data))
                 args.data /= "content.obw";
+#ifdef OPENBMH_MODERN_SESSION
+            // A Modern world (docs/new_engine): read selectively (its artwork stays in the
+            // archive), mount its Classic payload and name the world for the session.
+            {
+                auto package = bmh::modern::open_world_package(args.data);
+                contents = package.classic;
+                bmh::modern::set_current_world(package.world);
+            }
+#else
             contents = bmh::content::open(args.data);
+#endif
             mount = std::make_unique<bmh::content::Mount>(args.data, contents);
             args.data = mount->root();
             if (args.saves.empty()) {
@@ -754,6 +768,10 @@ int main(int argc, char** argv) {
                     bmh::launch::executable_path(bmh::launch::path_from_utf8(argv[0])).parent_path());
                 bmh::launch::ModEntry mod;
                 mod.content_id = contents->content_id;
+#ifdef OPENBMH_MODERN_SESSION
+                // a Modern world names itself "<id>@<revision>"; its save folder is keyed by the hash
+                mod.content_id = bmh::content::sha256(mod.content_id);
+#endif
                 args.saves = library.user_directory(mod);
             }
         } else
