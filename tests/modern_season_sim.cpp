@@ -528,7 +528,8 @@ int main(int argc, char** argv) {
             }
         }
         print_first_league_results(g, "run end");
-        if (modern::current_world()) print_almanac(g);
+        // MODERN_ALMANAC_SUMMARY=1: also on Classic data (balance comparisons)
+        if (modern::current_world() || std::getenv("MODERN_ALMANAC_SUMMARY")) print_almanac(g);
         // MODERN_STATS=1: the queries of the game statistics menu (docs/new_engine/statistik.md)
         if (std::getenv("MODERN_STATS")) {
             const auto ask = [&](const cli::Json::Object& request) {

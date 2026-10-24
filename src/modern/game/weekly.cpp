@@ -579,8 +579,12 @@ void transfer_bid(ModernState& g, int slot, uint32_t list, bool high, int months
             if (own >= 0 && g.manager_of(own) >= 0 && list != 0 && (w35c >> 27) != 0 && game.range(0, 0xf) != 0) continue;
             if (first_pass && nat < 5 && nat != region && foreign_skip++ % 10 == 0) continue;
             const int players = modern::squad_count(g, team, 3);
+            // The original takes German clubs up to 21 players, foreign ones (16 squad slots) up to
+            // 15. Modern squads of 24 slots everywhere: a foreign club with 24 slots takes players up
+            // to 21 like a German one (with only 15 no foreign club of 20 players would ever buy,
+            // and once the German squads are full a transfer finds no club).
             if (region == 0 && players > 0x15) continue;
-            if (region != 0 && players > 0xf) continue;
+            if (region != 0 && players > (squad_range(team).count >= 24 ? 0x15 : 0xf)) continue;
             int avg[4];
             int count[4];
             for (int p = 0; p < 4; p++) {

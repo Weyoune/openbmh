@@ -46,6 +46,24 @@ Messung (Modern-Datensatz, Verein des Menschen in der Bundesliga, 12 Seeds je Va
 
 Messwerkzeug: `SIM_CAMP=<Lager> SIM_CONTRACTS=1 SIM_ADVERTISING=1 modern_season_sim <welt.obw> 100 0 <seed>`; am Ende steht `almanac human club … place`.
 
+## Langläufe (10 Saisons)
+
+`SIM_CONTRACTS=1 SIM_ADVERTISING=1 modern_season_sim <welt.obw> 520 0 <seed>`, Seeds 1–3, Mensch ohne eigene Transfers.
+
+- **Fehler behoben:** Nach gut 5 Saisons fand ein Transfer keinen Verein mehr (`transfer: no club found`). Das Original nimmt ausländische Vereine (16 Kaderplätze) nur bis 15 Spieler; Modern-Auslandsvereine haben 20 Spieler in 24 Plätzen und kauften deshalb nie, bis die deutschen Kader voll waren. Vereine mit 24 Plätzen nehmen jetzt wie deutsche bis 21 Spieler (`weekly.cpp`, `transfer_bid`; Classic unverändert).
+- Danach laufen alle drei Karrieren 10 Saisons ohne Abbruch und ohne Regelverletzung (Alter, Werte, Kader); der Almanach hält 33.700–37.100 Spiele, Tore und Ergebnis stimmen überall.
+
+| | Modern (Seeds 1–3) | Classic-Daten (Seeds 1, 3) |
+|---|---|---|
+| Tore pro Spiel | 2,70–2,77 | 3,06–3,10 |
+| Bundesliga-Meister | 60–92 Pkt. | 65–92 Pkt. |
+| Bundesliga-Letzter | 9–27 Pkt. | 13–31 Pkt. |
+| Serienmeister | Köln 4×, Frankfurt 4× | Leipzig 5× |
+
+Die Ligen driften in beiden Fällen über die Jahre auseinander (Serienmeister, Meister bis über 90 Punkte): Verhalten des Originals, keine Modern-Abweichung. Modern ist etwas torärmer als Classic (Kandidat für eine spätere Feinjustierung; real hat die Bundesliga etwa 3,1 Tore pro Spiel).
+
+`MODERN_ALMANAC_SUMMARY=1` zeigt die Almanach-Auswertung auch mit Classic-Daten.
+
 ## Offen
 - Ermüdung und Verletzungen bei 38 Spieltagen, Marktwerte und Gehälter der neuen Spieler, Finanzen des menschlichen Vereins (Langläufe über 10 Saisons).
 - Spieler in den Pools (vereinslos) aus dem Datensatz behalten ihre Rohwerte; der Datensatz 1.3 hat keine.
