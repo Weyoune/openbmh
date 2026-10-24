@@ -62,6 +62,17 @@ Siehe [Trainingslager](trainingslager.md): Katalog aus den Daten, drei Regionen,
 
 **Abnahme:** Prüfbericht ohne Fehler; Editor öffnet und speichert verlustfrei.
 
+**Stand Engine (erledigt):** Die Engine liest alles, was 1.4 liefern soll: `runtime:modern-v1` (F1), Ligatermine für 38 Spieltage (F3; Revision 1.3 spielt schon 38/38), den Lager-Katalog mit Karten (F4), den Schiedsrichter-Pool aus `staff` (F9). Für Finanzen (F7) braucht 0.3 nichts.
+
+**Aufgabenpaket Datenmigration 1.4 (Codex, Python-Migrationswerkzeug, privates Repo):**
+1. Manifest: `requires` um `runtime:modern-v1` ergänzen, `playable: true`. `editor:world-v1` darf bleiben.
+2. Trainingslager: Regel `rule:training-camps` mit `maps` (Deutschland, Europa, Naher Osten) und den 18 Lagern aus `docs/new_ui/desktop/trainingcamp` nach [F4](datenformat.md#f4--trainingslager); `x`/`y` bleiben `null`. Vorlage für Werte und IDs (`resort:0..17`): `default_camp_catalogue()` in `src/modern/game/training_camps.cpp`.
+3. Schiedsrichter: mindestens 50 neue `staff`-Zeilen (`role: referee`, ohne `x-legacy`) nach [F9](datenformat.md#f9--schiedsrichter), fiktive Namen, `attributes.strictness` und `attributes.perception` je 0–3 ähnlich verteilt wie bei den 49 Originalen (`x-legacy.property`: Bits 3–4 bzw. 0–1).
+4. Stabile IDs: Vereins-, Spieler- und Schiedsrichter-IDs aus 1.3 unverändert lassen (der Almanach und die Spielstände beziehen sich darauf).
+5. Bericht, Prüfung und Editor-Roundtrip wie bei 1.3; Eintrag in `DIAMOND_MIGRATIONS.md`.
+
+Danach: `modern_season_sim` mit der neuen Welt (zwei Saisons, `SIM_CONTRACTS=1`) muss ohne Doppeleinsätze von Schiedsrichtern und mit den 18 Lagern laufen; das prüfe ich.
+
 ## M6 · Spielstände und UI-Projektionen
 
 - Spielstände `.obs` mit `save_profile: modern-career-v1`: gleiche Hülle wie Classic, aber Modern-Zustand mit Layout und Namen; Dimensionen aus der Welt.

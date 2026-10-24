@@ -107,7 +107,7 @@ Die bestehende Regel `rule:training-camps` (Typ `training_camps`) bleibt und wir
 
 - Modern-Spielstände sind `.obs` mit `save_profile: modern-career-v1`; Aufbau wie Classic-Spielstände (`state/…`, Integritätsdatei), aber mit dem Modern-Zustand und den Dimensionen der Welt.
 - Anders als ein Classic-Spielstand enthält ein Modern-Spielstand **nicht** die Welt (sie ist samt HD-Bildern mehrere hundert MB groß). Das Manifest nennt sie unter `world` (`id`, `data_revision`, `title`); geladen wird nur mit genau dieser Welt.
-- Einträge: `state/career.json` (Spielzustand), `state/modern.json` (Schema `modern-state@1.0`: Vereins- und Spieler-IDs, UTF-8-Namen, Nationen je Laufzeit-Index), `state/rng.json`, `state/driver.json`, `state/session.json`, `state/information.json`, `state/integrity.json`. Rund 210 KB.
+- Einträge: `state/career.json` (Spielzustand), `state/modern.json` (Schema `modern-state@1.1`: Vereins- und Spieler-IDs, UTF-8-Namen, Nationen je Laufzeit-Index, Liga-IDs, Zähler neuer Spieler-IDs), `history/…` (Almanach, F10), `state/rng.json`, `state/driver.json`, `state/session.json`, `state/information.json`, `state/integrity.json`. Rund 210 KB.
 - Ändert sich die Datenrevision, passt ein alter Spielstand nicht mehr; eine Spielstand-Migration ist noch nicht vorgesehen.
 - **Editor:** öffnet keine Spielstände; keine Änderung.
 
