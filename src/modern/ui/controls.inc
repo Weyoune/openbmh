@@ -135,6 +135,7 @@ void App::ProcessEvent(Rml::Event &event) try {
     keyboard_navigation_ = true;
   else if (type == "mousedown")
     keyboard_navigation_ = false;
+  if (type == "blur" && popup_.empty()) bank_event(event);
   if (type == "blur") {
     if (auto *select = dynamic_cast<Rml::ElementFormControlSelect *>(
             event.GetTargetElement());
@@ -148,6 +149,10 @@ void App::ProcessEvent(Rml::Event &event) try {
        n = n->GetParentNode())
     if (n->GetId() == "native-ticket-layer")
       return;
+  if (amount_event(event)) return;
+  if (popup_.empty() && amount_trigger_event(event)) return;
+  if (popup_.empty() && contracts_event(event)) return;
+  if (popup_.empty() && (bank_event(event) || finance_event(event))) return;
   if (!planning_dialog_.empty() && popup_.empty()) {
     const bool key_event = type == "keydown";
     const auto key = key_event ? Rml::Input::KeyIdentifier(event.GetParameter<int>("key_identifier", 0)) : Rml::Input::KI_UNKNOWN;
@@ -389,7 +394,8 @@ void App::ProcessEvent(Rml::Event &event) try {
         if (controls[size_t(next)]->GetId().starts_with("report-detail-player-") ||
             controls[size_t(next)]->GetId().starts_with("report-club-") ||
             controls[size_t(next)]->GetId().starts_with("friendly-opponent-") ||
-            controls[size_t(next)]->GetId().starts_with("alm-match-"))
+            controls[size_t(next)]->GetId().starts_with("alm-match-") ||
+            controls[size_t(next)]->GetId().starts_with("contract-player-"))
           controls[size_t(next)]->ScrollIntoView(
               Rml::ScrollIntoViewOptions(Rml::ScrollAlignment::Nearest));
         event.StopImmediatePropagation();
@@ -429,6 +435,7 @@ void App::ProcessEvent(Rml::Event &event) try {
 void App::dispatch(const std::string &action, Rml::Element *target) {
   const auto id =
       target ? target->GetAttribute<Rml::String>("data-id", "") : std::string();
+  if (amount_action(action, target) || bank_action(action, target) || finance_action(action, target) || contracts_action(action, target)) return;
   if (almanac_action(action, target) || planning_action(action, target) || indoor_action(action, target)) return;
   if (report_detail_action(action, target)) {
     close_report_picker(false);
@@ -1040,11 +1047,12 @@ void App::dispatch(const std::string &action, Rml::Element *target) {
     }
     static const std::set<std::string> available = {
         "tables", "strengths", "camp",     "settings",
-        "save",   "load",      "training", "tactics", "calendar", "league", "other", "postpone", "friendlies", "indoor", "almanac"};
+        "save",   "load",      "training", "tactics", "calendar", "league", "other", "postpone", "friendlies", "indoor", "almanac", "bank", "balance", "contracts"};
     if (!available.contains(route)) {
       message("Diese native Ansicht wird im nächsten Menüpaket übertragen.");
       return;
     }
+    if (route == "bank") { bank_view_ = "entrance"; bank_hint_.clear(); }
     menu_ = route;
     report_picker_.clear();
     report_detail_kind_.clear();
@@ -1393,12 +1401,16 @@ void App::script() {
         context_->ProcessTextInput(command.value("value", std::string()));
       else if (type == "key") {
         const std::map<std::string, Rml::Input::KeyIdentifier> keys = {
-            {"ESC", Rml::Input::KI_ESCAPE}, {"ENTER", Rml::Input::KI_RETURN},
+            {"ESC", Rml::Input::KI_ESCAPE}, {"ENTER", Rml::Input::KI_RETURN}, {"NUMENTER", Rml::Input::KI_NUMPADENTER},
             {"TAB", Rml::Input::KI_TAB},    {"SPACE", Rml::Input::KI_SPACE},
             {"HOME", Rml::Input::KI_HOME},  {"END", Rml::Input::KI_END},
             {"LEFT", Rml::Input::KI_LEFT},  {"RIGHT", Rml::Input::KI_RIGHT},
             {"UP", Rml::Input::KI_UP},      {"DOWN", Rml::Input::KI_DOWN},
-            {"A", Rml::Input::KI_A},        {"Z", Rml::Input::KI_Z}};
+            {"A", Rml::Input::KI_A}, {"Z", Rml::Input::KI_Z}, {"V", Rml::Input::KI_V},
+            {"BACKSPACE", Rml::Input::KI_BACK}, {"DELETE", Rml::Input::KI_DELETE}, {"F4", Rml::Input::KI_F4},
+            {"0", Rml::Input::KI_0}, {"1", Rml::Input::KI_1}, {"2", Rml::Input::KI_2}, {"3", Rml::Input::KI_3},
+            {"4", Rml::Input::KI_4}, {"5", Rml::Input::KI_5}, {"6", Rml::Input::KI_6}, {"7", Rml::Input::KI_7},
+            {"8", Rml::Input::KI_8}, {"9", Rml::Input::KI_9}};
         const auto name = command.at("value").get<std::string>();
         if (!keys.contains(name))
           throw editor::Error("Unbekannte UI-Skripttaste.");
@@ -1420,6 +1432,10 @@ void App::script() {
                  {"menu", menu_},
                  {"report_picker", report_picker_},
                  {"planning_dialog", planning_dialog_},
+                 {"bank_view", bank_view_}, {"bank_property", bank_property_}, {"bank_stock", bank_stock_},
+                 {"balance_future", balance_future_},
+                 {"contracts_view", {{"dialog", contracts_dialog_}, {"player", contracts_player_}, {"tab", contracts_tab_}, {"draft", contract_draft_}}},
+                 {"amount_editor", amount_ ? Json{{"title", amount_->request.title}, {"raw", amount_->raw}, {"review", amount_->review}, {"error", amount_error()}} : Json()},
                  {"source_revision", source_ ? Json(snap().revision) : Json()},
                  {"game_dirty", source_ && source_->dirty()},
                  {"desktop_dirty", desktop_ != saved_desktop_},

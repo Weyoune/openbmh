@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "modern/ui/model.hpp"
 #include "modern/ui/demo_almanac.hpp"
+#include "modern/ui/demo_finance.hpp"
 #include "modern/ui/demo_calendar.hpp"
 #include "modern/ui/demo_reports.hpp"
 #include "modern/ui/demo_sports.hpp"
@@ -84,6 +85,8 @@ DemoSource::DemoSource(std::shared_ptr<const Catalog> catalog)
     throw editor::Error("invalid_demo_date");
   state_["calendar"] = demo_calendar(*catalog_, state_.at("date"), club);
   state_["reports"] = demo_reports(*catalog_);
+  if (!migrate_demo_finance(state_, *catalog_, club))
+    throw editor::Error("invalid_demo_finance");
   saved_ = state_;
 }
 Snapshot DemoSource::snapshot() const { return {revision_, catalog_, state_}; }
@@ -122,11 +125,15 @@ ActionResult DemoSource::apply(const Action &action) {
       if (next.at("training").at("club") != first) {
         next["training"] = demo_training(*catalog_, first);
         next["tactics"] = demo_tactics();
+        next["contracts"] = demo_contracts(*catalog_, first);
         next["calendar"] = demo_calendar(*catalog_, next.at("date"), first);
         const auto error = edit_demo_reports(next["reports"],
             {{"kind", "league"}, {"value", next["calendar"]["league"]}}, *catalog_);
         if (!error.empty()) return {false, revision_, error};
       }
+    } else if (action.kind == "finance") {
+      const auto error = edit_demo_finance(next, action.value, *catalog_, next["managers"][0]["club"]);
+      if (!error.empty()) return {false, revision_, error};
     } else if (action.kind == "training") {
       const auto error = edit_demo_training(next["training"], action.value);
       if (!error.empty())
@@ -246,6 +253,8 @@ Json DemoSource::load(const fs::path &file) {
   for (const auto &v : focus)
     if (!v.is_number_integer() || v < 0 || v > 15)
       throw editor::Error("invalid_focus");
+  if (!migrate_demo_finance(data, *catalog_, club))
+    throw editor::Error("invalid_demo_finance");
   auto next = data;
   auto desktop = next.value("desktop", Json::object());
   if (!migrate_desktop(desktop))

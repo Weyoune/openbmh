@@ -1,0 +1,59 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+.amount-layer {position:absolute;left:0;right:0;top:0;bottom:0;z-index:150;display:flex;align-items:center;justify-content:center;background-color:#0a131d66;}
+.amount-box {position:relative;flex-shrink:0;width:820dp;height:1154dp;padding:26dp;border:2dp var(--border);border-radius:30dp;background-color:var(--strong);color:var(--text);}
+.amount-button {display:flex;align-items:center;justify-content:center;padding:0;border:1dp var(--border);border-radius:14dp;background-color:#53616d;font-size:46dp;font-weight:normal;line-height:1.1;color:var(--text);}
+.amount-button:hover {filter:brightness(1.16);}
+.amount-button:active {filter:brightness(.88);}
+.amount-button[disabled] {opacity:.4;}
+.amount-button:focus-visible {border-color:var(--accent);}
+.amount-header {position:absolute;left:26dp;top:26dp;width:764dp;height:58dp;}
+.amount-header h2 {position:absolute;left:62dp;top:10.8dp;width:640dp;height:36.4dp;line-height:36.4dp;margin:0;font-size:28dp;font-weight:normal;text-align:center;}
+.amount-header .amount-close {position:absolute;left:0;top:7dp;width:44dp;height:44dp;border-radius:22dp;background-color:#fa6a60;border-color:#ffb0a34d;color:#572c29;font-size:34dp;}
+.amount-label {position:absolute;left:26dp;top:104dp;width:764dp;height:28dp;line-height:28dp;text-align:right;font-size:24dp;color:var(--muted);}
+#calculator-value {position:absolute;left:26dp;top:132dp;width:764dp;height:112dp;padding:6dp 8dp;border:0dp;border-radius:10dp;background-color:transparent;color:var(--text);font-size:82dp;font-weight:normal;line-height:98.4dp;text-align:right;letter-spacing:-2dp;}
+.amount-context {position:absolute;left:26dp;top:256dp;width:764dp;height:58dp;}
+.amount-limit {position:absolute;left:0;top:0;width:595.984dp;height:58dp;display:flex;align-items:center;font-size:24dp;color:var(--muted);}
+.amount-limit span {display:block;line-height:28dp;}
+.amount-context .amount-button {position:absolute;top:5dp;height:48dp;font-size:24dp;border-radius:10dp;background-color:#384957;}
+.amount-clear {left:607.984dp;width:66dp;}
+.amount-max {left:685.984dp;width:78.016dp;}
+.amount-proposal,.amount-key {position:absolute;}
+.amount-proposal {font-size:31dp;background-color:#40596b;}
+.amount-proposal.selected {background-color:var(--selected);color:var(--accent);}
+.amount-feedback {position:absolute;left:26dp;top:964dp;width:764dp;height:70dp;display:flex;align-items:center;justify-content:center;margin:0;font-size:24dp;line-height:32.4dp;text-align:center;color:var(--muted);}
+.amount-feedback span {display:block;width:100%;line-height:32.4dp;}
+.amount-feedback.invalid {color:#e7c7a7;}
+.amount-actions {position:absolute;left:26dp;top:1050dp;width:764dp;height:74dp;display:flex;gap:14dp;}
+.amount-actions .amount-button {height:74dp;width:326.078dp;font-size:28dp;background-color:#3b4b59;}
+.amount-actions .amount-button.amount-accept {width:423.922dp;background-color:var(--accent);color:var(--on-accent);}
+.amount-box.amount-review {height:auto;min-height:620dp;padding:70dp;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:42dp;text-align:center;}
+.amount-review h2 {display:block;width:100%;margin:0;line-height:50dp;font-size:44dp;font-weight:bold;}
+.amount-review>p {display:block;width:100%;margin:0;line-height:51dp;font-size:34dp;color:var(--text);}
+.amount-review>strong {display:block;width:100%;font-size:74dp;line-height:85dp;font-weight:normal;color:var(--accent);}
+.amount-review-actions {display:flex;align-items:center;justify-content:center;flex-shrink:0;gap:24dp;width:697.188dp;height:87.188dp;margin-top:28dp;}
+.amount-review-actions .amount-button {height:87.188dp;width:234.781dp;padding:24dp 38dp;border:2dp var(--border);border-radius:16dp;background-color:var(--soft);font-size:32dp;line-height:35.2dp;flex-shrink:0;}
+.amount-review-actions #calculator-back {width:183.188dp;}
+.amount-review-actions #calculator-confirm {width:231.219dp;background-color:var(--selected);border-color:var(--accent);}
+.amount-review .amount-review-error {color:var(--danger);font-size:26dp;line-height:35dp;}
+body.midnight .amount-box {background-color:#293846fa;border-color:#dce8f13d;color:#eef2f6;}
+body.midnight .amount-review>strong {color:#c4e9dd;}
+body.midnight .amount-review>p {color:#b5cad9;}
+body.silver .amount-button {background-color:#d8e2eb;}
+body.matchday .amount-button {background-color:#514b50;}
+body.silver .amount-context .amount-button,body.matchday .amount-context .amount-button {background-color:var(--soft);}
+body.silver .amount-proposal,body.matchday .amount-proposal {background-color:var(--panel);}
+body.midnight .amount-box {background-color:transparent;decorator:linear-gradient(155deg,#364350f5,#1f2b37fa);}
+body.silver .amount-box {background-color:#eaf1f7fc;}
+body.matchday .amount-box {background-color:#2c2c32fc;}
+body.silver .amount-proposal.selected,body.matchday .amount-proposal.selected {background-color:var(--selected);color:var(--accent);}
+#calculator-value selection {color:#ffffff;background-color:#144bc1;}
+#calculator-value:focus {box-shadow:0dp 0dp 0dp 2dp #b2d7f23b;}
+body.midnight .amount-actions .amount-accept {background-color:#719dab;color:#10252d;}
+body.midnight .amount-review-actions #calculator-confirm {background-color:#96cdb536;border-color:#a5dfca73;}
+body.silver .amount-button {background-color:transparent;decorator:linear-gradient(180deg,#ffffffb0,#bfd0e259);}
+body.matchday .amount-button {background-color:transparent;decorator:linear-gradient(180deg,#e8d6dc12,#a1a0aa0d);}
+body.silver .amount-button.selected,body.matchday .amount-button.selected,
+body.silver .amount-button.amount-accept,body.matchday .amount-button.amount-accept,
+body.silver .amount-review #calculator-confirm,body.matchday .amount-review #calculator-confirm {decorator:none;}
+body.silver .amount-header .amount-close,body.matchday .amount-header .amount-close {decorator:none;background-color:#fa6a60;border-color:#ffb0a34d;color:#572c29;}
+body.silver .amount-context .amount-button,body.matchday .amount-context .amount-button {background-color:transparent;}

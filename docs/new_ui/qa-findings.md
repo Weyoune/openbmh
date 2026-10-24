@@ -32,8 +32,16 @@ gemeinsamen Controländerungen zusätzlich in mehreren Menüs nachgeprüft.
 Die erste Gesamterfassung enthält 36 Routen, davon zwölf native Aufnahmen
 und 24 ausstehende Ports. Diese historische Matrix bleibt unverändert.
 Der anschließend übertragene Kalender bekommt einen eigenen Vergleich;
-der aktuelle Runner erfasst 19 native Routen und 18 offene Ports.
+der aktuelle Runner erfasst 22 native Routen und 15 offene Ports.
 Spätere Meilensteine erfassen denselben Gesamtkatalog erneut.
 
 Siehe [QA-Ablauf](menu-qa.md), [Typografie](typography-qa.md) und
 [aktuellen nativen Stand](NATIVE_STATUS.md).
+
+Im Finanzpaket behoben: unsichtbare Bilanzplan-Labels, unnötige Umbrüche in
+Vertragsbuttons, fehlendes Bilanz-Umschaltsymbol, Bank-Laufzeittext am Pfeil,
+Tastaturhinweise der Bankhalle sowie abweichende Farben des Zahleneditors.
+Das immobilienspezifische HTML-Seitenverhältnis war verzerrt und wurde auf
+die ursprüngliche 2×3-Atlaskachel korrigiert. Native Bilder bleiben proportional;
+der HTML-Randbeschnitt von 1 % ist als kleine verbleibende Bildabweichung
+im privaten Nachweis dokumentiert.

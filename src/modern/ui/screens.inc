@@ -883,6 +883,12 @@ std::string App::render_menu(const std::string &key) {
     body = render_friendlies();
   else if (key == "indoor")
     body = render_indoor();
+  else if (key == "bank")
+    body = render_bank();
+  else if (key == "balance")
+    body = render_balance();
+  else if (key == "contracts")
+    body = render_contracts();
   else if (key == "training")
     body = render_training();
   else if (key == "tactics")
@@ -900,6 +906,12 @@ std::string App::render_menu(const std::string &key) {
     body = render_desktop_tools(key);
   else
     throw editor::Error("Diese native Ansicht ist noch nicht verfügbar.");
+  std::string heading = key == "postpone" ? "Spiel verlegen" : title(key);
+  if (key == "bank" && bank_view_ != "entrance") {
+    const std::map<std::string, std::string> labels = {{"savings", "Sparbuch"}, {"properties", "Immobilien"},
+        {"stocks", "Aktien"}, {"credit", "Kredit"}, {"overview", "Finanzübersicht"}};
+    if (labels.contains(bank_view_)) heading += " · " + labels.at(bank_view_);
+  }
   return "<div class=\"fill\" style=\"z-index:100;\">" +
-         window(key == "postpone" ? "Spiel verlegen" : title(key), body) + "</div>";
+         window(heading, body) + "</div>";
 }

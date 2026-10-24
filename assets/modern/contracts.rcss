@@ -1,0 +1,117 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* Contracts retain the HTML roster and modal coordinates in 2612 x 1864 dp. */
+.contracts-overview {position:absolute;left:0;top:0;width:2612dp;height:1864dp;color:var(--text);}
+.contracts-heading {position:absolute;left:0;top:0;width:2612dp;height:118dp;}
+.contracts-heading-club {position:absolute;left:0;top:7dp;width:1950dp;height:104dp;}
+.contracts-club-label {display:flex;align-items:center;gap:14dp;min-width:0;width:100%;height:58dp;font-size:38dp;}
+.contracts-club-label .image-frame {flex-shrink:0;}
+.contracts-club-label span {display:block;flex:1;min-width:0;width:100%;max-width:100%;line-height:44dp;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.contracts-heading-club p {display:block;position:absolute;left:0;top:70dp;width:100%;height:30dp;margin:0;font-size:26dp;line-height:30dp;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);}
+.contracts-salary-total {position:absolute;right:0;top:9dp;max-width:620dp;height:100dp;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:12dp;}
+.contracts-salary-total span {display:block;font-size:26dp;line-height:30dp;white-space:nowrap;color:var(--muted);}
+.contracts-salary-total .contracts-total-value {font-size:42dp;line-height:48dp;color:var(--accent);}
+.contracts-roster {position:absolute;left:0;top:148dp;width:2612dp;height:1578dp;border:2dp var(--border);border-radius:18dp;background-color:var(--panel);overflow-y:auto;overflow-x:hidden;}
+.contracts-table {width:100%;font-size:30dp;}
+.contracts-row {display:flex;align-items:stretch;width:100%;height:76dp;color:var(--text);}
+.contracts-row.striped {background-color:var(--soft);}
+.contracts-row.selected {background-color:var(--selected);}
+.contracts-cell {display:flex;align-items:center;justify-content:flex-end;flex-shrink:0;min-width:0;width:11.333333%;height:76dp;padding:8dp 18dp;font-size:30dp;overflow:hidden;}
+.contracts-cell.c0 {width:32%;justify-content:flex-start;}
+.contracts-cell.c1,.contracts-cell.c2,.contracts-cell.c3 {justify-content:center;}
+.contracts-cell span {display:block;max-width:100%;line-height:34dp;white-space:nowrap;}
+.contracts-table-head {height:70dp;border-bottom:2dp var(--border);}
+.contracts-table-head .contracts-cell {height:70dp;font-size:27dp;color:var(--muted);}
+.contracts-table-head .contracts-cell span {width:100%;line-height:31dp;overflow:hidden;text-overflow:ellipsis;text-align:right;}
+.contracts-table-head .contracts-cell.c0 span {text-align:left;}
+.contracts-table-head .contracts-cell.c1 span,.contracts-table-head .contracts-cell.c2 span,.contracts-table-head .contracts-cell.c3 span {text-align:center;}
+.contract-player-button {display:flex;align-items:center;justify-content:flex-start;gap:18dp;width:100%;max-width:100%;min-width:0;padding:4dp 0;border:0dp;border-radius:0dp;background-color:transparent;color:var(--text);font-size:30dp;text-align:left;}
+.contract-player-button:hover {background-color:var(--hover);}
+.contract-player-button:focus-visible {border-color:var(--accent);}
+.contracts-row.selected .contract-player-button {color:var(--accent);}
+.contract-player-button .contract-player-rank {display:block;flex-shrink:0;width:58dp;line-height:34dp;text-align:right;color:var(--muted);}
+.contract-player-button .contract-player-name {display:block;flex:1;min-width:0;width:100%;max-width:100%;line-height:34dp;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.contract-value {display:block;min-width:0;width:100%;max-width:100%;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.contracts-cell.c1 .contract-value,.contracts-cell.c2 .contract-value,.contracts-cell.c3 .contract-value {text-align:center;}
+.contracts-empty {margin:90dp 40dp;font-size:32dp;line-height:46dp;text-align:center;color:var(--muted);}
+.contracts-actions {position:absolute;left:0;top:1770dp;width:2612dp;height:94dp;display:flex;gap:20dp;}
+.contract-control {display:flex;align-items:center;justify-content:center;gap:18dp;padding:12dp 24dp;border:2dp var(--border);border-radius:12dp;background-color:transparent;decorator:linear-gradient(180deg,#c1d1e31c,#869eb312);font-size:30dp;font-weight:normal;color:var(--text);}
+.contract-control>span {display:block;min-width:0;width:100%;max-width:100%;line-height:34dp;white-space:nowrap;text-align:center;}
+.contract-control>.control-label {min-width:0;width:100%;max-width:100%;white-space:nowrap;text-align:center;}
+.contract-control:hover {decorator:none;background-color:var(--hover);}
+.contract-control:focus-visible {border-color:var(--accent);}
+.contract-control.selected {decorator:none;background-color:var(--selected);border-color:var(--accent);}
+.contracts-actions .contract-control {flex:1;min-width:0;height:94dp;}
+.contracts-actions .contract-control.bonuses {flex:1.2;}
+.contracts-layer {position:absolute;left:0;top:0;width:2612dp;height:1864dp;z-index:30;display:flex;align-items:center;justify-content:center;background-color:#08101980;}
+.contracts-dialog {position:relative;flex-shrink:0;width:2050dp;height:350dp;border:2dp var(--border);border-radius:22dp;background-color:var(--strong);font-size:36dp;color:var(--text);}
+.contracts-dialog-offer {height:1201.0625dp;}
+.contracts-dialog-insurance {height:581dp;}
+.contracts-dialog-bonuses {height:1132dp;}
+.contracts-dialog h2 {position:absolute;left:52dp;top:40dp;width:1942dp;height:45dp;margin:0;font-size:40dp;line-height:45dp;font-weight:bold;letter-spacing:-0.4dp;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.contract-player-summary {position:absolute;left:52dp;top:103dp;width:1942dp;height:42dp;margin:0;font-size:28dp;line-height:42dp;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);}
+.contract-scenes {position:absolute;left:52dp;top:173dp;width:1942dp;height:295.0625dp;display:flex;gap:24dp;}
+.contract-scene {display:flex;align-items:center;justify-content:center;flex-shrink:0;width:959dp;height:295.0625dp;border:2dp var(--border);border-radius:14dp;overflow:hidden;}
+.contract-scene .image-frame {flex-shrink:0;}
+.contract-amounts {position:absolute;left:52dp;top:496.0625dp;width:1942dp;height:147dp;display:flex;gap:24dp;}
+.contract-amount-card {flex:1;min-width:0;height:147dp;padding:24dp 28dp;border:2dp var(--border);border-radius:14dp;background-color:var(--panel);}
+.contract-amount-label {display:block;width:100%;max-width:100%;height:31dp;line-height:31dp;font-size:27dp;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);}
+.contract-amount-value {display:block;width:100%;max-width:100%;height:48dp;line-height:48dp;margin-top:16dp;font-size:42dp;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.contract-duration-heading {position:absolute;left:52dp;top:671.0625dp;width:1942dp;height:34dp;display:flex;align-items:center;justify-content:space-between;font-size:30dp;}
+.contract-duration-heading span {display:block;line-height:34dp;}
+.contract-duration-value {color:var(--accent);}
+.contract-duration {position:absolute;left:52dp;top:721.0625dp;width:1942dp;height:78dp;display:flex;gap:18dp;}
+.contract-duration .contract-control {flex:1;min-width:0;height:78dp;font-size:30dp;}
+.contract-salary {position:absolute;left:52dp;top:827.0625dp;width:1942dp;height:136dp;border-top:2dp var(--border);border-bottom:2dp var(--border);font-size:32dp;}
+.contract-salary-label {position:absolute;left:0;top:28.5dp;width:1432dp;height:75dp;display:flex;flex-direction:column;gap:12dp;}
+.contract-salary-label span {display:block;font-size:32dp;line-height:36dp;}
+.contract-salary-label .contract-salary-hint {font-size:24dp;line-height:27dp;color:var(--muted);}
+.contract-salary-input {position:absolute;right:0;top:24dp;display:flex;align-items:center;justify-content:flex-end;width:480dp;height:84dp;padding:14dp 24dp;border:2dp var(--border);border-radius:12dp;background-color:var(--input);font-size:38dp;text-align:right;}
+.contract-salary-input span {display:block;width:100%;max-width:100%;text-align:right;line-height:44dp;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.contract-salary-input:focus-visible {border-color:var(--accent);}
+.contract-draft-note {position:absolute;left:52dp;top:987.0625dp;width:1942dp;height:39dp;margin:0;font-size:26dp;line-height:39dp;color:var(--muted);}
+.contract-dialog-actions {position:absolute;left:52dp;right:52dp;bottom:40dp;height:86dp;display:flex;gap:20dp;}
+.contract-dialog-actions .contract-control {flex:1;min-width:0;height:86dp;font-size:30dp;}
+.contract-submit {decorator:none;background-color:var(--selected);border-color:var(--accent);color:var(--accent);}
+.contract-insurance-prompt {position:absolute;left:52dp;top:115dp;width:1942dp;height:45dp;margin:0;font-size:30dp;line-height:45dp;text-align:center;}
+.contract-insurance-options {position:absolute;left:52dp;top:196dp;width:1942dp;height:210dp;display:flex;gap:24dp;}
+.contract-insurance-options .contract-control {flex:1;min-width:0;height:210dp;padding:12dp 20dp;flex-direction:column;gap:22dp;}
+.contract-insurance-options .contract-insurance-title {display:block;max-width:100%;font-size:40dp;line-height:45dp;white-space:nowrap;}
+.contract-insurance-options .contract-insurance-caption {display:block;max-width:100%;font-size:26dp;line-height:30dp;color:var(--muted);white-space:nowrap;}
+.contract-bonuses {position:absolute;left:52dp;top:173dp;width:1942dp;height:784dp;}
+.contract-bonus-row {display:flex;align-items:center;justify-content:space-between;width:100%;height:112dp;padding:16dp 22dp;border-bottom:2dp var(--border);font-size:32dp;}
+.contract-bonus-row>span {display:block;flex:1;min-width:0;width:100%;max-width:100%;line-height:36dp;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.contract-bonus-row .contract-control {flex-shrink:0;width:240dp;height:78dp;padding:12dp 20dp;font-size:36dp;}
+.contract-bonus-row .contract-control span {line-height:41dp;}
+.contract-notice-text {position:absolute;left:52dp;top:121dp;width:1942dp;height:54dp;margin:0;font-size:36dp;line-height:54dp;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+body.midnight .contracts-overview {color:#d4e0e9;}
+body.midnight .contracts-heading-club {color:#e2ebf2;}
+body.midnight .contracts-heading-club p {color:#a2b8c9;}
+body.midnight .contracts-salary-total span {color:#a0b7c7;}
+body.midnight .contracts-salary-total .contracts-total-value {color:#b8dfd0;}
+body.midnight .contracts-roster {border-color:#c5d9e726;background-color:#12243140;}
+body.midnight .contracts-row {color:#d4e0e9;}
+body.midnight .contracts-row.striped {background-color:#e3edf605;}
+body.midnight .contracts-row.selected {background-color:#9acbb21a;}
+body.midnight .contracts-table-head .contracts-cell {color:#9fb7c8;}
+body.midnight .contract-player-button {color:#d4e0e9;}
+body.midnight .contracts-row.selected .contract-player-button {color:#c3e8d9;}
+body.midnight .contract-player-button .contract-player-rank {color:#91acbf;}
+body.midnight .contract-control {color:#e0e6ec;border-color:#d4e0ec29;}
+body.midnight .contract-control.selected {decorator:none;background-color:#9cafc240;border-color:#dce9f047;color:#f5f8fc;}
+body.midnight .contracts-dialog {background-color:#283542f5;border-color:#e1ecf429;color:#dce3e9;}
+body.midnight .contracts-dialog h2 {color:#e3ecf3;}
+body.midnight .contract-player-summary,body.midnight .contract-amount-label,body.midnight .contract-draft-note {color:#9fb8ca;}
+body.midnight .contract-scene {border-color:#c5d9e724;}
+body.midnight .contract-amount-card {border-color:#c5d9e71f;background-color:#10232e40;}
+body.midnight .contract-amount-value {color:#d6e7f2;}
+body.midnight .contract-duration-heading {color:#bdd1df;}
+body.midnight .contract-duration-value {color:#a9dccb;}
+body.midnight .contract-salary {border-color:#c5d9e726;color:#d4e5f0;}
+body.midnight .contract-salary-hint {color:#91adbf;}
+body.midnight .contract-salary-input {border-color:#c5d9e738;background-color:#111f2a80;color:#e3ecf5;}
+body.midnight .contract-submit {color:#d6eee5;background-color:#78b9a533;border-color:#a9dccb52;}
+body.midnight .contract-insurance-prompt {color:#abc1d1;}
+body.midnight .contract-insurance-options .contract-insurance-caption {color:#a4bdcf;}
+body.midnight .contract-bonus-row {border-color:#c5d9e71f;color:#cadde9;}
+body.silver .contract-control {decorator:linear-gradient(180deg,#ffffffb0,#bfd0e259);}
+body.matchday .contract-control {decorator:linear-gradient(180deg,#e8d6dc12,#a1a0aa0d);}

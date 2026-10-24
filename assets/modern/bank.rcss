@@ -1,0 +1,84 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+.bank-page {position:absolute;left:0;right:0;top:0;bottom:0;color:var(--text);}
+.bank-scene {position:absolute;left:0;top:60dp;width:2612dp;height:1470.016746dp;border:2dp var(--border);border-radius:20dp;overflow:hidden;}
+.bank-hotspots {position:absolute;left:0;right:0;top:0;bottom:0;}
+.bank-hotspot,.bank-hotspot:hover {position:absolute;padding:0;border:0dp;border-radius:10dp;background-color:transparent;decorator:none;}
+.bank-hotspot:focus-visible {border:4dp var(--accent);}
+#bank-interaction-hint {position:absolute;left:40dp;right:40dp;bottom:25dp;min-height:90dp;display:flex;align-items:center;justify-content:center;text-align:center;font-size:32dp;line-height:46.4dp;}
+.bank-overlay {position:absolute;left:0;right:0;top:0;bottom:0;border:2dp var(--border);border-radius:20dp;background-color:#243441f7;color:var(--text);font-size:34dp;}
+.bank-overlay>h2 {position:absolute;left:50dp;right:50dp;top:40dp;text-align:center;font-size:40dp;line-height:45dp;font-weight:normal;}
+.bank-actions {position:absolute;left:50dp;right:50dp;bottom:35dp;height:84dp;display:flex;gap:30dp;}
+.bank-actions .bank-control {flex:1;min-width:0;height:84dp;padding:12dp 24dp;font-size:32dp;border-radius:12dp;background-color:transparent;decorator:linear-gradient(180deg,#c1d1e31c,#869eb312);}
+.savings-overlay {background-color:#1c2d3bba;}
+.passbook {position:absolute;left:254dp;top:35dp;width:2100dp;height:1301.109375dp;color:#342c27;}
+.passbook-left,.passbook-right {position:absolute;top:30dp;bottom:30dp;width:924dp;font-size:34dp;line-height:49.3dp;}
+.passbook-left {left:63dp;}
+.passbook-right {right:63dp;}
+.passbook h2 {position:absolute;left:0;right:0;top:0;text-align:center;font-size:52dp;line-height:60dp;font-weight:normal;color:#8b3c32;}
+.passbook h3 {position:absolute;left:0;right:0;top:90dp;font-size:46dp;line-height:54dp;font-weight:bold;text-transform:uppercase;color:#423628;}
+.passbook-left p {position:absolute;left:0;right:0;}
+.passbook-note-one {top:184dp;}
+.passbook-note-two {top:273.296875dp;}
+.passbook-note-three {top:411.890625dp;}
+.passbook-right h2 {color:#5b4837;}
+.passbook-right output {position:absolute;left:0;right:0;top:140dp;text-align:right;font-size:54dp;line-height:62dp;}
+.property-row {position:absolute;left:50dp;right:50dp;height:650dp;display:flex;align-items:center;gap:50dp;}
+.owned-property {top:115dp;}
+.offered-property {top:765dp;}
+.property-description {flex:1;min-width:0;font-size:34dp;line-height:47.6dp;}
+.property-description h3 {font-size:34dp;font-weight:normal;line-height:44.2dp;margin:10dp 0 30dp;}
+.property-description p {margin:20dp 0;}
+.property-picture {width:1000dp;height:570dp;flex-shrink:0;padding:0;border:2dp var(--border);border-radius:16dp;background-color:#172431;overflow:hidden;display:flex;align-items:center;justify-content:center;}
+.property-empty {display:block;width:100%;height:100%;background-color:#242323;}
+.stock-table {position:absolute;left:50dp;top:115dp;width:1718dp;height:1320dp;font-size:32dp;}
+.stock-row {display:flex;align-items:center;height:103.333333dp;}
+.stock-row.stock-head {height:80dp;}
+.stock-row>div {width:399.333333dp;flex-shrink:0;text-align:right;color:#d8c892;}
+.stock-row>div:first-child {width:520dp;text-align:left;}
+.stock-head>div {color:var(--text);}
+.stock-name {font-size:32dp;padding:8dp 15dp;border:0dp;border-radius:8dp;background-color:transparent;color:var(--text);}
+.stock-name[aria-pressed=true] {background-color:var(--selected);color:var(--accent);}
+.stock-chart {position:absolute;left:1818dp;top:115dp;width:740dp;height:1320dp;background-color:#172938;border-radius:16dp;overflow:hidden;}
+.credit-portrait {position:absolute;left:50dp;top:135dp;width:620dp;height:515dp;border-radius:16dp;overflow:hidden;}
+.credit-facts {position:absolute;left:740dp;top:195dp;width:1818dp;height:395dp;font-size:34dp;line-height:39dp;}
+.credit-fact {position:absolute;left:0;right:0;height:63dp;display:flex;justify-content:space-between;}
+.credit-fact>span,.credit-fact>strong {display:block;width:891.5dp;font-weight:normal;}
+.credit-fact>strong {text-align:right;white-space:nowrap;color:#b9d8e2;}
+#bank-term {width:190dp;height:63dp;padding:12dp 30dp 12dp 12dp;text-align:left;border:2dp var(--border);border-radius:10dp;background-color:#263744;color:var(--text);font-size:30dp;}
+.credit-schedule {position:absolute;left:50dp;right:50dp;top:686dp;height:642.78125dp;border:2dp var(--border);border-radius:18dp;background-color:#1a303fe6;}
+.credit-schedule-caption {position:absolute;left:36dp;right:36dp;top:28dp;height:106.390625dp;}
+.credit-schedule-caption h3 {font-size:32dp;line-height:41.59375dp;font-weight:normal;color:var(--text);}
+.credit-schedule-amount {position:absolute;left:0;top:51.59375dp;font-size:42dp;line-height:54.796875dp;color:var(--accent);}
+.credit-schedule-amount>span {padding:0 16dp;color:var(--muted);}
+.credit-schedule-context {position:absolute;right:0;top:0;text-align:right;}
+.credit-schedule-context>span {display:inline-block;padding:10dp 22dp;border:2dp var(--border);border-radius:12dp;background-color:var(--soft);font-size:28dp;line-height:36.4dp;}
+.credit-schedule-context>p {margin-top:14dp;font-size:26dp;line-height:33.8dp;color:var(--muted);}
+.credit-chart {position:absolute;left:36dp;top:152.390625dp;width:2432dp;height:420dp;}
+.credit-schedule-note {position:absolute;left:36dp;right:36dp;top:580.390625dp;font-size:26dp;line-height:36.390625dp;color:var(--muted);}
+.bank-note {font-size:28dp;line-height:42dp;color:var(--muted);}
+.credit-note {position:absolute;left:50dp;right:50dp;top:1346.78125dp;line-height:39.1875dp;}
+.bank-overview {position:absolute;left:110dp;right:110dp;top:175dp;font-size:40dp;line-height:45dp;}
+.bank-overview-row {height:113dp;display:flex;justify-content:space-between;gap:45dp;}
+.bank-overview-row>span,.bank-overview-row>strong {display:block;width:50%;font-weight:normal;}
+.bank-overview-row>strong {text-align:right;color:#b9d8e2;}
+.bank-overview-total {height:90dp;border-top:5dp var(--border);padding-top:40dp;}
+.overview-note {position:absolute;left:50dp;right:50dp;bottom:50dp;}
+body.silver .bank-overlay {background-color:#eaf1f7fc;color:#233443;}
+body.silver .savings-overlay {background-color:#f1f6fa80;}
+body.silver .property-picture {background-color:#f1f6fa80;}
+body.silver .stock-chart {background-color:#f1f6fa80;}
+body.silver .stock-row>div {color:#805b18;}
+body.silver .stock-head>div,body.silver .stock-name {color:#233443;}
+body.silver .credit-fact>strong,body.silver .bank-overview-row>strong {color:#233443;}
+body.silver #bank-term {background-color:#ffffffad;color:#233443;}
+body.silver .credit-schedule {background-color:#f1f6fa80;}
+body.silver .bank-actions .bank-control {decorator:linear-gradient(180deg,#ffffffb0,#bfd0e259);}
+body.matchday .bank-overlay {background-color:#2c2c32fc;color:#efeded;}
+body.matchday .savings-overlay {background-color:#1d1e2466;}
+body.matchday .property-picture,body.matchday .stock-chart {background-color:#1d1e2466;}
+body.matchday .stock-row>div {color:#e1c68b;}
+body.matchday .stock-head>div,body.matchday .stock-name {color:#efeded;}
+body.matchday .credit-fact>strong,body.matchday .bank-overview-row>strong {color:#efeded;}
+body.matchday #bank-term {background-color:#191a208a;color:#efeded;}
+body.matchday .credit-schedule {background-color:#1d1e2466;}
+body.matchday .bank-actions .bank-control {decorator:linear-gradient(180deg,#e8d6dc12,#a1a0aa0d);}

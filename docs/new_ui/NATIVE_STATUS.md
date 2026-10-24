@@ -60,6 +60,15 @@ wird ausdrücklich mit `OPENBMH_BUILD_MODERN_UI=ON` gebaut.
   Die Vorschau verwendet unveränderliche Pseudodatensätze über zwei Saisons;
   die vorbereitete Leseprojektion ist noch nicht an F10/OBS angeschlossen.
 
+- [Bank](desktop/bank/README.md): anklickbare Bankhalle, Sparbuch,
+  Immobilien, Aktien, Kredit mit Tilgungsverlauf und Vermögensübersicht.
+- [Bilanz](desktop/balance/README.md): aktuelle Einnahmen/Ausgaben und
+  getrennte Zukunftsplanung, mit gemeinsamem Kontostand und Eintrittspreis.
+- [Verträge](desktop/contracts/README.md): tatsächlicher OBW-Kader,
+  drei Datenseiten, Gehaltsangebot/Laufzeit, Versicherung und Prämien.
+  Die gemeinsame Zahleneingabe bietet sechs Vorschlagswerte, Tastaturbedienung,
+  lokale Entwürfe und eine zweite Bestätigung vor Geldänderungen.
+
 **Anstoß führt keine Aktion aus**, weder per Maus noch per Tastatur. Das gilt
 auch für die direkte Aktionsschnittstelle des Demoanbieters.
 
@@ -97,8 +106,8 @@ python3 tools/modern_ui/prepare_gui_assets.py \
   --mockup /path/to/bmh_4k_ui --output /path/to/gui-resources
 cmake -S . -B build-modern -DOPENBMH_BUILD_MODERN_UI=ON \
   -DBMH_MODERN_GUI_ASSETS=/path/to/gui-resources
-cmake --build build-modern --target openbmh_play modern_ui_core_tests modern_reports_tests modern_ticket_document_tests
-ctest --test-dir build-modern -R '^modern_(ui_core|reports_|ticket_)' --output-on-failure
+cmake --build build-modern --target openbmh_play modern_ui_core_tests modern_reports_tests modern_finance_ui_tests modern_ticket_document_tests
+ctest --test-dir build-modern -R '^modern_(ui_core|reports_|finance_ui_|ticket_)' --output-on-failure
 ./build-modern/OpenBMH --modern-ui-demo --mod /path/to/Diamond_Modern.obw
 ```
 

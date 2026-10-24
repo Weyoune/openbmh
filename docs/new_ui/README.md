@@ -19,6 +19,10 @@ Implementierung in der Spiel-Engine.
 | Training | [Übungen, Kader, Intensität und Demo-Automatik](desktop/training/README.md) |
 | Taktik | [Interaktive Diagramme und Einsatzregler](desktop/tactics/README.md) |
 | Kalender | [Zwölf Monate, transponierte Wochen und Ligavorschau](desktop/calendar/README.md) |
+| Zahleneingabe | [Entwurf, Vorschläge und Bestätigung](desktop/number-entry/README.md) |
+| Bank | [Sparbuch, Immobilien, Aktien und Kredit](desktop/bank/README.md) |
+| Bilanz | [Aktuelle Bilanz und Zukunftsplanung](desktop/balance/README.md) |
+| Verträge | [Kaderdaten, Angebote, Versicherung und Prämien](desktop/contracts/README.md) |
 | Almanach | [Jahreskalender, Tagespartien und historische Spielberichte](desktop/almanac/README.md) |
 | Paarungsanordnung | [Mittige Ergebnisse und innenliegende Wappen](desktop/fixtures/README.md) |
 | Berichte | [Tabellen, Stärken, Ligaspiele, übrige Spiele und Profile](desktop/reports/README.md) |

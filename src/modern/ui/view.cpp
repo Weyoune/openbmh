@@ -6,6 +6,7 @@
 #include "launch/rml_video.hpp"
 #include "modern/ui/controls.hpp"
 #include "modern/ui/demo_calendar.hpp"
+#include "modern/ui/demo_finance.hpp"
 #include "modern/ui/demo_reports.hpp"
 #include "modern/ui/demo_sports.hpp"
 #include "modern/ui/desktop.hpp"
@@ -16,6 +17,7 @@
 #include "version.hpp"
 #include <RmlUi/Core.h>
 #include <RmlUi/Core/Elements/ElementFormControl.h>
+#include <RmlUi/Core/Elements/ElementFormControlInput.h>
 #include <RmlUi/Core/Elements/ElementFormControlSelect.h>
 #include <RmlUi_Platform_SDL.h>
 #include <SDL.h>
@@ -280,6 +282,20 @@ struct Mod {
   fs::path file;
   Json manifest;
 };
+struct AmountRequest {
+  std::string title, unit, return_focus;
+  int64_t value = 0, min = 0, max = 99999999, step = 1, suggestion_step = 100000;
+  bool review = true;
+  std::function<std::string(int64_t)> review_text;
+  std::function<bool(int64_t)> accept;
+};
+struct AmountDraft {
+  AmountRequest request;
+  std::string raw, error, menu;
+  bool review = false;
+  uint64_t revision = 0;
+  std::shared_ptr<const Catalog> world;
+};
 class App final : public Rml::EventListener {
   fs::path executable_, root_, assets_, gui_root_;
   launch::SaveMigrator migrate_;
@@ -317,6 +333,16 @@ class App final : public Rml::EventListener {
   std::string planning_dialog_, planning_notice_, planning_return_focus_;
   int almanac_year_ = 0;
   std::string almanac_day_, almanac_match_, almanac_tab_ = "lineups";
+  std::optional<AmountDraft> amount_;
+  bool amount_select_all_ = false, amount_caret_end_ = false;
+  std::string bank_view_ = "entrance", bank_hint_;
+  int bank_property_ = 0, bank_owned_ = 0, bank_stock_ = 11;
+  bool balance_future_ = false;
+  Json contract_draft_;
+  std::string contracts_player_, contracts_dialog_, contracts_return_focus_, contracts_notice_;
+  int contracts_tab_ = 2;
+  uint64_t contracts_revision_ = 0;
+  std::shared_ptr<const Catalog> contracts_world_;
   float device_ratio_ = 1.f;
   Json desktop_ = Json::object(), saved_desktop_ = Json::object(),
        options_ = Json::object();
@@ -368,6 +394,10 @@ class App final : public Rml::EventListener {
     return money(value,
                  world_ ? world_->manifest().value("currency", Json::object())
                         : Json::object());
+  }
+  std::string money_unit() const {
+    const auto code = world_ ? world_->manifest().value("currency", Json::object()).value("code", std::string("EUR")) : "EUR";
+    return code == "EUR" ? "€" : code;
   }
   fs::path user_dir() const {
     const auto id = world_ ? world_->manifest().value("id", std::string("none"))
@@ -422,10 +452,10 @@ class App final : public Rml::EventListener {
   std::string window(const std::string &heading, const std::string &content,
                      bool close = true) {
     return "<div class=\"window\"><div class=\"titlebar\">" +
-           (close ? btn("close", "<span>×</span>", "close")
+           (close ? btn("close", "<span>×</span>", "close", "id=\"window-close\" aria-label=\"" + std::string(menu_ == "bank" && bank_view_ != "entrance" ? "Zurück zur Bankhalle" : "Fenster schließen") + "\"")
                   : "<span style=\"width:76dp;\"></span>") +
            "<h1>" + esc(heading) + "</h1></div><div class=\"content\">" +
-           content + "</div></div>";
+           content + "</div>" + (amount_ ? render_amount() : "") + "</div>";
   }
   std::string
   select(const std::string &id,
@@ -526,6 +556,15 @@ class App final : public Rml::EventListener {
     renderer_.world(next);
     world_ = std::move(next);
     source_ = std::move(demo);
+    amount_.reset();
+    amount_select_all_ = amount_caret_end_ = false;
+    contracts_dialog_.clear();
+    contracts_player_.clear();
+    contract_draft_ = Json();
+    contracts_world_.reset();
+    bank_view_ = "entrance";
+    bank_hint_.clear();
+    balance_future_ = false;
     almanac_year_ = 0;
     almanac_day_.clear();
     almanac_match_.clear();
@@ -635,6 +674,26 @@ class App final : public Rml::EventListener {
   std::string render_planning_dialog();
   std::string planning_progress(bool, bool);
   bool planning_action(const std::string &, Rml::Element *);
+  std::string render_amount();
+  void open_amount(AmountRequest);
+  void close_amount(bool restore = true);
+  void update_amount(bool focus = false, bool select_all = false);
+  bool amount_action(const std::string &, Rml::Element *);
+  bool amount_event(Rml::Event &);
+  bool amount_trigger_event(Rml::Event &);
+  std::optional<int64_t> amount_value() const;
+  std::string amount_error() const;
+  bool commit_finance(const Json &, uint64_t);
+  std::string render_bank();
+  bool bank_action(const std::string &, Rml::Element *);
+  bool bank_event(Rml::Event &);
+  std::string render_balance();
+  bool finance_action(const std::string &, Rml::Element *);
+  bool finance_event(Rml::Event &);
+  std::string render_contracts();
+  bool contracts_action(const std::string &, Rml::Element *);
+  bool contracts_event(Rml::Event &);
+  void close_contracts(bool restore = true);
   std::string render_almanac();
   bool almanac_action(const std::string &, Rml::Element *);
   std::string render_indoor();
@@ -704,6 +763,9 @@ class App final : public Rml::EventListener {
     // open. Never keep that menu's modal/input gate in the destination view.
     if (menu_ != last_rendered_menu_) {
       planning_dialog_.clear();
+      amount_.reset();
+      contracts_dialog_.clear();
+      contract_draft_ = Json();
       report_detail_kind_.clear();
       report_picker_.clear();
     }
@@ -737,12 +799,20 @@ class App final : public Rml::EventListener {
     if (!menu_.empty())
       markup += render_menu(menu_);
     element("canvas")->SetInnerRML(markup);
-    if (!report_detail_kind_.empty() || !planning_dialog_.empty()) {
+    if (!report_detail_kind_.empty() || !planning_dialog_.empty() || !contracts_dialog_.empty()) {
       Rml::ElementList behind;
       doc_->QuerySelectorAll(behind,
-          "#report-underlay button,#report-underlay input,#report-underlay select,.window .titlebar button");
+          "#report-underlay button,#report-underlay input,#report-underlay select,#contracts-underlay button,.window .titlebar button");
       for (auto *node : behind)
         node->SetProperty("pointer-events", "none");
+    }
+    if (amount_) {
+      Rml::ElementList underlay;
+      doc_->QuerySelectorAll(underlay, ".window>.content,.window>.titlebar");
+      for (auto *node : underlay) {
+        node->SetProperty("pointer-events", "none");
+        node->SetProperty("filter", "blur(10dp)");
+      }
     }
     const auto size = context_->GetDimensions();
     const auto background =
@@ -770,7 +840,8 @@ class App final : public Rml::EventListener {
         node->Focus(keyboard_navigation_);
       if (focus_after_render_.starts_with("report-option-") ||
           focus_after_render_.starts_with("friendly-opponent-") ||
-          focus_after_render_.starts_with("alm-match-"))
+          focus_after_render_.starts_with("alm-match-") ||
+          focus_after_render_.starts_with("contract-player-"))
         report_option_to_scroll_ = focus_after_render_;
       focus_after_render_.clear();
     }
@@ -855,6 +926,15 @@ class App final : public Rml::EventListener {
     context_->Update();
     if (center_selects(*doc_))
       context_->Update();
+    if (amount_select_all_) {
+      if (auto *input = dynamic_cast<Rml::ElementFormControlInput *>(element("calculator-value"))) input->Select();
+      amount_select_all_ = false;
+    }
+    if (amount_caret_end_) {
+      if (auto *input = dynamic_cast<Rml::ElementFormControlInput *>(element("calculator-value")))
+        input->SetSelectionRange(int(input->GetValue().size()), int(input->GetValue().size()));
+      amount_caret_end_ = false;
+    }
     if (center_fixture_columns())
       context_->Update();
     if (training_scroll_) {
@@ -986,9 +1066,9 @@ public:
         throw std::runtime_error("Modern UI layout missing");
       for (const char *event :
            {"click", "dblclick", "change", "input", "keydown", "blur", "mousedown",
-            "mouseup", "mousemove", "contextmenu"})
+            "mouseup", "mousemove", "contextmenu", "focus"})
         doc_->AddEventListener(event, this, Rml::String(event) == "keydown" ||
-                                               Rml::String(event) == "blur");
+                                               Rml::String(event) == "blur" || Rml::String(event) == "focus");
       if (!config_.theme.empty())
         theme_ = config_.theme;
       if (theme_ != "midnight" && theme_ != "silver" && theme_ != "matchday")
@@ -1119,6 +1199,13 @@ public:
 #include "modern/ui/planning_controls.inc"
 #include "modern/ui/almanac_screens.inc"
 #include "modern/ui/almanac_controls.inc"
+#include "modern/ui/amount_entry.inc"
+#include "modern/ui/bank_screens.inc"
+#include "modern/ui/bank_controls.inc"
+#include "modern/ui/finance_screens.inc"
+#include "modern/ui/finance_controls.inc"
+#include "modern/ui/contracts_screens.inc"
+#include "modern/ui/contracts_controls.inc"
 } // namespace
 bool is_modern_world(const fs::path &file) {
   try {

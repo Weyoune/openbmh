@@ -56,6 +56,12 @@ def main():
         add('button.' + route, button['src'].removeprefix('../'))
     add('button.news', 'assets/vector/desktop-news.svg')
     add('button.almanac', 'assets/vector/desktop-almanac.svg')
+    for i in range(6):
+        add('bank.property.' + str(i), 'assets/studies/submenus/bank-properties-v1.png',
+            [(i % 2) / 2, (i // 2) / 3, .5, 1 / 3])
+    for i in range(2):
+        add('contracts.scene.' + str(i), 'assets/studies/submenus/management-negotiations-v1.png',
+            [0, i / 2, 1, .5])
     for i in range(9):
         add('training.skill.' + str(i), 'assets/studies/submenus/training-icons-v2.png',
             [(i % 3) / 3, (i // 3) / 3, 1 / 3, 1 / 3])

@@ -2,6 +2,7 @@
 #include "modern/ui/demo_sports.hpp"
 #include "modern/ui/demo_calendar.hpp"
 #include "modern/ui/demo_reports.hpp"
+#include "modern/ui/demo_finance.hpp"
 #include "modern/ui/desktop.hpp"
 #include "modern/ui/gui_assets.hpp"
 #include "modern/ui/model.hpp"
@@ -23,6 +24,134 @@ void table(const fs::path &root, const std::string &name, const Json &rows) {
   write(root,
         name == "assets" ? "assets/index.json" : "world/" + name + ".json",
         {{"schema", name + "@1.0"}, {"items", rows}});
+}
+void check_finance_source(const fs::path &root,
+                          const std::shared_ptr<const Catalog> &base) {
+  const auto folder = root / "finance-source";
+  auto manifest = base->manifest();
+  manifest["id"] = "world:synthetic-finance-source";
+  manifest["currency"] = {{"code", "EUR"}, {"minor_units", 2}};
+  write(folder, "manifest.json", manifest);
+  table(folder, "nations", base->rows("nations"));
+  table(folder, "competitions", base->rows("competitions"));
+  auto clubs = base->rows("clubs"), players = base->rows("players");
+  clubs.push_back({{"id", "club:finance-next"}, {"name", "Synthetic next club"},
+      {"nation", "nation:de"}, {"competition", "comp:home"}});
+  players.push_back({{"id", "player:finance-next"}, {"name", "Synthetic next player"},
+      {"team", "club:finance-next"}, {"positions", {"gk"}}, {"squad_order", 0}});
+  table(folder, "clubs", clubs);
+  table(folder, "players", players);
+  table(folder, "contracts", Json::array({
+      {{"id", "contract:finance-real"}, {"person", "player:a"}, {"team", "club:a"},
+       {"salary", 12000000}},
+      {{"id", "contract:finance-initialization"}, {"person", "player:b"}, {"team", "club:a"},
+       {"initialization", {{"kind", "synthetic-demo"}}}},
+      {{"id", "contract:finance-next"}, {"person", "player:finance-next"}, {"team", "club:finance-next"},
+       {"salary", 24000000}}}));
+  const auto immutable_players = bmh::editor::read_file(folder / "world/players.json");
+  const auto immutable_contracts = bmh::editor::read_file(folder / "world/contracts.json");
+  auto world = Catalog::open(folder);
+  DemoSource source(world);
+  const auto start = source.snapshot();
+  const auto factor = finance_currency_factor(*world);
+  require(factor == 100 && start.state["contracts"]["club"] == "club:a",
+          "Synthetic cent-currency source did not select its first manager");
+  const auto act = [&](const Json &value) {
+    return source.apply({source.snapshot().revision, "finance", value});
+  };
+  const auto deposit = act({{"kind", "deposit"}, {"value", 400}});
+  const auto deposited = source.snapshot();
+  require(deposit.ok && deposit.revision == start.revision + 1 &&
+              deposited.revision == deposit.revision && source.dirty() &&
+              deposited.state["cash"] == start.state["cash"].get<int64_t>() - 400 * factor &&
+              deposited.state["deposit"] == start.state["deposit"].get<int64_t>() + 400 * factor,
+          "Finance source action lost whole-to-minor conversion or revision/dirty state");
+  const auto bank = demo_bank_summary(deposited.state, *world);
+  const auto balance = demo_balance_rows(deposited.state, *world);
+  require(bank.value("ok", false) && balance.value("ok", false) &&
+              bank["cash"] == deposited.state["cash"] && balance["cash"] == bank["cash"] &&
+              bank["deposit"] == deposited.state["deposit"] &&
+              source.snapshot().state == deposited.state && source.snapshot().revision == deposited.revision,
+          "Bank/balance projections diverged from the shared wallet or mutated their source");
+  const auto stale = source.apply({start.revision, "finance", {{"kind", "withdraw"}, {"value", 1}}});
+  require(!stale.ok && stale.error == "stale_revision" &&
+              source.snapshot().state == deposited.state && source.snapshot().revision == deposited.revision,
+          "Stale finance source action mutated the wallet or advanced its revision");
+  require(act({{"kind", "contract-offer"}, {"player", "player:a"}, {"salary", 1234}, {"months", 36}}).ok &&
+              act({{"kind", "insurance"}, {"player", "player:a"}, {"value", 24}}).ok &&
+              act({{"kind", "bonus"}, {"index", 6}, {"value", 255}}).ok &&
+              act({{"kind", "plan"}, {"index", 0}, {"value", 1000}}).ok,
+          "Contracts, insurance, bonuses or balance planning failed through the shared source");
+  const auto edited = source.snapshot();
+  require(edited.state["contracts"]["players"]["player:a"]["salary"] == 1234 * factor &&
+              edited.state["contracts"]["players"]["player:a"]["months"] == 36 &&
+              edited.state["contracts"]["players"]["player:a"]["insurance"] == 24 &&
+              edited.state["contracts"]["bonuses"][6] == 255 &&
+              edited.state["balance"]["plan"][0] == 1000 * factor &&
+              edited.state["cash"] == deposited.state["cash"] &&
+              edited.state["deposit"] == deposited.state["deposit"] && edited.state["debt"] == deposited.state["debt"],
+          "Contract/plan edits double-converted money or booked unrelated wallet movements");
+  const auto file = folder / "finance.ui.json";
+  const auto layout = default_desktop();
+  source.save(file, layout);
+  require(!source.dirty(), "Saved finance source remained dirty");
+  require(act({{"kind", "withdraw"}, {"value", 1}}).ok, "Post-save finance edit failed");
+  const auto before_restore = source.snapshot().revision;
+  require(source.load(file) == layout && source.snapshot().state == edited.state &&
+              source.snapshot().revision == before_restore + 1 && !source.dirty(),
+          "Finance checkpoint lost wallet/contracts/plans or failed revision and clean-state restoration");
+  auto legacy = Json::parse(bmh::editor::read_file(file));
+  for (const auto *key : {"finance", "balance", "contracts"}) legacy.erase(key);
+  write(folder, "legacy-finance.ui.json", legacy);
+  DemoSource migrated(world);
+  migrated.load(folder / "legacy-finance.ui.json");
+  const auto upgraded = migrated.snapshot();
+  require(valid_demo_finance(upgraded.state, *world, "club:a") && !migrated.dirty() &&
+              upgraded.state["contracts"] == demo_contracts(*world, "club:a") &&
+              upgraded.state["managers"] == edited.state["managers"],
+          "Legacy finance checkpoint did not initialize a complete manager-scoped preview");
+  for (const auto *key : {"cash", "deposit", "debt", "ticket"})
+    require(upgraded.state.at(key) == edited.state.at(key),
+            "Legacy finance migration overwrote an existing wallet/ticket value");
+  auto corrupt = Json::parse(bmh::editor::read_file(file));
+  corrupt["contracts"]["players"]["player:a"]["salary"] = -1;
+  write(folder, "invalid-finance.ui.json", corrupt);
+  const auto accepted = source.snapshot();
+  bool rejected = false;
+  try { source.load(folder / "invalid-finance.ui.json"); }
+  catch (const std::exception &) { rejected = true; }
+  require(rejected && source.snapshot().state == accepted.state &&
+              source.snapshot().revision == accepted.revision && !source.dirty(),
+          "Malformed existing finance fields were repaired or partially loaded");
+  const auto change = source.apply({accepted.revision, "managers", Json::array({
+      {{"name", "Synthetic next manager"}, {"club", "club:finance-next"}, {"portrait", 1}}})});
+  const auto changed = source.snapshot();
+  require(change.ok && changed.revision == accepted.revision + 1 &&
+              changed.state["contracts"] == demo_contracts(*world, "club:finance-next") &&
+              changed.state["contracts"]["players"].contains("player:finance-next") &&
+              !changed.state["contracts"]["players"].contains("player:a") &&
+              changed.state["cash"] == accepted.state["cash"] &&
+              changed.state["deposit"] == accepted.state["deposit"] &&
+              changed.state["debt"] == accepted.state["debt"] &&
+              changed.state["finance"] == accepted.state["finance"] &&
+              changed.state["balance"] == accepted.state["balance"],
+          "First-manager club change retained another club's contracts or reset the shared finances");
+  require(!source.apply({accepted.revision, "finance", {{"kind", "insurance"},
+                       {"player", "player:a"}, {"value", 12}}}).ok &&
+              !source.apply({changed.revision, "finance", {{"kind", "contract-offer"},
+                       {"player", "player:a"}, {"salary", 2000}, {"months", 24}}}).ok &&
+              source.snapshot().state == changed.state && source.snapshot().revision == changed.revision,
+          "Old-club contract targets were silently retargeted after a manager switch");
+  require(act({{"kind", "bonus"}, {"index", 0}, {"value", 17}}).ok,
+          "New club bonus edit failed");
+  const auto before_rename = source.snapshot();
+  require(source.apply({before_rename.revision, "managers", Json::array({
+              {{"name", "Renamed manager"}, {"club", "club:finance-next"}, {"portrait", 1}}})}).ok &&
+              source.snapshot().state["contracts"] == before_rename.state["contracts"],
+          "Renaming a manager in the same club reset its contracts/bonuses");
+  require(bmh::editor::read_file(folder / "world/players.json") == immutable_players &&
+              bmh::editor::read_file(folder / "world/contracts.json") == immutable_contracts,
+          "Finance source edits modified immutable catalogue players or contracts");
 }
 } // namespace
 int main(int argc, char **argv) try {
@@ -449,6 +578,7 @@ int main(int argc, char **argv) try {
               restored_planning.snapshot().state["calendar"]["friendly_league"] == "comp:home" &&
               restored_planning.snapshot().state["reports"]["sorts"]["indoor"]["key"] == "points",
           "Old checkpoint lost league preview or failed planning/indoor migration");
+  check_finance_source(root, world);
   GuiAssets absent(root / "missing-gui");
   require(!absent.available(),
           "World resources were mistaken for GUI resources");

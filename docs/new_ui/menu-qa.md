@@ -71,9 +71,23 @@ deshalb nicht ins öffentliche Quellcode-Repository. Öffentliche Zusammenfassun
   [Freundschaftsspiele](desktop/friendlies/README.md) und
   [Hallentabellen](desktop/indoor/README.md): ein gemeinsames Paket mit
   18 Rendererläufen, 43 Bedienzuständen und gesondertem OS-Beenden-/
-  Speichern-Nachtest. Aktueller Gesamtkatalog: 18 native und 18 offene Routen.
+  Speichern-Nachtest. Damals: 18 native und 18 offene Routen.
 
 - [Almanach](desktop/almanac/README.md): Jahreskalender, Tagespartien und
   Spielbericht als neues readonly Menü; alle Ergebnisphasen, Kader/Bank,
   Ereignisse, alte Ansichten und unveränderte Revision/Dirty-Zustände geprüft.
-  Der Katalog umfasst jetzt 19 native und 18 offene Routen.
+  Nach diesem Paket: 19 native und 18 offene Routen.
+
+- [Bank](desktop/bank/README.md), [Bilanz](desktop/balance/README.md) und
+  [Verträge](desktop/contracts/README.md): gemeinsames Finanzpaket mit drei
+  Themes bei 720p/1080p. Bankhalle und fünf Dienste, alle acht Transaktionen,
+  Kredit-/Bestandsgrenzen, Entwürfe, doppelte Bestätigung und Abbruch geprüft.
+  Zwölf Bilanz-/Vertragsläufe liefern 96 erfolgreiche Zustandsprüfungen;
+  42 Text-/Layoutzustände zeigen keinen horizontalen Textüberlauf.
+  Die 20 ausgewählten Regressionstests bestehen nach Übernahme der parallel
+  eingetroffenen Engineänderungen. Screenshots, UI-Demostände und Eingabeskripte
+  liegen privat unter `docs/qa/finance-batch-2026-10-24/`.
+  Aktueller Katalog: **22 native und 15 noch offene Routen**.
+
+Die Finanzprüfung umfasst echte Linux-/OpenGL-Aufnahmen. Windows-/macOS-
+Laufzeitdarstellung wird dadurch nicht als abgenommen ausgegeben.

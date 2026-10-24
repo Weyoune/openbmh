@@ -1,6 +1,6 @@
 # Balance (M7)
 
-Laufende Notizen zur Balance der Modern-Engine: Befunde, Entscheidungen von Michael, Messungen.
+Laufende Notizen zur Balance der Modern-Engine: Befunde, bestätigte Entscheidungen, Messungen.
 
 ## Spielerwerte des Datensatzes
 
@@ -8,7 +8,7 @@ Laufende Notizen zur Balance der Modern-Engine: Befunde, Entscheidungen von Mich
 
 Die Werte des Datensatzes passen zwischen den Vereinen nicht zur Spielstärke: Wolfsburg (2. Liga) 92, stärker als jeder Bundesligist, Elversberg (Bundesliga) 42, Kaiserslautern (2. Liga) 28. Streuung der Vereinsstärke (Mittel der besten 14) in den deutschen Ligen 14–21 Punkte statt rund 6 im Original. 1:1 übernommen ergab das 3,3 Tore pro Spiel und Tabellen mit 100 bzw. 6 Punkten.
 
-**Entscheidung (Michael): Rangfolge übernehmen.**
+**Entscheidung: Rangfolge übernehmen.**
 - Die Vereine einer Liga nehmen die Plätze im Stärkeband der Liga nach der Rangfolge im Datensatz ein (Mittel von Kondition und Technik der besten 14), statt nach dem Tabellenplatz.
 - Innerhalb des Kaders behalten die Spieler ihren Abstand zum Vereinsniveau, gestaucht auf die Streuung erzeugter Spieler (W(Niveau ± 10 %), Standardabweichung ≈ 5,8 % des Niveaus), wo der Kader breiter ist. Form und Eigenschaften bleiben aus dem Datensatz.
 - Der Verein des Menschen (Mannschaftsstärke beim Start) und Vereine, die beim Start den Platz tauschen, werden als Ganzes auf ihr Niveau verschoben; die Abstände bleiben.
