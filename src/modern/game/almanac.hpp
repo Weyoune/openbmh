@@ -98,6 +98,34 @@ struct AlmanacLeague {
     bool operator==(const AlmanacLeague&) const = default;
 };
 
+// A row of a final league table (in rank order).
+struct AlmanacStanding {
+    uint16_t club = 0;          // index into the season's clubs
+    uint8_t rank = 0;           // 1 = champion (equal ranks are possible as the engine ranks them)
+    uint8_t played = 0, won = 0, drawn = 0, lost = 0;
+    uint8_t goals_for = 0, goals_against = 0;
+    int16_t points = 0;         // after a point deduction of a human manager
+    bool operator==(const AlmanacStanding&) const = default;
+};
+struct AlmanacTable {
+    uint8_t league = 0;         // league index (season header: id and name)
+    std::vector<AlmanacStanding> rows;
+    bool operator==(const AlmanacTable&) const = default;
+};
+
+// The winner of a competition, noted when it is decided: league champions from the final
+// tables, cups when their last stage ends (single final: the loser is the runner-up; a final
+// group, e.g. the indoor tournament: its second).
+struct AlmanacWinner {
+    uint8_t type = 0;           // as AlmanacMatch: 0 league, else cup id + 1
+    uint8_t league = 0xff;      // league index for type 0
+    uint8_t stage = 0xff;       // the last cup stage (cup table index)
+    uint8_t detail = 0;         // 1 = the indoor Masters (after the five tournaments)
+    uint32_t date = 0;          // day counter
+    uint16_t winner = 0, runner_up = 0xffff;  // indices into the season's clubs (0xffff none)
+    bool operator==(const AlmanacWinner&) const = default;
+};
+
 struct AlmanacSeason {
     int season = -1;            // seasons played before (GameState::season)
     int start_year = 0;         // calendar year the season starts in
@@ -108,6 +136,8 @@ struct AlmanacSeason {
     std::vector<AlmanacManager> managers;
     std::vector<std::string> referees;   // index 0 = none
     std::vector<AlmanacMatch> matches;   // in the order played
+    std::vector<AlmanacTable> tables;    // final league tables, at the end of the season
+    std::vector<AlmanacWinner> winners;  // in the order decided
 
     bool operator==(const AlmanacSeason&) const = default;
 
@@ -148,6 +178,13 @@ AlmanacSeason decode_almanac_season(const std::string& bytes);
 // A player index now belongs to a new person (retirement or youth player): gives it a new
 // stable identity so the almanac does not merge the two careers.
 void new_player_identity(ModernState& g, int player);
+
+// --- Season results -----------------------------------------------------------------------
+// The final tables of every league and their champions; the season core calls it once the
+// leagues are complete, before promotion moves the clubs.
+void almanac_final_tables(ModernState& g);
+// A cup is decided (its last stage ended): cup id, last stage, winner and runner-up (-1 none).
+void almanac_cup_winner(ModernState& g, int cup, int stage, int winner, int runner_up, bool masters = false);
 
 // --- Recording (the Modern turn driver) ---------------------------------------------------
 // One matchday as the turn driver plays it: begin after kick-off (line-ups, rounds), the

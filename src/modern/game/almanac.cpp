@@ -9,6 +9,8 @@
 #include "formats/binary.hpp"
 #include "game/match_engine.hpp"
 #include "game/presentation.hpp"
+#include "game/schedule.hpp"
+#include "game/table.hpp"
 #include "modern/game/cup.hpp"
 #include "modern/game/matchday.hpp"
 #include "modern/game/modern_state.hpp"
@@ -18,7 +20,8 @@ namespace bmh::modern {
 namespace {
 
 constexpr size_t kManagerRecord = 0xB0C;
-constexpr uint32_t kVersion = 1;
+// Version 2 adds the final tables and the winners; version 1 seasons are still read.
+constexpr uint32_t kVersion = 2;
 
 // Original single-byte text (ISO 646-DE) to UTF-8, as the interfaces show it.
 std::string utf8(std::string_view original) {
@@ -218,13 +221,25 @@ std::string encode_almanac_season(const AlmanacSeason& s) {
         for (const AlmanacEvent& e : m.events)
             w.u8(uint32_t(e.kind)), w.u8(e.minute), w.u8(e.side), w.u8(e.detail), w.u16(e.player), w.u16(e.other);
     }
+    w.u8(uint32_t(s.tables.size()));
+    for (const AlmanacTable& t : s.tables) {
+        w.u8(t.league), w.u8(uint32_t(t.rows.size()));
+        for (const AlmanacStanding& row : t.rows) {
+            w.u16(row.club), w.u8(row.rank), w.u8(row.played), w.u8(row.won), w.u8(row.drawn), w.u8(row.lost);
+            w.u8(row.goals_for), w.u8(row.goals_against), w.u16(uint32_t(uint16_t(row.points)));
+        }
+    }
+    w.u16(uint32_t(s.winners.size()));
+    for (const AlmanacWinner& x : s.winners)
+        w.u8(x.type), w.u8(x.league), w.u8(x.stage), w.u8(x.detail), w.u32(x.date), w.u16(x.winner), w.u16(x.runner_up);
     return std::move(w.out);
 }
 
 AlmanacSeason decode_almanac_season(const std::string& bytes) {
     if (bytes.size() < 6 || bytes.compare(0, 4, "OBAL") != 0) throw FormatError("almanac: not an almanac season");
     Reader r{bytes, 4};
-    if (r.u16() != kVersion) throw FormatError("almanac: unknown season version");
+    const uint32_t version = r.u16();
+    if (version < 1 || version > kVersion) throw FormatError("almanac: unknown season version");
     AlmanacSeason s;
     s.season = int16_t(r.u16()), s.start_year = int(r.u16()), s.display_start_year = int(r.u16());
     for (uint32_t n = r.u16(); n > 0; --n) {
@@ -272,9 +287,86 @@ AlmanacSeason decode_almanac_season(const std::string& bytes) {
         if (m.home >= s.clubs.size() || m.away >= s.clubs.size()) throw FormatError("almanac: unknown club in a match");
         s.matches.push_back(std::move(m));
     }
+    if (version >= 2) {
+        for (uint32_t n = r.u8(); n > 0; --n) {
+            AlmanacTable t;
+            t.league = uint8_t(r.u8());
+            for (uint32_t k = r.u8(); k > 0; --k) {
+                AlmanacStanding row;
+                row.club = uint16_t(r.u16());
+                row.rank = uint8_t(r.u8()), row.played = uint8_t(r.u8()), row.won = uint8_t(r.u8());
+                row.drawn = uint8_t(r.u8()), row.lost = uint8_t(r.u8());
+                row.goals_for = uint8_t(r.u8()), row.goals_against = uint8_t(r.u8());
+                row.points = int16_t(r.u16());
+                if (row.club >= s.clubs.size()) throw FormatError("almanac: unknown club in a table");
+                t.rows.push_back(row);
+            }
+            s.tables.push_back(std::move(t));
+        }
+        for (uint32_t n = r.u16(); n > 0; --n) {
+            AlmanacWinner x;
+            x.type = uint8_t(r.u8()), x.league = uint8_t(r.u8()), x.stage = uint8_t(r.u8()), x.detail = uint8_t(r.u8());
+            x.date = r.u32();
+            x.winner = uint16_t(r.u16()), x.runner_up = uint16_t(r.u16());
+            if (x.winner >= s.clubs.size() || (x.runner_up != 0xffff && x.runner_up >= s.clubs.size()))
+                throw FormatError("almanac: unknown club among the winners");
+            s.winners.push_back(x);
+        }
+    }
     if (r.at != bytes.size()) throw FormatError("almanac: trailing bytes after the season");
     s.index();
     return s;
+}
+
+void almanac_final_tables(ModernState& g) try {
+    AlmanacSeason& season = current_season(g);
+    season.tables.clear();
+    std::erase_if(season.winners, [](const AlmanacWinner& x) { return x.type == 0; });
+    for (int league = 0; league < kLeagueCount; ++league) {
+        const LeagueTable t = compute_league_table(g, league, 0, league_matchdays(league), 7, 1);
+        const int first = league_first_team(league);
+        AlmanacTable table;
+        table.league = uint8_t(league);
+        for (int i = 0; i < t.size; ++i) {
+            AlmanacStanding row;
+            row.club = season.club(club_of(g, first + i));
+            row.rank = uint8_t(t.rank(i) + 1);
+            row.played = uint8_t(t.games(i)), row.won = t.wins[size_t(i)], row.lost = t.defeats[size_t(i)];
+            row.drawn = uint8_t(std::max(0, t.games(i) - t.wins[size_t(i)] - t.defeats[size_t(i)]));
+            row.goals_for = t.goals_for[size_t(i)], row.goals_against = t.goals_against[size_t(i)];
+            row.points = t.points[size_t(i)];
+            table.rows.push_back(row);
+        }
+        std::stable_sort(table.rows.begin(), table.rows.end(),
+                         [](const AlmanacStanding& a, const AlmanacStanding& b) { return a.rank < b.rank; });
+        if (!table.rows.empty()) {
+            AlmanacWinner champion;
+            champion.league = uint8_t(league);
+            champion.date = g.date;
+            champion.winner = table.rows[0].club;
+            if (table.rows.size() > 1) champion.runner_up = table.rows[1].club;
+            season.winners.push_back(champion);
+        }
+        season.tables.push_back(std::move(table));
+    }
+} catch (const std::exception& e) {
+    std::fprintf(stderr, "almanac: final tables not recorded: %s\n", e.what());
+}
+
+void almanac_cup_winner(ModernState& g, int cup, int stage, int winner, int runner_up, bool masters) try {
+    const int teams = world_layout().total_teams();
+    if (winner < 0 || winner >= teams) return;
+    AlmanacSeason& season = current_season(g);
+    AlmanacWinner x;
+    x.type = uint8_t(cup + 1);
+    x.stage = uint8_t(stage);
+    x.detail = masters ? 1 : 0;
+    x.date = g.date;
+    x.winner = season.club(club_of(g, winner));
+    if (runner_up >= 0 && runner_up < teams) x.runner_up = season.club(club_of(g, runner_up));
+    season.winners.push_back(x);
+} catch (const std::exception& e) {
+    std::fprintf(stderr, "almanac: winner not recorded: %s\n", e.what());
 }
 
 void new_player_identity(ModernState& g, int player) {

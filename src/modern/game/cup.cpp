@@ -605,6 +605,11 @@ void advance_cup(ModernState& g, int id, WatcomRandom& rand, MinuteReport& repor
                 if (!losers.empty()) mem.set16(e + 0x24, losers[0]);
             }
             if (type == 0xc) remove_competition(mem, 0xc);
+            // The almanac notes every decided competition (not the replay and friendly
+            // containers 9 and 10): the runner-up is the final's loser or the group's second.
+            if (type != 9 && type != 10 && !winners.empty())
+                modern::almanac_cup_winner(g, type, entry, winners[0],
+                                           winners.size() > 1 ? winners[1] : losers.empty() ? -1 : losers[0]);
             // CupRuntimeField5: the title of the competition (0xFF: none)
             static constexpr uint8_t kTitle[14] = {1, 2, 3, 4, 5, 0xff, 6, 0xff, 8, 0xff, 0xff, 0xff, 0xff, 0xff};
             const uint8_t title = type >= 0 && type < 14 ? kTitle[type] : 0xff;
@@ -656,6 +661,7 @@ void advance_cup(ModernState& g, int id, WatcomRandom& rand, MinuteReport& repor
                     winner_display(g, {7, winner});
                 if (mem.u8(::bmh::layout::Cup_AdvanceCup_RuntimeField) == 0 && mem.has(::bmh::layout::CareerSession_BeginFriendlyOpponentTable_ExecutableField2)) mem.set8(::bmh::layout::CareerSession_BeginFriendlyOpponentTable_ExecutableField2, 0);
                 mem.set16(::bmh::layout::Titles + 7 * 100 + uint32_t(std::min<int>(g.season, 0x31)) * 2, winner);
+                modern::almanac_cup_winner(g, 0xb, entry, winner, -1, true);  // the Masters (almanac)
                 if (mem.has(::bmh::layout::Cup_AdvanceCup_RuntimeField7)) mem.set16(::bmh::layout::Cup_AdvanceCup_RuntimeField7, winner);
                 const int manager = g.manager_of(winner);
                 if (manager >= 0) {

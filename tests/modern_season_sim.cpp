@@ -129,6 +129,18 @@ void print_almanac(const modern::ModernState& g) {
     std::printf("almanac: %zu seasons, %zu matches, %zu events, %zu bytes uncompressed, %u new player identities\n",
                 seasons.size(), matches, events, bytes, g.almanac.generated_players);
     std::printf("almanac: %zu matches whose goal events differ from the result, %zu without line-ups\n", mismatched, without_lineup);
+    for (const auto& s : seasons) {
+        if (s.tables.empty() && s.winners.empty()) continue;
+        std::printf("almanac season %d: %zu final tables, %zu winners\n", s.start_year, s.tables.size(), s.winners.size());
+        for (const auto& t : s.tables)
+            if (!t.rows.empty())
+                std::printf("  league %d: %s %d pts, last %s %d pts (%zu clubs)\n", int(t.league), s.clubs[t.rows.front().club].name.c_str(),
+                            int(t.rows.front().points), s.clubs[t.rows.back().club].name.c_str(), int(t.rows.back().points), t.rows.size());
+        for (const auto& w : s.winners)
+            if (w.type != 0)
+                std::printf("  cup %d%s (stage %d): %s, runner-up %s\n", int(w.type) - 1, w.detail ? " Masters" : "", int(w.stage),
+                            s.clubs[w.winner].name.c_str(), w.runner_up == 0xffff ? "-" : s.clubs[w.runner_up].name.c_str());
+    }
     std::vector<std::pair<int, std::string>> top;
     for (const auto& [id, row] : scorers) top.emplace_back(row.first, row.second + " (" + id + ")");
     std::sort(top.begin(), top.end(), [](const auto& a, const auto& b) { return a.first > b.first; });

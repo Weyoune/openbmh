@@ -22,6 +22,13 @@ Pro Spiel (`AlmanacMatch`):
 | Aufstellungen | je Seite die 11 Startspieler, dann die Bank (nur Ligavereine; Länder- und Amateurteams haben in der Engine keine Kader) |
 | Ereignisse | Minute, Seite, Spieler und ggf. zweiter Spieler: Tor (mit Vorlage und Art: Spiel, Elfmeter/Freistoß, Nachschuss, Ecke), Fehlschuss, Gelb, Gelb-Rot, Rot, Verletzung, Wechsel (ein/aus), Elfmeter im Elfmeterschießen |
 
+Pro Saison zusätzlich:
+
+| Feld | Inhalt |
+|---|---|
+| Abschlusstabellen (`tables`) | alle Ligen in Platzierungsreihenfolge: Platz, Verein, Spiele, S/U/N, Tore, Gegentore, Punkte (nach einem Punktabzug). Aufgenommen zu Beginn des Saisonwechsels, bevor Auf- und Abstieg die Vereine verschieben |
+| Sieger (`winners`) | in der Reihenfolge, in der sie feststehen: Meister jeder Liga (mit Vizemeister) und jeder entschiedene Pokalwettbewerb (DFB-Pokal, Europapokale, Supercup, Relegation, Länderturniere, jedes Hallenturnier und das Masters) mit Datum, letzter Stufe und Finalgegner bzw. Gruppenzweitem. Nicht: die Behälter für Wiederholungsspiele und Freundschaftsspiele (Pokal-ID 9 und 10) |
+
 ## Woher die Daten kommen (keine Wirkung auf das Spiel)
 
 - Tore, Fehlschüsse, Karten, Verletzungen: das Ereignisprotokoll der Spielgruppe (`MatchGroup::log`), das die Engine wie das Original für **jedes** Spiel führt.
@@ -40,7 +47,7 @@ Pro Spiel (`AlmanacMatch`):
 
 - Jede Saison hat ihre eigenen Tabellen (Ligen, Vereine, Spieler, Manager, Schiedsrichter) und ist damit für sich lesbar.
 - Abgeschlossene Saisons liegen im Spielstand als `history/season-<Jahr>.bin` und werden nie wieder geschrieben; die laufende als `history/current.bin`. Beide stehen in `state/integrity.json`.
-- Binärformat Version 1 (Little Endian): `OBAL`, u16 Version, Saisonkopf, Tabellen, Spiele. Text: u16 Länge + UTF-8. Einzelheiten in `encode_almanac_season`.
+- Binärformat Version 2 (Little Endian): `OBAL`, u16 Version, Saisonkopf, Tabellen (Ligen, Vereine, Spieler, Manager, Schiedsrichter), Spiele, Abschlusstabellen, Sieger. Version 1 (ohne Abschlusstabellen und Sieger) wird weiter gelesen. Text: u16 Länge + UTF-8. Einzelheiten in `encode_almanac_season`.
 - Größe: etwa 0,5 MB pro Saison im (komprimierten) Spielstand, mit allen Ereignissen und Aufstellungen. Ein Spielstand nach einer Saison ist ~700 KB statt ~210 KB.
 
 ## Für die UI (Codex)

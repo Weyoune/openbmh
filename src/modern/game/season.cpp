@@ -1603,6 +1603,7 @@ SeasonTransitionOutcome season_transition(ModernState& g, GameRandom& game, Watc
     }
     g.memory.set8(::bmh::layout::CareerSession_RuntimeError_RuntimeField4, 0);
     if (g.memory.has(::bmh::layout::Season_SeasonTransition_RuntimeField)) g.memory.set8(::bmh::layout::Season_SeasonTransition_RuntimeField, 0);
+    modern::almanac_final_tables(g);  // final tables and champions of the season that ended
     g.season = int16_t(g.season + 1);  // SeasonIndex
     modern::reset_club_moods(g, game, rand);
     european_setup(g, game, rand, cup_draw);

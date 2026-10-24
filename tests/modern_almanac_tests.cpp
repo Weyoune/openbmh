@@ -41,6 +41,13 @@ AlmanacSeason sample() {
     m.events.push_back({AlmanacEventKind::Substitution, 80, 0, 0, b, a});
     m.events.push_back({AlmanacEventKind::ShootoutKick, 121, 1, 1, a, kAlmanacNone});
     s.matches.push_back(m);
+    AlmanacTable t;
+    t.league = 0;
+    t.rows.push_back({home, 1, 34, 25, 5, 4, 80, 30, 77});
+    t.rows.push_back({away, 2, 34, 20, 6, 8, 70, 40, -2});
+    s.tables.push_back(t);
+    s.winners.push_back({0, 0, 0xff, 0, 300, home, away});
+    s.winners.push_back({12, 0xff, 4, 1, 310, away, 0xffff});
     return s;
 }
 }  // namespace
