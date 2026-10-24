@@ -79,10 +79,10 @@ Messwerkzeug: `SIM_CAMP=<Lager> SIM_CONTRACTS=1 SIM_ADVERTISING=1 modern_season_
 
 | | Modern (Seeds 1–3) | Classic-Daten (Seeds 1, 3) |
 |---|---|---|
-| Tore pro Spiel | 2,70–2,77 (noch ohne Fähigkeiten, siehe oben) | 3,06–3,10 |
-| Bundesliga-Meister | 60–92 Pkt. | 65–92 Pkt. |
-| Bundesliga-Letzter | 9–27 Pkt. | 13–31 Pkt. |
-| Serienmeister | Köln 4×, Frankfurt 4× | Leipzig 5× |
+| Tore pro Spiel (alle Wettbewerbe) | 2,86–2,90 (mehr Spiele in den torärmeren Auslandsligen; je Wettbewerb wie Classic) | 3,06–3,10 |
+| Bundesliga-Meister | 64–93 Pkt. | 65–92 Pkt. |
+| Bundesliga-Letzter | 9–25 Pkt. | 13–31 Pkt. |
+| Serienmeister | Dortmund 4×, Frankfurt 3× | Leipzig 5× |
 
 Die Ligen driften in beiden Fällen über die Jahre auseinander (Serienmeister, Meister bis über 90 Punkte): Verhalten des Originals, keine Modern-Abweichung. Die geringere Torquote von Modern lag an den fehlenden Fähigkeiten (siehe oben) und ist behoben.
 
