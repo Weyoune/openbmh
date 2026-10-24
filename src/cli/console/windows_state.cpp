@@ -231,7 +231,7 @@ void Console::register_advice_commands() {
                 std::sort(strengths.rbegin(), strengths.rend());
                 int sum = 0, n = 0;
                 for (; n < 11 && n < int(strengths.size()); ++n) sum += strengths[size_t(n)];
-                rows.push_back({std::to_string(m + 1), utf8(g.club_name(team)), league_name, rank, points, games, std::to_string(balance),
+                rows.push_back({std::to_string(m + 1), club_text(g, team), league_name, rank, points, games, std::to_string(balance),
                                 n ? std::to_string(sum / n) : "-"});
             }
             emit_table({"Manager", "Club", "League", "Place", "Points", "Games", "Balance", "Best11"}, rows);

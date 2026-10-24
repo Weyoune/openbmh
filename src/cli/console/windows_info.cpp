@@ -108,7 +108,7 @@ void Console::register_info_commands() {
         if (found.empty()) fail("E_BAD_ARGUMENT", "no club named \"" + reference + "\" in the leagues");
         std::string candidates;
         for (size_t i = 0; i < found.size() && i < 8; ++i)
-            candidates += (i ? ", " : "") + utf8(session_->state().club_name(found[i])) + " = club:" + std::to_string(found[i]);
+            candidates += (i ? ", " : "") + club_text(session_->state(), found[i]) + " = club:" + std::to_string(found[i]);
         fail("E_AMBIGUOUS", "\"" + reference + "\" fits several clubs: " + candidates);
     };
     auto show_team = [this] {

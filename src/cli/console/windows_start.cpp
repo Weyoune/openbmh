@@ -358,7 +358,7 @@ void Console::install_hooks() {
         } else if (event.phase == SeasonCupDrawPhase::overview && view.group_stage) {
             std::vector<std::vector<std::string>> rows;
             for (const auto& r : view.group_rows)
-                rows.push_back({std::to_string(r.rank), utf8(state.club_name(r.runtime_id))});
+                rows.push_back({std::to_string(r.rank), club_text(state, r.runtime_id)});
             const std::string caption = title + (view.group_caption.empty() ? "" : " " + utf8(view.group_caption));
             pending_info_.push_back([this, caption, rows] {
                 set_window("Info.CupDraw", 0);

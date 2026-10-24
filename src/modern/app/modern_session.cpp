@@ -4468,8 +4468,9 @@ TurnAdvanceResult ModernSession::dispatch_kickoff(const ui::DeskRequest& request
     // transition. The result view must keep the identities of the played event.
     std::vector<std::string> names;
     names.reserve(g_.club_ids.size());
-    for (size_t team = 0; team < g_.club_ids.size(); ++team)
-        names.push_back(ui::original_to_utf8(g_.club_name(int(team))));
+    for (size_t team = 0; team < g_.club_ids.size(); ++team)  // a Modern world's UTF-8 names first
+        names.push_back(team < g_.world_club_name.size() && !g_.world_club_name[team].empty()
+                            ? g_.world_club_name[team] : ui::original_to_utf8(g_.club_name(int(team))));
     const bool had_results = turn_driver_.last_results.valid;
     const uint32_t previous_result_date = turn_driver_.last_results.date;
     const uint32_t previous_day = g_.date;

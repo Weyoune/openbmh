@@ -41,7 +41,7 @@ void Console::register_reschedule_commands() {
             const GameState& g = session_->state();
             std::vector<std::vector<std::string>> rows;
             for (const LeagueMatchRef& m : reschedulable_matches(g, manager()))
-                rows.push_back({day_text(m.day), std::to_string(m.round + 1), utf8(g.club_name(m.away))});
+                rows.push_back({day_text(m.day), std::to_string(m.round + 1), club_text(g, m.away)});
             if (rows.empty()) emit('i', "no home league match can be moved");
             emit_table({"Date", "Matchday", "Opponent"}, rows);
         });
@@ -62,7 +62,7 @@ void Console::register_reschedule_commands() {
             const GameState& g = session_->state();
             std::vector<std::vector<std::string>> rows;
             for (const LeagueMatchRef& m : moved_matches(g, manager()))
-                rows.push_back({day_text(m.day), std::to_string(m.round + 1), utf8(g.club_name(m.home)), utf8(g.club_name(m.away))});
+                rows.push_back({day_text(m.day), std::to_string(m.round + 1), club_text(g, m.home), club_text(g, m.away)});
             if (rows.empty()) emit('i', "no moved match");
             emit_table({"Date", "Matchday", "Home", "Away"}, rows);
         });
@@ -72,7 +72,7 @@ void Console::register_reschedule_commands() {
             for (const LeagueMatchRef& m : moved_matches(g, manager())) {
                 if (day_text(m.day) != v.text("game")) continue;
                 app::RescheduleActions(*session_).undo_console(manager(), m.day, revision_);
-                emit('+', utf8(g.club_name(m.home)) + " - " + utf8(g.club_name(m.away)) + " back on matchday " + std::to_string(m.round + 1));
+                emit('+', club_text(g, m.home) + " - " + club_text(g, m.away) + " back on matchday " + std::to_string(m.round + 1));
                 return;
             }
             fail("E_RULE", "no moved match on " + v.text("game") + " (ListMovedGames)");
@@ -92,7 +92,7 @@ void Console::register_reschedule_commands() {
             default: fail("E_RULE", "the match cannot be moved");
             }
             const GameState& g = session_->state();
-            emit('+', utf8(g.club_name(m.home)) + " - " + utf8(g.club_name(m.away)) + " moved from " + day_text(m.day) + " to " +
+            emit('+', club_text(g, m.home) + " - " + club_text(g, m.away) + " moved from " + day_text(m.day) + " to " +
                           day_text(target));
         });
 }

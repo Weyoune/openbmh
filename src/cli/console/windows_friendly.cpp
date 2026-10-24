@@ -64,7 +64,7 @@ void Console::register_friendly_commands() {
             if (q.status != FriendlyQuoteStatus::quoted) fail("E_RULE", "no friendly possible against this club");
             friendly_quote_ = q;
             const GameState& g = session_->state();
-            emit('+', utf8(g.club_name(q.home_team)) + " - " + utf8(g.club_name(q.away_team)) + ", costs " + money(q.cost) +
+            emit('+', club_text(g, q.home_team) + " - " + club_text(g, q.away_team) + ", costs " + money(q.cost) +
                           (q.payer_manager >= 0 ? " (paid by player " + std::to_string(q.payer_manager + 1) + ")" : "") +
                           (q.opponent_manager >= 0 ? ", player " + std::to_string(q.opponent_manager + 1) + " must agree" : "") +
                           "; ListFreeDates, SetFriendlyDate(YYYY-MM-DD)");

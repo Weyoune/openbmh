@@ -66,7 +66,7 @@ struct Console::EngineRun {
     int minute = 0;
     MatchEngine* engine = nullptr;
     std::vector<MatchGroup>* groups = nullptr;
-    GameState* state = nullptr;
+    app::SessionState* state = nullptr;  // the session state (Modern: ModernState)
     bool intro_shown = false;
 
     // the clock: minutes to run before the next pause, or a minute to run to
@@ -216,7 +216,7 @@ void Console::start_matchday(const ui::DeskRequest& request, const ui::DeskState
         const int player = int(state.squad_slots[squad.first + size_t(row)] & 0x0fff);
         if (player == 0x0fff || size_t(player) >= state.players.size())
             throw std::runtime_error("contract expiry: missing player");
-        const std::string player_name = utf8(state.player_name(player));
+        const std::string player_name = player_text(state, player);
         const app::SessionState before = state;  // the whole state (Modern carries more)
         const WatcomRandom before_random = random;
 
@@ -314,14 +314,14 @@ void Console::start_matchday(const ui::DeskRequest& request, const ui::DeskState
             if (!notice.empty()) run->notices.push_back(notice);
             return -1;
         }
-        std::string text = (notice.empty() ? std::string() : notice + " ") + "Offers for " + utf8(g.player_name(view.player)) + ":";
+        std::string text = (notice.empty() ? std::string() : notice + " ") + "Offers for " + player_text(g, view.player) + ":";
         std::vector<std::string> options;
         std::vector<int> slots;
         for (const auto& o : view.offers) {
             if (!o.present) continue;
             options.push_back("Accept" + std::to_string(options.size() + 1));
             slots.push_back(o.bid_index);
-            text += " " + options.back() + " = " + (o.loan ? "loan to " : "sell to ") + utf8(g.club_name(o.buyer)) + " for " + std::to_string(o.fee) + " (" +
+            text += " " + options.back() + " = " + (o.loan ? "loan to " : "sell to ") + club_text(g, o.buyer) + " for " + std::to_string(o.fee) + " (" +
                     std::to_string(o.monthly_salary) + " monthly" + (o.loan ? ", loan" : "") + ");";
         }
         options.push_back("Decline");
@@ -335,7 +335,7 @@ void Console::start_matchday(const ui::DeskRequest& request, const ui::DeskState
     // relay it at the next thread handoff instead of silently dropping it.
     session_->set_transfer_decision_observer([this, run](const TransferDecisionEvent& event) {
         const auto& g = session_->state();
-        const std::string player = utf8(g.player_name(event.offers.player));
+        const std::string player = player_text(g, event.offers.player);
         if (event.kind == TransferDecisionEventKind::last_week) {
             run->notices.push_back(player + utf8(message_text(g, event.result_text_address)));
             return;
@@ -349,7 +349,7 @@ void Console::start_matchday(const ui::DeskRequest& request, const ui::DeskState
         for (const auto& offer : event.offers.offers) {
             if (!offer.present) continue;
             const bool accepted = event.accepted && offer.bid_index == event.selected_bid_index;
-            run->notices.push_back(player + ": " + utf8(g.club_name(offer.buyer)) + ": " +
+            run->notices.push_back(player + ": " + club_text(g, offer.buyer) + ": " +
                 utf8(message_text(g, accepted ? ::bmh::layout::IncomingTransfer_RenderAtElapsed_TextPointer3 : ::bmh::layout::IncomingTransfer_RenderAtElapsed_TextPointer4)));
             if (accepted) break;
         }
@@ -360,10 +360,10 @@ void Console::start_matchday(const ui::DeskRequest& request, const ui::DeskState
         for (const auto& offer : event.offers.offers) {
             if (!offer.present || (event.accepted && offer.bid_index == event.selected_bid_index)) continue;
             if (g.manager_of(offer.buyer) < 0) continue;
-            std::string line = player + ": the bid of " + utf8(g.club_name(offer.buyer)) + " was not accepted";
+            std::string line = player + ": the bid of " + club_text(g, offer.buyer) + " was not accepted";
             for (const auto& winner : event.offers.offers)
                 if (event.accepted && winner.present && winner.bid_index == event.selected_bid_index)
-                    line += " - he signs for " + utf8(g.club_name(winner.buyer));
+                    line += " - he signs for " + club_text(g, winner.buyer);
             run->notices.push_back(line);
         }
     });
@@ -397,15 +397,15 @@ void Console::start_matchday(const ui::DeskRequest& request, const ui::DeskState
         }
         static const char* const kGroups[4] = {"1st division", "2nd division", "3rd divisions", "4th division"};
         std::string up, down;
-        for (size_t i = 0; i < e.count && i < e.promoted.size(); ++i) up += (up.empty() ? "" : ", ") + utf8(g.club_name(e.promoted[i]));
-        for (size_t i = 0; i < e.count && i < e.relegated.size(); ++i) down += (down.empty() ? "" : ", ") + utf8(g.club_name(e.relegated[i]));
+        for (size_t i = 0; i < e.count && i < e.promoted.size(); ++i) up += (up.empty() ? "" : ", ") + club_text(g, e.promoted[i]);
+        for (size_t i = 0; i < e.count && i < e.relegated.size(); ++i) down += (down.empty() ? "" : ", ") + club_text(g, e.relegated[i]);
         run->notices.push_back(std::string(kGroups[std::clamp(e.group, 0, 3)]) + ": relegated " + down + "; promoted " + up);
     });
     session_->set_season_cup_draw([run](const GameState& g, const SeasonCupDrawEvent& e) {
         if (e.phase != SeasonCupDrawPhase::draw) return;
         std::string pairs;
         for (size_t i = 0; i + 1 < e.participants.size() && i + 1 < e.count; i += 2)
-            pairs += (pairs.empty() ? "" : "; ") + utf8(g.club_name(e.participants[i])) + " - " + utf8(g.club_name(e.participants[i + 1]));
+            pairs += (pairs.empty() ? "" : "; ") + club_text(g, e.participants[i]) + " - " + club_text(g, e.participants[i + 1]);
         run->notices.push_back("cup draw (competition " + std::to_string(e.competition) + ", round " + std::to_string(e.round + 1) + "): " + pairs);
     });
     session_->set_live_minute([run](int minute, MatchEngine& engine, std::vector<MatchGroup>& groups, GameState& g) {
@@ -430,7 +430,7 @@ void Console::start_matchday(const ui::DeskRequest& request, const ui::DeskState
         run->minute = minute;
         run->engine = &engine;
         run->groups = &groups;
-        run->state = &g;
+        run->state = &static_cast<app::SessionState&>(g);  // the session state behind the hook
         run->engine_turn = false;
         run->cv.notify_all();
         run->cv.wait(lock, [run] { return run->engine_turn; });
@@ -675,8 +675,8 @@ void Console::show_match_pause() {
         }
         std::string text = utf8(e.text);
         if (e.what == Show::Substitution && run->state && e.player >= 0 && e.player < 0xfff && e.other >= 0 && e.other < 0xfff)
-            text = utf8(run->state->player_name(e.other)) + " for " + utf8(run->state->player_name(e.player));
-        if (text.empty() && run->state && e.player >= 0 && e.player < 0xfff) text = utf8(run->state->player_name(e.player));
+            text = player_text(*run->state, e.other) + " for " + player_text(*run->state, e.player);
+        if (text.empty() && run->state && e.player >= 0 && e.player < 0xfff) text = player_text(*run->state, e.player);
         Json::Object data{{"kind", int(e.what)}, {"group", int(e.group)}, {"match", int(e.match)}, {"side", int(e.side)},
                           {"team", int(e.team)}, {"player", int(e.player)}, {"other", int(e.other)}};
         emit('~', std::to_string(e.minute) + "' [match " + std::to_string(e.group) + "." + std::to_string(e.match) + "] " + what + text,
@@ -747,7 +747,7 @@ void Console::register_match_commands() {
         for (size_t row = 0; row < range.count; ++row) {
             const uint16_t slot = run.state->squad_slots.at(range.first + row);
             if ((slot & 0x0fff) == 0x0fff || !(slot & 0xc000)) continue;
-            refs.push_back({int(row), slot & 0x0fff, utf8(run.state->player_name(slot & 0x0fff))});
+            refs.push_back({int(row), slot & 0x0fff, player_text(*run.state, slot & 0x0fff)});
         }
         return refs;
     };
@@ -790,7 +790,7 @@ void Console::register_match_commands() {
     // the SDL live tactics screen does).
     auto live_tactics = [this, paused](int manager) {
         EngineRun& run = paused();
-        GameState view = *run.state;
+        app::SessionState view = *run.state;
         if (view.memory.has(::bmh::layout::ActiveManager)) view.memory.set8(::bmh::layout::ActiveManager, uint8_t(manager));
         return ui::tactics_from_game(view, exe_, revision_);
     };
@@ -861,7 +861,7 @@ void Console::register_match_commands() {
                 require_engine(false, "live position", why);
             };
             // the projection of the paused match for the manager (as the SDL live line-up)
-            GameState view = *run.state;
+            app::SessionState view = *run.state;
             if (view.memory.has(::bmh::layout::ActiveManager)) view.memory.set8(::bmh::layout::ActiveManager, uint8_t(manager));
             ui::PreparationState p = ui::preparation_from_game(view, exe_, revision_);
             p.lineup.in_match = true;

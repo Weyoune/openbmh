@@ -54,6 +54,11 @@ std::string fold(std::string s);
 // ("M]NCHEN"), some already convert (cup draw names, results). The original encoding has no
 // bytes above 0x7f, so a string with such bytes is taken as UTF-8 already.
 std::string utf8(std::string_view text);
+// The UTF-8 name of a club / player for the console. Classic: the engine's name (utf8 above).
+// Modern (openbmh_modern_cli): the world's names, players with first name, when the world has
+// them. `g` must be the session's state (app::SessionState), not a sliced copy.
+std::string club_text(const GameState& g, int team);
+std::string player_text(const GameState& g, int player);
 // "2027-07-01" (the concept's date type)
 std::string date_text(int day, int month, int year);
 // Money as whole euros without separators (01-grundlagen 2.1)

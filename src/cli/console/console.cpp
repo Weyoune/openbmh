@@ -62,6 +62,26 @@ std::string utf8(std::string_view text) {
     return ui::original_to_utf8(text);
 }
 
+std::string club_text(const GameState& g, int team) {
+#ifdef OPENBMH_MODERN_SESSION
+    const auto& m = static_cast<const app::SessionState&>(g);
+    if (team >= 0 && size_t(team) < m.world_club_name.size() && !m.world_club_name[size_t(team)].empty())
+        return m.world_club_name[size_t(team)];
+#endif
+    return utf8(g.club_name(team));
+}
+
+std::string player_text(const GameState& g, int player) {
+#ifdef OPENBMH_MODERN_SESSION
+    const auto& m = static_cast<const app::SessionState&>(g);
+    if (player >= 0 && size_t(player) < m.player_last.size() && !m.player_last[size_t(player)].empty()) {
+        const std::string& first = size_t(player) < m.player_first.size() ? m.player_first[size_t(player)] : std::string();
+        return first.empty() ? m.player_last[size_t(player)] : first + " " + m.player_last[size_t(player)];
+    }
+#endif
+    return utf8(g.player_name(player));
+}
+
 std::string fold(std::string s) {
     s = lower(std::move(s));
     // UTF-8 Ä Ö Ü (C3 84, C3 96, C3 9C) -> ä ö ü (C3 A4, C3 B6, C3 BC)

@@ -28,7 +28,7 @@ Auch der JSON-Modus (`--json`, Befehle `new`, `kickoff`, `save`, `load`, …) un
 ## Grenzen
 
 - Nur deutsche Vereine sind wählbar (0.3); die Zusatz-Reiter der Auswahl (Amateure) und Auslandsvereine werden abgelehnt.
-- Die Konsole zeigt die Namen der Engine (Großbuchstaben, Einzelbyte-Zeichensatz); UTF-8-Namen, Vornamen, Almanach und Spielstatistik liefert die Engine über `ModernSession::read` für die neue Oberfläche.
+- Namen: Meldungen, Ergebnisse, Spielerlisten und Angebote zeigen die UTF-8-Namen der Welt (Spieler mit Vornamen; `club_text`/`player_text` in der Konsole). Paarungen, Ligatabelle und weitere Ansichten aus den Projektionen der Classic-Oberfläche zeigen noch die Engine-Namen (Großbuchstaben). Almanach und Spielstatistik liefert die Engine über `ModernSession::read` für die neue Oberfläche.
 - Spielstände sind Modern-Spielstände (`.obs`, nennen ihre Welt); sie laden nur mit derselben Welt.
 
 ## Technik

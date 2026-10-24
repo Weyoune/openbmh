@@ -380,7 +380,7 @@ void Console::register_transfer_commands() {
                 const GameState& g = services.state();
                 const Player& p = g.players.at(size_t(selection.player_id));
                 emit_table({"Player", "Value"},
-                           {{"name", utf8(g.player_name(selection.player_id))},
+                           {{"name", player_text(g, selection.player_id)},
                             {"position", text(kPositionNames + p.position())},
                             {"age", std::to_string(p.age())},
                             {"condition", std::to_string(p.condition())},
@@ -434,10 +434,10 @@ void Console::register_transfer_commands() {
             const int p = g.squad_slots.at(s) & 0xfff;
             if (p == 0xfff) continue;
             const Player& pl = g.players.at(size_t(p));
-            rows.push_back({"id:" + std::to_string(p), utf8(g.player_name(p)), text(kPositionNames + pl.position()), std::to_string(pl.age()),
+            rows.push_back({"id:" + std::to_string(p), player_text(g, p), text(kPositionNames + pl.position()), std::to_string(pl.age()),
                             std::to_string(pl.strength(true))});
         }
-        emit('i', utf8(g.club_name(team)));
+        emit('i', club_text(g, team));
         emit_table({"Id", "Player", "Pos", "Age", "Str"}, rows);
     });
     add({"Transfer.Poach", "PoachPlayer", {player}, "the offer to a player of another club (decided at once)", true},
