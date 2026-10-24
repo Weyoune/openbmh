@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #pragma once
+#include "modern/content/projections.hpp"
 #include "modern/content/statistics.hpp"
 #include "modern/content/world_expand.hpp"
 // The engine side of the UI's career handoff (src/ui/flow.hpp, ENGINE_BINDING.md).
@@ -817,6 +818,11 @@ public:
     // The game statistics menu (docs/new_engine/statistik.md): winners by season, player
     // statistics per competition. Read-only; answers {ok, ...} or {ok: false, error}.
     cli::Json read_statistics(const cli::Json& request) const { return query_statistics(g_, request); }
+    // The read queries of the new interface (docs/new_engine/ui-abfragen.md): status, leagues,
+    // table, fixtures, squad and the statistics, for the manager at the desk. Read-only.
+    cli::Json read(const cli::Json& request) const {
+        return query_projection(g_, int(g_.memory.has(::bmh::layout::ActiveManager) ? g_.memory.u8(::bmh::layout::ActiveManager) : 0), request);
+    }
     ModernState& state() { return g_; }
     const TurnResultSnapshot& last_turn_results() const { return turn_driver_.last_results; }
     // Owned presentation for the event completed by the last accepted kickoff.

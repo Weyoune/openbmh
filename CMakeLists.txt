@@ -345,7 +345,8 @@ add_subdirectory(src/import)
 add_library(bmh_modern_content STATIC src/modern/content/world.cpp src/modern/content/world_package.cpp
     src/modern/content/world_save.cpp
     src/modern/content/world_expand.cpp
-    src/modern/content/statistics.cpp)
+    src/modern/content/statistics.cpp
+    src/modern/content/projections.cpp)
 target_link_libraries(bmh_modern_content PUBLIC bmh_content bmh_season_modern PRIVATE bmh_miniz)
 if(MSVC)
     target_compile_options(bmh_modern_content PRIVATE /W4 /utf-8)

@@ -69,6 +69,7 @@ Siehe [Trainingslager](trainingslager.md): Katalog aus den Daten, drei Regionen,
 2. Trainingslager: Regel `rule:training-camps` mit `maps` (Deutschland, Europa, Naher Osten) und den 18 Lagern aus `docs/new_ui/desktop/trainingcamp` nach [F4](datenformat.md#f4--trainingslager); `x`/`y` bleiben `null`. Vorlage für Werte und IDs (`resort:0..17`): `default_camp_catalogue()` in `src/modern/game/training_camps.cpp`.
 3. Schiedsrichter: mindestens 50 neue `staff`-Zeilen (`role: referee`, ohne `x-legacy`) nach [F9](datenformat.md#f9--schiedsrichter), fiktive Namen, `attributes.strictness` und `attributes.perception` je 0–3 ähnlich verteilt wie bei den 49 Originalen (`x-legacy.property`: Bits 3–4 bzw. 0–1).
 4. Stabile IDs: Vereins-, Spieler- und Schiedsrichter-IDs aus 1.3 unverändert lassen (der Almanach und die Spielstände beziehen sich darauf).
+4a. Geburtsdaten auch für die 2.574 Originalspieler (heute Platzhalter-Alter 16). Die Engine übernimmt das Alter dann beim Karrierestart, statt es zu würfeln ([Balance](balance.md)).
 5. Bericht, Prüfung und Editor-Roundtrip wie bei 1.3; Eintrag in `DIAMOND_MIGRATIONS.md`.
 
 Danach: `modern_season_sim` mit der neuen Welt (zwei Saisons, `SIM_CONTRACTS=1`) muss ohne Doppeleinsätze von Schiedsrichtern und mit den 18 Lagern laufen; das prüfe ich.

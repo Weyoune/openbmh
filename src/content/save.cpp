@@ -2,6 +2,7 @@
 #include "content/save.hpp"
 #include "import/detail.hpp"
 #include "game/save.hpp"
+#include "game/world_layout.hpp"
 #include <limits>
 #include <algorithm>
 #include <bit>
@@ -107,7 +108,10 @@ J groups_json(const std::vector<MatchGroup> &groups) {
 std::vector<MatchGroup> groups_json(const J &j) {
     std::vector<MatchGroup> groups;
     const auto &rows = arr(j);
-    if (rows.size() > 6)
+    // The original has six group descriptors. A Modern world plays more competitions on one
+    // day (nine leagues and the cups); its groups beyond the sixth live in the turn driver.
+    const size_t max_groups = world_layout().league_teams == classic_world_layout().league_teams ? 6 : 16;
+    if (rows.size() > max_groups)
         fail("too many match groups");
     for (const auto &row : rows)
         groups.push_back(group_json(row));

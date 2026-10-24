@@ -32,7 +32,7 @@ Messwerkzeug: `MODERN_SPREAD=1 modern_season_sim <welt.obw> 1 0 1` zeigt die Ver
 
 Das Original würfelt beim Start auch das Alter (20–32, der Verein des Menschen 20–25) und die sieben Fähigkeiten (Teamplay, Tempo, Schuss, Passspiel, Zweikampf, Freistoß, Ecke; je 0–3) neu.
 
-- **Alter:** Datensatzspieler behalten ihr Alter (`new_career_players`, `career_add_manager`).
+- **Alter:** Datensatzspieler behalten ihr Alter, wenn der Datensatz eines liefert (Geburtsdatum; `world_age_known`, `new_career_players`, `career_add_manager`). Im Datensatz 1.3 haben das nur die 840 ergänzten Spieler; die 2.574 Originalspieler stehen auf dem Platzhalter 16 und bekommen ihr Alter wie im Original gewürfelt (Kader des Menschen 20–25). Echte Alter für alle brauchen Geburtsdaten im Datensatz (Aufgabe für 1.4).
 - **Fähigkeiten:** Der Datensatz 1.3 hat keine (alle 0, auch `x-legacy.skill_word`). Sie werden daher wie im Original gewürfelt (Mittel 1,5); nur Fähigkeiten, die ein Datensatz liefert (nicht alle 0), bleiben. Ein erster Versuch, sie zu „behalten“, ließ alle Spieler ohne Fähigkeiten spielen: 0,1–0,5 Tore pro Spiel weniger in jedem Wettbewerb.
 
 Tore pro Spiel je Wettbewerb (zwei Saisons, Seed 1):

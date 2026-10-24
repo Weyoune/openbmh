@@ -606,6 +606,18 @@ int main(int argc, char** argv) {
             ask({{"kind", "player_stats"}, {"competition", g.world_league_id.empty() ? "league:0" : g.world_league_id[0]},
                  {"sort", "yellow"}, {"limit", 3}});
             ask({{"kind", "player_stats"}, {"competition", "x"}, {"sort", "dribbles"}});
+            // the read queries of the new interface (docs/new_engine/ui-abfragen.md)
+            const auto read = [&](const cli::Json::Object& request) {
+                std::string answer = cli::dump_json(session.read(request));
+                if (answer.size() > 8000) answer = answer.substr(0, 8000) + " ...";
+                std::printf("read %s\n  -> %s\n", cli::dump_json(request).c_str(), answer.c_str());
+            };
+            read({{"kind", "status"}});
+            read({{"kind", "leagues"}});
+            read({{"kind", "table"}, {"league", 0}});
+            read({{"kind", "fixtures"}, {"league", 0}, {"matchday", 1}});
+            read({{"kind", "squad"}});
+            read({{"kind", "table"}, {"league", 42}});
         }
         if (std::getenv("SIM_ADVERTISING")) std::printf("%d advertising contracts accepted (SIM_ADVERTISING=1)\n", ad_contracts);
         if (std::getenv("SIM_CAMP")) std::printf("%d training camp stays (SIM_CAMP=%s)\n", camp_stays, std::getenv("SIM_CAMP"));

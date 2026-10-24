@@ -305,6 +305,10 @@ ExpandReport expand_to_world(ModernState& g, const World& world) {
         else
             ++report.fallback_nationalities;
         const int age = std::clamp(p.age < 0 ? 24 : p.age, 16, 47);
+        if (p.age >= 0) {  // a birth date: the career start keeps this age (balance.md)
+            if (g.world_age_known.size() < size_t(next_player)) g.world_age_known.resize(size_t(next_player), false);
+            g.world_age_known[i] = true;
+        }
         Player& pl = g.players[i];
         pl.w35c = clamp7(p.form) | clamp7(p.technique) << 7 | clamp7(p.condition) << 14;
         pl.w368 = skill(p.teamplay) | skill(p.speed) << 2 | skill(p.shooting) << 4 | skill(p.passing) << 6 |

@@ -52,6 +52,9 @@ struct ModernState : GameState {
     std::vector<TrainingCamp> training_camps;
     // The football almanac (docs/new_engine/almanach.md): every match of the career.
     Almanac almanac;
+    // Players whose age the data set gives (birth date); the others carry a placeholder the
+    // career start replaces as in the original. Needed only while a career starts (not saved).
+    std::vector<bool> world_age_known;
 
     ModernState() { season_hooks = &modern::season_hooks(); }
     // Takes over a state built by shared code (save loading, career setup).
@@ -64,6 +67,11 @@ struct ModernState : GameState {
 inline bool keeps_world_values(const ModernState& g, int player) {
     return player >= 0 && size_t(player) < g.world_player_id.size() && !g.world_player_id[size_t(player)].empty() &&
            !g.world_player_id[size_t(player)].starts_with("player:gen-");
+}
+
+// A player of the data set whose age it gives (balance.md).
+inline bool keeps_world_age(const ModernState& g, int player) {
+    return keeps_world_values(g, player) && size_t(player) < g.world_age_known.size() && g.world_age_known[size_t(player)];
 }
 
 }  // namespace bmh::modern

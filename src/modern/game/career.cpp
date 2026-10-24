@@ -277,10 +277,11 @@ bool new_career_players(ModernState& g, GameRandom& game, WatcomRandom& rand, Mi
         if (id == 0x0fff) continue;
         Player& p = g.players.at(size_t(id));
         const uint32_t age = uint32_t(rand.range(4, 0x10)), skills = uint32_t(rand.range(0, 0x3fff));
-        // Modern (balance.md): a player of the data set keeps his age; his seven skills are drawn
-        // as in the original unless the data set gives him some (data sets have none so far).
+        // Modern (balance.md): a player of the data set keeps the age and the seven skills the
+        // data set gives him; what it leaves at 0 is drawn as in the original (data set 1.3 has
+        // ages only for the players it added, skills for nobody).
         const bool world = keeps_world_values(g, id);
-        if (!world) p.w364 |= age << 21;
+        if (!keeps_world_age(g, id)) p.w364 = (p.w364 & ~(0x1fu << 21)) | age << 21;
         if (!world || (p.w368 & 0x3fff) == 0) p.w368 = (p.w368 & 0xffffc000u) + skills;
     }
     for (int slot = int(pool_end_slot() + 24); slot < int(pool_end_slot() + 24) + 0x36; slot++)
@@ -600,7 +601,7 @@ bool career_add_manager(ModernState& g, const LeImage& exe, int m, const CareerM
     for (int i = 0; i < players; i++) {
         const size_t slot = squad.first + size_t(i);
         Player& p = g.players.at(size_t(g.squad_slots.at(slot) & 0x0fff));
-        if (!keeps_world_values(g, g.squad_slots.at(slot) & 0x0fff)) {  // Modern: the data set's age stays
+        if (!keeps_world_age(g, g.squad_slots.at(slot) & 0x0fff)) {  // Modern: an age of the data set stays
             p.w364 &= ~(0x1fu << 21);
             p.w364 |= uint32_t(rand.range(4, 9)) << 21;
         }
@@ -619,7 +620,7 @@ bool career_add_manager(ModernState& g, const LeImage& exe, int m, const CareerM
             const int id = g.squad_slots.at(slot) & 0x0fff;
             if (id == 0x0fff) continue;
             Player& p = g.players.at(size_t(id));
-            if (!keeps_world_values(g, id)) {  // Modern: the data set's age stays
+            if (!keeps_world_age(g, id)) {  // Modern: an age of the data set stays
                 p.w364 &= ~(0x1fu << 21);
                 p.w364 |= uint32_t(rand.range(4, 9)) << 21;
             }
