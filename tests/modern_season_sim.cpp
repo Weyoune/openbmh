@@ -130,6 +130,25 @@ void print_almanac(const modern::ModernState& g) {
     std::printf("almanac: %zu seasons, %zu matches, %zu events, %zu bytes uncompressed, %u new player identities\n",
                 seasons.size(), matches, events, bytes, g.almanac.generated_players);
     std::printf("almanac: %zu matches whose goal events differ from the result, %zu without line-ups\n", mismatched, without_lineup);
+    // The human club's final place per season (balance runs compare these).
+    // The club comes from the season's league matches of manager 0 (at the national coach's
+    // desk his record names the national team).
+    for (const auto& s : seasons) {
+        std::string human;
+        for (const auto& m : s.matches) {
+            if (m.type != 0 || !human.empty()) continue;
+            for (int side = 0; side < 2; ++side) {
+                const int8_t idx = side ? m.away_manager : m.home_manager;
+                if (idx >= 0 && size_t(idx) < s.managers.size() && s.managers[size_t(idx)].index == 0)
+                    human = s.clubs[side ? m.away : m.home].id;
+            }
+        }
+        for (const auto& t : s.tables)
+            for (const auto& row : t.rows)
+                if (s.clubs[row.club].id == human)
+                    std::printf("almanac human club %s season %d: league %d place %d, %d pts\n", s.clubs[row.club].name.c_str(),
+                                s.start_year, int(t.league), int(row.rank), int(row.points));
+    }
     for (const auto& s : seasons) {
         if (s.tables.empty() && s.winners.empty()) continue;
         std::printf("almanac season %d: %zu final tables, %zu winners\n", s.start_year, s.tables.size(), s.winners.size());
@@ -379,12 +398,21 @@ int main(int argc, char** argv) {
         check_state(g, "start", checks);
         bool listed_for_sale = false;
         int ad_contracts = 0;  // SIM_ADVERTISING: contracts accepted
+        int camp_stays = 0;    // SIM_CAMP: training camp stays booked
         for (; played < turns; played++) {
             // SIM_ADVERTISING=1: the manager keeps his advertising places filled, as every
             // player does (the largest income besides the gate): an expired contract is renewed
             // when the sponsor offers it (legacy routine), a free place takes the best acceptable
             // offer (TV, shirt, then the boards). Without it a long run lives on gate money
             // alone and its debts grow without bound (issue #95).
+            // SIM_CAMP=<resort>: the manager books this training camp whenever he may (three
+            // stays a season, one a week) and can pay it (the camp's effect, balance.md).
+            if (const char* camp = std::getenv("SIM_CAMP")) {
+                const int resort = std::atoi(camp);
+                if (modern::training_camp_booking_block(g, 0) == TrainingCampBookingBlock::none &&
+                    modern::book_training_camp(g, 0, resort, session.rand()))
+                    ++camp_stays;
+            }
             if (const char* ads = std::getenv("SIM_ADVERTISING"); ads && std::string(ads) == "1") {
                 for (int slot = 15; slot >= 0; --slot) {
                     AdvertisingOfferList list = modern::advertising_offers(g, 0, slot);
@@ -516,6 +544,7 @@ int main(int argc, char** argv) {
             ask({{"kind", "player_stats"}, {"competition", "x"}, {"sort", "dribbles"}});
         }
         if (std::getenv("SIM_ADVERTISING")) std::printf("%d advertising contracts accepted (SIM_ADVERTISING=1)\n", ad_contracts);
+        if (std::getenv("SIM_CAMP")) std::printf("%d training camp stays (SIM_CAMP=%s)\n", camp_stays, std::getenv("SIM_CAMP"));
         if (std::getenv("SIM_INTERVENE")) std::printf("%d interventions (substitution at minute 30, re-rated)\n", interventions);
         if (sim_contracts_env && std::string(sim_contracts_env) == "1")
             std::printf("contract expiry policy: %d decisions, %d renewals, %d rejected offers/releases, %d no-demand releases, %d errors (SIM_CONTRACTS=1)\n",

@@ -28,9 +28,25 @@ Code: `src/modern/game/career.cpp` (`startup_players`, `set_club_strength`, `pla
 
 Messwerkzeug: `MODERN_SPREAD=1 modern_season_sim <welt.obw> 1 0 1` zeigt die Vereinsstärken je Liga beim Start.
 
-## Offen
+### Alter und Fähigkeiten
 
-- Trainingslager: Saisonwirkung von 6 Sternen messen (Ziel: höchstens etwa +1 Tabellenplatz).
+Das Original würfelt beim Start auch das Alter (20–32, der Verein des Menschen 20–25) und die sieben Fähigkeiten (Teamplay, Tempo, Schuss, …) neu. Datensatzspieler behalten in Modern beides (`new_career_players`, `career_add_manager`).
+
+## Trainingslager
+
+Messung (Modern-Datensatz, Verein des Menschen in der Bundesliga, 12 Seeds je Variante, erste Saison; der Mensch bucht, sobald erlaubt und bezahlbar; Werbeeinnahmen an):
+
+| Variante | Aufenthalte | mittlerer Platz | Gewinn |
+|---|---|---|---|
+| kein Lager | – | 9,4 | – |
+| 5 Sterne (Lager 7, 840.000 €) | 3 je Saison | 7,8 | +1,7 Plätze |
+| 6 Sterne (Lager 14, 2,8 Mio. €) | 3–4 in 2 Saisons (Geld) | 6,9 | +2,5 Plätze |
+
+6 Sterne bringen gegenüber 5 Sternen etwa +0,8 Plätze bei mehr als dreifachem Preis: Ziel erreicht (nicht übermächtig, höchstens etwa +1 Platz). Keine Änderung der Wirkung. Standardfehler je Mittel rund 1 Platz.
+
+Messwerkzeug: `SIM_CAMP=<Lager> SIM_CONTRACTS=1 SIM_ADVERTISING=1 modern_season_sim <welt.obw> 100 0 <seed>`; am Ende steht `almanac human club … place`.
+
+## Offen
 - Ermüdung und Verletzungen bei 38 Spieltagen, Marktwerte und Gehälter der neuen Spieler, Finanzen des menschlichen Vereins (Langläufe über 10 Saisons).
 - Spieler in den Pools (vereinslos) aus dem Datensatz behalten ihre Rohwerte; der Datensatz 1.3 hat keine.
 - Datenpflege: Die Werte im Datensatz könnten auf eine gemeinsame Skala gebracht werden; die Engine braucht das wegen der Rangfolge nicht.

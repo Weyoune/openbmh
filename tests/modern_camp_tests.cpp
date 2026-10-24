@@ -97,6 +97,26 @@ int main() {
         check((after_camp({5, 5, 5, 6}, seed).players[3].w364 >> 16 & 0x1f) == 2, "lodging 6: one week less injury");
         check((five.players[3].w364 >> 16 & 0x1f) == 3, "lodging 5: injury unchanged");
     }
+    {
+        // The club is a word: a club beyond 127 (Modern: international clubs, the original read a
+        // signed byte) books like any other; the national coach's desk (record names the
+        // national team, no_team()) books none.
+        ModernState g = squad();
+        g.training_camps = {camp({5, 5, 5, 5})};
+        g.manager_records[0x290] = 131;
+        check(training_camp_booking_block(g, 0) == TrainingCampBookingBlock::none, "club 131 may book");
+        bool thrown = false;
+        try {
+            WatcomRandom rand(1);
+            training_camp_effect(g, 0, 0, rand);
+        } catch (const std::exception&) {
+            thrown = true;
+        }
+        check(!thrown, "camp effect for club 131");
+        g.manager_records[0x290] = uint8_t(no_team() & 0xff), g.manager_records[0x291] = uint8_t(no_team() >> 8);
+        check(training_camp_booking_block(g, 0) == TrainingCampBookingBlock::invalid_request,
+              "no camp at the national coach's desk");
+    }
     if (failures) return 1;
     std::puts("modern camp checks passed");
     return 0;

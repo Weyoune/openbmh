@@ -69,7 +69,11 @@ und 3 abgeschwächt. Das Ergebnis wird hier und in [DIFFERENCES](../DIFFERENCES.
 - Preis, Buchung und Wirkung in `src/modern/game/desk_actions.cpp` (`training_camp_price`, `book_training_camp`, `training_camp_effect`).
 - Die 6-Sterne-Regeln sind wie oben umgesetzt: Stufenindex auf das Tabellenende gedeckelt, Leistungsdach +1 ab Platz 5 und +1 bei Platz und Fitness 6, Verpflegung 6 bis +1 Kondition, Unterkunft 6 eine Woche weniger Verletzung.
 - Mit Classic-Daten unverändert: Nur die Original-Lager 6 und 7 haben Platz 5, das alte Kriterium „Index ab 6“ trifft dieselben Lager.
-- Test: `modern_camp_tests` (Katalog, Deckelung, Verpflegung, Unterkunft).
+- Test: `modern_camp_tests` (Katalog, Deckelung, Verpflegung, Unterkunft, Vereinsnummer, Bundestrainer-Schreibtisch).
+- Fehler behoben bei den Balance-Läufen:
+  - `ModernSession::dispatch_training_camp` ließ nur die Lager 0–7 zu (Classic-Konstante); jetzt alle Lager des Katalogs.
+  - Der Verein des Managers wurde wie im Original als vorzeichenbehaftetes Byte gelesen (Vereine über 127 wurden negativ). Modern liest das ganze Wort (`manager_club`).
+  - Am Schreibtisch des Bundestrainers nennt der Managerdatensatz die Nationalmannschaft; dort ist kein Lager buchbar (`invalid_request`).
 - Offen: Messung der Saisonwirkung (M7) und die Projektion für die UI (M6).
 
 ## Für die Oberfläche

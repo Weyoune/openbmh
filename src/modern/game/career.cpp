@@ -275,6 +275,7 @@ bool new_career_players(ModernState& g, GameRandom& game, WatcomRandom& rand, Mi
     for (size_t slot = 0; slot < transfer_list_slot(); slot++) {
         const int id = g.squad_slots.at(slot) & 0x0fff;
         if (id == 0x0fff) continue;
+        if (keeps_world_values(g, id)) continue;  // Modern: age and skills of the data set stay (balance.md)
         Player& p = g.players.at(size_t(id));
         p.w364 |= uint32_t(rand.range(4, 0x10)) << 21;
         p.w368 = (p.w368 & 0xffffc000u) + uint32_t(rand.range(0, 0x3fff));
@@ -596,8 +597,10 @@ bool career_add_manager(ModernState& g, const LeImage& exe, int m, const CareerM
     for (int i = 0; i < players; i++) {
         const size_t slot = squad.first + size_t(i);
         Player& p = g.players.at(size_t(g.squad_slots.at(slot) & 0x0fff));
-        p.w364 &= ~(0x1fu << 21);
-        p.w364 |= uint32_t(rand.range(4, 9)) << 21;
+        if (!keeps_world_values(g, g.squad_slots.at(slot) & 0x0fff)) {  // Modern: the data set's age stays
+            p.w364 &= ~(0x1fu << 21);
+            p.w364 |= uint32_t(rand.range(4, 9)) << 21;
+        }
         modern::new_board_entry(g, m, i, int(slot), rand);
         g.tactics.at(size_t(m) * 0x840 + size_t(i) * 0x58 + 0xd) = 100;
     }
@@ -613,8 +616,10 @@ bool career_add_manager(ModernState& g, const LeImage& exe, int m, const CareerM
             const int id = g.squad_slots.at(slot) & 0x0fff;
             if (id == 0x0fff) continue;
             Player& p = g.players.at(size_t(id));
-            p.w364 &= ~(0x1fu << 21);
-            p.w364 |= uint32_t(rand.range(4, 9)) << 21;
+            if (!keeps_world_values(g, id)) {  // Modern: the data set's age stays
+                p.w364 &= ~(0x1fu << 21);
+                p.w364 |= uint32_t(rand.range(4, 9)) << 21;
+            }
             modern::new_board_entry(g, m, int(i), int(slot), rand);
             g.tactics.at(size_t(m) * 0x840 + i * 0x58 + 0xd) = 100;
         }

@@ -55,6 +55,14 @@ constexpr int8_t kDirection[5] = {1, 1, 1, -1, 1};
 // Scaled: a * b * 20 / 100 with unsigned byte arguments.
 int scaled(int a, int b) { return (a & 0xff) * (b & 0xff) * 20 / 100; }
 
+// The club of a manager (record +0x290). The original reads the low byte as a signed byte,
+// which holds for its clubs below 128; Modern clubs go beyond (and the national coach's desk
+// names the national team), so Modern reads the whole word.
+int manager_club(const ModernState& g, int manager) {
+    const size_t at = size_t(manager) * kRecordSize + kTeam;
+    return int(g.manager_records.at(at) | g.manager_records.at(at + 1) << 8);
+}
+
 FriendlyBookingQuote make_friendly_quote(const ModernState& g, int manager, int opponent,
                                          bool manager_home) {
     FriendlyBookingQuote out;
@@ -522,7 +530,7 @@ void configure_training_camp_data(ModernState& g, const LeImage& exe) {
 int32_t training_camp_price(const ModernState& g, int manager, int resort) {
     if (manager < 0 || size_t(manager) >= g.manager_teams.size() || resort < 0 || size_t(resort) >= g.training_camps.size())
         throw FormatError("training camp: invalid manager or resort");
-    const int team = int8_t(g.manager_records.at(size_t(manager) * kRecordSize + kTeam));
+    const int team = manager_club(g, manager);
     return g.training_camps[size_t(resort)].base_price + team_average(g, team, 0xff).players * 5000;
 }
 
@@ -1453,6 +1461,10 @@ TrainingCampBookingBlock training_camp_booking_block(const ModernState& g, int m
     if (manager < 0 || size_t(manager) >= g.manager_teams.size() ||
         (size_t(manager) + 1) * kRecordSize > g.manager_records.size())
         return TrainingCampBookingBlock::invalid_request;
+    // Only for the manager's club: at the national coach's desk the record names the
+    // national team, which has no camp (Modern; Classic offers no camp there either).
+    if (manager_club(g, manager) < 0 || manager_club(g, manager) >= league_clubs())
+        return TrainingCampBookingBlock::invalid_request;
     const uint8_t stays = g.manager_records.at(size_t(manager) * kRecordSize + kStays);
     if (stays & 0x80) return TrainingCampBookingBlock::booked_this_week;
     if ((stays & 0x7f) >= 3) return TrainingCampBookingBlock::visit_limit;
@@ -1474,7 +1486,7 @@ bool book_training_camp(ModernState& g, int manager, int resort, WatcomRandom& r
 
 void training_camp_effect(ModernState& g, int manager, int resort, WatcomRandom& rand) {
     const size_t rec = size_t(manager) * kRecordSize;
-    const int team = int8_t(g.manager_records.at(rec + kTeam));
+    const int team = manager_club(g, manager);
     const auto& grade = g.training_camps.at(size_t(resort)).quality;
 
     // Morale (bits 0-5) + 12 * grade * 20 %, clamped to 0..0x2f (ClampSignedWord with a word

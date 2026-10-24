@@ -8035,7 +8035,7 @@ bool ModernSession::dispatch_training_camp(const ui::TrainingCampRequest& reques
         return true;
     }
     if (request.kind == ui::TrainingCampRequestKind::book) {
-        if (request.resort < 0 || request.resort >= kTrainingCampResorts) {
+        if (request.resort < 0 || size_t(request.resort) >= g_.training_camps.size()) {  // the world's catalogue
             error = "invalid_resort";
             return false;
         }
