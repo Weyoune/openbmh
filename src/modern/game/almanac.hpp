@@ -18,6 +18,7 @@
 #include <array>
 #include <cstdint>
 #include <map>
+#include <string_view>
 #include <string>
 #include <utility>
 #include <vector>
@@ -169,6 +170,9 @@ struct Almanac {
 struct AlmanacDate { int year = 0, month = 0, day = 0; };
 // The calendar date of a day counter (day 0 = 1 July of display_start_year), as the desk shows it.
 AlmanacDate almanac_date(uint32_t counter, int display_start_year);
+
+// Original single-byte text (ISO 646-DE) as UTF-8, the form the almanac keeps names in.
+std::string almanac_utf8(std::string_view original);
 
 // Binary form of a season (format version 1, little-endian; docs/new_engine/almanach.md).
 std::string encode_almanac_season(const AlmanacSeason& season);

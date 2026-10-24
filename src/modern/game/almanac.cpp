@@ -23,19 +23,28 @@ constexpr size_t kManagerRecord = 0xB0C;
 // Version 2 adds the final tables and the winners; version 1 seasons are still read.
 constexpr uint32_t kVersion = 2;
 
-// Original single-byte text (ISO 646-DE) to UTF-8, as the interfaces show it.
-std::string utf8(std::string_view original) {
+std::string utf8(std::string_view original) { return almanac_utf8(original); }
+
+}  // namespace
+
+std::string almanac_utf8(std::string_view original) {
     static constexpr std::string_view german[] = {"Ä", "Ö", "Ü", "ä", "ö", "ü", "ß"};
     static constexpr std::string_view codes = "[\\]{|}~";
+    // Some engine texts carry the umlauts of code page 437 instead.
+    static constexpr unsigned char cp437[] = {0x8e, 0x99, 0x9a, 0x84, 0x94, 0x81, 0xe1};
     std::string out;
     for (char c : original) {
         const size_t i = codes.find(c);
+        const auto* high = std::find(std::begin(cp437), std::end(cp437), static_cast<unsigned char>(c));
         if (i != std::string_view::npos) out += german[i];
+        else if (high != std::end(cp437)) out += german[high - std::begin(cp437)];
         else if (static_cast<unsigned char>(c) < 128) out += c;
         else out += '?';
     }
     return out;
 }
+
+namespace {
 
 const std::string& entry(const std::vector<std::string>& names, size_t i) {
     static const std::string none;
@@ -399,6 +408,20 @@ AlmanacRecorder::AlmanacRecorder(ModernState& g, const std::vector<MatchGroup>& 
             if (rec.type == 0) {
                 rec.league = uint8_t(id);
                 if (id < g.league_rounds.size()) rec.round = uint8_t(g.league_rounds[id] + 1);
+            } else if (rec.type == 10) {
+                // Competition 9 holds today's replays of postponed league matches, in the order
+                // of their entries in the postponement table (PrepareReplays): the almanac keeps
+                // them as matches of their league and original matchday.
+                int k = 0;
+                for (uint32_t n = 0; n < 0x28; ++n) {
+                    const uint32_t at = ::bmh::layout::Postponed + n * 6;
+                    if (!g.memory.has(at + 4) || g.memory.u16(at) != uint16_t(g.season_day())) continue;
+                    if (k++ != m) continue;
+                    rec.type = 0;
+                    rec.league = g.memory.u8(at + 3);
+                    rec.round = uint8_t(g.memory.u8(at + 2) + 1);
+                    break;
+                }
             } else if (id >= kCupTable && id < kCupTable + kCupEntries * kCupEntrySize && (id - kCupTable) % kCupEntrySize == 0) {
                 rec.stage = uint8_t(modern::cup_entry_index(id));
                 rec.round = uint8_t(modern::cup_round(g.memory, rec.stage) + 1);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #pragma once
+#include "modern/content/statistics.hpp"
 #include "modern/content/world_expand.hpp"
 // The engine side of the UI's career handoff (src/ui/flow.hpp, ENGINE_BINDING.md).
 //
@@ -813,6 +814,9 @@ public:
                   const std::filesystem::path &save_path, bool importing_legacy = false);
 
     const ModernState& state() const { return g_; }
+    // The game statistics menu (docs/new_engine/statistik.md): winners by season, player
+    // statistics per competition. Read-only; answers {ok, ...} or {ok: false, error}.
+    cli::Json read_statistics(const cli::Json& request) const { return query_statistics(g_, request); }
     ModernState& state() { return g_; }
     const TurnResultSnapshot& last_turn_results() const { return turn_driver_.last_results; }
     // Owned presentation for the event completed by the last accepted kickoff.

@@ -474,6 +474,20 @@ int main(int argc, char** argv) {
         }
         print_first_league_results(g, "run end");
         if (modern::current_world()) print_almanac(g);
+        // MODERN_STATS=1: the queries of the game statistics menu (docs/new_engine/statistik.md)
+        if (std::getenv("MODERN_STATS")) {
+            const auto ask = [&](const cli::Json::Object& request) {
+                std::printf("statistics %s\n  -> %s\n", cli::dump_json(request).c_str(),
+                            cli::dump_json(session.read_statistics(request)).c_str());
+            };
+            ask({{"kind", "competitions"}});
+            ask({{"kind", "winners"}, {"competition", "cup:0"}});
+            ask({{"kind", "player_stats"}, {"competition", g.world_league_id.empty() ? "league:0" : g.world_league_id[0]},
+                 {"season", "2026/27"}, {"limit", 3}});
+            ask({{"kind", "player_stats"}, {"competition", g.world_league_id.empty() ? "league:0" : g.world_league_id[0]},
+                 {"sort", "yellow"}, {"limit", 3}});
+            ask({{"kind", "player_stats"}, {"competition", "x"}, {"sort", "dribbles"}});
+        }
         if (std::getenv("SIM_ADVERTISING")) std::printf("%d advertising contracts accepted (SIM_ADVERTISING=1)\n", ad_contracts);
         if (std::getenv("SIM_INTERVENE")) std::printf("%d interventions (substitution at minute 30, re-rated)\n", interventions);
         if (sim_contracts_env && std::string(sim_contracts_env) == "1")
