@@ -59,15 +59,15 @@ std::string btn(const std::string &action, const std::string &label,
                 const std::string &css = {}, const std::string &attrs = {}) {
   return button_markup(action, label, css, attrs);
 }
-const std::array<std::string, 31> routes = {
+const std::array<std::string, 32> routes = {
     "tables",   "league",      "strengths", "lineup",     "achievements",
     "other",    "friendlies",  "postpone",  "calendar",   "indoor",
     "load",     "save",        "kickoff",   "toto",       "bank",
     "camp",     "training",    "transfer",  "tactics",    "settings",
     "scorers",  "advertising", "stadium",   "statistics", "environment",
     "fairplay", "highscore",   "contracts", "balance",    "newplayer",
-    "news"};
-const std::array<std::string, 31> titles = {"Tabellen",
+    "news", "almanac"};
+const std::array<std::string, 32> titles = {"Tabellen",
                                             "Ligaspiele",
                                             "Stärken",
                                             "Aufstellung",
@@ -97,7 +97,7 @@ const std::array<std::string, 31> titles = {"Tabellen",
                                             "Verträge",
                                             "Bilanz",
                                             "Neuer Spieler",
-                                            "Nachrichten"};
+                                            "Nachrichten", "Almanach"};
 std::string title(const std::string &route) {
   const auto i = std::find(routes.begin(), routes.end(), route);
   if (i != routes.end())
@@ -212,6 +212,8 @@ public:
           }
         }
         raster = editor::images::decode(svg, ".svg", pixels);
+      } else if (key == "button.almanac" && !gui_.contains(key)) {
+        raster = editor::images::decode(editor::read_file(assets_ / "icons" / "almanac.svg"), ".svg", pixels);
       } else if (gui_.contains(key))
         raster = gui_.decode(key, pixels);
       else if (key == "background")
@@ -308,10 +310,13 @@ class App final : public Rml::EventListener {
   std::optional<float> training_scroll_;
   std::optional<float> report_scroll_;
   float fixture_half_width_ = -1.f;
+  float almanac_list_width_ = -1.f;
   std::string last_report_state_, report_picker_, report_detail_kind_,
       report_detail_club_, report_detail_player_, report_detail_return_focus_,
       report_option_to_scroll_;
   std::string planning_dialog_, planning_notice_, planning_return_focus_;
+  int almanac_year_ = 0;
+  std::string almanac_day_, almanac_match_, almanac_tab_ = "lineups";
   float device_ratio_ = 1.f;
   Json desktop_ = Json::object(), saved_desktop_ = Json::object(),
        options_ = Json::object();
@@ -521,6 +526,10 @@ class App final : public Rml::EventListener {
     renderer_.world(next);
     world_ = std::move(next);
     source_ = std::move(demo);
+    almanac_year_ = 0;
+    almanac_day_.clear();
+    almanac_match_.clear();
+    almanac_tab_ = "lineups";
     desktop_ = Json::object();
     ticket_ =
         std::make_unique<TicketPopover>(*context_, *doc_, *source_, [this] {
@@ -626,6 +635,8 @@ class App final : public Rml::EventListener {
   std::string render_planning_dialog();
   std::string planning_progress(bool, bool);
   bool planning_action(const std::string &, Rml::Element *);
+  std::string render_almanac();
+  bool almanac_action(const std::string &, Rml::Element *);
   std::string render_indoor();
   bool indoor_action(const std::string &, Rml::Element *);
   std::string training_balls(const std::string &, int, int, bool,
@@ -688,6 +699,7 @@ class App final : public Rml::EventListener {
   }
   void render() {
     fixture_half_width_ = -1.f;
+    almanac_list_width_ = -1.f;
     // A window-close save prompt can leave a menu while its local dialog is
     // open. Never keep that menu's modal/input gate in the destination view.
     if (menu_ != last_rendered_menu_) {
@@ -757,7 +769,8 @@ class App final : public Rml::EventListener {
       if (auto *node = element(focus_after_render_))
         node->Focus(keyboard_navigation_);
       if (focus_after_render_.starts_with("report-option-") ||
-          focus_after_render_.starts_with("friendly-opponent-"))
+          focus_after_render_.starts_with("friendly-opponent-") ||
+          focus_after_render_.starts_with("alm-match-"))
         report_option_to_scroll_ = focus_after_render_;
       focus_after_render_.clear();
     }
@@ -793,12 +806,28 @@ class App final : public Rml::EventListener {
       button->Focus();
   }
   bool center_fixture_columns() {
+    bool changed = false;
+    // History can contain every competition on one date. Keep its whole-row
+    // buttons on the same centre even when the long list gains a scrollbar.
+    if (auto *history = element("alm-day-list")) {
+      if (auto *content = doc_->QuerySelector(".window .content")) {
+        const float width = content->GetBox().GetSize(Rml::BoxArea::Content).x;
+        if (std::abs(width - almanac_list_width_) >= .001f) {
+          almanac_list_width_ = width;
+          history->SetProperty("width", scalar(width) + "px");
+          Rml::ElementList rows;
+          history->QuerySelectorAll(rows, ".alm-list-head,.alm-match-row");
+          for (auto *row : rows) row->SetProperty("width", scalar(width) + "px");
+          changed = true;
+        }
+      }
+    }
     auto *list = element("report-list");
     if (!list || !list->IsClassSet("match-list"))
-      return false;
+      return changed;
     auto *score = list->QuerySelector(".report-cell.score");
     if (!score)
-      return false;
+      return changed;
     const auto &box = list->GetBox();
     // Rml rounds borders to physical pixels. Use the actual full inner width,
     // independently of the scrollport, so fractional density cannot move scores.
@@ -807,7 +836,7 @@ class App final : public Rml::EventListener {
         box.GetEdge(Rml::BoxArea::Border, Rml::BoxEdge::Right);
     const float half = std::max(0.f, (inner - score->GetBox().GetSize(Rml::BoxArea::Border).x) / 2.f);
     if (std::abs(half - fixture_half_width_) < .001f)
-      return false;
+      return changed;
     fixture_half_width_ = half;
     Rml::ElementList sides;
     list->QuerySelectorAll(sides, ".report-cell.first,.report-cell:last-child");
@@ -1088,6 +1117,8 @@ public:
 #include "modern/ui/indoor_screen.inc"
 #include "modern/ui/planning_screens.inc"
 #include "modern/ui/planning_controls.inc"
+#include "modern/ui/almanac_screens.inc"
+#include "modern/ui/almanac_controls.inc"
 } // namespace
 bool is_modern_world(const fs::path &file) {
   try {

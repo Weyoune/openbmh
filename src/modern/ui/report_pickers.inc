@@ -2,11 +2,11 @@
 namespace {
 bool report_picker_menu(const std::string &menu) {
   return menu == "tables" || menu == "strengths" || menu == "league" ||
-         menu == "other" || menu == "calendar" || menu == "friendlies";
+         menu == "other" || menu == "calendar" || menu == "friendlies" || menu == "almanac";
 }
 bool report_picker_kind(const std::string &kind) {
   return kind == "country" || kind == "league" || kind == "filter" ||
-         kind == "competition";
+         kind == "competition" || kind == "year";
 }
 } // namespace
 
@@ -15,6 +15,15 @@ App::report_picker_items(const std::string &kind) const {
   std::vector<std::pair<std::string, std::string>> items;
   if (!world_ || !report_picker_kind(kind))
     return items;
+  if (kind == "year") {
+    if (!source_) return items;
+    const auto index = source_->read_almanac({{"kind", "index"}});
+    if (!index.value("ok", false)) return items;
+    for (const auto &year : index.at("years"))
+      items.emplace_back(std::to_string(year.get<int>()), std::to_string(year.get<int>()));
+    std::reverse(items.begin(), items.end());
+    return items;
+  }
   if (kind == "filter" || kind == "competition") {
     const std::vector<std::string> captions =
         kind == "filter"
@@ -56,6 +65,7 @@ App::report_picker_items(const std::string &kind) const {
 std::string App::report_picker_value(const std::string &kind) const {
   if (!world_ || !report_picker_kind(kind))
     return {};
+  if (kind == "year") return std::to_string(almanac_year_);
   const auto reports = snap().state.at("reports");
   if (kind == "filter" || kind == "competition")
     return std::to_string(reports.at(kind).get<int>());
@@ -78,10 +88,11 @@ std::string App::report_picker(const std::string &kind, double left,
   for (const auto &[value, label] : items)
     if (value == selected)
       caption = label;
+  if (kind == "year") caption = "Jahr " + std::to_string(almanac_year_);
   const bool open = report_picker_ == kind;
   const std::string menu_label = kind == "country" ? "Land"
                                 : kind == "league" ? "Liga"
-                                : kind == "filter" ? "Spiele" : "Wettbewerb";
+                                : kind == "filter" ? "Spiele" : kind == "year" ? "Kalenderjahr" : "Wettbewerb";
   std::string out =
       "<div class=\"report-picker-wrapper\" data-report-picker=\"" + kind +
       "\" style=\"left:" + scalar(left) + "dp;width:" + scalar(width) + "dp;\">" +
@@ -103,8 +114,8 @@ std::string App::report_picker(const std::string &kind, double left,
         "<span class=\"report-picker-check-slot\" aria-hidden=\"true\">" +
         std::string(checked ? "<span class=\"report-picker-check\"></span>" : "") +
         "</span>";
-    out += btn("report-choice", marker + "<span class=\"report-picker-option-label\">" +
-                                   esc(items[i].second) + "</span>",
+    const auto option_label = "<span class=\"report-picker-option-label\">" + esc(items[i].second) + "</span>";
+    out += btn("report-choice", kind == "year" ? option_label + marker : marker + option_label,
                "report-picker-option",
                "id=\"report-option-" + kind + "-" + std::to_string(i) +
                    "\" data-kind=\"" + kind + "\" data-value=\"" +
@@ -130,6 +141,10 @@ void App::close_report_picker(bool focus) {
   context_->Update();
   if (focus && trigger)
     trigger->Focus(keyboard_navigation_);
+  if (kind == "year") {
+    if (focus) focus_after_render_ = "report-picker-year";
+    refresh();
+  }
   dirty_ = true;
 }
 
@@ -171,7 +186,12 @@ bool App::report_picker_action(const std::string &action, Rml::Element *target) 
                              ? Json(std::stoi(value)) : Json(value);
   close_report_picker(false);
   // Commit even an unchanged country: the Gold resets its first league.
-  if (menu_ == "friendlies")
+  if (kind == "year" && menu_ == "almanac") {
+    almanac_year_ = std::stoi(value);
+    almanac_day_.clear();
+    almanac_match_.clear();
+    almanac_tab_ = "lineups";
+  } else if (menu_ == "friendlies")
     apply("calendar", {{"kind", "friendly-" + kind}, {"value", selection}});
   else if (menu_ == "calendar") {
     const auto leagues = kind == "country" ? world_->leagues(value) : std::vector<const Json *>{};
@@ -211,6 +231,7 @@ bool App::report_picker_event(Rml::Event &event) {
       return true;
     }
     if (type == "mousedown") {
+      if (report_picker_ == "year") return false; // Dedicated backdrop dismisses this toolbar popup.
       auto *wrapper = ancestor("data-report-picker");
       if (!wrapper || wrapper->GetAttribute<Rml::String>("data-report-picker", "") !=
                           report_picker_)
@@ -229,13 +250,14 @@ bool App::report_picker_event(Rml::Event &event) {
       event.StopImmediatePropagation();
       return true;
     }
-    if (key == Rml::Input::KI_TAB) {
+    if (key == Rml::Input::KI_TAB && report_picker_ != "year") {
       keyboard_navigation_ = true;
       close_report_picker(true);
       return false;
     }
     if (key == Rml::Input::KI_UP || key == Rml::Input::KI_DOWN ||
-        key == Rml::Input::KI_HOME || key == Rml::Input::KI_END) {
+        key == Rml::Input::KI_HOME || key == Rml::Input::KI_END ||
+        (key == Rml::Input::KI_TAB && report_picker_ == "year")) {
       const auto items = report_picker_items(report_picker_);
       if (items.empty())
         return false;
@@ -250,7 +272,7 @@ bool App::report_picker_event(Rml::Event &event) {
       const int count = int(items.size());
       const int next = key == Rml::Input::KI_HOME ? 0
                        : key == Rml::Input::KI_END ? count - 1
-                       : (current + (key == Rml::Input::KI_UP ? -1 : 1) + count) % count;
+                       : (current + ((key == Rml::Input::KI_UP || (key == Rml::Input::KI_TAB && event.GetParameter<int>("shift_key", 0))) ? -1 : 1) + count) % count;
       if (auto *node = element("report-option-" + report_picker_ + "-" +
                                std::to_string(next))) {
         keyboard_navigation_ = true;

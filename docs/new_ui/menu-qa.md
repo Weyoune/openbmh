@@ -72,3 +72,8 @@ deshalb nicht ins öffentliche Quellcode-Repository. Öffentliche Zusammenfassun
   [Hallentabellen](desktop/indoor/README.md): ein gemeinsames Paket mit
   18 Rendererläufen, 43 Bedienzuständen und gesondertem OS-Beenden-/
   Speichern-Nachtest. Aktueller Gesamtkatalog: 18 native und 18 offene Routen.
+
+- [Almanach](desktop/almanac/README.md): Jahreskalender, Tagespartien und
+  Spielbericht als neues readonly Menü; alle Ergebnisphasen, Kader/Bank,
+  Ereignisse, alte Ansichten und unveränderte Revision/Dirty-Zustände geprüft.
+  Der Katalog umfasst jetzt 19 native und 18 offene Routen.

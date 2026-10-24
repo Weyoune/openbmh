@@ -74,7 +74,7 @@ const std::vector<std::string> &desktop_routes() {
       "camp",     "training",    "transfer",  "tactics",    "settings",
       "scorers",  "advertising", "stadium",   "statistics", "environment",
       "fairplay", "highscore",   "contracts", "balance",    "newplayer",
-      "news"};
+      "news", "almanac"};
   return value;
 }
 const std::vector<WidgetDefinition> &widget_definitions() {
@@ -165,6 +165,21 @@ bool valid_desktop(const Json &layout) {
     for (const auto &route : desktop_routes())
       if (!check("app-" + route, false))
         return false;
+    return true;
+  } catch (const Json::exception &) {
+    return false;
+  }
+}
+bool migrate_desktop(Json &layout) {
+  try {
+    if (layout.at("objects").contains("app-almanac"))
+      return valid_desktop(layout);
+    auto next = layout;
+    next["objects"]["app-almanac"] = object(0, 0, 1, 1, false, true);
+    if (!valid_desktop(next) ||
+        !find_space(next, "app-almanac", left, top, false))
+      return false;
+    layout = std::move(next);
     return true;
   } catch (const Json::exception &) {
     return false;

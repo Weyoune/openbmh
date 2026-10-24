@@ -208,13 +208,13 @@ std::string App::render_desktop() {
              "</div>";
     else {
       const auto route = id.substr(4);
-      const std::array<std::string, 31> colors = {
+      const std::array<std::string, 32> colors = {
           "#3d789b", "#375a83", "#477c73", "#42846b", "#a58a49", "#586ba0",
           "#517d71", "#668a98", "#af6860", "#6b809c", "#657cb3", "#507b9c",
           "#559b76", "#a7474e", "#967d50", "#648f91", "#54856b", "#558f93",
           "#6379a3", "#788598", "#8d7856", "#a66d64", "#748474", "#6887a2",
           "#6b9270", "#7c8b9c", "#ac8b52", "#7783a4", "#648f83", "#927d9d",
-          "#ac5e63"};
+          "#ac5e63", "#806c98"};
       const auto i = std::find(routes.begin(), routes.end(), route);
       const auto color = colors[size_t(i - routes.begin())];
       const auto top = theme_ == "matchday" ? mixed_color(color, "#27282e", .55)
@@ -875,6 +875,8 @@ std::string App::render_menu(const std::string &key) {
   std::string body;
   if (key == "tables" || key == "strengths" || key == "league" || key == "other")
     body = render_reports(key);
+  else if (key == "almanac")
+    body = render_almanac();
   else if (key == "postpone")
     body = render_postpone();
   else if (key == "friendlies")

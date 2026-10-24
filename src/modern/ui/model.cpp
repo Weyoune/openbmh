@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "modern/ui/model.hpp"
+#include "modern/ui/demo_almanac.hpp"
 #include "modern/ui/demo_calendar.hpp"
 #include "modern/ui/demo_reports.hpp"
 #include "modern/ui/demo_sports.hpp"
@@ -48,7 +49,7 @@ bool preferences(const Json &value) {
 }
 } // namespace
 DemoSource::DemoSource(std::shared_ptr<const Catalog> catalog)
-    : catalog_(std::move(catalog)) {
+    : catalog_(std::move(catalog)), almanac_(make_demo_almanac(*catalog_)) {
   std::string club;
   for (const auto *c : catalog_->clubs()) {
     if (!catalog_->manageable(c->value("id", "")))
@@ -86,6 +87,9 @@ DemoSource::DemoSource(std::shared_ptr<const Catalog> catalog)
   saved_ = state_;
 }
 Snapshot DemoSource::snapshot() const { return {revision_, catalog_, state_}; }
+Json DemoSource::read_almanac(const Json &request) const {
+  return query_demo_almanac(almanac_, request, state_.at("date"));
+}
 ActionResult DemoSource::apply(const Action &action) {
   if (action.revision != revision_)
     return {false, revision_, "stale_revision"};
@@ -243,8 +247,8 @@ Json DemoSource::load(const fs::path &file) {
     if (!v.is_number_integer() || v < 0 || v > 15)
       throw editor::Error("invalid_focus");
   auto next = data;
-  const auto desktop = next.value("desktop", Json::object());
-  if (!valid_desktop(desktop))
+  auto desktop = next.value("desktop", Json::object());
+  if (!migrate_desktop(desktop))
     throw editor::Error("invalid_demo_desktop");
   next.erase("desktop");
   state_ = std::move(next);

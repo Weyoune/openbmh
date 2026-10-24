@@ -79,3 +79,13 @@ private QA-Inhalte bleiben im privaten Bestand.
   `cacf8fdd5376110529afbf97c7b977aaee1d7957`: Karten, Campmotive und Menügrafiken.
 - Diamond 2026/27 Modern, Datenrevision 1.3: der geprüfte Asset-Index enthält
   HQ-Wappen und Spielerbilder, aber keine `asset:camp/...`-Bildschlüssel.
+
+## Almanachsymbol
+
+Das neue `almanac.svg` ist ein eigenständig gezeichnetes Vektorsymbol aus
+Kalenderbuch und Fußball. Die GUI-Vorbereitung übernimmt
+`assets/vector/desktop-almanac.svg` als `button.almanac`. Die native UI liefert
+dieselbe Grafik unter `assets/modern/icons/almanac.svg` mit und kann sie auch
+bei einem älteren externen GUI-Paket anzeigen. Ein OBW muss dieses Motiv
+nicht enthalten. Bestehende Desktopansichten erhalten nur das zusätzliche
+Icon an einer freien Stelle; vorhandene Objekte werden dabei nicht verschoben.

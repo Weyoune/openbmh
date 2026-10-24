@@ -45,6 +45,15 @@ Pro Spiel (`AlmanacMatch`):
 
 ## Für die UI (Codex)
 
+Der [native und HTML-Almanachprototyp](../new_ui/desktop/almanac/README.md)
+liegt mit Pseudodaten vor. Der [Lesevertrag](../new_ui/desktop/almanac/DATA_CONTRACT.md)
+beschreibt die Abfragen `index`, `calendar`, `day` und `match` für eine spätere
+konstante Modern-Sessionprojektion. Dort sind auch die F10-Grenzen festgehalten:
+Teilstände nur bei vollständigem Nachweis ableiten, die ET-Teilnahme beim
+Elfmeterschießen nicht raten, historische Tabellen verwenden und fehlende
+Kader beziehungsweise Einzelangaben neutral ausgeben. Die UI liest derzeit
+keine F10-/OBS-Dateien und ändert keine Engine- oder Spielstanddaten.
+
 - `ModernState::almanac`: `finished` (Dateiname + Bytes je Saison, mit `decode_almanac_season` lesen) und `current` (laufende Saison).
 - Auswertungen (Torjäger aller Zeiten, Bilanzen, Rekorde) baut die Engine als Projektionen, sobald die Almanach-Oberfläche feststeht. Bis dahin kann die UI direkt auf den Saisons rechnen. `modern_season_sim` zeigt am Laufende ein Beispiel (`print_almanac`: Prüfung Tore gegen Ergebnis, Top-Torschützen über alle Saisons).
 - Namen sind UTF-8; Wettbewerbsnamen für Pokale kommen wie im Ergebnisbildschirm aus den Texten (`type - 1` = Pokal-ID).

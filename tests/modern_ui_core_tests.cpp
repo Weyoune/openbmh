@@ -111,6 +111,14 @@ int main(int argc, char **argv) try {
           "Minor currency units");
   DemoSource source(world);
   const auto before = source.snapshot();
+  const auto archive_index = source.read_almanac({{"kind", "index"}});
+  require(archive_index.value("ok", false) &&
+              source.snapshot().revision == before.revision &&
+              source.snapshot().state == before.state && !source.dirty(),
+          "Almanac read mutated presentation state or revision");
+  require(!source.read_almanac({{"kind", "invalid"}}).value("ok", true) &&
+              source.snapshot().state == before.state && !source.dirty(),
+          "Rejected almanac query mutated state");
   require(!source
                .apply({0, "managers",
                        Json::array({{{"name", "Pat"}, {"club", "club:b"}}})})
@@ -130,6 +138,21 @@ int main(int argc, char **argv) try {
   const auto save = root / "demo.ui.json";
   auto layout = default_desktop();
   require(valid_desktop(layout), "Default desktop must validate");
+  auto old_layout = layout;
+  old_layout["objects"].erase("app-almanac");
+  const auto preserved_layout = old_layout;
+  require(migrate_desktop(old_layout) && valid_desktop(old_layout) &&
+              old_layout["objects"]["app-almanac"]["visible"] == true,
+          "Older desktop did not gain its Almanac icon");
+  auto without_added_icon = old_layout;
+  without_added_icon["objects"].erase("app-almanac");
+  require(without_added_icon == preserved_layout,
+          "Almanac migration moved or reset existing desktop objects");
+  auto bad_old_layout = preserved_layout;
+  bad_old_layout["objects"]["calendar"]["x"] = -1;
+  const auto before_bad_migration = bad_old_layout;
+  require(!migrate_desktop(bad_old_layout) && bad_old_layout == before_bad_migration,
+          "Desktop migration partially repaired invalid existing data");
   auto moved = layout;
   require(!place_desktop_object(moved, "account", 3000, 1500) &&
               moved == layout,
@@ -146,6 +169,15 @@ int main(int argc, char **argv) try {
   require(!valid_desktop(corrupt), "Out of bounds desktop accepted");
   source.save(save, layout);
   require(!source.dirty(), "Saved demo remains dirty");
+  auto old_icon_save = Json::parse(bmh::editor::read_file(save));
+  old_icon_save["desktop"]["objects"].erase("app-almanac");
+  write(root, "old-icon.ui.json", old_icon_save);
+  DemoSource old_icon_source(world);
+  const auto migrated_icon_layout = old_icon_source.load(root / "old-icon.ui.json");
+  require(valid_desktop(migrated_icon_layout) &&
+              migrated_icon_layout["objects"].contains("app-almanac") &&
+              !old_icon_source.dirty(),
+          "Older UI checkpoint rejected its missing Almanac desktop icon");
   require(source.apply({1, "ticket", 21}).ok, "Second action");
   const auto desktop = source.load(save);
   require(source.snapshot().state["ticket"] == 17 && desktop == layout,

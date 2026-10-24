@@ -187,6 +187,32 @@ void App::ProcessEvent(Rml::Event &event) try {
     }
   } else if (report_detail_kind_.empty() && planning_dialog_.empty() && popup_.empty() && report_picker_event(event))
     return;
+  if (menu_ == "almanac" && popup_.empty() && report_picker_.empty()) {
+    const auto key = type == "keydown" ? Rml::Input::KeyIdentifier(event.GetParameter<int>("key_identifier", 0)) : Rml::Input::KI_UNKNOWN;
+    if (key == Rml::Input::KI_ESCAPE || (type == "mouseup" && event.GetParameter<int>("button", 0) == 1)) {
+      almanac_action("alm-back", nullptr);
+      event.StopImmediatePropagation();
+      return;
+    }
+    if (key == Rml::Input::KI_TAB && context_->GetFocusElement() &&
+        context_->GetFocusElement()->GetId() == "alm-heading") {
+      auto *next = event.GetParameter<int>("shift_key", 0) ? element("alm-back")
+          : !almanac_match_.empty() ? element("alm-tab-lineups")
+                                   : doc_->QuerySelector("#alm-day-list .alm-match-row");
+      if (!next) next = element("alm-back");
+      if (next) next->Focus(true);
+      event.StopImmediatePropagation();
+      return;
+    }
+    if (type == "keydown" && !almanac_match_.empty() && event.GetTargetElement()->GetId().starts_with("alm-tab-") &&
+        (key == Rml::Input::KI_LEFT || key == Rml::Input::KI_RIGHT || key == Rml::Input::KI_HOME || key == Rml::Input::KI_END)) {
+      almanac_tab_ = key == Rml::Input::KI_HOME ? "lineups" : key == Rml::Input::KI_END ? "events" : almanac_tab_ == "lineups" ? "events" : "lineups";
+      focus_after_render_ = "alm-tab-" + almanac_tab_;
+      refresh();
+      event.StopImmediatePropagation();
+      return;
+    }
+  }
   if (menu_ == "friendlies" && planning_dialog_.empty() && popup_.empty() &&
       snap().state.at("calendar").at("friendly_stage") == 1 &&
       ((type == "keydown" && event.GetParameter<int>("key_identifier", 0) == Rml::Input::KI_ESCAPE) ||
@@ -362,7 +388,8 @@ void App::ProcessEvent(Rml::Event &event) try {
         controls[size_t(next)]->Focus(true);
         if (controls[size_t(next)]->GetId().starts_with("report-detail-player-") ||
             controls[size_t(next)]->GetId().starts_with("report-club-") ||
-            controls[size_t(next)]->GetId().starts_with("friendly-opponent-"))
+            controls[size_t(next)]->GetId().starts_with("friendly-opponent-") ||
+            controls[size_t(next)]->GetId().starts_with("alm-match-"))
           controls[size_t(next)]->ScrollIntoView(
               Rml::ScrollIntoViewOptions(Rml::ScrollAlignment::Nearest));
         event.StopImmediatePropagation();
@@ -402,7 +429,7 @@ void App::ProcessEvent(Rml::Event &event) try {
 void App::dispatch(const std::string &action, Rml::Element *target) {
   const auto id =
       target ? target->GetAttribute<Rml::String>("data-id", "") : std::string();
-  if (planning_action(action, target) || indoor_action(action, target)) return;
+  if (almanac_action(action, target) || planning_action(action, target) || indoor_action(action, target)) return;
   if (report_detail_action(action, target)) {
     close_report_picker(false);
     return;
@@ -589,8 +616,8 @@ void App::dispatch(const std::string &action, Rml::Element *target) {
     const auto file =
         user_dir() / "layouts" / editor::path(selections_["view"] + ".json");
     auto next = Json::parse(editor::read_file(file));
-    if (!valid_desktop(next))
-      throw editor::Error("Ungültige Desktopansicht.");
+    if (!migrate_desktop(next))
+      throw editor::Error("Ungültige Desktopansicht oder kein freier Platz für den Almanach.");
     undo_.push_back(desktop_);
     desktop_ = std::move(next);
     menu_.clear();
@@ -1013,7 +1040,7 @@ void App::dispatch(const std::string &action, Rml::Element *target) {
     }
     static const std::set<std::string> available = {
         "tables", "strengths", "camp",     "settings",
-        "save",   "load",      "training", "tactics", "calendar", "league", "other", "postpone", "friendlies", "indoor"};
+        "save",   "load",      "training", "tactics", "calendar", "league", "other", "postpone", "friendlies", "indoor", "almanac"};
     if (!available.contains(route)) {
       message("Diese native Ansicht wird im nächsten Menüpaket übertragen.");
       return;
@@ -1393,6 +1420,10 @@ void App::script() {
                  {"menu", menu_},
                  {"report_picker", report_picker_},
                  {"planning_dialog", planning_dialog_},
+                 {"source_revision", source_ ? Json(snap().revision) : Json()},
+                 {"game_dirty", source_ && source_->dirty()},
+                 {"desktop_dirty", desktop_ != saved_desktop_},
+                 {"almanac_view", {{"year", almanac_year_}, {"date", almanac_day_}, {"id", almanac_match_}, {"tab", almanac_tab_}}},
                  {"report_detail", {{"kind", report_detail_kind_},
                                      {"club", report_detail_club_},
                                      {"player", report_detail_player_}}},

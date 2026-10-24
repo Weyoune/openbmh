@@ -32,7 +32,7 @@ gemeinsamen Controländerungen zusätzlich in mehreren Menüs nachgeprüft.
 Die erste Gesamterfassung enthält 36 Routen, davon zwölf native Aufnahmen
 und 24 ausstehende Ports. Diese historische Matrix bleibt unverändert.
 Der anschließend übertragene Kalender bekommt einen eigenen Vergleich;
-der aktuelle Runner erfasst 18 native Routen und 18 offene Ports.
+der aktuelle Runner erfasst 19 native Routen und 18 offene Ports.
 Spätere Meilensteine erfassen denselben Gesamtkatalog erneut.
 
 Siehe [QA-Ablauf](menu-qa.md), [Typografie](typography-qa.md) und

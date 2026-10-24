@@ -54,6 +54,12 @@ wird ausdrücklich mit `OPENBMH_BUILD_MODERN_UI=ON` gebaut.
 - [Hallentabellen](desktop/indoor/README.md): bis zu 16 Vereine aus der ersten
   deutschen Liga, unabhängige Platz-/Punktesortierung, Vereinsprofile und Info.
 
+- [Almanach](desktop/almanac/README.md): eigenes Desktopicon, Jahreskalender,
+  Tagespaarungen und Spielberichte mit Phasenergebnissen, menschlichen Managern,
+  Schiedsrichter, Zuschauern, Wetter, beiden Aufstellungen/Bank und Ereignissen.
+  Die Vorschau verwendet unveränderliche Pseudodatensätze über zwei Saisons;
+  die vorbereitete Leseprojektion ist noch nicht an F10/OBS angeschlossen.
+
 **Anstoß führt keine Aktion aus**, weder per Maus noch per Tastatur. Das gilt
 auch für die direkte Aktionsschnittstelle des Demoanbieters.
 

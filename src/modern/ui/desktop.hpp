@@ -13,6 +13,8 @@ const std::vector<std::string> &desktop_routes();
 // untouched.
 Json default_desktop();
 bool valid_desktop(const Json &);
+// Add new applications to a valid older view without moving existing objects.
+bool migrate_desktop(Json &);
 bool place_desktop_object(Json &, const std::string &, int x, int y,
                           bool nearest = true);
 bool resize_desktop_widget(Json &, const std::string &, int columns, int rows);

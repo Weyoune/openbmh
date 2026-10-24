@@ -24,18 +24,25 @@ public:
   virtual ~DataSource() = default;
   virtual Snapshot snapshot() const = 0;
   virtual ActionResult apply(const Action &) = 0;
+  // Read-side history projections can be backed by lazy engine-season decoding.
+  // Browsing does not change the game revision or copy the archive into a save.
+  virtual Json read_almanac(const Json &) const {
+    return {{"ok", false}, {"error", "almanac_unavailable"}};
+  }
 };
 class DemoSource final : public DataSource {
 public:
   explicit DemoSource(std::shared_ptr<const Catalog>);
   Snapshot snapshot() const override;
   ActionResult apply(const Action &) override;
+  Json read_almanac(const Json &) const override;
   void save(const fs::path &, const Json &desktop);
   Json load(const fs::path &);
   bool dirty() const { return state_ != saved_; }
 
 private:
   std::shared_ptr<const Catalog> catalog_;
+  const Json almanac_;
   Json state_, saved_;
   uint64_t revision_ = 0;
 };
