@@ -130,6 +130,19 @@ void print_almanac(const modern::ModernState& g) {
     std::printf("almanac: %zu seasons, %zu matches, %zu events, %zu bytes uncompressed, %u new player identities\n",
                 seasons.size(), matches, events, bytes, g.almanac.generated_players);
     std::printf("almanac: %zu matches whose goal events differ from the result, %zu without line-ups\n", mismatched, without_lineup);
+    {
+        // goals per match by competition (league index, or cup id + 100), over all seasons
+        std::map<int, std::pair<long, long>> by;  // matches, goals
+        for (const auto& s : seasons)
+            for (const auto& m : s.matches) {
+                auto& e = by[m.type == 0 ? int(m.league) : 100 + m.type - 1];
+                ++e.first, e.second += m.home_goals + m.away_goals;
+            }
+        std::printf("almanac goals per match:");
+        for (const auto& [k, e] : by)
+            std::printf(" %s%d %.2f (%ld)", k >= 100 ? "cup " : "L", k >= 100 ? k - 100 : k, double(e.second) / double(e.first), e.first);
+        std::printf("\n");
+    }
     // The human club's final place per season (balance runs compare these).
     // The club comes from the season's league matches of manager 0 (at the national coach's
     // desk his record names the national team).
@@ -305,6 +318,56 @@ int main(int argc, char** argv) {
                 double var = 0; for (double c : clubs) var += (c - mean) * (c - mean); var /= double(clubs.size());
                 std::printf("spread league %d: club strength (best 14) mean %.1f sd %.1f min %.1f max %.1f\n", league, mean, std::sqrt(var),
                             *std::min_element(clubs.begin(), clubs.end()), *std::max_element(clubs.begin(), clubs.end()));
+            }
+        }
+        // MODERN_VALUES=1: market value and its factors per league at the start, original players
+        // (index below 2574) against the players the data set added (balance.md)
+        if (std::getenv("MODERN_VALUES")) {
+            const auto& st = session.state();
+            {
+                // form and the seven skills (0-3: teamplay, speed, shooting, passing, tackling,
+                // free kick, corner) of the league players
+                double form = 0, skill[7] = {};
+                int n = 0;
+                for (int t = 0; t < modern::league_clubs(); ++t) {
+                    const auto r = squad_range(t);
+                    for (size_t s = r.first; s < r.first + r.count; ++s) {
+                        const int id = st.squad_slots[s] & 0xfff;
+                        if (id == 0xfff) continue;
+                        const auto& p = st.players[size_t(id)];
+                        form += p.form();
+                        for (int k = 0; k < 7; ++k) skill[k] += double(p.w368 >> (2 * k) & 3);
+                        ++n;
+                    }
+                }
+                std::printf("values all league players: %d, form %.1f, skills", n, form / n);
+                for (double v : skill) std::printf(" %.2f", v / n);
+                std::printf("\n");
+            }
+            WatcomRandom scratch(1);  // market_value may draw for small fees; a copy keeps the game's
+            for (int league = 0; league < 9; ++league) {
+                double sum[2][4] = {};
+                int n[2] = {0, 0};
+                const int first = league_first_team(league);
+                for (int t = first; t < first + int(kLeagueSizes[league]); ++t) {
+                    const auto r = squad_range(t);
+                    for (size_t s = r.first; s < r.first + r.count; ++s) {
+                        const int id = st.squad_slots[s] & 0xfff;
+                        if (id == 0xfff) continue;
+                        const int added = id >= 2574 ? 1 : 0;
+                        uint32_t fee = 0, salary = 0;
+                        modern::market_value(st, int(s), 0, 100, fee, salary, 0, 0, scratch);
+                        const auto& p = st.players[size_t(id)];
+                        sum[added][0] += fee, sum[added][1] += salary;
+                        sum[added][2] += double(p.w364 >> 26 & 0x3f), sum[added][3] += double(p.w364 >> 10 & 0x3f);
+                        ++n[added];
+                    }
+                }
+                std::printf("values league %d:", league);
+                for (int a = 0; a < 2; ++a)
+                    if (n[a]) std::printf(" %s %d players fee %.0f salary %.0f experience %.1f position %.1f;", a ? "added" : "original", n[a],
+                                          sum[a][0] / n[a], sum[a][1] / n[a], sum[a][2] / n[a], sum[a][3] / n[a]);
+                std::printf("\n");
             }
         }
         if (!session.confirm_manager(options, choice, error)) throw std::runtime_error("manager: " + error);

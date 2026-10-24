@@ -30,7 +30,31 @@ Messwerkzeug: `MODERN_SPREAD=1 modern_season_sim <welt.obw> 1 0 1` zeigt die Ver
 
 ### Alter und Fähigkeiten
 
-Das Original würfelt beim Start auch das Alter (20–32, der Verein des Menschen 20–25) und die sieben Fähigkeiten (Teamplay, Tempo, Schuss, …) neu. Datensatzspieler behalten in Modern beides (`new_career_players`, `career_add_manager`).
+Das Original würfelt beim Start auch das Alter (20–32, der Verein des Menschen 20–25) und die sieben Fähigkeiten (Teamplay, Tempo, Schuss, Passspiel, Zweikampf, Freistoß, Ecke; je 0–3) neu.
+
+- **Alter:** Datensatzspieler behalten ihr Alter (`new_career_players`, `career_add_manager`).
+- **Fähigkeiten:** Der Datensatz 1.3 hat keine (alle 0, auch `x-legacy.skill_word`). Sie werden daher wie im Original gewürfelt (Mittel 1,5); nur Fähigkeiten, die ein Datensatz liefert (nicht alle 0), bleiben. Ein erster Versuch, sie zu „behalten“, ließ alle Spieler ohne Fähigkeiten spielen: 0,1–0,5 Tore pro Spiel weniger in jedem Wettbewerb.
+
+Tore pro Spiel je Wettbewerb (zwei Saisons, Seed 1):
+
+| | Classic-Daten | Modern |
+|---|---|---|
+| Bundesliga | 2,33 | 2,40 |
+| 2. Liga | 2,86 | 2,97 |
+| 3. Ligen | 3,12–3,30 | 3,23–3,28 |
+| Regionalliga | 3,28 | 3,28 |
+| Auslandsligen | 2,08–2,33 | 2,26–2,90 |
+| DFB-Pokal | 4,13 | 4,37 |
+
+Messwerkzeug: `MODERN_VALUES=1` (Form, Fähigkeiten, Marktwerte je Liga beim Start); die Almanach-Auswertung zeigt Tore pro Spiel je Wettbewerb.
+
+### Marktwerte
+
+Beim Start (Mittel je Liga): Bundesliga 1,4 Mio. €, 2. Liga 0,7 Mio., 3. Ligen 0,36 Mio., Regionalliga 0,17 Mio., Auslandsligen 1,4–2,1 Mio. Die vom Datensatz hinzugefügten Spieler der Auslandsligen sind 2–23 % weniger wert als die Originalspieler derselben Ligen (jüngere, schwächere Kaderergänzungen). Erfahrung und Positionswert sind beim Start für alle Spieler 0, wie im Original. Keine Änderung.
+
+### Finanzen
+
+Der Verein des Menschen (Sim-Manager ohne Transfers, mit Werbung) bleibt über 10 Saisons im Plus (von etwa 8 Mio. auf etwa 0); mit Classic-Daten fällt er auf −7 Mio. Keine Änderung.
 
 ## Trainingslager
 
@@ -55,12 +79,12 @@ Messwerkzeug: `SIM_CAMP=<Lager> SIM_CONTRACTS=1 SIM_ADVERTISING=1 modern_season_
 
 | | Modern (Seeds 1–3) | Classic-Daten (Seeds 1, 3) |
 |---|---|---|
-| Tore pro Spiel | 2,70–2,77 | 3,06–3,10 |
+| Tore pro Spiel | 2,70–2,77 (noch ohne Fähigkeiten, siehe oben) | 3,06–3,10 |
 | Bundesliga-Meister | 60–92 Pkt. | 65–92 Pkt. |
 | Bundesliga-Letzter | 9–27 Pkt. | 13–31 Pkt. |
 | Serienmeister | Köln 4×, Frankfurt 4× | Leipzig 5× |
 
-Die Ligen driften in beiden Fällen über die Jahre auseinander (Serienmeister, Meister bis über 90 Punkte): Verhalten des Originals, keine Modern-Abweichung. Modern ist etwas torärmer als Classic (Kandidat für eine spätere Feinjustierung; real hat die Bundesliga etwa 3,1 Tore pro Spiel).
+Die Ligen driften in beiden Fällen über die Jahre auseinander (Serienmeister, Meister bis über 90 Punkte): Verhalten des Originals, keine Modern-Abweichung. Die geringere Torquote von Modern lag an den fehlenden Fähigkeiten (siehe oben) und ist behoben.
 
 `MODERN_ALMANAC_SUMMARY=1` zeigt die Almanach-Auswertung auch mit Classic-Daten.
 

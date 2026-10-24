@@ -275,10 +275,13 @@ bool new_career_players(ModernState& g, GameRandom& game, WatcomRandom& rand, Mi
     for (size_t slot = 0; slot < transfer_list_slot(); slot++) {
         const int id = g.squad_slots.at(slot) & 0x0fff;
         if (id == 0x0fff) continue;
-        if (keeps_world_values(g, id)) continue;  // Modern: age and skills of the data set stay (balance.md)
         Player& p = g.players.at(size_t(id));
-        p.w364 |= uint32_t(rand.range(4, 0x10)) << 21;
-        p.w368 = (p.w368 & 0xffffc000u) + uint32_t(rand.range(0, 0x3fff));
+        const uint32_t age = uint32_t(rand.range(4, 0x10)), skills = uint32_t(rand.range(0, 0x3fff));
+        // Modern (balance.md): a player of the data set keeps his age; his seven skills are drawn
+        // as in the original unless the data set gives him some (data sets have none so far).
+        const bool world = keeps_world_values(g, id);
+        if (!world) p.w364 |= age << 21;
+        if (!world || (p.w368 & 0x3fff) == 0) p.w368 = (p.w368 & 0xffffc000u) + skills;
     }
     for (int slot = int(pool_end_slot() + 24); slot < int(pool_end_slot() + 24) + 0x36; slot++)
         if (!modern::release_player(g, slot, game, rand, report)) return false;
