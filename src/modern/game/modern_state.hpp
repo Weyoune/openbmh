@@ -8,7 +8,9 @@
 // always prefers the Modern season function over a Classic one of the same name.
 // Modern-only data (world layout, UTF-8 names, ...) is added here, never to GameState.
 
+#include <array>
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -52,6 +54,15 @@ struct ModernState : GameState {
     std::vector<TrainingCamp> training_camps;
     // The football almanac (docs/new_engine/almanach.md): every match of the career.
     Almanac almanac;
+    // Toto with up to six columns (docs/new_engine/toto.md), per manager. Column 1 is the
+    // original coupon (Coupon + manager * 0x14); columns 2-6 and the last settlement live here.
+    struct PoolsColumns {
+        std::vector<std::array<uint8_t, 11>> extra;  // columns 2-6, tips 1 home, 0 draw, 2 away
+        std::vector<uint8_t> hits;                   // hits per column of the last settlement
+        uint32_t paid = 0, won = 0;                  // stakes and fee, winnings of the last settlement
+        bool operator==(const PoolsColumns&) const = default;
+    };
+    std::vector<PoolsColumns> pools;
     // Players whose age the data set gives (birth date); the others carry a placeholder the
     // career start replaces as in the original. Needed only while a career starts (not saved).
     std::vector<bool> world_age_known;

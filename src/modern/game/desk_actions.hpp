@@ -270,6 +270,20 @@ bool build_stadium_investment_source(ModernState&, int manager, StadiumInvestmen
 bool submit_pools_coupon(ModernState& g, int manager, uint32_t stake,
                          const std::array<uint8_t, 11>& tips);
 
+// Modern Toto with up to six columns (docs/new_engine/toto.md): each column costs the stake
+// (10,000-400,000) and is settled on its own with the original quotas; all columns together
+// stake at most 400,000; every column beyond the first adds a fee of 10 % of the stake; no two
+// columns alike. Column 1 goes to the original coupon. A stake of 0 clears every column.
+constexpr int kPoolsMaxColumns = 6;
+constexpr uint32_t kPoolsMaxTotalStake = 400'000;
+enum class PoolsColumnsResult { ok, invalid, too_many_columns, stake_out_of_range, total_too_high, duplicate_column };
+PoolsColumnsResult submit_pools_columns(ModernState& g, int manager, uint32_t stake,
+                                        const std::vector<std::array<uint8_t, 11>>& columns);
+// What a coupon of `columns` columns costs at `stake` per column (stakes plus fee).
+inline uint32_t pools_cost(uint32_t stake, size_t columns) {
+    return columns == 0 ? 0 : uint32_t(stake * columns + stake / 10 * (columns - 1));
+}
+
 }  // namespace bmh::modern
 
 namespace bmh::modern {

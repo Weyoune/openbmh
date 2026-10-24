@@ -92,6 +92,21 @@ int g_high_scores = 0;  // matches with 13-15 goals (outside shoot-outs)
 int g_human_team = -1, g_human_for = 0, g_human_against = 0, g_human_matches = 0;
 int g_league_goals = 0, g_league_matches = 0;
 
+// A club's strength for the Toto tips of SIM_TOTO: mean of technique and condition of its
+// first eleven squad slots.
+int club_strength(const modern::ModernState& g, int team) {
+    const SquadRange r = squad_range(team);
+    int sum = 0, n = 0;
+    for (size_t s = r.first; s < r.first + std::min<size_t>(11, r.count); ++s) {
+        const int id = g.squad_slots.at(s) & 0xfff;
+        if (id == 0xfff) continue;
+        sum += (g.players.at(size_t(id)).technique() + g.players.at(size_t(id)).condition()) / 2, ++n;
+    }
+    return n ? sum / n : 0;
+}
+uint64_t toto_paid = 0, toto_won = 0;
+int toto_coupons = 0, toto_hits[12] = {};
+
 // The almanac of the run (docs/new_engine/almanach.md): size, consistency of the recorded
 // goals with the results, and the top scorers over all seasons by stable player id.
 void print_almanac(const modern::ModernState& g) {
@@ -476,6 +491,37 @@ int main(int argc, char** argv) {
                     modern::book_training_camp(g, 0, resort, session.rand()))
                     ++camp_stays;
             }
+            // SIM_TOTO=<columns>: the manager plays the Toto whenever a coupon is open, 400,000 in
+            // all spread over the columns: the stronger side (team strength) wins, column k > 1
+            // tips a draw in match k - 1 instead (docs/new_engine/toto.md).
+            if (const char* toto = std::getenv("SIM_TOTO")) {
+                auto& pools = g.pools;
+                if (!pools.empty() && !pools[0].hits.empty()) {  // the last settlement
+                    toto_paid += pools[0].paid, toto_won += pools[0].won, ++toto_coupons;
+                    for (uint8_t h : pools[0].hits) toto_hits[std::min<int>(h, 11)]++;
+                    pools[0].hits.clear();
+                }
+                const int columns = std::clamp(std::atoi(toto), 1, 6);
+                if (g.memory.has(::bmh::layout::CareerSession_DispatchToto_RuntimeField) &&
+                    g.memory.u8(::bmh::layout::CareerSession_DispatchToto_RuntimeField) == 11) {
+                    std::array<uint8_t, 11> base{};
+                    for (uint32_t k = 0; k < 11; ++k) {
+                        const int home = g.memory.u16(::bmh::layout::DeskActions_SubmitPoolsCoupon_RuntimeField + k * 4);
+                        const int away = g.memory.u16(::bmh::layout::DeskActions_SubmitPoolsCoupon_RuntimeField + k * 4 + 2);
+                        const int hs = home < modern::league_clubs() ? club_strength(g, home) : 0;
+                        const int as = away < modern::league_clubs() ? club_strength(g, away) : 0;
+                        base[k] = as > hs + 2 ? 2 : 1;
+                    }
+                    std::vector<std::array<uint8_t, 11>> tips{base};
+                    for (int c = 1; c < columns; ++c) {
+                        auto column = base;
+                        column[size_t(c - 1)] = 0;
+                        tips.push_back(column);
+                    }
+                    const uint32_t stake = std::max<uint32_t>(10000, 400000 / uint32_t(columns) / 10000 * 10000);
+                    modern::submit_pools_columns(g, 0, stake, tips);
+                }
+            }
             if (const char* ads = std::getenv("SIM_ADVERTISING"); ads && std::string(ads) == "1") {
                 for (int slot = 15; slot >= 0; --slot) {
                     AdvertisingOfferList list = modern::advertising_offers(g, 0, slot);
@@ -582,7 +628,7 @@ int main(int argc, char** argv) {
                                             h.player_last == g.player_last && h.world_player_id == g.world_player_id;
                     const bool same_layout = world_layout().league_teams == layout.league_teams &&
                                              world_layout().total_slots == layout.total_slots;
-                    const bool same_almanac = h.almanac == g.almanac && h.world_league_id == g.world_league_id;
+                    const bool same_almanac = h.almanac == g.almanac && h.world_league_id == g.world_league_id && h.pools == g.pools;
                     std::printf("save check at turn %d: state %s, names %s, layout %s, almanac %s, %ju bytes\n", played,
                                 same_state ? "same" : "DIFFERS", same_names ? "same" : "DIFFER",
                                 same_layout ? "same" : "DIFFERS", same_almanac ? "same" : "DIFFERS",
@@ -621,6 +667,15 @@ int main(int argc, char** argv) {
         }
         if (std::getenv("SIM_ADVERTISING")) std::printf("%d advertising contracts accepted (SIM_ADVERTISING=1)\n", ad_contracts);
         if (std::getenv("SIM_CAMP")) std::printf("%d training camp stays (SIM_CAMP=%s)\n", camp_stays, std::getenv("SIM_CAMP"));
+        if (std::getenv("SIM_TOTO")) {
+            int won_coupons = 0;
+            std::printf("toto (SIM_TOTO=%s): %d coupons, paid %llu, won %llu, return %.1f %%; hits per column:", std::getenv("SIM_TOTO"),
+                        toto_coupons, (unsigned long long)toto_paid, (unsigned long long)toto_won,
+                        toto_paid ? 100.0 * double(toto_won) / double(toto_paid) : 0.0);
+            for (int h = 0; h <= 11; ++h) std::printf(" %d:%d", h, toto_hits[h]);
+            for (int h = 9; h <= 11; ++h) won_coupons += toto_hits[h];
+            std::printf(" (winning columns %d)\n", won_coupons);
+        }
         if (std::getenv("SIM_INTERVENE")) std::printf("%d interventions (substitution at minute 30, re-rated)\n", interventions);
         if (sim_contracts_env && std::string(sim_contracts_env) == "1")
             std::printf("contract expiry policy: %d decisions, %d renewals, %d rejected offers/releases, %d no-demand releases, %d errors (SIM_CONTRACTS=1)\n",

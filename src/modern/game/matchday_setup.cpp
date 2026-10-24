@@ -19,6 +19,7 @@
 #include "game/schedule.hpp"
 #include "game/messages.hpp"
 #include "game/table.hpp"
+#include "modern/game/desk_actions.hpp"
 #include "modern/game/weekly.hpp"
 
 namespace bmh::modern {
@@ -1216,24 +1217,41 @@ void settle_pools_coupon(ModernState& g, const std::vector<MatchGroup>& groups) 
     if (mem.has(::bmh::layout::CareerSession_DispatchToto_RuntimeField)) mem.set8(::bmh::layout::CareerSession_DispatchToto_RuntimeField, uint8_t(k));
     if (k <= 10) return;
     static constexpr uint8_t kQuota[12] = {11, 10, 0, 20, 11, 10, 0, 1, 0, 10, 20, 50};  // MatchdaySetupRuntimeField13
+    if (g.pools.size() < g.manager_teams.size()) g.pools.resize(g.manager_teams.size());
     for (size_t m = 0; m < g.manager_teams.size(); m++) {
         const uint32_t at = ::bmh::layout::Coupon + uint32_t(m) * 0x14;
-        if (mem.u8(at + 3) & 0x80) mem.set32(at, 0);
+        auto& extra = g.pools[m].extra;
+        if (mem.u8(at + 3) & 0x80) mem.set32(at, 0), extra.clear();
         const uint32_t stake = mem.u32(at);
         if ((stake & 0x7fffffff) == 0) continue;
-        if (!modern::book_money(g, int(m), int32_t(stake), false, true)) {
+        // Modern: every column costs the stake, every one beyond the first 10 % more
+        // (docs/new_engine/toto.md); with one column this is the original booking.
+        const uint32_t cost = pools_cost(stake, 1 + extra.size());
+        if (!modern::book_money(g, int(m), int32_t(cost), false, true)) {
             post_composed(g, int(m), message_text(g, ::bmh::layout::MatchdaySetup_SettlePoolsCoupon_TextPointer));
         } else {
-            int hits = 0;
-            for (uint32_t i = 0; i < 0xb; i++)
-                if (mem.u8(at + 8 + i) == mem.u8(::bmh::layout::MatchdaySetup_EvaluatePoolsCoupon_RuntimeField + i)) hits++;
-            uint32_t win = 0;
-            if (hits > 8) win = stake * kQuota[hits];
+            auto hits_of = [&](auto tip) {
+                int hits = 0;
+                for (uint32_t i = 0; i < 0xb; i++)
+                    if (tip(i) == mem.u8(::bmh::layout::MatchdaySetup_EvaluatePoolsCoupon_RuntimeField + i)) hits++;
+                return hits;
+            };
+            const int hits = hits_of([&](uint32_t i) { return mem.u8(at + 8 + i); });
+            uint32_t win = hits > 8 ? stake * kQuota[hits] : 0;
+            std::vector<uint8_t> column_hits{uint8_t(hits)};
+            for (const auto& column : extra) {
+                const int h = hits_of([&](uint32_t i) { return column[i]; });
+                column_hits.push_back(uint8_t(h));
+                if (h > 8) win += stake * kQuota[h];
+            }
             mem.set32(at + 4, win);
             mem.set8(at + 0x13, uint8_t(hits));
+            g.pools[m].hits = std::move(column_hits);
+            g.pools[m].paid = cost, g.pools[m].won = win;
             modern::book_money(g, int(m), -int32_t(win), true, true);
         }
         mem.set32(at, 0);  // (also clears the "settled" bit 7 of byte 3 just set)
+        extra.clear();
     }
 }
 

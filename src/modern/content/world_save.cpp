@@ -44,6 +44,43 @@ std::vector<std::string> strings(const J& value) {
 }
 std::string world_identity(const World& world) { return world.id + "@" + world.data_revision; }
 
+// The Toto columns 2-6 and the last settlement per manager (docs/new_engine/toto.md).
+J pools_json(const std::vector<ModernState::PoolsColumns>& pools) {
+    A out;
+    for (const auto& p : pools) {
+        A extra, hits;
+        for (const auto& column : p.extra) {
+            A tips;
+            for (uint8_t t : column) tips.push_back(int(t));
+            extra.push_back(std::move(tips));
+        }
+        for (uint8_t h : p.hits) hits.push_back(int(h));
+        out.push_back(O{{"extra", std::move(extra)}, {"hits", std::move(hits)}, {"paid", int64_t(p.paid)}, {"won", int64_t(p.won)}});
+    }
+    return out;
+}
+std::vector<ModernState::PoolsColumns> pools_json(const J& value) {
+    std::vector<ModernState::PoolsColumns> out;
+    for (const J& row : arr(value)) {
+        ModernState::PoolsColumns p;
+        for (const J& column : arr(get(row, "extra"))) {
+            const A& tips = arr(column);
+            if (tips.size() != 11) fail("invalid Toto column");
+            std::array<uint8_t, 11> c{};
+            for (size_t i = 0; i < 11; ++i) {
+                const int64_t t = num(tips[i]);
+                if (t < 0 || t > 2) fail("invalid Toto tip");
+                c[i] = uint8_t(t);
+            }
+            p.extra.push_back(c);
+        }
+        for (const J& h : arr(get(row, "hits"))) p.hits.push_back(uint8_t(num(h)));
+        p.paid = uint32_t(num(get(row, "paid"))), p.won = uint32_t(num(get(row, "won")));
+        out.push_back(std::move(p));
+    }
+    return out;
+}
+
 }  // namespace
 
 void save_world_career(const std::filesystem::path& path, const World& world, const ModernState& state,
@@ -69,7 +106,8 @@ void save_world_career(const std::filesystem::path& path, const World& world, co
           {"player_nations", strings(state.player_nation)},
           {"league_ids", strings(state.world_league_id)},
           {"league_names", strings(state.world_league_name)},
-          {"generated_players", int64_t(state.almanac.generated_players)}});
+          {"generated_players", int64_t(state.almanac.generated_players)},
+          {"pools", pools_json(state.pools)}});
     // The almanac: finished seasons unchanged, the running one encoded now.
     for (const auto& [name, bytes] : state.almanac.finished) docs[name] = bytes;
     if (state.almanac.current.season >= 0) docs["history/current.bin"] = encode_almanac_season(state.almanac.current);
@@ -117,6 +155,7 @@ SavedWorldCareer load_world_career(const std::filesystem::path& path, const Worl
     out.state.world_league_id = strings(get(modern, "league_ids"));
     out.state.world_league_name = strings(get(modern, "league_names"));
     out.state.almanac.generated_players = uint32_t(num(get(modern, "generated_players")));
+    out.state.pools = pools_json(get(modern, "pools"));
     for (const auto& [name, bytes] : docs) {
         if (!name.starts_with("history/season-")) continue;
         decode_almanac_season(bytes);  // a damaged season fails here, not in the almanac screen

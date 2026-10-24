@@ -1867,6 +1867,29 @@ bool submit_pools_coupon(ModernState& g, int manager, uint32_t stake,
     return true;
 }
 
+// OpenBMH deviates from the original: the Modern Toto takes up to six columns (one in the original), each at the stake plus a 10 % fee per extra column, 400,000 at most in all.
+PoolsColumnsResult submit_pools_columns(ModernState& g, int manager, uint32_t stake,
+                                        const std::vector<std::array<uint8_t, 11>>& columns) {
+    if (manager < 0 || size_t(manager) >= g.manager_teams.size()) return PoolsColumnsResult::invalid;
+    if (g.pools.size() < g.manager_teams.size()) g.pools.resize(g.manager_teams.size());
+    if (stake == 0) {  // clears the coupon
+        if (!modern::submit_pools_coupon(g, manager, 0, columns.empty() ? std::array<uint8_t, 11>{} : columns[0]))
+            return PoolsColumnsResult::invalid;
+        g.pools[size_t(manager)].extra.clear();
+        return PoolsColumnsResult::ok;
+    }
+    if (columns.empty()) return PoolsColumnsResult::invalid;
+    if (columns.size() > size_t(kPoolsMaxColumns)) return PoolsColumnsResult::too_many_columns;
+    if (stake < 10'000 || stake > 400'000) return PoolsColumnsResult::stake_out_of_range;
+    if (uint64_t(stake) * columns.size() > kPoolsMaxTotalStake) return PoolsColumnsResult::total_too_high;
+    for (size_t a = 0; a < columns.size(); ++a)
+        for (size_t b = a + 1; b < columns.size(); ++b)
+            if (columns[a] == columns[b]) return PoolsColumnsResult::duplicate_column;
+    if (!modern::submit_pools_coupon(g, manager, stake, columns[0])) return PoolsColumnsResult::invalid;
+    g.pools[size_t(manager)].extra.assign(columns.begin() + 1, columns.end());
+    return PoolsColumnsResult::ok;
+}
+
 }  // namespace bmh::modern
 
 namespace bmh::modern {

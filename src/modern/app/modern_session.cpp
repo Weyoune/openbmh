@@ -8582,11 +8582,31 @@ bool ModernSession::dispatch_toto(const ui::TotoRequest& request, uint64_t& revi
         error = "stale_manager_or_revision"; return false;
     }
     if (g_.memory.u8(::bmh::layout::CareerSession_DispatchToto_RuntimeField) != 11) { error = "toto_coupon_requires_eleven_matches"; return false; }
-    if (!modern::submit_pools_coupon(g_, request.manager_slot, request.stake, request.tips)) {
+    // one column: the original coupon; earlier extra columns of this manager are dropped
+    if (modern::submit_pools_columns(g_, request.manager_slot, request.stake, {request.tips}) != PoolsColumnsResult::ok) {
         error = "invalid_toto_coupon"; return false;
     }
     ++revision;
     return true;
+}
+
+bool ModernSession::dispatch_pools_columns(int manager, uint32_t stake, const std::vector<std::array<uint8_t, 11>>& columns,
+                                           uint64_t& revision, std::string& error) {
+    const int active = int(g_.memory.u8(::bmh::layout::ActiveManager));
+    if (manager != active || manager < 0 || size_t(manager) >= g_.manager_teams.size()) {
+        error = "stale_manager_or_revision"; return false;
+    }
+    if (g_.memory.u8(::bmh::layout::CareerSession_DispatchToto_RuntimeField) != 11) { error = "toto_coupon_requires_eleven_matches"; return false; }
+    switch (modern::submit_pools_columns(g_, manager, stake, columns)) {
+        case PoolsColumnsResult::ok: ++revision; return true;
+        case PoolsColumnsResult::too_many_columns: error = "too_many_columns"; return false;
+        case PoolsColumnsResult::stake_out_of_range: error = "stake_out_of_range"; return false;
+        case PoolsColumnsResult::total_too_high: error = "total_stake_too_high"; return false;
+        case PoolsColumnsResult::duplicate_column: error = "duplicate_column"; return false;
+        case PoolsColumnsResult::invalid: break;
+    }
+    error = "invalid_toto_coupon";
+    return false;
 }
 
 }  // namespace bmh::modern::app

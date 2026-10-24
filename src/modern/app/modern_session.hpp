@@ -601,6 +601,11 @@ public:
     }
     bool stadium_tip_deadline_expired() const;
     bool dispatch_toto(const ui::TotoRequest&, uint64_t& revision, std::string& error);
+    // Modern Toto with up to six columns for the manager at the desk (docs/new_engine/toto.md).
+    // Errors: too_many_columns, stake_out_of_range, total_stake_too_high, duplicate_column,
+    // toto_coupon_requires_eleven_matches, invalid_toto_coupon, stale_manager_or_revision.
+    bool dispatch_pools_columns(int manager, uint32_t stake, const std::vector<std::array<uint8_t, 11>>& columns,
+                                uint64_t& revision, std::string& error);
     bool dispatch_tactics(const ui::TacticsRequest&, uint64_t& revision, std::string& error);
     bool dispatch_lineup(const ui::LineupRequest&, uint64_t& revision, std::string& error);
     // Source PitchScreen live-match path: apply one user-picked field/bench

@@ -10,7 +10,9 @@
 #include "game/schedule.hpp"
 #include "game/table.hpp"
 #include "modern/content/statistics.hpp"
+#include "formats/executable_layout.hpp"
 #include "modern/game/almanac.hpp"
+#include "modern/game/desk_actions.hpp"
 #include "modern/game/matchday.hpp"
 
 namespace bmh::modern {
@@ -201,6 +203,49 @@ J squad(const ModernState& g, int team) {
     return O{{"ok", true}, {"club", club_json(g, team)}, {"players", std::move(players)}};
 }
 
+// The Toto coupon of the matchday and the manager's columns (docs/new_engine/toto.md).
+J toto(const ModernState& g, int manager) {
+    if (manager < 0 || size_t(manager) >= g.manager_teams.size()) return error("invalid_manager");
+    const StaticMemory& mem = g.memory;
+    const uint32_t matches_at = ::bmh::layout::DeskActions_SubmitPoolsCoupon_RuntimeField;
+    const int count = mem.has(::bmh::layout::CareerSession_DispatchToto_RuntimeField) ? mem.u8(::bmh::layout::CareerSession_DispatchToto_RuntimeField) : 0;
+    A matches;
+    for (int k = 0; k < count && k < 11 && mem.has(matches_at + uint32_t(k) * 4 + 3); ++k)
+        matches.push_back(O{{"home", club_json(g, mem.u16(matches_at + uint32_t(k) * 4))},
+                            {"away", club_json(g, mem.u16(matches_at + uint32_t(k) * 4 + 2))}});
+    const uint32_t at = ::bmh::layout::Coupon + uint32_t(manager) * 0x14;
+    uint32_t stake = 0;
+    A columns;
+    if (mem.has(at + 0x13)) {
+        stake = mem.u32(at) & 0x7fffffff;
+        if (stake != 0) {
+            A first;
+            for (uint32_t i = 0; i < 11; ++i) first.push_back(int(mem.u8(at + 8 + i)));
+            columns.push_back(std::move(first));
+            if (size_t(manager) < g.pools.size())
+                for (const auto& column : g.pools[size_t(manager)].extra) {
+                    A tips;
+                    for (uint8_t t : column) tips.push_back(int(t));
+                    columns.push_back(std::move(tips));
+                }
+        }
+    }
+    const int64_t cost = int64_t(pools_cost(stake, columns.size()));
+    O last{{"paid", 0}, {"won", 0}, {"hits", A{}}};
+    if (size_t(manager) < g.pools.size()) {
+        const auto& p = g.pools[size_t(manager)];
+        A hits;
+        for (uint8_t h : p.hits) hits.push_back(int(h));
+        last = O{{"paid", int64_t(p.paid)}, {"won", int64_t(p.won)}, {"hits", std::move(hits)}};
+    }
+    return O{{"ok", true}, {"open", count == 11}, {"matches", std::move(matches)}, {"stake", int64_t(stake)},
+             {"cost", cost}, {"columns", std::move(columns)},
+             {"rules", O{{"max_columns", kPoolsMaxColumns}, {"stake_min", 10000}, {"stake_max", 400000},
+                         {"total_max", int64_t(kPoolsMaxTotalStake)}, {"extra_column_fee_percent", 10},
+                         {"quota", O{{"9", 10}, {"10", 20}, {"11", 50}}}}},
+             {"last", std::move(last)}};
+}
+
 }  // namespace
 
 cli::Json query_projection(const ModernState& g, int manager, const cli::Json& request) {
@@ -209,6 +254,7 @@ cli::Json query_projection(const ModernState& g, int manager, const cli::Json& r
     const std::string& k = *kind->string();
     try {
         if (k == "status") return status(g, manager);
+        if (k == "toto") return toto(g, manager);
         if (k == "leagues") return leagues(g);
         if (k == "table" || k == "fixtures") {
             const int league = league_of_request(g, field(request, "league"));

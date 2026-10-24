@@ -36,6 +36,7 @@ describe deliberate changes; they are not a list of every known compatibility li
 - [src/modern/game/career.hpp](../src/modern/game/career.hpp): uses the supported player-generation ranges and excludes reserved calendar positions when assigning managers.
 - [src/modern/game/desk_actions.cpp](../src/modern/game/desk_actions.cpp): uses the supported transfer-fee arithmetic and designated set-piece fields.
 - [src/modern/game/desk_actions.cpp](../src/modern/game/desk_actions.cpp): Modern training camps have grades up to six stars with a capped step, a higher limit and recovery extras.
+- [src/modern/game/desk_actions.cpp](../src/modern/game/desk_actions.cpp): the Modern Toto takes up to six columns (one in the original), each at the stake plus a 10 % fee per extra column, 400,000 at most in all.
 - [src/modern/game/desk_actions.hpp](../src/modern/game/desk_actions.hpp): supports designated set-piece records and the supported transfer-editor rules.
 - [src/modern/game/environment.hpp](../src/modern/game/environment.hpp): uses six monthly environment budgets across data editions while retaining the shared staff prices and academy player-generation strength bands.
 - [src/modern/game/highscore.cpp](../src/modern/game/highscore.cpp): reads the supported edition-specific high-score format from the loaded image.

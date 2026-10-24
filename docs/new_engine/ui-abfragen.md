@@ -23,6 +23,7 @@ Michaels Entscheidung: Die neue Oberfläche wird **je Menü** an die Modern-Engi
 | `{kind: "leagues"}` | `leagues: [{index, id, name, clubs, matchdays, played}]` |
 | `{kind: "table", league}` | `league`, `played`, `rows: [{rank, club, played, won, drawn, lost, goals_for, goals_against, points}]` (aktueller Stand, mit Punktabzug) |
 | `{kind: "fixtures", league, matchday?}` | `league`, `matchday`, `matches: [{home, away, result: [h, a] \| null, status: open \| played \| postponed}]`; ohne `matchday` der nächste |
+| `{kind: "toto"}` | Tippschein des Spieltags und eigene Spalten, siehe [Toto](toto.md) |
 | `{kind: "squad", club?}` | `club`, `players: [{slot, player, nation, position (gk/def/mid/fwd), age, technique, condition, form, strength, skills {teamplay, speed, shooting, passing, tackling, free_kick, corner}, lineup (start/bench/none), injured_weeks, banned_weeks}]`; ohne `club` der eigene Verein, sonst Welt-ID oder Laufzeitindex |
 | `competitions`, `winners`, `player_stats` | siehe [Spielstatistik](statistik.md) |
 
