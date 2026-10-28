@@ -76,6 +76,11 @@ void reschedule_test(GameState g) {
     check(undone.memory.u16(at) == 0 && undone.results.at(size_t(m.match) + size_t(m.round) * 10 + size_t(league) * 0x17c) == kNotPlayed,
           "undo frees the entry and restores 0xCC");
     check(reschedulable_matches(undone, 0).size() == matches.size(), "the match is movable again");
+    // UndoReschedule clears the replay bit when no other replay stays on the day: the same
+    // target days as before the move (issue 16)
+    check((undone.memory.u16(::bmh::layout::CompetitionCalendar + uint32_t(target) * 2) & 0x4000) == 0,
+          "undo clears the calendar replay bit");
+    check(reschedule_target_days(undone, 0, m) == days, "the same target days after the undo");
     std::cout << "moved round " << m.round + 1 << " from day " << m.day << " to day " << target << " (" << days.size()
               << " days offered)\n";
 }
