@@ -228,14 +228,21 @@ bool undo_reschedule(GameState& g, int manager, int day) {
     if (std::none_of(moved.begin(), moved.end(), [&](const LeagueMatchRef& m) { return m.day == day; })) return false;
     const int team = manager_team(g, manager);
     // UndoReschedule(day, 1, team): every replay of the club on that day, whatever its league
+    int kept = 0;  // local_18: the replays of other clubs that stay on the day
     for (int e = 0; e < kPostponedEntries; e++) {
         const uint32_t at = kPostponed + uint32_t(e) * 6;
         if (g.memory.u16(at) != uint16_t(day)) continue;
         const int league = g.memory.u8(at + 3), round = g.memory.u8(at + 2), m = g.memory.u8(at + 4);
         const Fixture f = round_fixtures(league, round).at(size_t(m));
-        if (f.home != team && f.away != team) continue;
+        if (f.home != team && f.away != team) { ++kept; continue; }
         g.results.at(result_at(league, round, m)) = kNotPlayed;
         g.memory.set16(at, 0);
+    }
+    // with no replay left the day loses its replay bit 0x4000 again (calendar high byte & 0xbf),
+    // so it can be a target once more
+    if (kept == 0) {
+        const uint32_t high = kCalendar + uint32_t(day) * 2 + 1;
+        g.memory.set8(high, uint8_t(g.memory.u8(high) & 0xbf));
     }
     return true;
 }

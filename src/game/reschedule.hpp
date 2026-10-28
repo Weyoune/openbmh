@@ -15,8 +15,8 @@
 //      matchday the 0xCE turns into 0xCD (matchday_setup) and the match is played on the
 //      new day like a winter postponement.
 //   4. A click on the new day of a moved match takes the move back (UndoReschedule(day, 1,
-//      team)): the entry is freed and the result byte is 0xCC again. The calendar keeps bit
-//      0x4000, as in the original.
+//      team)): the entry is freed and the result byte is 0xCC again. When no replay of another
+//      club stays on that day, the day loses bit 0x4000 again and can be a target once more.
 //
 // Everything here works on the saved GameState only: no random numbers are drawn, so a
 // rescheduled career stays deterministic.
