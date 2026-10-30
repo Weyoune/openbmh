@@ -1,11 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 cmake_minimum_required(VERSION 3.24)
-project(OpenBMH VERSION 0.2.1 LANGUAGES CXX C)
-if(APPLE)
-    enable_language(OBJC OBJCXX)
-    set(CMAKE_OBJCXX_STANDARD 20)
-    set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
-endif()
+project(OpenBMH VERSION 0.1.2 LANGUAGES CXX C)
 # the one place of the version: --version of both programs and the window title (src/version.hpp)
 add_compile_definitions(OPENBMH_VERSION="${PROJECT_VERSION}")
 
@@ -201,10 +196,6 @@ bmh_add_data_test(NAME highscore_tests REQUIRED_OPTIONS BMH_TEST_HIGHSCORE_TESTS
 # Engine core: file formats and game logic, no platform dependencies
 add_library(bmhcore STATIC
     src/formats/binary.cpp
-    src/formats/content.cpp
-    src/formats/native_state.cpp
-    src/formats/native_file.cpp
-    src/cli/json.cpp
     src/formats/palette.cpp
     src/formats/vga.cpp
     src/formats/font.cpp
@@ -273,10 +264,10 @@ else()
     target_compile_options(bmhcore PRIVATE -Wall -Wextra)
 endif()
 
-add_executable(openbmh_inspect src/main.cpp)
-target_link_libraries(openbmh_inspect PRIVATE bmhcore ${BMH_SDL_TARGET})
+add_executable(openbmh src/main.cpp)
+target_link_libraries(openbmh PRIVATE bmhcore ${BMH_SDL_TARGET})
 if(MSVC)
-    target_compile_options(openbmh_inspect PRIVATE /utf-8)
+    target_compile_options(openbmh PRIVATE /utf-8)
 endif()
 
 # --- Game data launcher (src/launch): find, unpack and check the original game data ---------
@@ -325,12 +316,6 @@ if(MSVC)
 endif()
 
 add_subdirectory(src/ui)
-add_subdirectory(src/import)
-option(OPENBMH_BUILD_EDITOR "Build the standalone OBW editor" OFF)
-if(OPENBMH_BUILD_EDITOR)
-    add_subdirectory(src/editor)
-endif()
-target_link_libraries(bmhui PUBLIC bmh_content)
 add_executable(driver_barrier_tests tests/driver_barrier_tests.cpp)
 target_link_libraries(driver_barrier_tests PRIVATE bmhcore)
 add_test(NAME driver_barrier_tests COMMAND driver_barrier_tests)
@@ -453,15 +438,10 @@ add_executable(openbmh_play
     src/app/main.cpp
     ${BMH_APP_CONTROLLER_SOURCE}
     ${BMH_APP_SESSION_SDL_SOURCE})
-target_link_libraries(openbmh_play PRIVATE bmhui bmh_launcher bmhlaunch_dialog openbmh_audio ${BMH_SDL_TARGET})
+target_link_libraries(openbmh_play PRIVATE bmhui bmhlaunch_dialog openbmh_audio ${BMH_SDL_TARGET})
 # a game without a console window on double-click (SDL2main provides WinMain); started from a
 # console it attaches to that one for --version, --help and start errors (src/app/main.cpp)
-set_target_properties(openbmh_play PROPERTIES WIN32_EXECUTABLE TRUE OUTPUT_NAME OpenBMH)
-if(CMAKE_CONFIGURATION_TYPES)
-    add_custom_command(TARGET openbmh_play POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_BINARY_DIR}/assets/launcher"
-                "$<TARGET_FILE_DIR:openbmh_play>/assets/launcher")
-endif()
+set_target_properties(openbmh_play PROPERTIES WIN32_EXECUTABLE TRUE)
 if(MSVC)
     target_compile_options(openbmh_play PRIVATE /utf-8)
     # App sources also compile in headless tests/helpers without target /utf-8.
@@ -641,7 +621,7 @@ add_executable(openbmh_cli
     src/cli/seat_hub.cpp
     src/cli/json.cpp
     ${BMH_APP_SESSION_SOURCE})
-target_link_libraries(openbmh_cli PRIVATE bmh_launcher bmhui bmhlaunch)
+target_link_libraries(openbmh_cli PRIVATE bmhui bmhlaunch)
 if(WIN32)
     target_link_libraries(openbmh_cli PRIVATE ws2_32)  # --listen (Winsock)
 endif()
@@ -1068,15 +1048,12 @@ bmh_add_data_test(NAME sportschau_app_tests REQUIRED_OPTIONS BMH_TEST_SPORTSCHAU
 install(TARGETS openbmh_play openbmh_cli RUNTIME DESTINATION . COMPONENT Runtime)
 install(FILES README.md LICENSE THIRD_PARTY_NOTICES.md ACKNOWLEDGEMENTS.md CONTRIBUTING.md
     DESTINATION . COMPONENT Runtime)
-install(DIRECTORY docs/ DESTINATION docs COMPONENT Runtime PATTERN "qa" EXCLUDE)
+install(DIRECTORY docs/ DESTINATION docs COMPONENT Runtime)
 if(MSVC)
     set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION .)
     set(CMAKE_INSTALL_SYSTEM_RUNTIME_COMPONENT Runtime)
     set(CMAKE_INSTALL_UCRT_LIBRARIES TRUE)
     include(InstallRequiredSystemLibraries)
-    if(OPENBMH_BUILD_EDITOR)
-        install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS} DESTINATION . COMPONENT Editor)
-    endif()
 endif()
 
 add_executable(tax_animation_unit_tests tests/tax_animation_unit_tests.cpp)
@@ -1092,25 +1069,6 @@ if(MSVC)
 endif()
 add_test(NAME launch_unit_tests COMMAND launch_unit_tests)
 
-add_executable(fltd_translation_unit_tests tests/fltd_translation_unit_tests.cpp)
-target_link_libraries(fltd_translation_unit_tests PRIVATE bmhlaunch)
-add_test(NAME fltd_translation_unit_tests COMMAND fltd_translation_unit_tests)
-
-add_executable(host_path_display_unit_tests tests/host_path_display_unit_tests.cpp)
-target_include_directories(host_path_display_unit_tests PRIVATE src)
-if(MSVC)
-    target_compile_options(host_path_display_unit_tests PRIVATE /utf-8)
-endif()
-add_test(NAME host_path_display_unit_tests COMMAND host_path_display_unit_tests)
-
-add_executable(quit_confirmation_unit_tests tests/quit_confirmation_unit_tests.cpp)
-target_include_directories(quit_confirmation_unit_tests PRIVATE src)
-target_link_libraries(quit_confirmation_unit_tests PRIVATE ${BMH_SDL_TARGET})
-if(MSVC)
-    target_compile_options(quit_confirmation_unit_tests PRIVATE /utf-8)
-endif()
-add_test(NAME quit_confirmation_unit_tests COMMAND quit_confirmation_unit_tests)
-
 add_executable(fixture_table_tests tests/fixture_table_tests.cpp)
 target_link_libraries(fixture_table_tests PRIVATE bmhcore)
 add_test(NAME fixture_table_unit_tests COMMAND fixture_table_tests)
@@ -1119,10 +1077,8 @@ bmh_add_data_test(NAME english_fixture_table_data_tests DATA_DIR "${BMH_ENGLISH_
     COMMAND fixture_table_tests "${BMH_ENGLISH_DATA}")
 
 # Private build paths are inputs to the source-package tool, never shipped in its manifest.
-FetchContent_GetProperties(rmlui)
-FetchContent_GetProperties(freetype)
 set(package_dependencies "{}")
-foreach(dependency IN ITEMS SDL2 miniz lzma_sdk nfd rmlui freetype)
+foreach(dependency IN ITEMS SDL2 miniz lzma_sdk nfd)
     string(REPLACE "\\" "/" dependency_path "${${dependency}_SOURCE_DIR}")
     if(dependency STREQUAL "SDL2" AND sdl2_SOURCE_DIR)
         set(dependency_path "${sdl2_SOURCE_DIR}")

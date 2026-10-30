@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-only
-#include "formats/content.hpp"
 #include "formats/binary.hpp"
 
 #include <fstream>
@@ -8,8 +7,6 @@
 namespace bmh {
 
 Bytes read_file(const std::filesystem::path& path) {
-    if (const auto r = content::find(path))
-        return content::bytes(*r);
     std::ifstream in(path, std::ios::binary);
     if (!in) throw FormatError("cannot open " + path.string());
     return Bytes(std::istreambuf_iterator<char>(in), {});

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "app/career_session.hpp"
-#include "content/save.hpp"
-#include "import/save.hpp"
 
 #include <stdexcept>
 #include <system_error>
@@ -422,14 +420,16 @@ void restore_saved_turn_cursor(TurnDriver& driver, GameState& state, const Datab
     if (!unsupported_continuation.empty()) return;
 
     std::vector<int> active_leagues;
-    // Expand the selected edition's groups. Only the German third divisions
-    // share bit 2; the English divisions each have their own calendar group.
-    // Stale descriptors beyond the active group count are ignored.
+    // DayCompetitions2's competition bits expand to group leagues in this original order;
+    // bit 2 owns both league 2 and 3. The stale descriptors after the active group count
+    // are intentionally ignored.
+    static constexpr int first_league[8] = {0, 1, 2, 4, 5, 6, 7, 8};
+    static constexpr int league_count[8] = {1, 1, 2, 1, 1, 1, 1, 1};
     for (int bit = 0; bit < 5; ++bit) {
         if (!((competitions >> bit) & 1u)) continue;
         const int first = bit, last = bit < 4 ? bit + 1 : 8;
         for (int k = first; k < last; ++k)
-            for (int league = kGroupLeague[k]; league < kGroupLeague[k] + kGroupLeagues[k]; ++league)
+            for (int league = first_league[k]; league < first_league[k] + league_count[k]; ++league)
                 active_leagues.push_back(league);
     }
     if (active_leagues.size() > 6)
@@ -539,7 +539,12 @@ static void install_league_sizes(const LeImage& exe) {
     kNewcomerFirst = exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
     kNewcomerCount = exe.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6);
     // EXE strings the engine posts (messages.hpp)
-    install_message_texts(exe);
+    kContractEndsSoonText = exe.cstring(kEnglishCompetitions ? ::bmh::layout::EnglishContractExpiryWarningText : ::bmh::layout::ContractExpiryWarningText);
+    kMastersQualificationText = kEnglishCompetitions ? "Masters entry confirmed. Your participation bonus has been credited." : exe.cstring(::bmh::layout::MastersQualificationText);
+    kMastersWinnerText = kEnglishCompetitions ? "Masters title won. Your prize money has been credited." : exe.cstring(::bmh::layout::MastersWinnerText);
+    kIndoorInvitationText = kEnglishCompetitions ? "Indoor event entry bonus credited for " : exe.cstring(::bmh::layout::IndoorInvitationText);
+    kChampionshipBonusText = kEnglishCompetitions ? "League title bonus credited." : exe.cstring(::bmh::layout::ChampionshipBonusText);
+    kFriendlyPayerPrefixText = kEnglishCompetitions ? "Your share: " : exe.cstring(::bmh::layout::NationalFriendlyPayerPrefixText);
 }
 
 CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_seed)
@@ -555,11 +560,6 @@ CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_
     session_id_ = next_session_id.fetch_add(1, std::memory_order_relaxed);
     initialize_club_modal_runtime();
     g_ = startup_state(exe_, db_, read_file(data / "M3.MEN"), read_file(data / "M3.DAT"));
-    if (const auto resource = content::find(data)) {
-        g_.display_start_year = resource->content->start_year;
-        content::set_display_start_year(data, g_.display_start_year);
-        exe_.set_display_start_year(g_.display_start_year);
-    }
     g_.texts = &texts_;
     g_.currency_suffix = exe_.cstring(::bmh::layout::CurrencySuffixText);  // CurrencySuffixText
     configure_training_camp_data(g_, exe_);
@@ -567,18 +567,14 @@ CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_
     g_.credit_divisor = std::bit_cast<double>(uint64_t(exe_.u32(::bmh::layout::BankCredit_BankCreditContext_RuntimeField)) | uint64_t(exe_.u32(::bmh::layout::BankCredit_BankCreditContext_RuntimeField2)) << 32);
     g_.credit_rate_table_available = true;
     install_default_hooks();
-    if (content::find(data))
-        turn_driver_.desk_autosave = [this](const GameState &state, WatcomRandom &random) {
-            write_desk_autosave(state, random);
-        };
     startup_players(g_, game_, rand_);  // CareerFirstSteps2
     MinuteReport report;
     if (!new_career_before_dialog(g_, game_, rand_, report))  // InitializeCareer up to the dialog
         throw std::runtime_error("career start: " + report.reason);
 }
 
-CareerSession::CareerSession(const std::filesystem::path &data, uint32_t watcom_seed,
-                             const std::filesystem::path &save_path, bool importing_legacy)
+CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_seed,
+                             const std::filesystem::path& save_path)
     : data_directory_(data), exe_(load_le(data / "BMH.exe")), db_(load_database(data / "M3D.MAN")),
       texts_(load_textd(data / "TEXTD.BLK")), rand_(watcom_seed) {
     install_league_sizes(exe_);
@@ -588,62 +584,15 @@ CareerSession::CareerSession(const std::filesystem::path &data, uint32_t watcom_
         ? TransferAllocatorContext::zero : TransferAllocatorContext::blocked;
     session_id_ = next_session_id.fetch_add(1, std::memory_order_relaxed);
     initialize_club_modal_runtime();
-    bool original_english_save = false;
-    std::optional<content::SavedCareer> native;
-    if (const auto resource = content::find(data); resource && !importing_legacy) {
-        if (content::key(save_path.extension()) != ".obs")
-            throw FormatError("0.2 loads native OBS saves; use Add to migrate legacy games");
-        native = content::load_career(save_path, *resource->content);
-        g_ = std::move(native->state);
-        rand_ = native->random;
-        game_ = native->game;
-    } else {
-        const Savegame file = load_savegame(save_path);
-        original_english_save = file.version == "V2.20";
-        if (!file.checksum_ok ||
-            (file.version != "V2.24" && !(importing_legacy && kEnglishCompetitions && original_english_save)))
-            throw FormatError("savegame: unsupported or damaged FBM");
-        const DbCounts counts{exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField),
-                              exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField3),
-                              exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField2),
-                              exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField4)};
-        const auto stream = original_english_save ? obw::normalize_english_save(file, counts) : file.stream;
-        const SaveState save(stream, counts);
-        const auto manager_count = save.data(::bmh::layout::ManagerCount)[0];
-        if (manager_count < 1 || manager_count > 4)
-            throw FormatError("Invalid legacy manager count");
-        if (importing_legacy) {
-            size_t english_blocks = 0;
-            for (const auto &[address, size] : kEnglishCompetitionBlocks)
-                for (const auto &block : save.extension())
-                    if (block.address == address && block.bytes.size() == size)
-                        ++english_blocks;
-            if ((kEnglishCompetitions && english_blocks != std::size(kEnglishCompetitionBlocks)) ||
-                (!kEnglishCompetitions && english_blocks != 0))
-                throw FormatError(
-                    "Spielstand und Mod-Ausgabe passen nicht zusammen oder englische Pokaldaten fehlen.");
-        }
-        g_ = GameState::from_save(save, counts);
-        if (importing_legacy && file.plain_header.size() >= 11) {
-            const std::string year(file.plain_header.begin() + 7, file.plain_header.begin() + 11);
-            if (std::all_of(year.begin(), year.end(), [](unsigned char c) { return std::isdigit(c); })) {
-                const int elapsed = ui::desk_date(g_.date, exe_).year - exe_.display_start_year();
-                const int origin = std::stoi(year) - elapsed;
-                if (origin >= 1900 && origin <= 9998)
-                    g_.display_start_year = origin;
-            }
-        }
-    }
-    if (content::find(data)) {
-        content::set_display_start_year(data, g_.display_start_year);
-        exe_.set_display_start_year(g_.display_start_year);
-    }
+    const Savegame file = load_savegame(save_path);
+    if (!file.checksum_ok || file.version != "V2.24") throw std::runtime_error("savegame: unsupported or damaged FBM");
+    const DbCounts counts{exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField), exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField3), exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField2), exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField4)};
+    const SaveState save(file.stream, counts);
+    g_ = GameState::from_save(save, counts);
     // CompetitionPointers2, after DeskDate2: these are process statics, not FBM fields.
     // Resuming within this month must not count it as a newly elapsed month.
-    if (!native) {
-        g_.autosave_months = 0;
-        g_.autosave_month = month_code(g_.date);
-    }
+    g_.autosave_months = 0;
+    g_.autosave_month = month_code(g_.date);
     // Original CompetitionPointers2 calls CompetitionPointers after loading the stream. This
     // rebinds pointer fields in the saved competition table before any resume
     // path dereferences them (the serialized values may point into the old process).
@@ -655,55 +604,10 @@ CareerSession::CareerSession(const std::filesystem::path &data, uint32_t watcom_
     g_.credit_divisor = std::bit_cast<double>(uint64_t(exe_.u32(::bmh::layout::BankCredit_BankCreditContext_RuntimeField)) | uint64_t(exe_.u32(::bmh::layout::BankCredit_BankCreditContext_RuntimeField2)) << 32);
     g_.credit_rate_table_available = true;
     install_default_hooks();
-    if (content::find(data))
-        turn_driver_.desk_autosave = [this](const GameState &state, WatcomRandom &random) {
-            write_desk_autosave(state, random);
-        };
-    if (!native)
-        national_coach_after_load(
-            g_); // (NationalCoachAfterLoad: a Bundestrainer takes the national team over again)
-    if (!native && g_.memory.has(::bmh::layout::CareerSession_Save_RuntimeField))
-        game_.set_seed(int32_t(g_.memory.u32(::bmh::layout::CareerSession_Save_RuntimeField)));
-    if (native) {
-        content::restore_driver(turn_driver_, native->driver);
-        restore_native_session_context(native->session);
-        turn_driver_.session_id = session_id_;
-        turn_driver_.revision = 1;
-        exe_.set_display_start_year(g_.display_start_year);
-    } else if (original_english_save &&
-               !g_.memory.u8(::bmh::layout::CareerSession_RuntimeError_RuntimeField4)) {
-        // V2.20 never stored transient match descriptors. Like its original loader,
-        // rebuild the current groups without replaying daily/financial progression
-        // or shuffling the saved manager order.
-        const int day = g_.season_day();
-        if (day < 0 || day >= 365)
-            throw FormatError("V2.20 calendar day is invalid");
-        const auto entry = g_.memory.u16(::bmh::layout::CompetitionCalendar + uint32_t(day) * 2);
-        const auto competitions = g_.memory.u32(::bmh::layout::SavedCompetition);
-        std::vector<uint8_t> referees = db_.raw_referee_properties;
-        for (auto &referee : referees)
-            referee &= 0x7f;
-        MatchdayContext context;
-        context.month = month_code(g_.date);
-        context.season_day = day;
-        context.weekday = ui::desk_date(g_.date, exe_).weekday;
-        context.referees = &referees;
-        MinuteReport report;
-        auto groups = setup_matchday(g_, competitions, context, game_, rand_, report);
-        if (report.unsupported)
-            throw FormatError("V2.20 continuation: " + report.reason);
-        std::string error;
-        if (!begin_turn_driver(turn_driver_, g_, std::move(groups), entry, db_.raw_referee_properties,
-                               session_id_, 1, error))
-            throw FormatError(error);
-        turn_driver_.referees = std::move(referees);
-        turn_driver_.loaded_matchday_resume = true;
-    } else
-        restore_saved_turn_cursor(turn_driver_, g_, db_, session_id_, 1, saved_turn_error_);
-    if (importing_legacy && !saved_turn_error_.empty())
-        throw FormatError(saved_turn_error_);
-    if (!native)
-        capture_source_desk_callargs();
+    national_coach_after_load(g_);  // (NationalCoachAfterLoad: a Bundestrainer takes the national team over again)
+    if (g_.memory.has(::bmh::layout::CareerSession_Save_RuntimeField)) game_.set_seed(int32_t(g_.memory.u32(::bmh::layout::CareerSession_Save_RuntimeField)));
+    restore_saved_turn_cursor(turn_driver_, g_, db_, session_id_, 1, saved_turn_error_);
+    capture_source_desk_callargs();
 }
 
 int CareerSession::runtime_club(int master) const { return runtime_club(g_, master); }
@@ -4225,7 +4129,6 @@ bool CareerSession::finish(ui::CareerInitializationResult& result, std::string& 
     for (size_t m = 0; m < managers_.size(); ++m)
         managers_[m].runtime_club = g_.manager_teams.at(m);
     result.managers = managers_;
-    flush_native_autosave();
     return true;
 }
 
@@ -4432,7 +4335,6 @@ TurnAdvanceResult CareerSession::dispatch_kickoff(const ui::DeskRequest& request
             return id < names.size() ? names[id] : std::string();
         }, exe_, g_);
     }
-    flush_native_autosave();
     return result;
 }
 
@@ -4898,10 +4800,7 @@ bool CareerSession::apply_settings_file(const ui::SaveLoadRequest& request,int m
     std::string extension=request.path.extension().string();
     std::transform(extension.begin(),extension.end(),extension.begin(),
         [](unsigned char c){return char(std::tolower(c));});
-    if (extension != (content::find(data_directory_) ? ".obsettings" : ".ein")) {
-        error = "invalid_settings_file_extension";
-        return false;
-    }
+    if(extension!=".ein") {error="invalid_settings_file_extension";return false;}
     const uint32_t base=::bmh::layout::LeaguePresentationOptions;
     if(!staged.memory.has(base+uint32_t(kBytes-1))) {error="settings_file_memory_unavailable";return false;}
     std::error_code ec;
@@ -4909,14 +4808,7 @@ bool CareerSession::apply_settings_file(const ui::SaveLoadRequest& request,int m
     if(!ec&&std::filesystem::is_symlink(status)) {error="settings_file_target_is_symlink";return false;}
     if(request.action==ui::SaveLoadAction::load) {
         Bytes bytes;
-        try {
-            bytes = content::find(data_directory_)
-                        ? content::load_preferences(request.path, "settings", kBytes)
-                        : read_file(request.path);
-        } catch (const std::exception &) {
-            error = "settings_file_read_failed";
-            return false;
-        }
+        try {bytes=read_file(request.path);}catch(const std::exception&) {error="settings_file_read_failed";return false;}
         if(bytes.size()!=kBytes) {error="settings_file_wrong_size";return false;}
         for(size_t i=0;i<kBytes;++i)staged.memory.set8(base+uint32_t(i),bytes[i]);
         std::array<uint8_t,kBytes> raw{};
@@ -4939,11 +4831,6 @@ bool CareerSession::apply_settings_file(const ui::SaveLoadRequest& request,int m
     Bytes bytes(kBytes);
     for(size_t i=0;i<kBytes;++i)bytes[i]=staged.memory.u8(base+uint32_t(i));
     try {
-        if (content::find(data_directory_)) {
-            content::save_preferences(request.path, "settings", bytes, request.overwrite);
-            error.clear();
-            return true;
-        }
         std::ofstream file(request.path,std::ios::binary|std::ios::trunc);
         if(!file) {error="settings_file_write_failed";return false;}
         file.write(reinterpret_cast<const char*>(bytes.data()),std::streamsize(bytes.size()));file.flush();
@@ -7635,11 +7522,6 @@ std::string CareerSession::take_autosave_error() {
 }
 
 void CareerSession::write_desk_autosave(const GameState& state, WatcomRandom& random) {
-    // OpenBMH deviates from the original: native saves do not consume gameplay randomness for encryption.
-    if (content::find(data_directory_)) {
-        native_autosave_pending_ = bool(autosave_directory_);
-        return;
-    }
     std::filesystem::path temporary;
     try {
         if (!autosave_directory_ || !std::filesystem::is_directory(*autosave_directory_))
@@ -7674,83 +7556,6 @@ void CareerSession::write_desk_autosave(const GameState& state, WatcomRandom& ra
     }
 }
 
-cli::Json CareerSession::native_session_context() const {
-    cli::Json::Array runtime, callargs, managers;
-    for (const auto &[address, value] : club_modal_runtime_)
-        runtime.emplace_back(cli::Json::Object{{"address", int64_t(address)}, {"value", int(value)}});
-    for (const auto &args : source_desk_callargs_)
-        callargs.emplace_back(cli::Json::Array{args.competition, args.opponent});
-    for (const auto &manager : managers_)
-        managers.emplace_back(cli::Json::Array{manager.slot, manager.master_club, manager.runtime_club});
-    return cli::Json::Object{{"schema", "classic-session@1.0"},
-                             {"runtime", std::move(runtime)},
-                             {"desk_callargs", std::move(callargs)},
-                             {"managers", std::move(managers)}};
-}
-void CareerSession::restore_native_session_context(const cli::Json &root) {
-    const auto field = [&](const char *name) -> const cli::Json & {
-        if (!root.object() || !root.object()->contains(name))
-            throw FormatError("Native session field missing");
-        return root.object()->at(name);
-    };
-    if (!field("schema").string() || *field("schema").string() != "classic-session@1.0")
-        throw FormatError("Unsupported native session");
-    const auto array = [](const cli::Json &j, size_t maximum) -> const cli::Json::Array & {
-        if (!j.array() || j.array()->size() > maximum)
-            throw FormatError("Invalid native session array");
-        return *j.array();
-    };
-    const auto integer = [](const cli::Json &j, int64_t low, int64_t high) -> int64_t {
-        if (!j.integer() || *j.integer() < low || *j.integer() > high)
-            throw FormatError("Invalid native session integer");
-        return *j.integer();
-    };
-    std::map<uint32_t, uint8_t> runtime;
-    for (const auto &row : array(field("runtime"), 8192)) {
-        if (!row.object() || !row.object()->contains("address") || !row.object()->contains("value"))
-            throw FormatError("Invalid runtime byte");
-        const auto at = uint32_t(integer(row.object()->at("address"), 0, UINT32_MAX));
-        if (!club_modal_runtime_.contains(at) ||
-            !runtime.emplace(at, uint8_t(integer(row.object()->at("value"), 0, 255))).second)
-            throw FormatError("Unknown or duplicated runtime byte");
-    }
-    if (runtime.size() != club_modal_runtime_.size())
-        throw FormatError("Incomplete native runtime bytes");
-    std::vector<ui::DeskMatchCallargs> callargs;
-    for (const auto &row : array(field("desk_callargs"), 4)) {
-        const auto &fields = array(row, 2);
-        if (fields.size() != 2)
-            throw FormatError("Invalid desk arguments");
-        callargs.push_back({int(integer(fields[0], -1, 255)), int(integer(fields[1], -1, 4095))});
-    }
-    std::vector<ui::InitializedManager> managers;
-    for (const auto &row : array(field("managers"), 4)) {
-        const auto &fields = array(row, 3);
-        if (fields.size() != 3)
-            throw FormatError("Invalid manager mapping");
-        managers.push_back({int(integer(fields[0], 0, 3)), int(integer(fields[1], 0, 4095)),
-                            int(integer(fields[2], 0, 4095))});
-    }
-    club_modal_runtime_ = std::move(runtime);
-    source_desk_callargs_ = std::move(callargs);
-    managers_ = std::move(managers);
-}
-void CareerSession::flush_native_autosave() {
-    if (!std::exchange(native_autosave_pending_, false))
-        return;
-    try {
-        if (!autosave_directory_ || !std::filesystem::is_directory(*autosave_directory_))
-            throw FormatError("Autosave directory unavailable");
-        const auto resource = content::find(data_directory_);
-        if (!resource)
-            throw FormatError("Native content unavailable");
-        content::save_career(*autosave_directory_ / "AUTOSAVE.obs", *resource->content, g_, rand_, game_,
-                             turn_driver_, true, native_session_context());
-    } catch (const std::exception &e) {
-        autosave_error_ = e.what();
-    }
-}
-
 bool CareerSession::save_game(const std::filesystem::path& path, int manager_slot, bool overwrite, std::string& error) {
     if (advertising_renewal_dispatch_active_) { error="save_blocked_during_advertising_renewal"; return false; }
     if(balance_draft_||balance_dispatch_active_||strengths_owner_||strengths_dispatch_active_||
@@ -7764,7 +7569,7 @@ bool CareerSession::save_game(const std::filesystem::path& path, int manager_slo
     std::string extension = path.extension().string();
     std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return char(std::tolower(c)); });
     if (manager_slot != active || manager_slot < 0 || size_t(manager_slot) >= g_.manager_teams.size() ||
-        extension != (content::find(data_directory_) ? ".obs" : ".fbm") || path.filename().empty()) {
+        extension != ".fbm" || path.filename().empty()) {
         error = "invalid_save_request"; return false;
     }
     std::error_code ec;
@@ -7777,11 +7582,6 @@ bool CareerSession::save_game(const std::filesystem::path& path, int manager_slo
     const bool exists = std::filesystem::exists(path, ec);
     if (ec || (exists && !overwrite)) { error = exists ? "overwrite_confirmation_required" : "save_target_unavailable"; return false; }
     try {
-        if (const auto resource = content::find(data_directory_)) {
-            content::save_career(path, *resource->content, g_, rand_, game_, turn_driver_, overwrite,
-                                 native_session_context());
-            return true;
-        }
         WatcomRandom staged_rand = rand_;
         const Savegame save = make_savegame(g_, staged_rand);
         write_savegame(path, save);
@@ -7823,10 +7623,7 @@ bool CareerSession::dispatch_menu_layout(const ui::SaveLoadRequest& request, uin
     std::string extension = request.path.extension().string();
     std::transform(extension.begin(), extension.end(), extension.begin(),
                    [](unsigned char c) { return char(std::tolower(c)); });
-    if (extension != (content::find(data_directory_) ? ".oblayout" : ".men")) {
-        error = "invalid_menu_layout_extension";
-        return false;
-    }
+    if (extension != ".men") { error = "invalid_menu_layout_extension"; return false; }
     const size_t active_base = size_t(request.manager_slot) * 0xb0c;
     if (active_base + 0xb0c > g_.manager_records.size() ||
         size_t(request.manager_slot) >= g_.manager_teams.size() ||
@@ -7871,14 +7668,8 @@ bool CareerSession::dispatch_menu_layout(const ui::SaveLoadRequest& request, uin
 
     if (request.action == ui::SaveLoadAction::load) {
         Bytes payload;
-        try {
-            payload = content::find(data_directory_)
-                          ? content::load_preferences(request.path, "layout", kLayoutBytes)
-                          : read_file(request.path);
-        } catch (const std::exception &) {
-            error = "menu_layout_read_failed";
-            return false;
-        }
+        try { payload = read_file(request.path); }
+        catch (const std::exception&) { error = "menu_layout_read_failed"; return false; }
         if (!validate_payload(payload)) return false;
         GameState staged = g_;
         for (size_t i = 0; i < kLayoutBytes; ++i)
@@ -7913,12 +7704,6 @@ bool CareerSession::dispatch_menu_layout(const ui::SaveLoadRequest& request, uin
     for (size_t i = 0; i < kLayoutBytes; ++i) payload[i] = g_.memory.u8(base + uint32_t(i));
     if (!validate_payload(payload)) return false;
     try {
-        if (content::find(data_directory_)) {
-            content::save_preferences(request.path, "layout", payload, request.overwrite);
-            ++revision;
-            error.clear();
-            return true;
-        }
         std::ofstream file(request.path, std::ios::binary | std::ios::trunc);
         if (!file) { error = "menu_layout_write_failed"; return false; }
         file.write(reinterpret_cast<const char*>(payload.data()), std::streamsize(payload.size()));

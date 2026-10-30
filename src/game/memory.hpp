@@ -70,13 +70,6 @@ public:
     }
     void set_pointer(uint32_t a, uint32_t address) { set32(a, address == 0 ? 0 : address + kGuestDataBase); }
 
-    const std::map<uint32_t, Bytes> &blocks() const { return blocks_; }
-    static StaticMemory from_blocks(std::map<uint32_t, Bytes> blocks) {
-        StaticMemory memory;
-        memory.blocks_ = std::move(blocks);
-        return memory;
-    }
-
 private:
     static std::string hex(uint32_t v) {
         char b[16];

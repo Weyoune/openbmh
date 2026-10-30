@@ -3,7 +3,7 @@ name: Build without game data
 
 on:
   push:
-    branches: [main, assist/codex-0.2-launcher]
+    branches: [main]
   pull_request:
   workflow_dispatch:
   workflow_call:
@@ -37,7 +37,7 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y build-essential git cmake ninja-build pkg-config libgtk-3-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxfixes-dev libxss-dev libasound2-dev libpulse-dev libgl1-mesa-dev libudev-dev
       - name: Verify source export
-        run: python3 tools/public_release/check_public_tree.py --root . --history --revision HEAD
+        run: python3 tools/public_release/check_public_tree.py --root . --history
       - name: Set up MSVC x64
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@a102174a2b586eec2ea151a69e6fd14404a8ce7c # v1.13.0
@@ -66,12 +66,6 @@ jobs:
         run: cmake --build build --config Release --parallel 2
       - name: Run synthetic tests and report data tests as skipped
         run: ctest --test-dir build -C Release --output-on-failure --output-junit test-results.xml
-      - name: Windows Server launcher with WARP software graphics
-        if: runner.os == 'Windows'
-        env:
-          SDL_VIDEODRIVER: windows
-          OPENBMH_RML_DRIVER: warp
-        run: build/launcher_gui_smoke.exe
       - name: Package products and licenses
         run: python3 tools/package/make_package.py --build build --out dist --platform ${{ matrix.platform }}
       - name: Package corresponding source and pinned dependencies

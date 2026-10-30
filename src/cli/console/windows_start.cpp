@@ -5,7 +5,6 @@
 
 #include <algorithm>
 
-#include "formats/content.hpp"
 #include "cli/console/console.hpp"
 #include "cli/console/detail.hpp"
 #include "ui/cup_draw.hpp"
@@ -397,8 +396,7 @@ std::filesystem::path Console::browser_file(const std::string& name) const {
     if (name == "." || name == ".." || name.find_first_of("/\\:") != std::string::npos)
         fail("E_BAD_ARGUMENT", "not a file name: " + name + " (no directories; use ChangeDirectory)");
     std::filesystem::path path = browse_directory_ / name;
-    if (!path.has_extension())
-        path += content::find(options_.data) ? ".obs" : ".FBM";
+    if (!path.has_extension()) path += ".FBM";
     return path;
 }
 
@@ -412,8 +410,7 @@ void Console::register_file_commands() {
             std::error_code ec;
             for (const auto& entry : std::filesystem::directory_iterator(browse_directory_, ec)) {
                 if (entry.is_directory(ec)) dirs.push_back({entry.path().filename().string(), "dir"});
-                else if (entry.is_regular_file(ec) && lower(entry.path().extension().string()) ==
-                                                          (content::find(options_.data) ? ".obs" : ".fbm"))
+                else if (entry.is_regular_file(ec) && lower(entry.path().extension().string()) == ".fbm")
                     files.push_back({entry.path().stem().string(), "file"});
             }
             if (ec) fail("E_IO", "cannot read the directory " + shown_directory());
@@ -466,8 +463,7 @@ void Console::register_file_commands() {
 
 void Console::load_game(const std::filesystem::path& requested) {
     std::filesystem::path path = requested;
-    if (!path.has_extension())
-        path += content::find(options_.data) ? ".obs" : ".FBM";
+    if (!path.has_extension()) path += ".FBM";
     std::error_code ec;
     if (!std::filesystem::is_regular_file(path, ec)) fail("E_IO", "file not found: " + path.filename().string());
     std::unique_ptr<app::CareerSession> loaded;

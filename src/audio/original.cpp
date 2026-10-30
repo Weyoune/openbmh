@@ -70,14 +70,7 @@ struct OriginalSynth::State {
     unsigned tempo_tick{};
     std::function<void(std::uint8_t, std::uint8_t)> register_observer;
     std::function<void(std::uint8_t)> sample_observer;
-    std::function<void(const OriginalNoteEvent&)> note_observer;
 
-    void observe_note(unsigned track, std::uint8_t channel, std::uint8_t instrument, std::uint8_t pitch,
-                      std::uint8_t duration, std::uint8_t volume, bool sample) {
-        if (dry || !note_observer) return;
-        note_observer(OriginalNoteEvent{stats.bar, stats.step, std::uint8_t(track), channel, instrument, pitch,
-                                        duration, volume, sample});
-    }
     void write(std::uint8_t reg, std::uint8_t value) noexcept {
         if (dry) return;
         ++stats.register_writes;
@@ -320,19 +313,13 @@ struct OriginalSynth::State {
                     const auto pitch = code < 128 ? code : song.parts[cursor++];
                     const auto duration = song.parts[cursor++];
                     if (index == 9 && code < 128) {
-                        if (!dma_effect) {
-                            observe_note(index, 0, 0, pitch, 0, 0, true);
-                            start_sample(pitch, false);
-                        }
+                        if (!dma_effect) start_sample(pitch, false);
                     } else if (t.channel < 9) {
                         auto& c = channels[t.channel];
                         if (!c.reserved) {
                             if (c.instrument != t.instrument) instrument(t.channel, t.instrument);
                             c.duration = duration;
-                            const auto played = std::uint8_t(pitch + t.transpose);
-                            const auto volume = song_level(t.volume);
-                            observe_note(index, t.channel, t.instrument, played, duration, volume, false);
-                            note(t.channel, played, volume);
+                            note(t.channel, std::uint8_t(pitch + t.transpose), song_level(t.volume));
                         }
                         if (++t.channel == t.end) t.channel = t.first;
                     } else { fail(); return; }
@@ -476,15 +463,6 @@ void OriginalSynth::set_register_observer(std::function<void(std::uint8_t, std::
 }
 void OriginalSynth::set_sample_observer(std::function<void(std::uint8_t)> f) {
     if (state_) state_->sample_observer = std::move(f);
-}
-void OriginalSynth::set_note_observer(std::function<void(const OriginalNoteEvent&)> f) {
-    if (state_) state_->note_observer = std::move(f);
-}
-bool OriginalSynth::song_timing(unsigned song, OriginalSongTiming& timing) const noexcept {
-    if (!state_ || song >= state_->songs.size()) return false;
-    const auto& s = state_->songs[song];
-    timing = {s.tempo, s.end, s.repeat};
-    return true;
 }
 
 } // namespace openbmh::audio

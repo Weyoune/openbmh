@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "ui/settings.hpp"
-#include "formats/content.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -305,27 +304,18 @@ SettingsReadmeScreen::SettingsReadmeScreen(const std::filesystem::path& data,
     // DOS resolves it case-insensitively; also try its uppercase spelling on
     // case-sensitive host filesystems.
     const std::filesystem::path source_name(texts_[839]);
-    if (const auto resource = content::find(data / source_name)) {
-        const auto it = resource->content->supplemental.find(resource->key);
-        if (it == resource->content->supplemental.end())
-            return;
-        file_available_ = true;
-        content_.assign(it->second.begin(), it->second.begin() + std::min(size_t(20000), it->second.size()));
-    } else {
-        std::ifstream file(data / source_name, std::ios::binary);
-        if (!file) {
-            auto uppercase_name = source_name.string();
-            std::transform(uppercase_name.begin(), uppercase_name.end(), uppercase_name.begin(),
-                           [](unsigned char c) { return char(std::toupper(c)); });
-            file.open(data / uppercase_name, std::ios::binary);
-        }
-        if (!file)
-            return;
-        file_available_ = true;
-        std::array<char, 20000> bytes{};
-        file.read(bytes.data(), std::streamsize(bytes.size()));
-        content_.assign(bytes.data(), size_t(file.gcount()));
+    std::ifstream file(data / source_name, std::ios::binary);
+    if (!file) {
+        auto uppercase_name = source_name.string();
+        std::transform(uppercase_name.begin(), uppercase_name.end(), uppercase_name.begin(),
+            [](unsigned char c) { return char(std::toupper(c)); });
+        file.open(data / uppercase_name, std::ios::binary);
     }
+    if (!file) return;
+    file_available_ = true;
+    std::array<char, 20000> bytes{};
+    file.read(bytes.data(), std::streamsize(bytes.size()));
+    content_.assign(bytes.data(), size_t(file.gcount()));
     pages_.emplace_back();
     int x = 0, baseline = 19;
     bool emphasized = false, new_page_before_next_byte = false;

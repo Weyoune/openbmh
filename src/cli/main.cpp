@@ -32,9 +32,6 @@
 
 #include "launch/archive.hpp"
 #include "launch/game_data.hpp"
-#include "content/package.hpp"
-#include "launch/process.hpp"
-#include "launch/mods.hpp"
 #include "version.hpp"
 
 namespace {
@@ -86,8 +83,7 @@ Arguments parse_args(int argc, char** argv) {
             std::exit(0);
         }
         if (arg == "--help" || arg == "-h") args.help = true;
-        else if (arg == "--data" || arg == "--mod")
-            args.data = bmh::launch::path_from_utf8(next(arg));
+        else if (arg == "--data") args.data = bmh::launch::path_from_utf8(next(arg));
         else if (arg == "--seed") { args.seed = parse_seed(next(arg)); args.seed_set = true; }
         else if (arg == "--text") args.json = false;
         else if (arg == "--json") args.json = true;
@@ -120,26 +116,21 @@ Arguments parse_args(int argc, char** argv) {
 }
 
 void print_usage() {
-    std::cout
-        << "openbmh_cli --mod <content.obw> [--seed <n>] [--text|--json] [--log <jsonl>]\n"
-           "openbmh_cli --replay <jsonl> [--mod <content.obw>] [--text|--json]\n"
-           "openbmh_cli --console --mod <content.obw> [--saves <dir>] [--seed <n>] [--text|--json] [--echo]\n"
-           "            [--log|--replay <jsonl> [--keep-going]] [--serve <dir> | --listen <port>] [--seats "
-           "N]\n"
-           "  --listen: the console on 127.0.0.1:<port>, line protocol (SEAT k with --seats; a block ends\n"
-           "            with go., the answer with a line \".\"); --json gives structured lines, State(view) "
-           "projections.\n"
-           "  --seats N: one mailbox <dir>/seat<k> per manager; a request \"WaitTurn\" waits for k's turn.\n"
-           "  --resume <jsonl>: with --seats, first play an earlier session log again, then go on.\n"
-           "openbmh_cli --send <dir> [--timeout <seconds>]   (the block on stdin)\n"
-           "  --serve: the session answers blocks dropped into <dir> (request-N.txt -> response-N.txt);\n"
-           "  --send hands one block to it and prints the answer - for agents that work in steps.\n"
-           "  console language (docs/CLI_CONCEPT): command lines, executed by a line \"go.\";\n"
-           "  ListOptions shows what is possible, Help the reference, Quit ends.\n"
-           "Commands: help, new, load, save, status, desk, kickoff, camp.*, bank.*, stadium.*, toto.submit, "
-           "quit\n"
-           "Text: new <master_club> <manager_name> [strength], load/save <path>, kickoff, status, desk, "
-           "quit\n";
+    std::cout << "openbmh_cli --data <BMH directory> [--seed <n>] [--text|--json] [--log <jsonl>]\n"
+                 "openbmh_cli --replay <jsonl> [--data <BMH directory>] [--text|--json]\n"
+                 "openbmh_cli --console --data <BMH directory> [--saves <dir>] [--seed <n>] [--text|--json] [--echo]\n"
+                 "            [--log|--replay <jsonl> [--keep-going]] [--serve <dir> | --listen <port>] [--seats N]\n"
+                 "  --listen: the console on 127.0.0.1:<port>, line protocol (SEAT k with --seats; a block ends\n"
+                 "            with go., the answer with a line \".\"); --json gives structured lines, State(view) projections.\n"
+                 "  --seats N: one mailbox <dir>/seat<k> per manager; a request \"WaitTurn\" waits for k's turn.\n"
+                 "  --resume <jsonl>: with --seats, first play an earlier session log again, then go on.\n"
+                 "openbmh_cli --send <dir> [--timeout <seconds>]   (the block on stdin)\n"
+                 "  --serve: the session answers blocks dropped into <dir> (request-N.txt -> response-N.txt);\n"
+                 "  --send hands one block to it and prints the answer - for agents that work in steps.\n"
+                 "  console language (docs/CLI_CONCEPT): command lines, executed by a line \"go.\";\n"
+                 "  ListOptions shows what is possible, Help the reference, Quit ends.\n"
+                 "Commands: help, new, load, save, status, desk, kickoff, camp.*, bank.*, stadium.*, toto.submit, quit\n"
+                 "Text: new <master_club> <manager_name> [strength], load/save <path>, kickoff, status, desk, quit\n";
 }
 
 std::string command_line_response(const Json& response) {
@@ -719,46 +710,14 @@ int main(int argc, char** argv) {
         Arguments args = parse_args(argc, argv);
         if (args.help) { print_usage(); return 0; }
         if (!args.send.empty()) return run_send(args);
-        // Replay and resumed sessions can supply their content/save paths in
-        // the log header. Resolve them before mounting or selecting defaults.
-        const auto &source_log = !args.replay.empty() ? args.replay : args.resume;
-        if (!source_log.empty()) {
-            std::ifstream input(source_log, std::ios::binary);
-            std::string line;
-            if (!input || !std::getline(input, line))
-                throw std::runtime_error("cannot_read_session_log_header");
-            const auto header = parse_json(line);
-            const auto *fields = header.object();
-            if (!fields || !fields->contains("type") || !fields->at("type").string() ||
-                *fields->at("type").string() != (args.console ? "openbmh_console_log" : "openbmh_cli_log"))
-                throw std::runtime_error("invalid_session_log_header");
-            if (args.data.empty()) {
-                if (!fields->contains("data") || !fields->at("data").string())
-                    throw std::runtime_error("missing_session_content_path");
-                args.data = bmh::launch::path_from_utf8(*fields->at("data").string());
-            }
-            if (args.console && args.saves.empty() && fields->contains("saves") &&
-                fields->at("saves").string())
-                args.saves = bmh::launch::path_from_utf8(*fields->at("saves").string());
-        }
-        std::shared_ptr<const bmh::content::Classic> contents;
-        std::unique_ptr<bmh::content::Mount> mount;
+        // --data may also name BMH.EXE or a ZIP/7z archive with one game (src/launch); an
+        // archive is unpacked into the per-user cache and its copy is used
         if (!args.data.empty()) {
-            if (std::filesystem::is_directory(args.data))
-                args.data /= "content.obw";
-            contents = bmh::content::open(args.data);
-            mount = std::make_unique<bmh::content::Mount>(args.data, contents);
-            args.data = mount->root();
-            if (args.saves.empty()) {
-                bmh::launch::ModLibrary library(
-                    bmh::launch::executable_path(bmh::launch::path_from_utf8(argv[0])).parent_path());
-                bmh::launch::ModEntry mod;
-                mod.content_id = contents->content_id;
-                args.saves = library.user_directory(mod);
-            }
-        } else
-            throw std::runtime_error(
-                "0.2 requires --mod <content.obw>; import installations in OpenBMH first");
+            const auto game = bmh::launch::resolve_game(args.data, bmh::launch::default_cache_directory());
+            if (!game.error.empty() || !game.check.playable)
+                throw std::runtime_error("the game cannot be used:\n" + bmh::launch::describe(game));
+            args.data = game.check.directory;
+        }
         if (args.console) {
             if (!args.log.empty() && !args.replay.empty()) throw std::runtime_error("--log and --replay cannot be combined");
             if (args.listen_port) return run_console_listen(args);

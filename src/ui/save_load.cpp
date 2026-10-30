@@ -8,15 +8,13 @@
 #include <system_error>
 
 #include "ui/manager.hpp"
-#include "ui/host_path.hpp"
 #include "ui/setup.hpp"
 #include "formats/fbm.hpp"
-#include "content/save.hpp"
 
 namespace bmh::ui {
 namespace {
 constexpr uint32_t kTextBase = ::bmh::layout::TextPointerTable;
-constexpr size_t kHostFilenameBytes = 255; // Includes the selected native or legacy extension.
+constexpr size_t kFilenameBytes = 251; // Host filename limit, including the four-byte .FBM suffix.
 std::string path_to_utf8(const std::filesystem::path& path) {
     const auto value = path.u8string();
     return std::string(value.begin(), value.end());
@@ -24,10 +22,11 @@ std::string path_to_utf8(const std::filesystem::path& path) {
 std::filesystem::path path_from_utf8(std::string_view value) {
     return std::filesystem::path(std::u8string(value.begin(), value.end()));
 }
-bool valid_filename(std::string_view value, size_t maximum) {
-    return !value.empty() && value.size() <= maximum && value != "." && value != ".." &&
-           std::all_of(value.begin(), value.end(),
-                       [](unsigned char c) { return c >= 32 && c != 127 && c != '/' && c != '\\'; });
+bool valid_filename(std::string_view value) {
+    return !value.empty() && value.size() <= kFilenameBytes && value != "." && value != ".." &&
+        std::all_of(value.begin(), value.end(), [](unsigned char c) {
+            return c >= 32 && c != 127 && c != '/' && c != '\\';
+        });
 }
 std::string_view text_at(const TextDb& texts, uint32_t address) {
     if (address < kTextBase || ((address - kTextBase) & 3u) != 0)
@@ -38,21 +37,13 @@ void rect(Image& image, int x, int y, int w, int h, uint8_t color) {
     for (int yy = std::max(0, y); yy < std::min(image.height, y + h); ++yy)
         for (int xx = std::max(0, x); xx < std::min(image.width, x + w); ++xx) image.at(xx, yy) = color;
 }
-bool has_file_kind_extension(const std::filesystem::path &path, SaveLoadFileKind kind, bool native) {
+bool has_file_kind_extension(const std::filesystem::path& path, SaveLoadFileKind kind) {
     std::string ext = path_to_utf8(path.extension());
     std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) { return char(std::tolower(c)); });
-    if (native)
-        return ext == (kind == SaveLoadFileKind::menu_layout ? ".oblayout"
-                       : kind == SaveLoadFileKind::settings  ? ".obsettings"
-                                                             : ".obs");
     return ext == (kind == SaveLoadFileKind::menu_layout ? ".men" :
                    kind == SaveLoadFileKind::settings ? ".ein" : ".fbm");
 }
-std::string_view file_kind_extension(SaveLoadFileKind kind, bool native) {
-    if (native)
-        return kind == SaveLoadFileKind::menu_layout ? ".oblayout"
-               : kind == SaveLoadFileKind::settings  ? ".obsettings"
-                                                     : ".obs";
+std::string_view file_kind_extension(SaveLoadFileKind kind) {
     return kind == SaveLoadFileKind::menu_layout ? ".MEN" :
            kind == SaveLoadFileKind::settings ? ".EIN" : ".FBM";
 }
@@ -93,14 +84,13 @@ SaveLoadScreen::SaveLoadScreen(const std::filesystem::path& data, std::filesyste
         throw FormatError("save/load: unsupported state");
     if (widgets_.width != 77 || widgets_.height != 112 || font_.height != 8 || footer_font_.height != 6)
         throw FormatError("save/load: unsupported Original font or widget atlas");
-    native_ = bool(content::find(data));
     std::error_code ec;
     if (std::filesystem::is_directory(directory_, ec)) {
         for (std::filesystem::directory_iterator it(directory_, ec), end; !ec && it != end; it.increment(ec)) {
             std::error_code file_error;
             const auto status = it->symlink_status(file_error);
             if (!file_error && std::filesystem::is_regular_file(status) &&
-                has_file_kind_extension(it->path(), file_kind_, native_))
+                has_file_kind_extension(it->path(), file_kind_))
                 entries_.push_back({it->path()});
         }
         std::sort(entries_.begin(), entries_.end(), [](const auto& a, const auto& b) {
@@ -134,10 +124,7 @@ Image SaveLoadScreen::render() const {
     button(out, field_x, directory_y, field_width);
     button(out, field_x, filename_y, field_width);
 
-    // ISO 646-DE uses the backslash code point for Ö. Generic separators retain
-    // a valid host path on Windows without displaying that unrelated glyph.
-    const auto directory_label = original_to_utf8(text_at(texts_, ::bmh::layout::SaveLoad_Render_TextPointer3)) +
-        save_directory_label(directory_);
+    const auto directory_label = original_to_utf8(text_at(texts_, ::bmh::layout::SaveLoad_Render_TextPointer3)) + path_to_utf8(directory_);
     text(out, 55, 203, directory_label, 0x6c, 140, footer_font_, true);
     text(out, 55, 216, original_to_utf8(text_at(texts_, ::bmh::layout::SaveLoad_Render_TextPointer4)), 0x6c, 50, footer_font_, true);
     const std::string displayed_filename = mode_ == SaveLoadMode::load && selected_ >= 0 &&
@@ -192,13 +179,7 @@ bool SaveLoadScreen::info_press(int x, int y) {
     if (file_kind_ != SaveLoadFileKind::game || pending_ || info_ || x <= 52 || x >= 200 || y <= 40 ||
         y >= 192 || !select_row(y)) return false;
     try {
-        Savegame saved;
-        if (native_) {
-            saved.plain_header = content::save_information(entries_.at(size_t(selected_)).path);
-            saved.version = "V2.24";
-            saved.checksum_ok = true;
-        } else
-            saved = load_savegame(entries_.at(size_t(selected_)).path);
+        const auto saved = load_savegame(entries_.at(size_t(selected_)).path);
         const auto& h = saved.plain_header;
         if (!saved.checksum_ok || saved.version != "V2.24" || h.size() < 172 || h[0] < 1 || h[0] > 4)
             throw FormatError("save/load: invalid native information header");
@@ -318,11 +299,10 @@ void SaveLoadScreen::request_action() {
                                    entries_[size_t(selected_)].path, false, file_kind_, origin_item_id_};
         return;
     }
-    if (!valid_filename(filename_, kHostFilenameBytes - file_kind_extension(file_kind_, native_).size())) {
+    if (!valid_filename(filename_)) {
         feedback_ = "UNGUELTIGER DATEINAME"; return;
     }
-    auto path =
-        directory_ / path_from_utf8(filename_ + std::string(file_kind_extension(file_kind_, native_)));
+    auto path = directory_ / path_from_utf8(filename_ + std::string(file_kind_extension(file_kind_)));
     // Selecting an existing mixed-case extension must overwrite that same file.
     if (selected_ >= 0 && size_t(selected_) < entries_.size() &&
         path_to_utf8(entries_[size_t(selected_)].path.stem()) == filename_)
@@ -396,8 +376,7 @@ bool SaveLoadScreen::key(std::string_view value) {
 bool SaveLoadScreen::text(std::string_view value) {
     if (info_ || mode_ != SaveLoadMode::save || !filename_focus_ || pending_ || value.empty()) return false;
     const std::string next = (filename_selected_ ? std::string{} : filename_) + std::string(value);
-    if (!valid_filename(next, kHostFilenameBytes - file_kind_extension(file_kind_, native_).size()))
-        return false;
+    if (!valid_filename(next)) return false;
     filename_ = next; filename_selected_ = false;
     overwrite_armed_ = false; feedback_.clear(); return true;
 }

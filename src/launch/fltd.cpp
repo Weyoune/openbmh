@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
-#include "formats/audio_layout.hpp"
 #include "launch/fltd.hpp"
 
 #include <algorithm>
@@ -72,7 +71,7 @@ const OwnText kOwnTexts[] = {
 
 }  // namespace
 
-LeImage translate_fltd(const fs::path& fltd_exe, bool apply_supported_rules) {
+LeImage translate_fltd(const fs::path& fltd_exe) {
     const Bytes raw = read_file(fltd_exe);
     if (raw.size() != kFltdSize || raw[0] != 'M' || raw[1] != 'Z')
         throw std::runtime_error(path_to_utf8(fltd_exe) + " is not the Football Limited FLTD.EXE");
@@ -120,15 +119,8 @@ LeImage translate_fltd(const fs::path& fltd_exe, bool apply_supported_rules) {
             }
         }
     }
-    // Bind the English audio driver's data explicitly; the general UI/table map
-    // does not cover its OPL voice slots or key-on frequency table.
-    for (uint32_t i = 0; i < 9; ++i)
-        put(layout::Audio_OriginalAudioAssets_RuntimeField + i * 16,
-            en(layout::EnglishAudioOperatorSlots + i * 16));
-    for (uint32_t i = 0; i < 96 * 2; ++i)
-        put(layout::Audio_OriginalAudioAssets_RuntimeField2 + i, en(layout::EnglishAudioNoteFrequencies + i));
     LeImage out = LeImage::from_bytes(kDeBase, std::move(image));
-    if (apply_supported_rules) apply_rule_base(out);
+    apply_rule_base(out);
     return out;
 }
 

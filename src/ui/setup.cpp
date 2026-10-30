@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "ui/setup.hpp"
-#include "formats/content.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -31,8 +30,6 @@ void copy_rect(Image& dst, const Image& src, int sx, int sy, int dx, int dy,
 }  // namespace
 
 std::filesystem::path asset_path(const std::filesystem::path& directory, const std::string& name) {
-    if (content::find(directory / name))
-        return directory / name;
     std::filesystem::path found;
     for (const auto& e : std::filesystem::directory_iterator(directory)) {
         if (e.is_regular_file() && folded(e.path().filename().string()) == folded(name)) {

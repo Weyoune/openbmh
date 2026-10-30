@@ -10,21 +10,9 @@ OpenBMH's own code and documentation use GPL-3.0-only. This does not replace the
 | [miniz](https://github.com/richgel999/miniz/releases/tag/3.0.2) | 3.0.2 amalgamation | MIT; embedded public-domain notices remain in its source | [miniz.txt](docs/licenses/miniz.txt), [source notices](docs/licenses/miniz-source-notices.txt) |
 | [LZMA SDK decoder files](https://github.com/ip7z/7zip/tree/24.09/C) | Selected C files from 7-Zip 24.09 | Public domain, as marked in the selected files | [LZMA-SDK.txt](docs/licenses/LZMA-SDK.txt) |
 | [nativefiledialog-extended](https://github.com/btzy/nativefiledialog-extended/tree/v1.2.1) | 1.2.1 | zlib license | [nativefiledialog-extended.txt](docs/licenses/nativefiledialog-extended.txt) |
-| [RmlUi](https://github.com/mikke89/RmlUi/tree/6.3) | 6.3, Core and SDL2/OpenGL backend | MIT | [RmlUi.txt](docs/licenses/RmlUi.txt), [containers](docs/licenses/RmlUi-containers.txt), [Khronos notice](docs/licenses/RmlUi-Khronos.txt) |
-| [FreeType](https://github.com/freetype/freetype/tree/VER-2-13-3) | 2.13.3 | FreeType License (FTL) | [license choices](docs/licenses/FreeType.txt), [FTL](docs/licenses/FreeType-FTL.txt), [BDF](docs/licenses/FreeType-BDF.txt), [PCF](docs/licenses/FreeType-PCF.txt), [internal gzip/zlib](docs/licenses/FreeType-zlib.txt) |
-| LatoLatin Regular and Bold | Unmodified fonts included with RmlUi 6.3 | SIL Open Font License 1.1 | [font notices](docs/licenses/RmlUi-fonts.txt) |
-| nlohmann/json (optional editor) | 3.12.0 | MIT | [notice](docs/licenses/nlohmann-json.txt) |
-| cpp-httplib (optional editor) | 0.63.0, local HTTP without TLS | MIT | [notice](docs/licenses/cpp-httplib.txt) |
-| SDL2_image (optional editor) | 2.8.8, selected static codecs | zlib | [notice](docs/licenses/SDL2_image.txt) |
-| stb_image (SDL2_image PNG/JPEG decoder) | Version supplied by SDL2_image 2.8.8 | MIT option | [verbatim alternatives](docs/licenses/stb-image.txt) |
-| libwebp (optional editor) | SDL2_image's pinned `1.0.3-SDL` fork, commit `05b15cb8`, including upstream backported fixes | BSD-3-Clause and patent grant | [license](docs/licenses/libwebp.txt), [patents](docs/licenses/libwebp-PATENTS.txt) |
-| LunaSVG / bundled PlutoVG (optional editor) | LunaSVG 3.5.0 and its tracked PlutoVG sources | MIT | [LunaSVG](docs/licenses/LunaSVG.txt), [PlutoVG](docs/licenses/PlutoVG.txt) |
-| pugixml (optional editor) | 1.15 | MIT | [notice](docs/licenses/pugixml.txt) |
 | [Nuked OPL3](https://github.com/nukeykt/Nuked-OPL3/tree/765ec962e473aeb767e4cba74ffdc8f588ffbfe8) | Commit `765ec962e473aeb767e4cba74ffdc8f588ffbfe8` | LGPL-2.1-or-later | [LGPL-2.1.txt](docs/licenses/LGPL-2.1.txt), [copyright and source notice](docs/licenses/Nuked-OPL3-notices.txt) |
 
-The miniz implementation provides a zlib-compatible API; it is not the zlib library. FreeType's internal gzip module includes its bundled zlib code; an external zlib library is not linked by the pinned build. SDL2 and nativefiledialog-extended use the **zlib license**, which is distinct from using zlib code. A system-library build or distributor's package can have additional runtime dependencies; its notices must match the libraries actually included.
-
-Portions of this software are copyright © the FreeType Project (www.freetype.org). All rights reserved. The pinned build uses the FreeType License option, with the included module notices retained. RmlUi and FreeType are linked statically; their corresponding pinned source is included in the source package.
+The miniz implementation provides a zlib-compatible API; it is not the zlib library. OpenBMH does not directly link a separate zlib dependency. SDL2 and nativefiledialog-extended use the **zlib license**, which is distinct from using zlib code. A system-library build or distributor's package can have additional runtime dependencies; its notices must match the libraries actually included.
 
 Only the public-domain C decoding subset is taken from the 7-Zip source package. This statement does not describe all of 7-Zip: other parts of that upstream project have different licenses and are not included here.
 

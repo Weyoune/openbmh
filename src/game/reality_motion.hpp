@@ -6,7 +6,6 @@
 #include <utility>
 
 #include "formats/le.hpp"
-#include "cli/json.hpp"
 
 namespace bmh {
 
@@ -60,17 +59,15 @@ RealityPath reality_goal_path(int x, int y, int goal_x);
 // either player plane. This is runtime scene state, not a Native save extension.
 class RealityGrid {
 public:
-  cli::Json checkpoint() const;
-  void restore_checkpoint(const cli::Json &);
-  bool place(int figure, int x, int y, int side);
-  void clear(int x, int y, int side); // caller clears old occupancy before a move
-  void reset_occupancy();             // Source initialization preserves old figure/ball data
-  bool operator==(const RealityGrid &) const = default;
-  void stage_position(int figure, int x, int y); // afb0c/afb23 before occupancy is committed
-  uint8_t occupant(int x, int y, int side) const;
-  std::pair<int, int> position(int figure) const;
-  std::pair<int, int> ball() const { return ball_; }
-  std::pair<int, int> previous_ball() const { return previous_ball_; }
+    bool place(int figure, int x, int y, int side);
+    void clear(int x, int y, int side); // caller clears old occupancy before a move
+    void reset_occupancy(); // Source initialization preserves old figure/ball data
+    bool operator==(const RealityGrid&) const = default;
+    void stage_position(int figure, int x, int y); // afb0c/afb23 before occupancy is committed
+    uint8_t occupant(int x, int y, int side) const;
+    std::pair<int, int> position(int figure) const;
+    std::pair<int, int> ball() const { return ball_; }
+    std::pair<int, int> previous_ball() const { return previous_ball_; }
 private:
     std::array<std::array<uint8_t, 0x478>, 2> occupied_{};
     std::array<std::pair<int, int>, 24> positions_{};

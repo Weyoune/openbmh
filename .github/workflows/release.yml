@@ -27,23 +27,14 @@ jobs:
           path: dist
           merge-multiple: true
       - name: Create draft for review
-        shell: python
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          import os, pathlib, re, subprocess
-          tag = os.environ['RELEASE_TAG']
-          match = re.fullmatch(r'v([0-9]+)\.([0-9]+)\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?', tag)
-          if not match:
-              raise SystemExit('Invalid release tag')
-          notes = pathlib.Path('docs/release') / (match[1] + '.' + match[2]) / 'RELEASE_NOTES.md'
-          packages = sorted(pathlib.Path('dist').glob('*.zip'))
-          expected = {'OpenBMH-' + tag[1:] + '-' + kind + '.zip'
-                      for kind in ('windows-x64', 'linux-x64', 'macos-arm64', 'source')}
-          if {p.name for p in packages} != expected:
-              raise SystemExit('Missing, unexpected or mismatched release package')
-          if not notes.is_file():
-              raise SystemExit('Release notes missing for ' + tag)
-          subprocess.run(['gh', 'release', 'create', tag, *map(str, packages), '--draft',
-                          '--verify-tag', '--title', 'OpenBMH ' + tag, '--notes-file', str(notes)], check=True)
+          for package in dist/*.zip; do
+            case "$(basename "$package")" in
+              OpenBMH-${RELEASE_TAG#v}-*.zip) ;;
+              *) echo "Release tag and package version differ" >&2; exit 1 ;;
+            esac
+          done
+          gh release create "$RELEASE_TAG" dist/*.zip --draft --verify-tag --title "OpenBMH $RELEASE_TAG" --notes-file docs/release/0.1/RELEASE_NOTES.md

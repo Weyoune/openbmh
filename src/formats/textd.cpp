@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-only
-#include "formats/content.hpp"
 #include "formats/textd.hpp"
 
 #include "formats/binary.hpp"
@@ -7,11 +6,6 @@
 namespace bmh {
 
 TextDb load_textd(const std::filesystem::path& path) {
-    if (const auto r = content::find(path)) {
-        if (r->key != "textd.blk")
-            throw FormatError("content: unknown text set");
-        return r->content->texts;
-    }
     Bytes d = read_file(path);
     if (d.size() < 7) throw FormatError("TEXTD: file too short");
     // header: u8 id, u16 buffer size, u32 unknown; the buffer may be larger than the file rest

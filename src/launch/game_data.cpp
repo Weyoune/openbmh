@@ -379,8 +379,7 @@ ResolvedGame resolve_game(const fs::path& input, const fs::path& cache) {
             const fs::path marker = prepared / ".openbmh-english";
             // the version of the translation (launch/fltd.cpp, fltd_map.inc): a cache built
             // by another version is built again
-            constexpr const char *kTranslation =
-                "english translation 14"; // 14: bind native English OPL slots and note frequencies
+            constexpr const char* kTranslation = "english translation 12";  // 12: contract warning ContractExpiryWarningText; 11: statistics windows, graph labels/count classes, streaks and national-badge banks
             std::string built;
             {
                 std::ifstream in(marker);

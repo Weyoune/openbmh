@@ -67,7 +67,6 @@ private:
     TextDb texts_;
     SpriteFont sprite_font_;
     Font footer_font_;
-    bool native_ = false;
     bool gradient_text_ = true;
     std::vector<SaveLoadEntry> entries_;
     int selected_ = 0, scroll_ = 0;

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "ui/sportschau.hpp"
-#include "formats/content.hpp"
 
 #include <algorithm>
 #include <array>
@@ -90,14 +89,6 @@ Image load_kb(const std::filesystem::path& data_directory, const char* file) {
 }
 
 std::optional<Palette> load_optional_embedded_palette(const std::filesystem::path& path) {
-    if (const auto resource = content::find(path)) {
-        auto name = std::filesystem::path(resource->key);
-        name.replace_extension();
-        const auto it = resource->content->image_palettes.find(name.generic_string());
-        if (it == resource->content->image_palettes.end())
-            return std::nullopt;
-        return it->second;
-    }
     const Bytes bytes = read_file(path);
     if (bytes.size() < 8) throw FormatError("sportschau: VGA palette source is truncated");
     const size_t rle_end = 8 + size_t(le32(bytes, 4));

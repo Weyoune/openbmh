@@ -26,7 +26,7 @@
 namespace bmh::launch {
 
 // The German-layout image of FLTD.EXE (throws std::runtime_error for another file).
-LeImage translate_fltd(const std::filesystem::path& fltd_exe, bool apply_supported_rules = true);
+LeImage translate_fltd(const std::filesystem::path& fltd_exe);
 
 // Builds the German-layout data directory `target` from the English game in `source`.
 // Returns false with `error` set when a file cannot be read or written.

@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-3.0-only
-#include "formats/content.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/live_timing.hpp"
 // openbmh_play - the UI of src/ui connected to the engine: options, manager dialogs, a new
@@ -11,7 +10,6 @@
 #include <SDL.h>
 
 #include <algorithm>
-#include <array>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -26,13 +24,9 @@
 #include <vector>
 
 #include "app/controller.hpp"
-#include "app/quit_confirmation.hpp"
 #include "launch/archive.hpp"
 #include "launch/file_dialog.hpp"
 #include "launch/game_data.hpp"
-#include "launch/launcher.hpp"
-#include "launch/startup_error.hpp"
-#include "content/package.hpp"
 #include "version.hpp"
 #include "app/live_matchday_events.hpp"
 #include "audio/playback.hpp"
@@ -76,23 +70,30 @@ using namespace bmh;
 
 // Why the game cannot start: a message box, and the same text on stderr.
 static void show_start_error(const std::string& text) {
-    rml::report_start_error("OpenBMH", text);
+    std::fprintf(stderr, "%s\n", text.c_str());
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "OpenBMH", text.c_str(), nullptr);
 }
 
-// Reattach the native editor when an in-game filename field takes focus. Cocoa
-// owns a field-editor responder in addition to SDL's TEXTINPUT enable flag.
-static void focus_filename_input(SDL_Renderer* renderer) {
-    int left, top, right, bottom;
-    SDL_RenderLogicalToWindow(renderer, 106, 209, &left, &top);
-    SDL_RenderLogicalToWindow(renderer, 262, 219, &right, &bottom);
-    const SDL_Rect field{left, top, std::max(1, right - left), std::max(1, bottom - top)};
-    SDL_StopTextInput();
-    SDL_SetTextInputRect(&field);
-    SDL_StartTextInput();
+#ifdef _WIN32
+// The game is a Windows GUI program (no console window on double-click). Started from a
+// console, it writes --version, --help and start errors there (kernel32 AttachConsole).
+extern "C" __declspec(dllimport) int __stdcall AttachConsole(unsigned long process_id);
+static void attach_parent_console() {
+    // (an output redirected to a file or pipe stays there; a GUI program without one has no
+    //  valid stream, fileno < 0)
+    const bool out_free = _fileno(stdout) < 0, err_free = _fileno(stderr) < 0;
+    if ((out_free || err_free) && AttachConsole(static_cast<unsigned long>(-1))) {  // ATTACH_PARENT_PROCESS
+        std::FILE* f = nullptr;
+        if (out_free) freopen_s(&f, "CONOUT$", "w", stdout);
+        if (err_free) freopen_s(&f, "CONOUT$", "w", stderr);
+    }
 }
+#else
+static void attach_parent_console() {}
+#endif
 
 int main(int argc, char** argv) {
-    rml::attach_parent_console();
+    attach_parent_console();
     const std::vector<std::string> args = launch::utf8_arguments(argc, argv);  // (file names beyond the code page)
     fs::path data, save_directory;
     uint32_t seed = uint32_t(std::chrono::system_clock::now().time_since_epoch().count());
@@ -116,7 +117,7 @@ int main(int argc, char** argv) {
         } else if (is("--live-frame-ms") && value) {
             live_frame_ms = std::clamp(std::atoi(args[++i].c_str()), 0, 1000);
             live_frame_ms_explicit = true;
-        } else if ((is("--run-mod") || is("--mod") || is("--data")) && value) {
+        } else if (is("--data") && value) {
             data = launch::path_from_utf8(args[++i]);
         } else if (is("--seed") && value) {
             seed = uint32_t(std::strtoul(args[++i].c_str(), nullptr, 0));
@@ -128,69 +129,51 @@ int main(int argc, char** argv) {
             std::printf("OpenBMH %s\n", bmh::kOpenBmhVersion);
             return 0;
         } else if (is("--help") || is("-h")) {
-            std::printf("usage: OpenBMH [--mod <mods/name/content.obw>] [--seed <Watcom seed>] "
-                        "[--save-directory <directory>] [--mute] [--volume <0..1>] [--no-music] "
-                        "[--live-frame-ms <0..1000>]\n");
+            std::printf("usage: openbmh_play [<game directory | BMH.EXE | game.zip | game.7z>] [--seed <Watcom seed>] "
+                        "[--save-directory <directory>] [--mute] [--volume <0..1>] [--no-music] [--live-frame-ms <0..1000>]\n");
             return 0;
         } else if (args[i].rfind("--", 0) != 0 && data.empty()) {
             data = launch::path_from_utf8(args[i]);
-        } else {
-            show_start_error("Unknown option or missing argument: " + args[i]);
-            return 1;
         }
     }
-    std::filesystem::path executable;
-    if (char *base = SDL_GetBasePath()) {
-        executable = launch::path_from_utf8(base);
-        SDL_free(base);
-#ifdef _WIN32
-        executable /= "OpenBMH.exe";
-#else
-        executable /= "OpenBMH";
-#endif
-    } else
-        executable = fs::absolute(launch::path_from_utf8(args.front()));
+    // the game: as given (directory, EXE or archive); else the directory OpenBMH itself lies in,
+    // when it holds a playable game (the simplest install: openbmh next to BMH.EXE); else
+    // chosen in the file dialog
+    if (data.empty()) {
+        if (char* base = SDL_GetBasePath()) {
+            const fs::path here = launch::path_from_utf8(base);
+            SDL_free(base);
+            try {
+                const launch::ResolvedGame game = launch::resolve_game(here, launch::default_cache_directory());
+                if (game.error.empty() && game.check.playable) data = here;
+            } catch (const std::exception&) {
+                // (not a game directory: fall through to the file dialog)
+            }
+        }
+    }
     if (data.empty()) {
         try {
-            return launch::run_launcher(executable, [](const fs::path &package, const fs::path &source,
-                                                       const fs::path &destination) {
-                const auto content = content::open(package);
-                content::Mount mount(package, content);
-                const auto source_bytes = read_file(source);
-                const auto digest = content::sha256(std::string(source_bytes.begin(), source_bytes.end()));
-                const auto seed = uint32_t(std::stoul(digest.substr(0, 8), nullptr, 16));
-                app::CareerSession migrated(mount.root(), seed, source, true);
-                std::string error;
-                if (!migrated.save_game(destination, migrated.state().memory.u8(::bmh::layout::ActiveManager),
-                                        false, error))
-                    throw FormatError("Spielstand konnte nicht übernommen werden: " + error);
-            });
-        } catch (const std::exception &e) {
-            show_start_error(e.what());
+            const auto chosen = launch::choose_game_file("OpenBMH");
+            if (!chosen) return 0;  // cancelled
+            data = *chosen;
+        } catch (const std::exception& e) {
+            show_start_error(std::string(e.what()) +
+                             "\nStart OpenBMH with the game as argument: openbmh_play <game directory | BMH.EXE | game.zip>");
             return 1;
         }
     }
-    std::shared_ptr<const content::Classic> contents;
-    std::unique_ptr<content::Mount> mount;
-    bool english_game = false;
-    try {
-        if (fs::is_directory(data))
-            data /= "content.obw";
-        contents = content::open(data);
-        mount = std::make_unique<content::Mount>(data, contents);
-        data = mount->root();
-        english_game = contents->english;
-        if (save_directory.empty()) {
-            const auto root = executable.parent_path();
-            launch::ModLibrary library(root);
-            launch::ModEntry mod;
-            mod.content_id = contents->content_id;
-            save_directory = library.user_directory(mod);
+    bool english_game = false;  // (the window title marks the English version as experimental)
+    {
+        const launch::ResolvedGame game = launch::resolve_game(data, launch::default_cache_directory());
+        if (!game.error.empty() || !game.check.playable) {
+            show_start_error("The game cannot be started:\n" + launch::describe(game));
+            return 1;
         }
-    } catch (const std::exception &e) {
-        show_start_error(e.what());
-        return 1;
+        english_game = game.check.family == launch::GameFamily::english;
+        // (from an archive: its unpacked copy in the cache, which then also keeps the saves)
+        data = game.check.directory;
     }
+    if (save_directory.empty()) save_directory = data;
     try {
         const Palette palette = load_palette(ui::asset_path(data, "M3PC.COL"));
         ui::StartupFlow flow(data, save_directory);
@@ -223,8 +206,6 @@ int main(int argc, char** argv) {
         ui::SportschauTeamInfo sportschau_team_info(data);
         ui::CompetitionWinnerScreen competition_winner(data);
         const auto season_exe = load_le(ui::asset_path(data, "BMH.exe"));
-        english_game = english_game || season_exe.u8(layout::LeagueSizes) == 20;
-        app::QuitConfirmation quit_confirmation(window, english_game);
         try {
             if (!playback.initialize_original(app::original_audio_assets(data, season_exe), audio_error))
                 std::fprintf(stderr, "audio: %s\n", audio_error.c_str());
@@ -364,7 +345,7 @@ int main(int argc, char** argv) {
                     if (screen.close_requested()) return renewed_expired_player ? 1 : 0;
                     SDL_Event event;
                     bool changed = false;
-                    while (quit_confirmation.poll(&event)) {
+                    while (SDL_PollEvent(&event)) {
                         if (event.type == SDL_QUIT) {
                             running = false;
                             staged = before;
@@ -466,7 +447,7 @@ int main(int argc, char** argv) {
             SDL_FlushEvents(SDL_MOUSEMOTION, SDL_MOUSEBUTTONUP);
             while (running) {
                 SDL_Event event;
-                while (quit_confirmation.poll(&event)) {
+                while (SDL_PollEvent(&event)) {
                     if (event.type == SDL_QUIT) { running = false; return; }
                     if (event.type == SDL_MOUSEBUTTONDOWN &&
                         (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT)) return;
@@ -480,7 +461,7 @@ int main(int argc, char** argv) {
             SDL_FlushEvents(SDL_MOUSEMOTION, SDL_MOUSEBUTTONUP);
             while (running) {
                 SDL_Event event;
-                while (quit_confirmation.poll(&event)) {
+                while (SDL_PollEvent(&event)) {
                     if (event.type == SDL_QUIT) { running = false; return; }
                     if (event.type == SDL_MOUSEBUTTONDOWN &&
                         (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT)) return;
@@ -493,7 +474,7 @@ int main(int argc, char** argv) {
                 SDL_Delay(20); // Source timer unit used by the traced intro path.
                 SDL_PumpEvents();
                 SDL_Event close;
-                while (quit_confirmation.peep(&close, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0)
+                while (SDL_PeepEvents(&close, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0)
                     running = false; // platform close is the only intro-loop escape
             }
         };
@@ -507,7 +488,7 @@ int main(int argc, char** argv) {
                 while (running && SDL_GetPerformanceCounter() - started < ticks_per_wait) {
                     SDL_PumpEvents();
                     SDL_Event close;
-                    while (quit_confirmation.peep(&close, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0)
+                    while (SDL_PeepEvents(&close, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0)
                         running = false; // platform close is the only animation-loop escape
                     if (running) SDL_Delay(1);
                 }
@@ -557,7 +538,7 @@ int main(int argc, char** argv) {
             bool skipped = false;
             while (running && !skipped && SDL_GetTicks() - start < duration) {
                 SDL_Event input;
-                while (quit_confirmation.poll(&input)) {
+                while (SDL_PollEvent(&input)) {
                     if (input.type == SDL_QUIT) running = false;
                     if (input.type == SDL_MOUSEBUTTONDOWN && input.button.button == SDL_BUTTON_LEFT)
                         skipped = true;
@@ -580,14 +561,14 @@ int main(int argc, char** argv) {
             bool skip = false;
             SDL_Event input;
             if (step.minute_wait) {
-                while (quit_confirmation.poll(&input)) {
+                while (SDL_PollEvent(&input)) {
                     if (input.type == SDL_QUIT) running = false;
                     if (input.type == SDL_MOUSEBUTTONDOWN && input.button.button == SDL_BUTTON_LEFT)
                         skip = true;
                 }
             } else {
                 SDL_PumpEvents();
-                while (quit_confirmation.peep(&input, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) running = false;
+                while (SDL_PeepEvents(&input, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) running = false;
             }
             if (!running) return true;
             const std::string title = "OpenBMH - sportschau_replay_" + std::to_string(fixture.group) +
@@ -702,7 +683,7 @@ int main(int argc, char** argv) {
             auto pressed = ui::GameEndTaxDialog::Button::none;
             while (running) {
                 SDL_Event input;
-                while (quit_confirmation.poll(&input)) {
+                while (SDL_PollEvent(&input)) {
                     if (input.type == SDL_QUIT) { running = false; return false; }
                     if (input.type == SDL_MOUSEBUTTONDOWN) {
                         if (event.kind != SeasonTaxEventKind::question &&
@@ -741,7 +722,7 @@ int main(int argc, char** argv) {
                     const auto started = SDL_GetTicks();
                     while (running && Uint32(SDL_GetTicks() - started) < animation.wait_milliseconds()) {
                         SDL_Event input;
-                        while (quit_confirmation.poll(&input)) if (input.type == SDL_QUIT) running = false;
+                        while (SDL_PollEvent(&input)) if (input.type == SDL_QUIT) running = false;
                         // Source param4=0: clicks/keys cannot change this script or RNG.
                         SDL_Delay(10);
                     }
@@ -758,7 +739,7 @@ int main(int argc, char** argv) {
                 // events for the next Original input boundary; only handle SDL exit.
                 SDL_PumpEvents();
                 SDL_Event quit;
-                if (quit_confirmation.peep(&quit, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) running = false;
+                if (SDL_PeepEvents(&quit, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) running = false;
                 if (running) SDL_Delay(10);
             }
         };
@@ -813,7 +794,7 @@ int main(int argc, char** argv) {
                 if (timed && Uint32(SDL_GetTicks() - started) >= 70 * 3 * 20)
                     return complete(PendingOfferAnswer::yes);
                 SDL_Event input;
-                while (quit_confirmation.poll(&input)) {
+                while (SDL_PollEvent(&input)) {
                     if (input.type == SDL_QUIT) { running = false; return PendingOfferAnswer::unsupported; }
                     const bool question_deadline = question && poll_process_timer(true,true);
                     if (question_deadline && pressed == ui::GameEndTaxDialog::Button::none)
@@ -883,7 +864,7 @@ int main(int argc, char** argv) {
                 SDL_FlushEvents(SDL_MOUSEMOTION, SDL_MOUSEBUTTONUP); // DecodeTaxAnimationScript/SDLFlushEvents redraw boundary
                 while (running) {
                     SDL_Event input;
-                    while (quit_confirmation.poll(&input)) {
+                    while (SDL_PollEvent(&input)) {
                         if (input.type == SDL_QUIT) { running = false; return PendingOfferTransferChoice{}; }
                         std::optional<int> bid;
                         if (input.type == SDL_MOUSEBUTTONDOWN &&
@@ -912,7 +893,7 @@ int main(int argc, char** argv) {
                 bool acknowledged=false;
                 while(running && !acknowledged) {
                     SDL_Event event;
-                    while(quit_confirmation.poll(&event)) {
+                    while(SDL_PollEvent(&event)) {
                         if(event.type==SDL_QUIT){running=false;break;}
                         if(event.type==SDL_MOUSEBUTTONDOWN &&
                            (event.button.button==SDL_BUTTON_LEFT || event.button.button==SDL_BUTTON_RIGHT)) {
@@ -975,7 +956,7 @@ int main(int argc, char** argv) {
             draw();
             while (running) {
                 SDL_Event event;
-                while (quit_confirmation.poll(&event)) {
+                while (SDL_PollEvent(&event)) {
                     if (event.type == SDL_QUIT) { running = false; return -1; }
                     ui::OutgoingTransferRequest action;
                     if (event.type == SDL_MOUSEMOTION) continue;
@@ -1092,7 +1073,7 @@ int main(int argc, char** argv) {
             while (running) {
                 if (deadline_expired()) return true; //ClubInfoFromGame event8 returns to its owning caller.
                 SDL_Event input;
-                while (quit_confirmation.poll(&input)) {
+                while (SDL_PollEvent(&input)) {
                     if (input.type == SDL_QUIT) { running = false; return false; }
                     if (deadline_expired()) return true;
                     ui::ClubInfoRequest request;
@@ -1193,7 +1174,7 @@ int main(int argc, char** argv) {
                 SDL_PumpEvents();
                 while (running && (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_LMASK)) {
                     SDL_Event input;
-                    while (quit_confirmation.poll(&input))
+                    while (SDL_PollEvent(&input))
                         if (input.type == SDL_QUIT) { running = false; return; }
                     SDL_PumpEvents();
                     if (running) SDL_Delay(10);
@@ -1261,7 +1242,7 @@ int main(int argc, char** argv) {
             while (running) {
                 if (const auto complete = expire_card()) return *complete;
                 SDL_Event input;
-                while (quit_confirmation.poll(&input)) {
+                while (SDL_PollEvent(&input)) {
                     if (input.type == SDL_QUIT) { running = false; return std::nullopt; }
                     if (const auto complete = expire_card()) return *complete;
                     bool changed = false;
@@ -1323,7 +1304,7 @@ int main(int argc, char** argv) {
             while (running) {
                 if (deadline_expired()) return; //LeagueCalculations frees its child before4f548 polls again.
                 SDL_Event input;
-                while (quit_confirmation.poll(&input)) {
+                while (SDL_PollEvent(&input)) {
                     if (input.type == SDL_QUIT) { running = false; return; }
                     if (deadline_expired()) return;
                     if (input.type == SDL_MOUSEBUTTONDOWN && input.button.button == SDL_BUTTON_RIGHT)
@@ -1407,7 +1388,7 @@ int main(int argc, char** argv) {
                 while(running&&!outcome) {
                     if(expire_range())break;
                     SDL_Event input;
-                    while(quit_confirmation.poll(&input)) {
+                    while(SDL_PollEvent(&input)) {
                         if(input.type==SDL_QUIT){running=false;break;}
                         if(expire_range())break;
                         bool changed=false;
@@ -1463,7 +1444,7 @@ int main(int argc, char** argv) {
             while(running) {
                 if(deadline_expired())return std::nullopt;
                 SDL_Event input;
-                while(quit_confirmation.poll(&input)) {
+                while(SDL_PollEvent(&input)) {
                     if(input.type==SDL_QUIT){running=false;break;}
                     if(deadline_expired())return std::nullopt;
                     bool changed=false;
@@ -1557,7 +1538,7 @@ int main(int argc, char** argv) {
                 // Source ignores the first OriginalMouseSound poll's gameplay result, then
                 // presents the starting scene before its ten option-delay polls.
                 SDL_Event initial;
-                if (quit_confirmation.poll(&initial) && initial.type == SDL_QUIT) { running = false; return; }
+                if (SDL_PollEvent(&initial) && initial.type == SDL_QUIT) { running = false; return; }
                 show_draw();
                 while (running && screen.advance_step()) {
                     if (screen.present_needed()) show_draw();
@@ -1565,7 +1546,7 @@ int main(int argc, char** argv) {
                     if (!running) return;
                     if (screen.input_poll_needed()) {
                         SDL_Event input;
-                        while (quit_confirmation.poll(&input)) {
+                        while (SDL_PollEvent(&input)) {
                             if (input.type == SDL_QUIT) { running = false; return; }
                             if (input.type == SDL_MOUSEBUTTONDOWN &&
                                 (input.button.button == SDL_BUTTON_LEFT || input.button.button == SDL_BUTTON_RIGHT)) {
@@ -1600,7 +1581,7 @@ int main(int argc, char** argv) {
             SDL_FlushEvents(SDL_MOUSEMOTION, SDL_MOUSEBUTTONUP);
             while (running) {
                 SDL_Event input;
-                while (quit_confirmation.poll(&input)) {
+                while (SDL_PollEvent(&input)) {
                     if (input.type == SDL_QUIT) { running = false; return; }
                     if (input.type != SDL_MOUSEBUTTONDOWN) continue;
                     if (input.button.button == SDL_BUTTON_RIGHT) return;
@@ -1637,7 +1618,7 @@ int main(int argc, char** argv) {
                 while (running && screen.phase() == ui::AlternateScorePhase::Calculator) {
                     SDL_Event event;
                     bool changed = false;
-                    while (quit_confirmation.poll(&event)) {
+                    while (SDL_PollEvent(&event)) {
                         if (event.type == SDL_QUIT) { running = false; return; }
                         if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_RIGHT) {
                             right_cancel = true;
@@ -1679,8 +1660,7 @@ int main(int argc, char** argv) {
                     wait_season_ack();
                 }
             } else {
-                const auto file =
-                    highscore_file(save_directory, signature, season_texts[889], bool(content::find(data)));
+                const auto file = highscore_file(save_directory, signature, season_texts[889]);
                 auto scores = make_highscore_projection(state, load_highscore_table(file), HighscoreContext::SeasonBoundary);
                 // The Original stores this table outside the native FBM. Use the
                 // configured writable save base rather than a working-directory path.
@@ -1703,11 +1683,6 @@ int main(int argc, char** argv) {
         std::optional<Uint64> timed_notice_presented_at;
         std::optional<Uint8> timed_notice_release;
         auto handle = [&](const ui::FlowResult& r) {
-            if (r.request == ui::FlowRequest::end_session && !quit_confirmation.confirm()) {
-                flow.reject_desk_action(english_game ? "Quit cancelled." : "Beenden abgebrochen.");
-                dirty = true;
-                return;
-            }
             if (const auto* desk = flow.desktop())
                 for (const auto id : desk->take_sound_ids()) app::original_audio_command(playback, id);
             if (r.request == ui::FlowRequest::kickoff || r.request == ui::FlowRequest::end_session) {
@@ -1830,7 +1805,7 @@ int main(int argc, char** argv) {
                             SDL_RenderPresent(renderer);
                             SDL_Event modal;
                             bool redrawn = false;
-                            while (quit_confirmation.poll(&modal)) {
+                            while (SDL_PollEvent(&modal)) {
                                 if (modal.type == SDL_QUIT) { running = false; closed = true; break; }
                                 if (modal.type == SDL_KEYDOWN && modal.key.keysym.sym == SDLK_ESCAPE) {
                                     screen.key("ESC"); closed = true; break;
@@ -2000,7 +1975,7 @@ int main(int argc, char** argv) {
                     show_dialog();
                     while (running && !outcome) {
                         SDL_Event input;
-                        while (quit_confirmation.poll(&input)) {
+                        while (SDL_PollEvent(&input)) {
                             if (input.type == SDL_QUIT) { running = false; break; }
                             bool changed = false;
                             if (input.type == SDL_TEXTINPUT) {
@@ -2100,7 +2075,7 @@ int main(int argc, char** argv) {
                 while (running && !closed) {
                     SDL_Event input;
                     bool redrawn = false;
-                    while (quit_confirmation.poll(&input)) {
+                    while (SDL_PollEvent(&input)) {
                         if (input.type == SDL_QUIT) { running = false; break; }
                         if (input.type == SDL_MOUSEMOTION) {
                             const bool changed = table_screen ? table_screen->move(input.motion.x, input.motion.y)
@@ -2210,7 +2185,7 @@ int main(int argc, char** argv) {
                             offer_dirty = false;
                         }
                         SDL_Event event;
-                        while (quit_confirmation.poll(&event)) {
+                        while (SDL_PollEvent(&event)) {
                             if (event.type == SDL_QUIT) { running = false; return -1; }
                             std::optional<int> answer;
                             if (event.type == SDL_MOUSEBUTTONUP &&
@@ -2279,7 +2254,7 @@ int main(int argc, char** argv) {
                             rendered_phase = phase;
                         }
                         SDL_Event event;
-                        while (quit_confirmation.poll(&event)) {
+                        while (SDL_PollEvent(&event)) {
                             if (event.type == SDL_QUIT) { running = false; return; }
                             if (event.type == SDL_MOUSEBUTTONUP &&
                                 (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT))
@@ -2307,7 +2282,7 @@ int main(int argc, char** argv) {
                         bool dismissed = false;
                         while (running && !dismissed) {
                             SDL_Event event;
-                            while (quit_confirmation.poll(&event)) {
+                            while (SDL_PollEvent(&event)) {
                                 if (event.type == SDL_QUIT) { running = false; return; }
                                 if (event.type == SDL_MOUSEBUTTONUP &&
                                     (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT)) {
@@ -2461,7 +2436,7 @@ int main(int argc, char** argv) {
                                 SDL_RenderPresent(renderer);
                                 SDL_Event modal;
                                 bool redrawn = false;
-                                while (quit_confirmation.poll(&modal)) {
+                                while (SDL_PollEvent(&modal)) {
                                     if (modal.type == SDL_QUIT) { running = false; closed = true; break; }
                                     if (modal.type == SDL_MOUSEBUTTONDOWN &&
                                         (modal.button.button == SDL_BUTTON_LEFT || modal.button.button == SDL_BUTTON_RIGHT))
@@ -2526,7 +2501,7 @@ int main(int argc, char** argv) {
                         bool resumed = false;
                         while (running && !resumed) {
                             SDL_Event paused_event;
-                            while (quit_confirmation.poll(&paused_event)) {
+                            while (SDL_PollEvent(&paused_event)) {
                                 if (paused_event.type == SDL_QUIT) {
                                     quit = true;
                                     live_skipped = true;
@@ -2639,12 +2614,11 @@ int main(int argc, char** argv) {
                                 SDL_RenderPresent(renderer);
                             };
                             render_file();
-                            focus_filename_input(renderer);
                             bool finished = false;
                             while (running && !finished) {
                                 SDL_Event file_input;
                                 bool file_changed = false;
-                                while (quit_confirmation.poll(&file_input)) {
+                                while (SDL_PollEvent(&file_input)) {
                                     if (file_input.type == SDL_QUIT) { running = false; break; }
                                     if (file_input.type == SDL_MOUSEBUTTONUP &&
                                         (file_input.button.button == SDL_BUTTON_LEFT ||
@@ -2704,7 +2678,7 @@ int main(int argc, char** argv) {
                         while (running && !closed) {
                             SDL_Event input;
                             bool changed = false;
-                            while (quit_confirmation.poll(&input)) {
+                            while (SDL_PollEvent(&input)) {
                                 if (input.type == SDL_QUIT) { running = false; break; }
                                 if (readme) {
                                     if (input.type == SDL_MOUSEBUTTONDOWN &&
@@ -2818,7 +2792,7 @@ int main(int argc, char** argv) {
                     const bool source_phase_start = minute == 1 ||
                         (state.indoor ? minute == 21 : (minute == 46 || minute == 91 || minute == 106));
                     SDL_Event event;
-                    while (quit_confirmation.poll(&event)) {
+                    while (SDL_PollEvent(&event)) {
                         if (event.type == SDL_QUIT) { quit = true; live_skipped = true; }
                         else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
                             live_skipped = true;
@@ -2939,7 +2913,7 @@ int main(int argc, char** argv) {
                         present(live_screen.render_ball(frame, event.displacement, index, chance));
                         SDL_PumpEvents();
                         SDL_Event quit_event;
-                        if (quit_confirmation.peep(&quit_event, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) {
+                        if (SDL_PeepEvents(&quit_event, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) {
                             running = false;
                             break;
                         }
@@ -2976,7 +2950,7 @@ int main(int argc, char** argv) {
                     SDL_RenderPresent(renderer);
                     SDL_PumpEvents();
                     SDL_Event quit_event;
-                    if (quit_confirmation.peep(&quit_event, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) {
+                    if (SDL_PeepEvents(&quit_event, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) {
                         running = false;
                         live_chance_context.reset();
                         return;
@@ -3008,7 +2982,7 @@ int main(int argc, char** argv) {
                         SDL_RenderPresent(renderer);
                         SDL_PumpEvents();
                         SDL_Event input;
-                        if (quit_confirmation.peep(&input, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) {
+                        if (SDL_PeepEvents(&input, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) {
                             running = false;
                             return;
                         }
@@ -3030,7 +3004,7 @@ int main(int argc, char** argv) {
                         SDL_Event input;
                         bool acknowledged = false;
                         while (running && !acknowledged) {
-                            while (quit_confirmation.poll(&input)) {
+                            while (SDL_PollEvent(&input)) {
                                 if (input.type == SDL_QUIT) { running = false; break; }
                                 if (input.type == SDL_MOUSEBUTTONDOWN &&
                                     (input.button.button == SDL_BUTTON_LEFT || input.button.button == SDL_BUTTON_RIGHT)) {
@@ -3065,7 +3039,7 @@ int main(int argc, char** argv) {
                         SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4);
                         SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);SDL_RenderPresent(renderer);
                         SDL_PumpEvents();SDL_Event input;
-                        if (quit_confirmation.peep(&input,1,SDL_GETEVENT,SDL_QUIT,SDL_QUIT)>0) { running=false;return; }
+                        if (SDL_PeepEvents(&input,1,SDL_GETEVENT,SDL_QUIT,SDL_QUIT)>0) { running=false;return; }
                         // FirstThen holds the first frame for 40 retraces; later frames
                         // use saved Main_FormatError_RuntimeField2. Keyboard/mouse input remains for the minute hook.
                         const int retraces=index==0?40:(state.memory.has(::bmh::layout::Main_FormatError_RuntimeField2)?state.memory.u8(::bmh::layout::Main_FormatError_RuntimeField2):0);
@@ -3091,7 +3065,7 @@ int main(int argc, char** argv) {
                     if (event.kind != 2 && app::match_sound_enabled(state))
                         app::original_audio_command(playback, 17); // EventImpl/SDLPumpEvents, no injury whistle.
                     SDL_PumpEvents();SDL_Event input;
-                    if (quit_confirmation.peep(&input,1,SDL_GETEVENT,SDL_QUIT,SDL_QUIT)>0) { running=false;return; }
+                    if (SDL_PeepEvents(&input,1,SDL_GETEVENT,SDL_QUIT,SDL_QUIT)>0) { running=false;return; }
                     const int pause=event.kind==0?3:4;
                     const uint32_t address=::bmh::layout::Main_FormatError_ExecutableFieldUnsigned+uint32_t(pause*9);
                     const int saved=state.memory.has(address)?state.memory.u8(address):0;
@@ -3115,7 +3089,7 @@ int main(int argc, char** argv) {
                     SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4);
                     SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);SDL_RenderPresent(renderer);
                     SDL_PumpEvents();SDL_Event input;
-                    if (quit_confirmation.peep(&input,1,SDL_GETEVENT,SDL_QUIT,SDL_QUIT)>0) { running=false;return; }
+                    if (SDL_PeepEvents(&input,1,SDL_GETEVENT,SDL_QUIT,SDL_QUIT)>0) { running=false;return; }
                     const int repeats=event.stage==LiveShootoutStage::preview?4:2;
                     const int saved=state.memory.has(::bmh::layout::Main_FormatError_RuntimeField6)?state.memory.u8(::bmh::layout::Main_FormatError_RuntimeField6):0;
                     const int delay=live_frame_ms_explicit?live_frame_ms:(saved<6?saved/2:saved)*20;
@@ -3179,16 +3153,16 @@ int main(int argc, char** argv) {
                         present(reality_surface,reality_colors,"OpenBMH - live_reality_report_"+round_identity);
                     }
                     SDL_PumpEvents();SDL_Event input;
-                    if (quit_confirmation.peep(&input,1,SDL_GETEVENT,SDL_QUIT,SDL_QUIT)>0) {running=false;return true;}
+                    if (SDL_PeepEvents(&input,1,SDL_GETEVENT,SDL_QUIT,SDL_QUIT)>0) {running=false;return true;}
                     // Consume only the Source exit for this scene. Other input remains
                     // queued for the existing live-minute/manager intervention boundary.
-                    if (quit_confirmation.peep(&input,1,SDL_PEEKEVENT,SDL_KEYDOWN,SDL_KEYDOWN)>0 &&
+                    if (SDL_PeepEvents(&input,1,SDL_PEEKEVENT,SDL_KEYDOWN,SDL_KEYDOWN)>0 &&
                         input.key.keysym.sym==SDLK_ESCAPE) {
-                        quit_confirmation.peep(&input,1,SDL_GETEVENT,SDL_KEYDOWN,SDL_KEYDOWN);return true;
+                        SDL_PeepEvents(&input,1,SDL_GETEVENT,SDL_KEYDOWN,SDL_KEYDOWN);return true;
                     }
-                    if (quit_confirmation.peep(&input,1,SDL_PEEKEVENT,SDL_MOUSEBUTTONDOWN,SDL_MOUSEBUTTONDOWN)>0 &&
+                    if (SDL_PeepEvents(&input,1,SDL_PEEKEVENT,SDL_MOUSEBUTTONDOWN,SDL_MOUSEBUTTONDOWN)>0 &&
                         input.button.button==SDL_BUTTON_RIGHT) {
-                        quit_confirmation.peep(&input,1,SDL_GETEVENT,SDL_MOUSEBUTTONDOWN,SDL_MOUSEBUTTONDOWN);return true;
+                        SDL_PeepEvents(&input,1,SDL_GETEVENT,SDL_MOUSEBUTTONDOWN,SDL_MOUSEBUTTONDOWN);return true;
                     }
                     return false;
                 }, [&](const PhaseResultRequest& request, const std::vector<MatchGroup>& groups,
@@ -3601,41 +3575,17 @@ int main(int argc, char** argv) {
             }
         };
         SDL_StartTextInput();
-        bool filename_input_active = false;
-        std::array<bool, 2> setup_button_down{};
         while (running) {
-            const bool filename_open = flow.screen_name() == "save_load";
-            if (filename_open && !filename_input_active) focus_filename_input(renderer);
-            filename_input_active = filename_open;
             if(timed_notice_presented_at && flow.timed_notice_open() &&
                SDL_GetTicks64()-*timed_notice_presented_at>=70*3*20)
                 handle(flow.expire_timed_notice());
             service_process_timer();
             if (!running) break;
             SDL_Event e;
-            while (quit_confirmation.poll(&e)) {
+            while (SDL_PollEvent(&e)) {
                 if (e.type == SDL_QUIT) {
                     running = false;
                     break;
-                }
-                if (e.type == SDL_WINDOWEVENT) {
-                    if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST) setup_button_down.fill(false);
-                    if (e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
-                        if (flow.screen_name() == "save_load") focus_filename_input(renderer);
-                        else SDL_StartTextInput();
-                    }
-                }
-                // A native picker/window activation can leave an unmatched UP.
-                // Only a press which began on setup may toggle its options.
-                if ((e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP) &&
-                    (e.button.button == SDL_BUTTON_LEFT || e.button.button == SDL_BUTTON_RIGHT)) {
-                    const size_t button = e.button.button == SDL_BUTTON_LEFT ? 0 : 1;
-                    if (e.type == SDL_MOUSEBUTTONDOWN) setup_button_down[button] = flow.screen_name() == "setup";
-                    else {
-                        const bool owned = setup_button_down[button];
-                        setup_button_down[button] = false;
-                        if (flow.screen_name() == "setup" && !owned) continue;
-                    }
                 }
                 if(e.type==SDL_MOUSEBUTTONUP&&timed_notice_release&&e.button.button==*timed_notice_release) {
                     timed_notice_release.reset();continue;
@@ -3692,8 +3642,7 @@ int main(int argc, char** argv) {
                     continue;
                 }
                 if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE &&
-                    !flow.in_preparation_menu() && !flow.in_results_view() && !flow.in_readonly_view() &&
-                    quit_confirmation.confirm())
+                    !flow.in_preparation_menu() && !flow.in_results_view() && !flow.in_readonly_view())
                     running = false;
                 if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT)
                     press = Press{e.button.x, e.button.y, SDL_GetTicks(), flow.screen_name(),

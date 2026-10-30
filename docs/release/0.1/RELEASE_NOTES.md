@@ -2,32 +2,6 @@
 
 OpenBMH reconstructs the Bundesliga Manager Hattrick engine in C++20. The graphical client uses SDL2; the console provides command batches and local manager-client transports over the same career session. This release needs a supported game installation supplied by the player. No original executable, artwork, music, text database, manual or saved game is included.
 
-## Unreleased corrections
-
-- Application exits ask for confirmation in a native German/English message
-  box, with Cancel selected by default, including window close events during
-  matches and dialogs ([#11](https://github.com/Weyoune/openbmh/issues/11)).
-
-- Football Limited uses the correct enabled/disabled setup sprites, positive
-  balance colour and outside controls of the desktop shortcut bar ([#7](https://github.com/Weyoune/openbmh/issues/7)).
-  Its cached data is regenerated automatically for the corrected mapping.
-- Filename dialogs reacquire the native SDL text editor on entry and window
-  focus, including the live settings dialog. macOS acceptance remains human QA
-  ([#8](https://github.com/Weyoune/openbmh/issues/8)).
-- Save-directory labels use portable `/` separators, avoiding the German bitmap
-  font's `Ö` glyph at the backslash position on Windows ([#9](https://github.com/Weyoune/openbmh/issues/9)).
-- Setup ignores mouse releases without a matching press on that screen, so
-  window activation cannot toggle the initial league/national-team selection
-  through that input path ([#10](https://github.com/Weyoune/openbmh/issues/10)).
-- The standalone [OBW installation converter](../../formats/obw/import.md) builds
-  complete `BMH-classic` / `FLTD-classic` installation-content worlds, including
-  graphics, fonts, audio, frozen player portrait recipes and versioned Classic
-  startup data. Subsequent CI packages include `openbmh_import`. The 0.2 runtime
-  adapter and savegame conversion remain separate work.
-
-These changes require a build from the updated source. The tagged 0.1.2 package
-does not contain these subsequent corrections.
-
 ## Changes in 0.1.2
 
 - The environment menu shows all six original artwork panels: three youth teams,

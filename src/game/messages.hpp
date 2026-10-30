@@ -16,7 +16,6 @@
 #include <string>
 #include <vector>
 
-#include "formats/le.hpp"
 #include "game/state.hpp"
 
 namespace bmh {
@@ -59,11 +58,6 @@ inline std::string kMastersWinnerText;
 inline std::string kIndoorInvitationText;
 inline std::string kChampionshipBonusText;
 inline std::string kFriendlyPayerPrefixText;
-
-// Installs the six texts above from the game image (the English game uses its own wording).
-// Both career sessions call it at start; standalone engine tools (week_check, the season sims)
-// must call it too, or these messages lose their text (#14: the indoor entry bonus mail).
-void install_message_texts(const LeImage& exe);
 
 // FormatNumber(buf, value, 0x101, ""): an amount of money as the messages show it: the
 // value converted with CurrencyMultiplier / CurrencyDivisor, digits grouped by dots, then " EU".

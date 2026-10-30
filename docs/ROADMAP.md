@@ -10,18 +10,9 @@ Career management, matches, finances, transfers, original-style SDL2 screens, au
 
 Complete edition-specific loading, presentation, competitions and sound support. Imported content determines names, text, clubs and league organisation; a shared engine rule base defines the simulation.
 
-## 0.2: portable Classic content and native saves
+## 0.2: open data and typed state
 
-Import a supplied BMH or Football Limited installation through the launcher into a
-sealed [OBW](formats/OBW.md) Classic mod. Run the original-style interface and
-console exclusively from converted content, with native careers and preferences
-stored separately. Legacy save migration is an import operation. See the
-[0.2 release notes](release/0.2/RELEASE_NOTES.md) and
-[runtime contract](formats/obw/runtime-0.2.md).
-
-Modern game screens are deferred. The Modern UI POC remains separate from the
-0.2 distribution. Replacing the remaining compatibility blocks with typed clubs,
-players, contracts and competitions is subsequent work, not a completed 0.2 claim.
+Introduce a documented import format and a native save format, retaining supported legacy import where practical. The format concept is [OBW](formats/OBW.md). Replace fixed-layout state gradually with typed clubs, players, contracts and competitions. Keep each intermediate stage usable and cover transitions with tests.
 
 ## 0.3: configurable rules
 

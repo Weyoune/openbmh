@@ -12,9 +12,7 @@ OpenBMH is a C++20 engine with graphical and console frontends. The implementati
 | `src/ui` | View projections, rendering and input interpretation for game screens |
 | `src/cli` | Command language, structured protocol, console windows and multi-client seat routing |
 | `src/audio` | Bank decoding, synthesis, playback and cues, without authority to change gameplay |
-| `src/launch` | RmlUI launcher, portable mod library, child processes and legacy installation discovery |
-| `src/content` | Sealed OBW content, native career containers and personal preferences |
-| `src/import` | Legacy installation and save-layout conversion; original readers are used here |
+| `src/launch` | Locating user data, archive extraction, edition normalisation and file selection |
 
 `bmhcore` contains the format and game layers. `bmhui`, `openbmh_audio` and the application session provide reusable pieces above it. Frontends should translate actions and display results; they should not introduce independent transfer, calendar or financial rules.
 
@@ -25,8 +23,6 @@ OpenBMH is a C++20 engine with graphical and console frontends. The implementati
 Some calendar operations need synchronous human decisions. Their presenters own a staged state until the question or editor returns. A console worker hands control to the input thread while paused; exactly one thread operates on that transaction at a time. Cancellation, failure and process shutdown must release the owner and preserve the transaction's rollback contract. A view must not read live state as though it were the paused staged state.
 
 ## Calendar and matches
-
-The planned split into one shared match engine and the season engines of Classic, Classic Extended (Classic plus backported Modern features) and Modern is described in [ENGINE_SPLIT](ENGINE_SPLIT.md).
 
 The turn driver moves between manager desks, match clocks and calendar events. Weekly, monthly and seasonal processing can produce decisions as well as simulation results. Match groups contain the day's competitions; a manager can intervene only in a group involving that manager's team. A multi-client match clock advances at a barrier shared by all seats.
 
@@ -41,30 +37,3 @@ Legacy saves serialize blocks in a fixed order and store name pools separately. 
 The [console reference](CLI_CONCEPT/README.md) documents window commands. [protocol.md](protocol.md) describes structured requests, and [CONSOLE_CLIENTS.md](CONSOLE_CLIENTS.md) explains safe client ownership and batching. Prefer shared projections/actions when adding another frontend.
 
 Use synthetic data for public tests and locally supplied installations only for data-dependent checks. Renderer tests, simulation tests and target-platform runtime checks answer different questions; document what each validates. See [CONTRIBUTING.md](../CONTRIBUTING.md).
-
-## 0.2 content boundary
-
-Normal GUI and console entrypoints accept sealed Classic OBW packages. `content::Mount`
-owns a shared immutable decoded store; existing path-shaped UI aliases identify resources
-inside it, without creating VGA/FNT/EXE files or falling back to an installation on disk.
-The only mutable mount setting is the presentation year of the selected career. Native
-`.obs` checkpoints serialize named fields, compatibility memory blocks, both random
-streams, Reality residues and the manager-desk driver. No host object, pointer or callback
-is dumped. The session reconstructs content pointers and callbacks when loading.
-
-The RmlUI launcher remains the parent process. Each game starts in a fresh child process
-of `OpenBMH`, keeping edition-specific process globals isolated. Portable mod content and
-personal files have independent lifetimes. See [runtime-0.2](formats/obw/runtime-0.2.md).
-
-The launcher layout and theme live in `assets/launcher/launcher.rml` and `theme.rcss`.
-They share the same RmlUI core, FreeType font engine and SDL2 platform layer.
-Windows uses the pinned upstream Direct3D 11 renderer with hardware-to-WARP
-fallback, while Linux/macOS keep the upstream OpenGL renderer. Both the editor
-and launcher share window/device lifetime, resizing and capture through
-`src/launch/rml_video.*`. The C++ view translates events into the existing launcher
-interface; it does not own conversion rules or mod storage. This presentation layer
-can be reused by future modern screens. Classic game screens retain their current UI.
-The operating system supplies the folder picker through nativefiledialog-extended.
-Release packages contain the complete launcher asset directory and unmodified Lato
-fonts from the pinned RmlUI source. Background artwork is independently generated;
-its provenance and approved digest are recorded with the project assets.

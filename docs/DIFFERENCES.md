@@ -6,8 +6,6 @@ See [Compatibility decisions](COMPATIBILITY.md) for the overall policy. These en
 describe deliberate changes; they are not a list of every known compatibility limit.
 
 - [src/app/career_session.cpp](../src/app/career_session.cpp): supports designated set-piece record initialization and validation.
-- [src/app/career_session.cpp](../src/app/career_session.cpp): native saves do not consume gameplay randomness for encryption.
-- [src/app/quit_confirmation.hpp](../src/app/quit_confirmation.hpp): confirms application exit with a localized native dialog, with cancellation selected by default.
 - [src/formats/le.hpp](../src/formats/le.hpp): applies a shared supported rule profile when loading editions with different rule-table values.
 - [src/formats/rule_base.cpp](../src/formats/rule_base.cpp): normalizes live-scene defaults, league strength ranges, option defaults, stadium prices and capacities, betting limits, and the foreign-player limit across supported editions.
 - [src/formats/rule_base.hpp](../src/formats/rule_base.hpp): normalizes live-scene options, league strength ranges, option defaults, stadium prices and capacities, betting limits, and the foreign-player limit.

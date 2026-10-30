@@ -174,7 +174,6 @@ struct GameState {
     // 3 (stadiums, *ba360): not used by the engine, kept for writing savegames.
     std::vector<uint8_t> master_database_metadata, referee_names, stadium_names;
     std::vector<uint16_t> player_cards;   // *PlayerCards, per player: card counters per competition
-    int display_start_year = 2026;        // Cosmetic Classic origin; does not alter scheduling.
     uint32_t date = 0;                    // CalendarDay: day counter
     // DaysIntoSeason (day of the season, the calendar index) moves with the day counter within
     // a season: season_day() = date - season_start.

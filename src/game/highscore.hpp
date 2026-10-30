@@ -53,8 +53,8 @@ HighscoreProjection make_highscore_projection(const GameState& g, HighscoreTable
 HighscoreBytes encode_highscore_table(const HighscoreTable& rows);
 HighscoreTable decode_highscore_table(const HighscoreBytes& bytes);
 // The caller supplies the configured installation base and Original TEXTD889 prefix.
-std::filesystem::path highscore_file(const std::filesystem::path &base, uint16_t signature,
-                                     const std::string &prefix = "high/h.", bool native = false);
+std::filesystem::path highscore_file(const std::filesystem::path& base,
+                                    uint16_t signature, const std::string& prefix = "high/h.");
 HighscoreTable load_highscore_table(const std::filesystem::path& file);
 bool save_highscore_table(const std::filesystem::path& file, const HighscoreTable& rows);
 

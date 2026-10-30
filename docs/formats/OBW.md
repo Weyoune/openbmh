@@ -1,31 +1,6 @@
-# OBW: OpenBMH world, save and pack format
+# OBW: OpenBMH world, save and pack format (concept, format version 1.0)
 
-## Implemented profiles
-
-| Profile | Format | Reader/writer | Playable |
-|---|---|---|---|
-| `classic-installation-v1` | OBW 1.0, `runtime:classic-v1` | Complete BMH/FLTD converter; OpenBMH 0.2 launcher, GUI and console | Yes, sealed Classic content |
-| `editor-world-v1` | OBW 1.1, `editor:world-v1` | OpenBMH Editor 0.5: OBW/unpacked worlds and legacy import, OBW-only saving | No; editable start database |
-| `legacy-database-v1` | OBW 1.0 development export | Converter's explicit `--database-only` option | No; partial legacy export |
-
-`openbmh_import` produces `BMH-classic` and `FLTD-classic` worlds including
-startup inputs, media and frozen portrait recipes. The
-[import guide](obw/import.md) distinguishes them from the partial development
-export. OpenBMH 0.2 reads the sealed content without the original installation
-and writes separate native career checkpoints; see the
-[runtime contract](obw/runtime-0.2.md).
-
-The [1.1 editor profile](obw/editor-v1.md) adds editable worlds without relaxing
-Classic seals. Opening Classic content in the editor preserves its sources;
-saving creates an editor world rather than a newly sealed Classic world.
-Names such as “Modern” are display names, not proof of runtime compatibility.
-A modern-season data package can be structurally valid and fully editable while
-its competition/season engine is still pending. See [the editor guide](../EDITOR.md).
-
-The sections below define the general format and distinguish implemented
-profiles from future capabilities. Generic calendar/rule authoring, modern
-season simulation, network play and generic world-to-career generation are
-not implemented merely because their data structures are documented here.
+Status: **concept** for roadmap 0.2 (open data and typed state) with preparation for 0.4 (scalable interface, content packs). Nothing here is implemented yet; the legacy formats in this directory remain authoritative for the current engine.
 
 ## 1. Goals and non-goals
 
@@ -41,15 +16,14 @@ Goals:
 Non-goals of version 1.0:
 
 - The match engine and its parameters (reserved namespace `x-matchengine`, see §3.3).
-- Network play and a binary encoding (reserved, see §2.4). The separate editor
-  uses the additive 1.1 profile described above.
+- Network play, an editor application and a binary encoding (reserved, see §2.4).
 - Layout or screen data. Interfaces are themes (§9.6), not part of a world.
 
 ## 2. Container and files
 
 ### 2.1 Container
 
-Every OBW file is a ZIP archive (deflate or stored) containing UTF-8 JSON documents and referenced binary assets. The 1.1 editor reader also supports ZIP64, with its own documented size limits. The versioned Classic extension additionally permits data-only compatibility regions and startup input records; it does not permit executable code or save state in a world. The readers use miniz for the container; the editor additionally uses its declared JSON/image dependencies. Generic editor JSON remains editable by hand or script; sealed Classic packages must retain their original bytes and seals.
+Every OBW file is a ZIP archive (deflate or stored) containing UTF-8 JSON documents. The project already links miniz (`bmh_miniz`) and has a JSON reader/writer (`src/cli/json.cpp`), so the format needs no new dependency. JSON keeps worlds diffable and editable by hand or by script.
 
 | Extension | `kind` | Contents |
 |---|---|---|
@@ -76,7 +50,7 @@ world/calendar.json      season calendar, §7
 world/rules.json         rule values (training camps, interest rates, ...)
 state/...                save only, §5.9
 locale/<lang>/*.po       texts, §9.3
-assets/...               local Classic worlds, packs and themes, §9
+assets/...               packs and themes only, §9
 x-<name>/...             extensions, §3.3
 ```
 
@@ -138,8 +112,6 @@ Fields and directories whose name starts with `x-` belong to extensions (`x-matc
 
 Each format version is published as JSON Schema (draft 2020-12) under `docs/formats/obw/schema/<major>.<minor>/`, one file per table. The schemas are the machine-readable specification and the basis of the validator (§10).
 
-The schemas describe the intermediate `legacy-database-v1` profile and the completed `classic-installation-v1` content profile. The latter requires `runtime:classic-v1`: it contains initialization policies and data-region compatibility fields in addition to typed projections. A generic OBW reader cannot execute those fields without the Classic adapter. Save, pack, theme and fully generic playable-world schemas remain future work. Optional fields and unknown extensions remain allowed.
-
 ## 4. Identifiers and names
 
 - Every entity has a stable string id `<type>:<key>`, e.g. `nation:de`, `club:0042`, `player:01873`, `comp:de-1`, `stadium:0042`. Keys are opaque: they never encode a real name, so a world and a pack can be published independently.
@@ -189,8 +161,7 @@ Teams without a squad (`foreign`, or `national` in a world that does not simulat
 |---|---|---|---|
 | `id` | string | R | |
 | `name` | object | R | `{"first": "...", "last": "...", "known_as": "..."}`, each a plain string; `known_as` optional |
-| `born` | date | R unless `age_at_start` | Age is derived from the in-game date |
-| `age_at_start` | object | Alternative to `born` | `{"years": 22, "on": "2026-07-01"}` when a legacy database gives an age but no exact birth date. Never invent a birthday. A consumer must explicitly support this precision. |
+| `born` | date | R | Age is derived from the in-game date |
 | `nationalities` | array | R | Nation ids, first entry is the sporting nationality (national-team eligibility) |
 | `positions` | array | R | `gk`, `def`, `mid`, `fwd` in the classic set; finer positions in later attribute sets |
 | `foot` | enum | O | `left`, `right`, `both` |
@@ -201,18 +172,6 @@ Teams without a squad (`foreign`, or `national` in a world that does not simulat
 | `squad_number` | integer | O | |
 | `status` | object | O | Injury, suspension and card counters per competition (save only) |
 | `photo` | string | O | Default `asset:player/<key>/photo` |
-| `appearance` | object | O | Recipe of a composed portrait, see below |
-
-**Composed portraits.** The original game stores no picture per player: it seeds a small random generator from the player's name and picks one of four backgrounds and one part for each of five layers from a parts sheet of the installation. OBW stores the outcome as a recipe instead of an image:
-
-```json
-"appearance": {"set": "bmh-classic@1", "background": 2, "layers": [5, 0, 3, 7, 1]}
-```
-
-- `set` names a portrait part set; it defines the number of backgrounds, the layers, the number of parts per layer and their placement. `bmh-classic@1` is the set of the original game.
-- The importer computes the recipe once from the legacy name and **freezes** it. A later rename (for example by a name pack) keeps the face; the legacy name-derived generator is never re-run.
-- Players created in OpenBMH (youth, generated players) receive a random recipe of the world's default set.
-- The recipe holds indices only. The part graphics come from the user's installation or from a pack that provides the same set, possibly in higher resolution (§9.2), so a recipe does not embed a composed face. A local Classic import may include the original part set as local-only assets; distributable worlds need separately licensed artwork.
 
 An attribute set is declared once in `world/rules.json` with its fields, scales and meaning, so a later, finer model can sit next to the classic one without breaking the format:
 
@@ -273,7 +232,6 @@ A competition is an ordered list of **stages**. Each stage takes teams from **sl
   "type": "league",
   "nation": "nation:de",
   "tier": 2,
-  "trophy": "asset:comp/de-2/trophy",
   "season_cycle": 1,
   "stages": [{
     "id": "regular",
@@ -390,7 +348,7 @@ Edition detection is the one the launcher already performs (`src/launch/game_dat
 
 ### 8.2 Mapping per edition
 
-The standalone converter and its Classic contract are documented in [the edition mapping](obw/import.md) and [Classic v1](obw/classic-v1.md). The core league mapping is:
+Every edition has a mapping table in the importer (to be published with it as `docs/formats/obw/import.md`):
 
 | Legacy league | German editions | Football Limited | OBW |
 |---|---|---|---|
@@ -404,8 +362,6 @@ The standalone converter and its Classic contract are documented in [the edition
 Cups, European cups, the indoor tournament, the English FA Cup with its qualifying stage and the League Cup become competitions with the same rules the engine applies today. Relegation places, European places and promotion groups are taken from the installed tables (`kLeagueRelegation`, `kLeagueEurope`, `kGroupBelow`), not re-typed by hand.
 
 ### 8.3 Fidelity
-
-The complete `classic-installation-v1` importer preserves all installation content without starting a career. Typed projections are complemented by the versioned `x-classic` startup contract and data-only regions, including original and effective rules. Installation tests reconstruct from OBW and compare first-season initialization bytes and both RNG streams with the existing loader. They do not establish a released OBW frontend or save continuation. The optional `--database-only` intermediate profile remains explicitly non-playable. `state/x-legacy.json` is reserved for converted saves.
 
 - A new career imported from an installation must produce the same first season in the engine as the legacy start (same fixtures, same participants), verified by the regression runs.
 - A converted `.FBM` must continue with the same results as the legacy save for a fixed number of turns.
@@ -432,30 +388,6 @@ Data never refers to file paths. It uses logical keys:
 | `asset:stadium/<key>/image` | Stadium picture |
 | `asset:icon/<name>` | Interface icon |
 
-**Competition trophies.** Every competition type may set the optional string
-`trophy` to a logical key `asset:comp/<key>/trophy`. The key is stable and opaque;
-it may be shared by several competitions, and never embeds a season, localized
-name, file path, URL or runtime index. `<key>` is a nonempty sequence of ASCII
-letters, digits, `.`, `_` or `-`, excluding `.` and `..`. A competition without
-the field uses `asset:comp/<competition key>/trophy`, where the competition key is
-its `id` without `comp:`. This also applies to additional foreign leagues and
-international competitions; a fixed competition list is not part of the format.
-
-Resolve that key from active packs by priority, then the world. If unavailable,
-resolve `asset:comp/generic/trophy` through the same sources, then use the
-client's built-in neutral trophy icon. The generic key is reserved for this
-fallback. A missing trophy never prevents a competition from being played.
-An invalid explicitly supplied key is an input error, not a request to guess a
-file path. File presence is not mandatory because a pack or theme may supply
-the image later. Asset-index metadata and rights requirements still apply.
-Trophies are presentation only; they do not identify competition rules, stages
-or historical winners.
-
-This optional-field clarification remains compatible with 1.0 worlds: old
-documents omit it, older readers ignore it, and no new `requires` feature is
-needed. Classic converters emit the conventional per-competition key without
-fabricating a trophy image or changing the original local media inventory.
-
 ### 9.2 Resolution and image formats
 
 A resolver looks a key up in the active packs by priority (§9.5), then in the world, then falls back: original low-resolution graphics of the installation where one exists, a crest generated from `colors`, a silhouette for photos, a neutral icon.
@@ -463,36 +395,8 @@ A resolver looks a key up in the active packs by priority (§9.5), then in the w
 - **Crests, logos, flags, icons:** SVG preferred (scales to every resolution). Otherwise PNG with alpha in size steps 64, 128, 256 and 512 px (`crest@128.png`). The resolver picks the smallest step not below the requested size.
 - **Photos:** PNG, JPEG or WebP, aspect 3:4, reference size 300×400 px, larger allowed. Faces centred; the interface crops, it never stretches.
 - **Pictures** (stadiums, backgrounds): PNG, JPEG or WebP, 16:9 reference 1920×1080.
-- **Trophies:** SVG or PNG/WebP with alpha, preserving the full object and native
-  aspect ratio. A transparent generic trophy may be provided under the reserved
-  fallback key. No real trophy artwork is bundled by the format specification.
 
 Asset metadata sits next to the files in `assets/index.json`: key, files per size, author, source and licence (required).
-
-**Optional visual defaults (1.1).** A world may set
-`manifest.presentation: "assets/presentation.json"`. The referenced document has
-`schema: "asset-presentation@1"`, an optional `player_photo_fallback` asset key,
-`trophy_fallback` (normally `asset:comp/generic/trophy`), and
-`youth_photos: {assets: [<photo keys>], selection: "random-on-creation",
-fallback: <photo key>}`. All keys resolve through the normal asset index. A
-client supporting youth creation chooses once using its saved game RNG and
-persists the selected key; it does not reroll a face on display or rename. This
-document supplies pictures, never player records, ratings or generation rules.
-Readers without this optional feature retain it and use their existing visual
-fallbacks. The current editor preserves it without generating youth players.
-An explicitly indexed player `photo` is displayed before composing a retained
-`appearance` recipe. A visual overlay can therefore keep Classic appearance and
-all game data intact while displaying a supplied photo or silhouette. Sealed
-Classic rendering and runtime capabilities are unaffected.
-
-**Player pictures** (`asset:player/<key>/photo`) resolve in this order:
-
-1. A photo from an active pack.
-2. The player's `appearance` recipe composed from a high-resolution part set (`assets/portrait-sets/<set>/` in a pack, same indices and layer order as the original set, with its own placement table for the larger size).
-3. The same recipe composed from the original parts of the installation, scaled up.
-4. A neutral silhouette.
-
-Composed pictures may be cached in the user's cache directory; they are never written into a world, save or pack.
 
 ### 9.3 Languages
 

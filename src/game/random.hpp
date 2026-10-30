@@ -20,10 +20,6 @@ public:
     void srand(uint32_t seed) { seed_ = seed; }
     uint32_t seed() const { return seed_; }
     uint64_t calls() const { return calls_; }
-    void restore(uint32_t seed, uint64_t calls) {
-        seed_ = seed;
-        calls_ = calls;
-    }
     int rand() {
         calls_++;
         if (draw_hook) draw_hook(1);
@@ -51,10 +47,6 @@ public:
     int32_t seed() const { return seed_; }
     void set_seed(int32_t seed) { seed_ = seed; }
     uint64_t calls() const { return calls_; }
-    void restore(int32_t seed, uint64_t calls) {
-        seed_ = seed;
-        calls_ = calls;
-    }
     int32_t range(int32_t lo, int32_t hi) {
         calls_++;
         if (draw_hook) draw_hook(0);
