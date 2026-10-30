@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
 cmake_minimum_required(VERSION 3.24)
 project(OpenBMH VERSION 1.0.1 LANGUAGES CXX C)
+if(APPLE)
+    # Enable native languages before dependencies/subdirectories inherit rules.
+    enable_language(OBJC OBJCXX)
+endif()
 set(OPENBMH_PRERELEASE "" CACHE STRING "Prerelease identifier; empty for final release")
 set(OPENBMH_PRODUCT_VERSION "${PROJECT_VERSION}")
 if(OPENBMH_PRERELEASE)
@@ -1138,7 +1142,6 @@ target_include_directories(video_session_tests PRIVATE src)
 target_link_libraries(video_session_tests PRIVATE ${BMH_SDL_TARGET})
 add_test(NAME video_session_tests COMMAND video_session_tests)
 if(APPLE)
-    enable_language(OBJCXX)
     add_executable(mac_video_picker_tests tests/mac_video_picker_tests.mm)
     set_target_properties(mac_video_picker_tests PROPERTIES OBJCXX_STANDARD 20 OBJCXX_STANDARD_REQUIRED YES)
     target_include_directories(mac_video_picker_tests PRIVATE src)
