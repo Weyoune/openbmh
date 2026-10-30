@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "app/video_session.hpp"
 #include <iostream>
-int main()try {
+int main(int, char**)try {
     SDL_setenv("SDL_VIDEODRIVER","dummy",1);
     { bmh::app::VideoSession video;
       if (!(SDL_WasInit(SDL_INIT_VIDEO) & SDL_INIT_VIDEO)) return 1;
