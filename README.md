@@ -14,12 +14,14 @@ Check the [releases page](https://github.com/Weyoune/openbmh/releases) for avail
 2. Extract the OpenBMH package into a separate directory, or alongside the game files.
 3. Start `OpenBMH` (`OpenBMH.exe` on Windows). Select the game directory or executable when prompted. A ZIP or 7z containing one game installation can also be selected.
 
-From a terminal:
+From a terminal in the extracted package on Linux or macOS:
 
 ```sh
-OpenBMH --data "path/to/game" --save-directory "path/to/saves"
-openbmh_cli --console --data "path/to/game" --saves "path/to/saves"
+./OpenBMH --data "path/to/game" --save-directory "path/to/saves"
+./openbmh_cli --console --data "path/to/game" --saves "path/to/saves"
 ```
+
+In Windows PowerShell, use `.\OpenBMH.exe` and `.\openbmh_cli.exe` instead.
 
 Use a writable save directory and keep backups of existing games. German editions are the primary compatibility target. **Football Limited / English data support is experimental**; original V2.20 save import and some edition-specific behaviour remain limited. See the [release notes](docs/release/1.0/RELEASE_NOTES.md).
 
@@ -31,7 +33,7 @@ OpenBMH focuses on original-game compatibility, stability and community contribu
 
 ## Build from source
 
-The following recipes target OpenBMH 1.0 release candidates. They require Git, CMake 3.24 or newer and a C++20 compiler. The first configure fetches pinned open-source dependencies. Native build and package results are documented for each release; these instructions do not claim an untested platform result.
+The following recipes build OpenBMH 1.0. They require Git, CMake 3.24 or newer and a C++20 compiler. The first configure fetches pinned open-source dependencies. Native build and package results are documented for each release; these instructions do not claim an untested platform result.
 
 Clone the public repository, then run the commands for your system:
 

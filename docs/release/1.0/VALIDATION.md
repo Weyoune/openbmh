@@ -1,9 +1,9 @@
-# Classic 1.0 candidate validation
+# OpenBMH 1.0 validation
 
 Scope: recorded automated/original-data checks. Exact final source revision and native platform build records accompany the published release.
 
 - Linux x64 Release build: all targets compiled.
-- CTest: 35 passed, 157 skipped, zero failures (192 registered tests). Skips require separately configured original-data or save fixtures; they are not acceptance passes.
+- Local Linux CTest: 35 passed, 157 skipped, zero failures (192 registered tests). Skips require separately configured original-data or save fixtures; they are not acceptance passes.
 - Synthetic tests cover unchanged executable image loading, nine original strength ranges, atomic rejection of malformed ranges, unsupported environment guards, and legacy/extended/truncated crest gates.
 - Public source scan: zero findings; generated differences catalogue matches source markers.
 - Version output: both GUI and console identify 1.0.0-rc.1.
