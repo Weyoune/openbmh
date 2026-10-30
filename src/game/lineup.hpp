@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #pragma once
-// OpenBMH deviates from the original: disables the foreign-player limit and supports owner-bound designated set-piece selection.
+// OpenBMH deviates from the original: supports owner-bound designated set-piece selection.
 // Automatic line-up of computer teams, port of Int2.
 //
 // The squad of a team is a run of squad slots (squad_range). The first 11 slots are the
@@ -21,7 +21,7 @@
 // The chosen player is swapped into slot p and flagged 0x8000 (slots 0-10) or 0x4000.
 //
 // Ported: assistant training-camp familiarity penalty and detailed position scoring at
-// difficulty >= 6. The foreign-player limit (ForeignPlayerLimitEnabled) is off in supported rule profile.
+// difficulty >= 6. The supplied edition controls the original foreign-player limit.
 
 #include <cstdint>
 #include <array>
@@ -30,6 +30,10 @@
 #include "game/state.hpp"
 
 namespace bmh {
+class LeImage;
+// Install the supplied edition's original automatic-lineup rule switch.
+void install_lineup_rules(const LeImage& exe);
+
 
 // Games: in-place quicksort (Hoare partition, middle element as pivot) of `keys`
 // descending (ascending if `ascending`), comparing as unsigned 32-bit, moving `items`
@@ -93,7 +97,7 @@ bool save_pitch_formation_source(GameState& g, int manager_slot, int runtime_clu
                                  int formation, uint8_t expected_weights,
                                  const std::array<uint8_t, 22>& formation_positions);
 
-// OpenBMH deviates from the original: disables the foreign-player limit and supports owner-bound designated set-piece selection.
+// OpenBMH deviates from the original: supports owner-bound designated set-piece selection.
 // supported rule profile NormalizePitchSetPieceSource/NormalizePitchSetPieceSource3/NormalizePitchSetPieceSource2/NormalizePitchSetPieceSource4: deterministic, owner-bound
 // set-piece presentation state. Stored takers are player_id+1; zero is AUTO.
 bool normalize_pitch_set_piece_source(GameState& g, int manager_slot, int runtime_club);

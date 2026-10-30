@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #pragma once
-// The OpenBMH version. CMake sets OPENBMH_VERSION from project(... VERSION ...) in the top
-// CMakeLists.txt - the one place to change it; this fallback only serves other builds.
+// Only the product entry points include the generated version, so changing a
+// release number does not rebuild the game, test suites or third-party code.
 #ifndef OPENBMH_VERSION
-#define OPENBMH_VERSION "0.1.0-dev"
+#if __has_include("openbmh_build_version.hpp")
+#include "openbmh_build_version.hpp"
+#else
+#define OPENBMH_VERSION "development"
+#endif
 #endif
 
 namespace bmh {

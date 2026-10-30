@@ -37,3 +37,7 @@ The supplied edition controls whether foreign league clubs use individual
 original crests or the original neutral crest. OpenBMH recognizes the verified
 Diamond 3.7 drawing gate and uses its database/save selectors and W atlases.
 Older drawing gates retain their own behaviour; no external crest pack is needed.
+
+The automatic lineup installs the supplied foreign-player rule switch alongside the career tables. Where enabled, it restores the original three/two-player limit, reserve swaps with board-coordinate preservation and the short-lineup outcome when domestic reserves are unavailable. This does not consume additional random draws.
+
+New careers correct the original all-zero EM qualification placeholders to the original national-team placeholders. Supplied nonzero seeds and restored savegame state are not rewritten by this initialization.

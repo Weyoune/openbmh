@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "game/lineup.hpp"
+#include "formats/le.hpp"
+#include "game/match.hpp"
+#include "game/weekly.hpp"
 
 #include <cstdlib>
 #include <stdexcept>
@@ -10,6 +13,7 @@
 namespace bmh {
 
 namespace {
+bool original_foreign_limit_enabled = false;
 
 // Position type by formation depth x (table at layout field).
 constexpr int8_t kTypeByDepth[24] = {0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 0, 1, 2, 2};
@@ -317,6 +321,10 @@ bool save_pitch_formation_source(GameState& g, int manager_slot, int runtime_clu
     }
 }
 
+void install_lineup_rules(const LeImage& exe) {
+    original_foreign_limit_enabled = exe.u8(layout::ForeignPlayerLimitEnabled) != 0;
+}
+
 static void auto_lineup_impl(GameState& g, int team, int mode, int manager) {
     if (team >= 138 && team != kNoTeam) return;  // teams without squads
     if (g.lineups_frozen) return;  // LineupRuntimeField (the season change)
@@ -574,8 +582,52 @@ static void auto_lineup_impl(GameState& g, int team, int mode, int manager) {
                 break;
             }
         }
-    // OpenBMH deviates from the original: disables the foreign-player limit in the supported rule profile.
-// (foreign-player limit ForeignPlayerLimitEnabled is off in the supported rule profile)
+    if (original_foreign_limit_enabled) {
+        const int country = team_region(team) & 0xff;
+        const int allowed = 3 - int(country != 0);
+        std::vector<int> foreign_rows, foreign_roles;
+        for (int row = 0; row < 11; ++row) {
+            const int id = g.squad_slots.at(range.first + row) & 0x0fff;
+            if (id != 0x0fff && nationality(g, id) != country) {
+                foreign_rows.push_back(row);
+                foreign_roles.push_back(g.players.at(id).position());
+            }
+        }
+        int tolerance = 0;
+        for (int attempt = 0; foreign_rows.size() > size_t(allowed) && attempt < 200; ++attempt) {
+            ++tolerance;
+            if (tolerance > 100) {
+                // No suitable domestic reserve: retain the original short-lineup
+                // outcome rather than fielding more foreign players than allowed.
+                g.squad_slots.at(range.first + foreign_rows.back()) &= 0x1fff;
+                foreign_rows.pop_back(); foreign_roles.pop_back();
+                continue;
+            }
+            for (int row = 11; row < players && value[row] != kUnavailable; ++row) {
+                const int id = g.squad_slots.at(range.first + row) & 0x0fff;
+                if (id == 0x0fff || nationality(g, id) != country) continue;
+                const int role = g.players.at(id).position();
+                const int replaced_role = foreign_roles.back();
+                if ((role == 0 && replaced_role != 0 && tolerance <= 7) ||
+                    std::abs(role - replaced_role) >= tolerance) continue;
+                const int field = foreign_rows.back();
+                foreign_rows.pop_back(); foreign_roles.pop_back();
+                auto& incoming = g.squad_slots.at(range.first + row);
+                auto& outgoing = g.squad_slots.at(range.first + field);
+                incoming = uint16_t((incoming & 0x1fff) | 0x8000);
+                outgoing = uint16_t((outgoing & 0x1fff) | (row < 17 ? 0x4000 : 0));
+                std::swap(incoming, outgoing);
+                std::swap(value[row], value[field]);
+                if (manager >= 0) {
+                    std::swap_ranges(board(row), board(row) + 0x58, board(field));
+                    std::swap(board(row)[0x41], board(field)[0x41]);
+                    std::swap(board(row)[0x42], board(field)[0x42]);
+                }
+                tolerance = 0;
+                if (foreign_rows.size() <= size_t(allowed)) break;
+            }
+        }
+    }
     // After a full line-up every player in the eleven or on the bench notes his squad slot
     // (relative to the squad start) in bits 0-4 of his card word (*PlayerCards).
     if (!first_eleven_only && !g.player_cards.empty())

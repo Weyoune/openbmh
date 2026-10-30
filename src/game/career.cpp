@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "game/career.hpp"
+#include "game/lineup.hpp"
 
 #include <algorithm>
 
@@ -38,6 +39,7 @@ void install_career_rules(const LeImage& exe) {
         if (next[league][0] > next[league][1] || next[league][1] > 99)
             throw FormatError("career: unsupported original league strength range");
     }
+    install_lineup_rules(exe);
     for (int league = 0; league < 9; ++league)
         for (int bound = 0; bound < 2; ++bound) kLeagueStrength[league][bound] = next[league][bound];
 }

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "game/season.hpp"
+#include "formats/executable_layout.hpp"
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
@@ -29,6 +30,18 @@ void run(bmh::GameState& g, bmh::GameRandom& game, bmh::WatcomRandom& rand) {
 }
 }
 int main() try {
+    {
+        auto g = fixture(2928, 20);
+        constexpr uint32_t entry = bmh::layout::CupTable + 14 * 0x28;
+        g.memory.set8(entry, 0x7f);
+        bmh::initialize_european_qualification_seed(g);
+        check(g.memory.u16(entry + 0x22) == 357 && g.memory.u16(entry + 0x24) == 358 &&
+              g.memory.u8(entry) == 0x7f, "empty EM seeds did not become national teams without changing descriptor data");
+        g.memory.set16(entry + 0x22, 361); g.memory.set16(entry + 0x24, 364);
+        bmh::initialize_european_qualification_seed(g);
+        check(g.memory.u16(entry + 0x22) == 361 && g.memory.u16(entry + 0x24) == 364,
+              "existing original national qualification seeds were overwritten");
+    }
     for (const auto [slot, foreign] : {std::pair{2928, false}, {2971, false}, {2972, false}, {3071, true}}) {
         auto g = fixture(slot, 47, foreign);
         bmh::GameRandom game(4711); bmh::WatcomRandom rand(815);
@@ -48,6 +61,16 @@ int main() try {
               "young club player changed ownership or age progression");
         check(game.calls() == 0 && rand.calls() == 1,
               "unchanged club ageing consumed additional random draws");
+    }
+    {
+        auto g = fixture(0, 20);
+        g.squad_slots[2968] = 0; // Cached contract/offer row still references this club player.
+        bmh::GameRandom game(4711); bmh::WatcomRandom rand(815);
+        run(g, game, rand);
+        check(g.players[0].age() == 21 && g.squad_slots[0] == 0 && g.squad_slots[2968] == 0,
+              "cached offer aged or recycled a player still owned by his club");
+        check(game.calls() == 0 && rand.calls() == 1,
+              "cached offer consumed a second retirement draw for its club player");
     }
     {
         auto g = fixture(3072, 47);

@@ -39,7 +39,10 @@ jobs:
       # Audit the selected tree shipped in source archives. Full repository
       # history auditing is available separately with --history.
       - name: Verify source export
-        run: python3 tools/public_release/check_public_tree.py --root .
+        run: |
+          python3 tools/public_release/check_public_tree.py --root .
+          python3 tools/ci/test_build_runnable_tests.py
+          python3 tools/package/test_verify_ci_release.py
       - name: Set up MSVC x64
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@a102174a2b586eec2ea151a69e6fd14404a8ce7c # v1.13.0
@@ -64,10 +67,20 @@ jobs:
         run: |
           test "$(uname -m)" = arm64
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 -DBMH_DATA= -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-      - name: Build every target
-        run: cmake --build build --config Release --parallel 2
+      - name: Build products and every runnable test
+        run: python3 tools/ci/build_runnable_tests.py --build build --config Release --parallel 2
       - name: Run synthetic tests and report data tests as skipped
         run: ctest --test-dir build -C Release --output-on-failure --output-junit test-results.xml
+      - name: Verify product versions
+        shell: python
+        run: |
+          import pathlib, subprocess, sys
+          build = pathlib.Path('build').resolve()
+          version = (build / 'product-version.txt').read_text().strip()
+          suffix = '.exe' if sys.platform == 'win32' else ''
+          cli = subprocess.run([str(build / ('openbmh_cli' + suffix)), '--version'], check=True, capture_output=True, text=True)
+          assert cli.stdout.strip() == 'OpenBMH console ' + version
+          subprocess.run([str(build / ('OpenBMH' + suffix)), '--version'], check=True)
       - name: Package products and licenses
         run: python3 tools/package/make_package.py --build build --out dist --platform ${{ matrix.platform }}
       - name: Package corresponding source and pinned dependencies

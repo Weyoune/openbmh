@@ -13,6 +13,9 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <optional>
 #include <map>
 #include <set>
 #include <stdexcept>
@@ -20,6 +23,7 @@
 
 #include "app/career_session.hpp"
 #include "game/desk_actions.hpp"
+#include "game/save.hpp"
 #include "game/lineup.hpp"
 #include "game/matchday.hpp"
 #include "game/month.hpp"
@@ -69,6 +73,37 @@ void check_state(const GameState& g, const std::string& when, Checks& c) {
             if ((g.squad_slots.at(s) & 0xfff) != 0xfff) n++;
         if (n < 11) c.fail("human squad below 11 players", when + " " + std::to_string(n));
     }
+}
+
+// Optional private investigation: snapshots use their own save-envelope RNG;
+// observing a failure never consumes either gameplay stream.
+bool capture_duplicate(const GameState& before, const GameState& after,
+                       const std::filesystem::path& directory) {
+    std::set<int> seen;
+    int duplicate = -1;
+    for (size_t slot = 0; slot < 2928 && slot < after.squad_slots.size(); ++slot) {
+        const int id = after.squad_slots[slot] & 0xfff;
+        if (id != 0xfff && !seen.insert(id).second) { duplicate = id; break; }
+    }
+    if (duplicate < 0) return false;
+    std::filesystem::create_directories(directory);
+    WatcomRandom envelope(1);
+    write_savegame(directory / "before_duplicate.FBM", make_savegame(before, envelope));
+    write_savegame(directory / "after_duplicate.FBM", make_savegame(after, envelope));
+    std::ofstream report(directory / "duplicate.txt");
+    report << "player=" << duplicate << " before_day=" << before.date << " after_day=" << after.date << '\n';
+    for (const auto* state : {&before, &after}) {
+        report << "day=" << state->date << " age=" << state->players.at(size_t(duplicate)).age() << '\n';
+        for (size_t slot = 0; slot < state->squad_slots.size(); ++slot)
+            if ((state->squad_slots[slot] & 0xfff) == duplicate)
+                report << "slot=" << slot << " team=" << slot_team(int(slot)) << " flags=" << (state->squad_slots[slot] & 0xf000) << '\n';
+        for (uint32_t row = 0; row < 200; ++row) {
+            const auto value = state->memory.u32(layout::Career_RemoveJoinLoans_RuntimeField + row * 4);
+            if (value && (value & 0xfff) == uint32_t(duplicate))
+                report << "loan_row=" << row << " raw=" << value << '\n';
+        }
+    }
+    return true;
 }
 
 // The matchday just played. Cup phase 2 stores the shoot-out goals added to the
@@ -150,6 +185,8 @@ int main(int argc, char** argv) {
     Checks checks;
     std::string gap;
     int played = 0, goals = 0, matches = 0, seasons = 0;
+    const char* duplicate_directory = std::getenv("SIM_DUPLICATE_DIR");
+    bool duplicate_captured = false;
     try {
         app::CareerSession session(argv[1], argc > 4 ? uint32_t(std::stoul(argv[4])) : 1u);
         ui::SetupOptions options;  // 5 seasons, level 2, one manager, mode III, league and world
@@ -305,6 +342,8 @@ int main(int argc, char** argv) {
                     if (offer.status == TransferActionStatus::pending || offer.status == TransferActionStatus::accepted) break;
                 }
             }
+            std::optional<GameState> duplicate_before;
+            if (duplicate_directory && !duplicate_captured) duplicate_before = g;
             ui::DeskRequest kickoff;
             kickoff.kind = ui::DeskRequestKind::advance_turn;
             kickoff.manager_slot = int(g.memory.u8(::bmh::layout::ActiveManager));
@@ -314,6 +353,8 @@ int main(int argc, char** argv) {
                 gap = r.reason.empty() ? error : r.reason;
                 break;
             }
+            if (duplicate_before && capture_duplicate(*duplicate_before, g, duplicate_directory))
+                duplicate_captured = true;
             if (r.kind == TurnDeskKind::CareerComplete) {
                 ++played;
                 std::printf("turn %d (day %u): career complete\n", played, r.date);

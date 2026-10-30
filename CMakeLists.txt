@@ -1,14 +1,15 @@
 # SPDX-License-Identifier: GPL-3.0-only
 cmake_minimum_required(VERSION 3.24)
 project(OpenBMH VERSION 1.0.0 LANGUAGES CXX C)
-set(OPENBMH_PRERELEASE "rc.1" CACHE STRING "Prerelease identifier; empty for final release")
+set(OPENBMH_PRERELEASE "" CACHE STRING "Prerelease identifier; empty for final release")
 set(OPENBMH_PRODUCT_VERSION "${PROJECT_VERSION}")
 if(OPENBMH_PRERELEASE)
     string(APPEND OPENBMH_PRODUCT_VERSION "-${OPENBMH_PRERELEASE}")
 endif()
 file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/product-version.txt" CONTENT "${OPENBMH_PRODUCT_VERSION}\n")
 # the one place of the version: --version of both programs and the window title (src/version.hpp)
-add_compile_definitions(OPENBMH_VERSION="${OPENBMH_PRODUCT_VERSION}")
+file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/generated/openbmh_build_version.hpp"
+    CONTENT "// SPDX-License-Identifier: GPL-3.0-only\n#pragma once\n#define OPENBMH_VERSION \"${OPENBMH_PRODUCT_VERSION}\"\n")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -447,6 +448,7 @@ target_link_libraries(openbmh_play PRIVATE bmhui bmhlaunch_dialog openbmh_audio 
 # a game without a console window on double-click (SDL2main provides WinMain); started from a
 # console it attaches to that one for --version, --help and start errors (src/app/main.cpp)
 set_target_properties(openbmh_play PROPERTIES WIN32_EXECUTABLE TRUE OUTPUT_NAME OpenBMH)
+target_include_directories(openbmh_play PRIVATE "${CMAKE_BINARY_DIR}/generated")
 if(MSVC)
     target_compile_options(openbmh_play PRIVATE /utf-8)
     # App sources also compile in headless tests/helpers without target /utf-8.
@@ -626,6 +628,7 @@ add_executable(openbmh_cli
     src/cli/seat_hub.cpp
     src/cli/json.cpp
     ${BMH_APP_SESSION_SOURCE})
+target_include_directories(openbmh_cli PRIVATE "${CMAKE_BINARY_DIR}/generated")
 target_link_libraries(openbmh_cli PRIVATE bmhui bmhlaunch)
 if(WIN32)
     target_link_libraries(openbmh_cli PRIVATE ws2_32)  # --listen (Winsock)
@@ -1120,3 +1123,7 @@ add_executable(season_player_reset_tests tests/season_player_reset_tests.cpp)
 target_link_libraries(season_player_reset_tests PRIVATE bmhcore)
 add_test(NAME season_player_reset_tests COMMAND season_player_reset_tests)
 set_tests_properties(season_player_reset_tests PROPERTIES TIMEOUT 10)
+
+add_executable(lineup_foreign_limit_tests tests/lineup_foreign_limit_tests.cpp)
+target_link_libraries(lineup_foreign_limit_tests PRIVATE bmhcore)
+add_test(NAME lineup_foreign_limit_tests COMMAND lineup_foreign_limit_tests)

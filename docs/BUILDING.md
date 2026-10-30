@@ -50,3 +50,14 @@ build/openbmh_cli --console --data "path/to/game" --saves "path/to/saves" --seed
 ```
 
 For redistribution, include [LICENSE](../LICENSE), [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md), the full texts in [licenses/](licenses/README.md), and the corresponding source and build information required by the applicable licenses. Inspect the actual libraries in each platform package; static SDL2 alone does not establish that every dependency is static.
+
+## Build the data-free CI subset
+
+`cmake --build build` compiles every development helper and test. With no private integration data configured, CI builds both products and every executable actually referenced by CTest instead:
+
+```sh
+python3 tools/ci/build_runnable_tests.py --build build --config Release --parallel 2
+ctest --test-dir build -C Release --output-on-failure
+```
+
+Tests whose inputs are unavailable still report a skip through the normal optional-data helper; they are not counted as passes. Supplying integration data during configuration causes their real programs to enter this build subset automatically. Source-export and build-discovery checks run separately in CI.

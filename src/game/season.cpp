@@ -1167,10 +1167,16 @@ void season_players(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteRe
         uint8_t count = 0xff;         // local_20
         int8_t owner = -1;            // local_24: the club's human manager
         size_t board_first = 0;       // local_3c
+        std::vector<bool> processed(g.players.size(), false);
         for (int s = 0; s < 0xc00 && !report.unsupported; s++) {
             for (;;) {
                 const int player = g.squad_slots.at(size_t(s)) & 0xFFF;
                 if (player == 0xFFF) break;
+                // OpenBMH deviates from the original: age/retire each player
+                // once, even when a temporary offer row references his club
+                // slot or regeneration moves him to a later free-agent slot.
+                if (processed.at(size_t(player))) break;
+                processed.at(size_t(player)) = true;
                 const int team = slot_team(s);
                 if (team != int(last_team)) {  // (-1 for the pool never equals 0xFFFF)
                     count = 0xff;
@@ -1643,6 +1649,16 @@ SeasonTransitionOutcome season_transition(GameState& g, GameRandom& game, Watcom
 
 namespace bmh {
 
+void initialize_european_qualification_seed(GameState& g) {
+    constexpr uint32_t entry = layout::CupTable + 14 * 0x28;
+    if (g.memory.u16(entry + 0x22) == 0 && g.memory.u16(entry + 0x24) == 0) {
+        // OpenBMH deviates from the original: initializes the empty EM qualifier
+        // seeds with national teams, preventing club zero from entering the EM.
+        g.memory.set16(entry + 0x22, 357);
+        g.memory.set16(entry + 0x24, 358);
+    }
+}
+
 bool career_season_setup(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteReport& report,
                          const std::function<void(const char*)>& pause,
                          const SeasonCupDrawHook& cup_draw) {
@@ -1662,6 +1678,7 @@ bool career_season_setup(GameState& g, GameRandom& game, WatcomRandom& rand, Min
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField5, uint16_t(first_small + 0x1f));
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField4, uint16_t(first_small + 0x13));
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField3, uint16_t(foreign + 1));
+    initialize_european_qualification_seed(g);
     mem.set16(::bmh::layout::Career_CompetitionPointersEnglish_ExecutableField28, 0);
     mem.set16(::bmh::layout::Cup_AdvanceCup_RuntimeField6, 0);
     mem.set16(::bmh::layout::Cup_AdvanceCup_RuntimeField5, 7);

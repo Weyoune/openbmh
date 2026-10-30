@@ -187,6 +187,10 @@ void cup_group_overview_effects(GameState& g, int group_index);
 // LeagueName: the name of a league below 5 (with its letter, e.g. for the third divisions).
 std::string league_name(const GameState& g, int league);
 
+// New careers: fill the original uninitialized EM qualification placeholders;
+// preserve any nonzero seeds supplied by the installation.
+void initialize_european_qualification_seed(GameState& g);
+
 // Season boundary: reset manager boards, age/retire players and clear seasonal
 // histories. Kept separate from cup draws, accounts and calendar advancement.
 void season_players(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteReport& report);
