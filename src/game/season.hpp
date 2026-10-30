@@ -187,6 +187,10 @@ void cup_group_overview_effects(GameState& g, int group_index);
 // LeagueName: the name of a league below 5 (with its letter, e.g. for the third divisions).
 std::string league_name(const GameState& g, int league);
 
+// Season boundary: reset manager boards, age/retire players and clear seasonal
+// histories. Kept separate from cup draws, accounts and calendar advancement.
+void season_players(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteReport& report);
+
 // MonthChange(absolute squad slot): the player leaves his club for the free agents with new
 // values (W and game draws) and an age W(4, 15); his club closes the gap (ReleasePlayer,
 // with a human club its tactics board as well). False if the source ownership/state

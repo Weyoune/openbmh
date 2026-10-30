@@ -1104,8 +1104,6 @@ bool release_player(GameState& g, int slot, GameRandom& game, WatcomRandom& rand
     return true;
 }
 
-namespace {
-
 // CareerSeasonSetup3: the players' new season. Records and boards of the managers restart
 // (with new advertising offers, TransferListCountdown2); then every squad and pool slot: players
 // out for their career recover now and then with a human club's good doctor, else leave;
@@ -1234,7 +1232,9 @@ void season_players(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteRe
                     // a year older
                     p.w368 &= 0xf8003fffu;
                     int age = int16_t(((p.w364 >> 21) & 0x1f) + 1);
-                    if (s < 0xb70 && rand.range(0x10, 0x16) < age && owner == -1) {
+                    // OpenBMH deviates from the original: includes transfer-market
+                    // players in retirement so the five-bit age cannot wrap to 16.
+                    if (rand.range(0x10, 0x16) < age && owner == -1) {
                         if (count != 0xff) count = uint8_t(squad_count(g, team, 2) + loans[team]);
                         if (count > 0xd) {
                             count--;
@@ -1252,6 +1252,10 @@ void season_players(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteRe
                 if (std::getenv("BMH_TRACE"))
                     std::printf("  [release slot %d player %d team %d age %u count %u]\n", s, player, team, (p.w364 >> 21) & 0x1f, count);
                 if (!release_player(g, s, game, rand, report)) return;
+                // Club releases compact their squad in remove_from_seller. Pool
+                // releases have no club: retire this source entry explicitly after
+                // the regenerated player has been placed in the free-agent pool.
+                if (team < 0) g.squad_slots.at(size_t(s)) = 0x0fff;
             }
         }
         g.lineups_frozen = false;
@@ -1261,6 +1265,8 @@ void season_players(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteRe
     for (size_t i = 0; i < size_t(0x8a) * 0x1a && i < g.position_history.size(); i++) g.position_history[i] = 0;
     std::fill(g.results.begin(), g.results.end(), uint8_t(0xcc));
 }
+
+namespace {
 
 // The end of the CareerSession_RuntimeError_RuntimeField4 branch of DailyInterest: histories beyond 50 seasons shift
 // (SeasonEndSteps), the managers' season record starts (ManagerOf(m, 0, -2)), the

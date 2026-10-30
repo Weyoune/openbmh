@@ -17,6 +17,7 @@ describe deliberate changes; they are not a list of every known compatibility li
 - [src/game/match.hpp](../src/game/match.hpp): uses the enhanced injury selection and suspension rules.
 - [src/game/match_engine.cpp](../src/game/match_engine.cpp): supports designated set-piece takers, the enhanced injury tables, and the extended suspension fields.
 - [src/game/season.cpp](../src/game/season.cpp): retains the enhanced academy player-generation strength bands with monthly youth budgets.
+- [src/game/season.cpp](../src/game/season.cpp): includes transfer-market players in retirement so the five-bit age cannot wrap to 16.
 - [src/game/season.hpp](../src/game/season.hpp): retains the enhanced academy player-generation strength bands with monthly youth budgets.
 - [src/game/state.hpp](../src/game/state.hpp): retains designated set-piece selections in the supported manager-record extension.
 - [src/game/week.cpp](../src/game/week.cpp): uses the enhanced training rules: focus strength is at least five below its target, and completed skills rotate to another focus.

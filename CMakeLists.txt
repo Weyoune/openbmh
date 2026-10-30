@@ -1115,3 +1115,8 @@ file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/package-dependencies.json" CONTENT "${
 add_executable(classic_rules_unit_tests tests/classic_rules_unit_tests.cpp)
 target_link_libraries(classic_rules_unit_tests PRIVATE bmhcore)
 add_test(NAME classic_rules_unit_tests COMMAND classic_rules_unit_tests)
+
+add_executable(season_player_reset_tests tests/season_player_reset_tests.cpp)
+target_link_libraries(season_player_reset_tests PRIVATE bmhcore)
+add_test(NAME season_player_reset_tests COMMAND season_player_reset_tests)
+set_tests_properties(season_player_reset_tests PROPERTIES TIMEOUT 10)

@@ -41,6 +41,7 @@ caves are evidence of the old defect, not an implementation requirement.
 
 Initial source review finds corrected camp field packing and separated card
 save-back contexts already present. Their dedicated regression acceptance is
-still pending. Retirement handling still excludes transfer-market slots and
-requires correction. The complete 33-item review is tracked privately; none of
+still pending. Transfer-market retirement is now corrected and covered by a
+synthetic season-boundary regression test, including relocation uniqueness and
+unchanged club-player random draws. The complete 33-item review is tracked privately; none of
 the unreviewed entries is claimed complete.

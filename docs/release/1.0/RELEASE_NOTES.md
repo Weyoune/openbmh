@@ -7,3 +7,5 @@ Reviewed backports include host filename/path handling, explicit quit confirmati
 This candidate is under compatibility validation, especially edition-dependent rules and environment behaviour. No complete platform or original-game acceptance is claimed before its recorded tests pass. Existing 0.2/editor releases remain historical; NextGen development moves to Dreierpack Manager.
 
 Diamond 3.7 foreign league crests use the supplied edition's original drawing gate, database selectors and W sheets. Older editions retain their original neutral foreign-club crest.
+
+Transfer-market players now enter the season-boundary retirement process, preventing the five-bit age from wrapping from 47 to 16. Relocated free agents no longer leave a duplicate in their old market slot. Young club players retain their existing random-draw count.
