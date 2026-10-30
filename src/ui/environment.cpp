@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/environment.hpp"
 
@@ -50,7 +51,7 @@ const char* result_name(EnvironmentRequestKind kind) {
 bool generic_badge(int club) {
     // SourceBadgeFallback gates on the runtime club ID, before looking up its W sprite.
     const unsigned team = unsigned(club) & 0xfff;
-    return team == 0xfff || (team >= 90 && team <= 137) || (team >= 168 && team <= 356);
+    return original_badge_fallback(int(team));
 }
 } // namespace
 

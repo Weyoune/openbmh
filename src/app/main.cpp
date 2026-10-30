@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/live_timing.hpp"
 // openbmh_play - the UI of src/ui connected to the engine: options, manager dialogs, a new
@@ -684,8 +685,7 @@ int main(int argc, char** argv) {
                 view.manager_name += char(state.manager_records[base + 0xa8 + i]);
             view.body = event.text;
             view.portrait = state.manager_records[base + 0x221];
-            view.badge_fallback = event.team == 0x0fff || (event.team > 89 && event.team < 138) ||
-                (event.team > 167 && event.team < 357);
+            view.badge_fallback = original_badge_fallback(event.team);
             view.badge_sprite = view.badge_fallback ? 0 : le16(state.club_heap_78, size_t(event.team) * 2) & 0x1ff;
             ui::GameEndTaxDialog screen(data, std::move(view), game_end_options(state),
                 event.kind == SeasonTaxEventKind::outcome ? season_backdrop : std::optional<Image>{});

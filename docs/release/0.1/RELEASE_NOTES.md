@@ -19,7 +19,7 @@ OpenBMH reconstructs the Bundesliga Manager Hattrick engine in C++20. The graphi
 - Setup ignores mouse releases without a matching press on that screen, so
   window activation cannot toggle the initial league/national-team selection
   through that input path ([#10](https://github.com/Weyoune/openbmh/issues/10)).
-- Source builds include the standalone [OBW installation converter](../../formats/obw/import.md).
+- Source builds include the standalone [OBW installation converter](https://github.com/Weyoune/openbmh/blob/v0.2.1/docs/formats/obw/import.md).
   It produces intermediate database conversions; game integration remains
   planned for 0.2.
 

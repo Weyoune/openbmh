@@ -1976,3 +1976,13 @@ inline constexpr auto EnglishDesktopBinSourceX = 0x6e180;
 inline constexpr auto EnglishDesktopBinSourceY = 0x6e182;
 inline constexpr auto EnglishDesktopSocketSourceX = 0x6e184;
 }  // namespace bmh::layout
+
+namespace bmh::layout {
+inline constexpr auto EnvironmentBudgetSteps = 0xa50ff;
+inline constexpr auto EnvironmentVerifiedCodeBegin = 0x6c000;
+inline constexpr auto EnvironmentVerifiedCodeEnd = 0x6cb40;
+inline constexpr auto EnvironmentVerifiedHookBegin = 0x7af65;
+inline constexpr auto EnvironmentVerifiedHookEnd = 0x7b020;
+}
+
+namespace bmh::layout { inline constexpr auto ForeignBadgeGateInstruction = 0x10070; }

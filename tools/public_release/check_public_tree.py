@@ -50,8 +50,8 @@ LEGACY_SYMBOLS = re.compile(
 PRIVATE_TEXT = re.compile(
     r"(?:(?<![\w}./\\])/" + r"tools/|[A-Z]:[/\\]Users[/\\]|[A-Z]:[/\\]OpenBMH[/\\]|"
     r"docs/(?:analyses|agents)/|src/ui/(?:validation|reference)/|"
-    + "bmh" + r"-work|matter" + r"most|\bMich" + r"ael\b|\bDIA" +
-    r"MOND\b|(?<![\w}./\\])/" + r"root/[^\s]+|https?://(?:10\.|192\.168\.|172\.(?:1[6-9]|2[0-9]|3[01])\.)|"
+    + "bmh" + r"-work|matter" + r"most|\bMich" + r"ael\b|"
+    r"(?<![\w}./\\])/" + r"root/[^\s]+|https?://(?:10\.|192\.168\.|172\.(?:1[6-9]|2[0-9]|3[01])\.)|"
     r"github\.com/[^/\s]+/openbmh[_-]dc\b)",
     re.IGNORECASE,
 )

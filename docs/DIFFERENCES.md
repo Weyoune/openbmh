@@ -7,14 +7,10 @@ describe deliberate changes; they are not a list of every known compatibility li
 
 - [src/app/career_session.cpp](../src/app/career_session.cpp): supports designated set-piece record initialization and validation.
 - [src/app/quit_confirmation.hpp](../src/app/quit_confirmation.hpp): confirms application exit with a localized native dialog, with cancellation selected by default.
-- [src/formats/le.hpp](../src/formats/le.hpp): applies a shared supported rule profile when loading editions with different rule-table values.
-- [src/formats/rule_base.cpp](../src/formats/rule_base.cpp): normalizes live-scene defaults, league strength ranges, option defaults, stadium prices and capacities, betting limits, and the foreign-player limit across supported editions.
-- [src/formats/rule_base.hpp](../src/formats/rule_base.hpp): normalizes live-scene options, league strength ranges, option defaults, stadium prices and capacities, betting limits, and the foreign-player limit.
 - [src/game/career.cpp](../src/game/career.cpp): skips reserved calendar positions when assigning a joining manager to a club.
 - [src/game/career.hpp](../src/game/career.hpp): uses the supported player-generation ranges and excludes reserved calendar positions when assigning managers.
 - [src/game/desk_actions.cpp](../src/game/desk_actions.cpp): uses the supported transfer-fee arithmetic and designated set-piece fields.
 - [src/game/desk_actions.hpp](../src/game/desk_actions.hpp): supports designated set-piece records and the supported transfer-editor rules.
-- [src/game/environment.hpp](../src/game/environment.hpp): uses six monthly environment budgets across data editions while retaining the shared staff prices and academy player-generation strength bands.
 - [src/game/highscore.cpp](../src/game/highscore.cpp): reads the supported edition-specific high-score format from the loaded image.
 - [src/game/lineup.cpp](../src/game/lineup.cpp): disables the foreign-player limit in the supported rule profile.
 - [src/game/lineup.hpp](../src/game/lineup.hpp): disables the foreign-player limit and supports owner-bound designated set-piece selection.

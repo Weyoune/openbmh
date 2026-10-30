@@ -145,8 +145,8 @@ def main():
                     '--root', str(source)], check=True)
     cache = (args.build / 'CMakeCache.txt').read_text()
     import re
-    version = re.search(r'^CMAKE_PROJECT_VERSION:STATIC=([^\n]+)$', cache, re.M).group(1)
-    if not re.fullmatch(r'\d+\.\d+\.\d+', version):
+    version = (args.build / 'product-version.txt').read_text().strip()
+    if not re.fullmatch(r'\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?', version):
         raise RuntimeError('Unexpected source version')
     dependencies = json.loads((args.build / 'package-dependencies.json').read_text())
     args.out.mkdir(parents=True, exist_ok=True)

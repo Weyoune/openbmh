@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/cup_draw.hpp"
 
@@ -229,7 +230,7 @@ struct CupDrawScreen::Impl {
             copy(screen,panel,0,0,29,22,261,203);bottom=screen;drawing=screen;present=true;flush=true;}
         else {draw_overview();drawing=screen;}
         for(size_t i=0;i<p.count;++i){const int id=p.clubs[i].runtime_id,sel=p.clubs[i].badge_selector&0x1ff;
-            if(!((id>=0x5a&&id<=0x89)||(id>=0xa8&&id<=0x164)||id==0xfff)){
+            if(!original_badge_fallback(id,&exe)){
                 const int atlas=sel>>3;if(!badges.contains(atlas))badges.emplace(atlas,load_vga(asset_path(data/"W",std::to_string(atlas)+".VGA")));
             }
         }
@@ -255,7 +256,7 @@ struct CupDrawScreen::Impl {
     void source_badge(Image& out,const CupDrawClub& c,int x,int y) const {
         source_frame(out,x,y);
         const int id=c.runtime_id,selector=c.badge_selector&0x1ff;
-        if((id>=0x5a&&id<=0x89)||(id>=0xa8&&id<=0x164)||id==0xfff)
+        if(original_badge_fallback(id,&exe))
             copy(out,widgets,8,0,x,y,38,38);
         else {
             const int atlas=selector>>3;copy(out,badges.at(atlas),(selector&7)*38,0,x,y,38,38);

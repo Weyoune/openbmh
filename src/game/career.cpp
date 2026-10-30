@@ -20,10 +20,27 @@ constexpr int kLeagueTeams = 138;     // CareerSession_DispatchLineup_RuntimeFie
 
 // LeagueSizes: clubs per league; LeagueStrengthRanges: (minimum, maximum) strength per league.
 // (the clubs per league are kLeagueSizes, schedule.hpp)
-constexpr int kLeagueStrength[9][2] = {{71, 93}, {49, 71}, {28, 49}, {28, 49}, {10, 28},
+int kLeagueStrength[9][2] = {{71, 93}, {49, 71}, {28, 49}, {28, 49}, {10, 28},
                                        {85, 95}, {90, 95}, {75, 95}, {80, 95}};
 
 }  // namespace
+
+std::pair<int,int> career_strength_range(int league) {
+    if (league<0 || league>=9) throw FormatError("career: invalid league range");
+    return {kLeagueStrength[league][0],kLeagueStrength[league][1]};
+}
+
+void install_career_rules(const LeImage& exe) {
+    int next[9][2]{};
+    for (int league = 0; league < 9; ++league) {
+        for (int bound = 0; bound < 2; ++bound)
+            next[league][bound] = exe.u8(layout::LeagueStrengthRanges + uint32_t(league * 2 + bound));
+        if (next[league][0] > next[league][1] || next[league][1] > 99)
+            throw FormatError("career: unsupported original league strength range");
+    }
+    for (int league = 0; league < 9; ++league)
+        for (int bound = 0; bound < 2; ++bound) kLeagueStrength[league][bound] = next[league][bound];
+}
 
 void generate_player(GameState& g, int id, int level_flags, GameRandom& game, WatcomRandom& rand) {
     Player& p = g.players.at(size_t(id));

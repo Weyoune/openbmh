@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "app/career_session.hpp"
 
@@ -540,6 +541,9 @@ static void install_league_sizes(const LeImage& exe) {
     kNewcomerCount = exe.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6);
     // EXE strings the engine posts (messages.hpp)
     install_message_texts(exe);
+    install_career_rules(exe);
+    install_environment_rules(exe);
+    install_original_badge_policy(exe);
 }
 
 CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_seed)
@@ -3331,7 +3335,7 @@ std::optional<CareerSession::BalanceDispatch> CareerSession::dispatch_balance_pl
                 notice.manager_name.assign(reinterpret_cast<const char*>(next.state.manager_records.data()+name_at),name_end-name_at);
                 notice.portrait=next.state.manager_records[record+0x221];
                 const int club=next.state.manager_teams[size_t(manager)];
-                notice.badge_fallback=club==0x0fff||(club>89&&club<138)||(club>167&&club<357);
+                notice.badge_fallback=original_badge_fallback(club,&exe_);
                 if(!notice.badge_fallback&&club>=0&&size_t(club)*2+2<=next.state.club_heap_78.size())
                     notice.badge_sprite=(int(next.state.club_heap_78[size_t(club)*2])|
                         int(next.state.club_heap_78[size_t(club)*2+1])<<8)&0x1ff;

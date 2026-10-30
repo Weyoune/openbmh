@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "app/controller.hpp"
 #include "app/window_actions.hpp"
@@ -56,7 +57,7 @@ ui::NationalFriendlyIdentity national_friendly_identity(const GameState& game,in
         out.manager_name.push_back(char(game.manager_records[record+0xa8+i]));
     out.portrait=game.manager_records[record+0x221];
     out.manager_slot=manager;
-    out.badge_fallback=team==0x0fff||(team>89&&team<138)||(team>167&&team<357);
+    out.badge_fallback=original_badge_fallback(team);
     if(!out.badge_fallback&&team>=0&&size_t(team)*2+1<game.club_heap_78.size())
         out.badge_sprite=int(game.club_heap_78[size_t(team)*2]|
             uint16_t(game.club_heap_78[size_t(team)*2+1])<<8)&0x1ff;

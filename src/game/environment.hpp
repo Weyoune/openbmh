@@ -4,14 +4,18 @@
 #include <cstdint>
 #include <string>
 #include "game/random.hpp"
+#include "formats/le.hpp"
 #include "game/state.hpp"
 
 namespace bmh {
+// Verified original-program capability; unknown environment variants are not guessed.
+void install_environment_rules(const LeImage&);
+bool environment_rules_supported();
 constexpr int kEnvironmentItems = 6;
 enum EnvironmentItem : int { kYouthYoungest = 0, kYouthAcademy = 1, kYouthOldest = 2,
                             kCoTrainer = 3, kDoctor = 4, kPhysio = 5 };
-// OpenBMH deviates from the original: uses six monthly environment budgets across data editions while retaining the shared staff prices and academy player-generation strength bands.
-inline constexpr std::array<int32_t, kEnvironmentItems> kEnvironmentStep = {2000, 4000, 5000, 5000, 5000, 5000};
+// Monthly environment model verified in the supported CD and Diamond 3.6/3.7 programs.
+inline std::array<int32_t, kEnvironmentItems> kEnvironmentStep = {2000, 4000, 5000, 5000, 5000, 5000};
 struct EnvironmentState {
     std::array<int32_t, kEnvironmentItems> monthly{};
     std::array<int, kEnvironmentItems> level{};

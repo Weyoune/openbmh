@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "formats/binary.hpp"
-#include "formats/rule_base.hpp"
 #include "launch/archive.hpp"
 #include "launch/game_data.hpp"
 
@@ -120,7 +119,6 @@ LeImage translate_fltd(const fs::path& fltd_exe) {
         }
     }
     LeImage out = LeImage::from_bytes(kDeBase, std::move(image));
-    apply_rule_base(out);
     return out;
 }
 

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/player_card.hpp"
 
@@ -194,7 +195,7 @@ PlayerCardScreen::PlayerCardScreen(const std::filesystem::path& data,PlayerCardS
     badge_=load_vga(asset_path(data/"W",std::to_string(state_.badge>>3)+".VGA"));
     if(state_.loan)for(size_t i=0;i<2;++i){
         const int club=i?state_.loan->borrower:state_.loan->owner;
-        if(club<=89||(club>=138&&club<=167)||club>=357)
+        if(!original_badge_fallback(club,&exe_))
             loan_badges_[i]=load_vga(asset_path(data/"W",std::to_string(state_.loan->badges[i]>>3)+".VGA"));
     }
     if(atlas_.width==314){Image padded(320,atlas_.height);padded.blit(atlas_,0,0);atlas_=std::move(padded);}

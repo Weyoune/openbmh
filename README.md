@@ -1,10 +1,10 @@
 # OpenBMH
 
-A modern and faithful open source rebuild of the *Bundesliga Manager Hattrick* engine.
+A faithful, standalone community reconstruction of *Bundesliga Manager Hattrick*, using the player's original installation and SDL2 interface.
 
-OpenBMH is a standalone C++20 engine with an SDL2 interface for *Bundesliga Manager Hattrick* (1994/95) and its English edition, *Football Limited*. The project develops a playable reconstruction alongside a platform for new rules, content and interfaces. Keeping the familiar game enjoyable and making it easier to extend are equally important goals.
+OpenBMH 1.0 is the Classic line, based on v0.1.2 with reviewed bug fixes. It starts directly with original data: no mod launcher, converter or OBW package is required. Original game files, graphics, audio and manuals are not distributed. German CD-compatible BMH and verified Diamond editions are the primary release targets. Football Limited remains experimental; the older floppy executable is not supported.
 
-The engine reads a game installation supplied by the player. Game data, artwork, music, manuals and the original executable are not distributed with OpenBMH. Its aim is recognisable behaviour and plausible results; documented compatibility decisions and safety fixes take precedence over reproducing every original fault.
+The former 0.3 / NextGen development continues separately as [Dreierpack Manager](https://github.com/Weyoune/Dreierpack-Manager). OpenBMH remains available for community maintenance and extensions of the original game.
 
 This is an independent community project, with no affiliation with or endorsement by the original rights holders, the DFL or the Bundesliga. It is an engine implementation, not an official source release or a remaster.
 
@@ -14,12 +14,12 @@ Check the [releases page](https://github.com/Weyoune/openbmh/releases) for avail
 
 1. Have your own supported game installation available.
 2. Extract the OpenBMH package into a separate directory, or alongside the game files.
-3. Start `openbmh_play` (`openbmh_play.exe` on Windows). Select the game directory or executable when prompted. A ZIP or 7z containing one game installation can also be selected.
+3. Start `OpenBMH` (`OpenBMH.exe` on Windows). Select the game directory or executable when prompted. A ZIP or 7z containing one game installation can also be selected.
 
 From a terminal:
 
 ```sh
-openbmh_play --data "path/to/game" --save-directory "path/to/saves"
+OpenBMH --data "path/to/game" --save-directory "path/to/saves"
 openbmh_cli --console --data "path/to/game" --saves "path/to/saves"
 ```
 
@@ -29,11 +29,11 @@ Use a writable save directory and keep backups of existing games. German edition
 
 The graphical client and console share career management, matches, transfers, contracts, finances, training, stadium management and save handling. The console supports command batches, structured views and multiple manager clients. Audio is decoded from the user's installation where supported.
 
-Version 0.1 establishes the playable engine and development interfaces. Later milestones introduce an open data format and typed model, configurable rules, a scalable interface and independently distributable content. These are goals rather than delivery dates; the [roadmap](docs/ROADMAP.md) describes their dependencies.
+OpenBMH focuses on Classic compatibility, stability and community contributions. Next-generation interfaces, open-world formats and configurable competition structures belong to Dreierpack Manager.
 
 ## Build from source
 
-The following recipes target v0.1.2. They require Git, CMake 3.24 or newer and a C++20 compiler. The first configure fetches pinned open-source dependencies. Native build and package results are documented for each release; these instructions do not claim an untested platform result.
+The following recipes target OpenBMH 1.0 release candidates. They require Git, CMake 3.24 or newer and a C++20 compiler. The first configure fetches pinned open-source dependencies. Native build and package results are documented for each release; these instructions do not claim an untested platform result.
 
 Clone the public repository, then run the commands for your system:
 
@@ -50,7 +50,7 @@ Install Visual Studio 2022 or its Build Tools with **Desktop development with C+
 cmake -S . -B build-windows -G "Visual Studio 17 2022" -A x64
 cmake --build build-windows --config Release
 ctest --test-dir build-windows -C Release --output-on-failure
-.\build-windows\Release\openbmh_play.exe --data "path/to/game" --save-directory "path/to/saves"
+.\build-windows\Release\OpenBMH.exe --data "path/to/game" --save-directory "path/to/saves"
 ```
 
 ### Linux
@@ -62,7 +62,7 @@ sudo apt install build-essential git cmake ninja-build pkg-config libgtk-3-dev l
 cmake -S . -B build-linux -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build-linux
 ctest --test-dir build-linux --output-on-failure
-./build-linux/openbmh_play --data "path/to/game" --save-directory "path/to/saves"
+./build-linux/OpenBMH --data "path/to/game" --save-directory "path/to/saves"
 ```
 
 Use a newer CMake if your distribution ships a version older than 3.24. A Linux binary can still require system libraries such as GTK3; a ZIP is not a guarantee of portability across distributions.
@@ -77,7 +77,7 @@ brew install cmake ninja
 cmake -S . -B build-macos -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
 cmake --build build-macos
 ctest --test-dir build-macos --output-on-failure
-./build-macos/openbmh_play --data "path/to/game" --save-directory "path/to/saves"
+./build-macos/OpenBMH --data "path/to/game" --save-directory "path/to/saves"
 ```
 
 On Intel Macs omit the arm64 setting or select `x86_64`. These commands build terminal executables; they do not create a signed application bundle.

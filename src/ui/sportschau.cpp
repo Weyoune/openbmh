@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/sportschau.hpp"
 
@@ -375,7 +376,7 @@ SportschauMatchReport::SportschauMatchReport(const std::filesystem::path& data_d
     for (size_t side = 0; side < badge_words.size(); ++side) {
         const int team = side == 0 ? fixture_.home_team : fixture_.away_team;
         if (team == 0x0fff) continue; // SourceBadgeFallback uses its generic missing-club icon.
-        const bool has_source_badge = team <= 89 || (team >= 138 && team <= 167) || team >= 357;
+        const bool has_source_badge = !original_badge_fallback(team);
         if (!has_source_badge) continue; // Source FormatError draws a distinct generic icon; see notes.
         if (badge_words[side] == 0xffff) throw FormatError("sportschau: missing live Source badge word");
         const unsigned atlas = (badge_words[side] & 0x01ff) >> 3;

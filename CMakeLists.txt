@@ -1,8 +1,14 @@
 # SPDX-License-Identifier: GPL-3.0-only
 cmake_minimum_required(VERSION 3.24)
-project(OpenBMH VERSION 0.1.2 LANGUAGES CXX C)
+project(OpenBMH VERSION 1.0.0 LANGUAGES CXX C)
+set(OPENBMH_PRERELEASE "rc.1" CACHE STRING "Prerelease identifier; empty for final release")
+set(OPENBMH_PRODUCT_VERSION "${PROJECT_VERSION}")
+if(OPENBMH_PRERELEASE)
+    string(APPEND OPENBMH_PRODUCT_VERSION "-${OPENBMH_PRERELEASE}")
+endif()
+file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/product-version.txt" CONTENT "${OPENBMH_PRODUCT_VERSION}\n")
 # the one place of the version: --version of both programs and the window title (src/version.hpp)
-add_compile_definitions(OPENBMH_VERSION="${PROJECT_VERSION}")
+add_compile_definitions(OPENBMH_VERSION="${OPENBMH_PRODUCT_VERSION}")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -202,7 +208,6 @@ add_library(bmhcore STATIC
     src/formats/textd.cpp
     src/formats/fbm.cpp
     src/formats/le.cpp
-    src/formats/rule_base.cpp
     src/formats/m3d.cpp
     src/formats/savestate.cpp
     src/game/schedule.cpp
@@ -441,7 +446,7 @@ add_executable(openbmh_play
 target_link_libraries(openbmh_play PRIVATE bmhui bmhlaunch_dialog openbmh_audio ${BMH_SDL_TARGET})
 # a game without a console window on double-click (SDL2main provides WinMain); started from a
 # console it attaches to that one for --version, --help and start errors (src/app/main.cpp)
-set_target_properties(openbmh_play PROPERTIES WIN32_EXECUTABLE TRUE)
+set_target_properties(openbmh_play PROPERTIES WIN32_EXECUTABLE TRUE OUTPUT_NAME OpenBMH)
 if(MSVC)
     target_compile_options(openbmh_play PRIVATE /utf-8)
     # App sources also compile in headless tests/helpers without target /utf-8.
@@ -1106,3 +1111,7 @@ foreach(dependency IN ITEMS SDL2 miniz lzma_sdk nfd)
     string(JSON package_dependencies SET "${package_dependencies}" "${dependency}" "\"${dependency_path}\"")
 endforeach()
 file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/package-dependencies.json" CONTENT "${package_dependencies}\n")
+
+add_executable(classic_rules_unit_tests tests/classic_rules_unit_tests.cpp)
+target_link_libraries(classic_rules_unit_tests PRIVATE bmhcore)
+add_test(NAME classic_rules_unit_tests COMMAND classic_rules_unit_tests)

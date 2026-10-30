@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/season_promotion.hpp"
 
@@ -181,7 +182,7 @@ SeasonPromotionProjection season_promotion_from_game(
         rows.reserve(event.count);
         for(size_t i=0;i<event.count;++i) {
             const uint16_t id=ids[i]&0x0fff;
-            const bool fallback=id==0x0fff||(id>0x59&&((id<0x8a||id>0xa7)&&id<0x165));
+            const bool fallback=original_badge_fallback(id);
             uint16_t badge=0;
             if(!fallback) {
                 const size_t at=size_t(id)*2;

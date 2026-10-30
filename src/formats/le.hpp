@@ -29,7 +29,7 @@ public:
     // The string a pointer variable at `address` points to (e.g. Weekly_AdvertisingOffers_TextPointer).
     std::string string_at_pointer(uint32_t address) const { return cstring(u32(address)); }
     const uint8_t* data(uint32_t address) const { return bytes_.data() + (address - base_); }
-    // Overwrites bytes inside the image (the rule base, formats/rule_base.hpp).
+    // Overwrites bytes inside a prepared image for verified address translation.
     void patch(uint32_t address, const uint8_t* bytes, size_t count) {
         for (size_t i = 0; i < count; ++i) bytes_.at(address - base_ + i) = bytes[i];
     }
@@ -51,10 +51,8 @@ private:
     Bytes bytes_;
 };
 
-// OpenBMH deviates from the original: applies a shared supported rule profile when loading editions with different rule-table values.
+// Loads the original executable image without changing edition-specific rule tables.
 // Throws FormatError for files that are not LE executables or use external fixups.
-// A German BMH.EXE is loaded with the OpenBMH rule base applied (formats/rule_base.hpp):
-// every edition plays by the supported rule profile rule values.
 LeImage load_le(const std::filesystem::path& path);
 
 // The OpenBMH image format: "OPENBMH-IMAGE" NUL, u32 base, u32 size, the bytes. load_le()

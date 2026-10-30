@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/club_player_detail.hpp"
 
@@ -50,7 +51,7 @@ ClubPlayerDetailProjection club_player_detail_from_game(const GameState& g,
             club.original_short_name=club.original_short_name.substr(raw>>4,(raw&15)+1);
         }
         // SourceBadgeFallback consults the selector only for real atlas clubs.
-        if(id<=89||(id>=138&&id<=167)||id>=357){
+        if(!original_badge_fallback(id,&exe)){
             if(size_t(id)*2+1>=g.club_heap_78.size())throw FormatError("club player detail: truncated badge table");
             club.badge_selector=le16(g.club_heap_78,size_t(id)*2)&0x1ff;
         }
@@ -92,7 +93,7 @@ ClubPlayerDetailScreen::ClubPlayerDetailScreen(const std::filesystem::path& data
     if(atlas_.width==314){Image padded(320,atlas_.height);padded.blit(atlas_,0,0);atlas_=std::move(padded);}
     for(size_t i=0;i<2;++i)if(projection_.clubs[i]){
         auto& club=*projection_.clubs[i];const int id=club.runtime_team;
-        if(id<=89||(id>=138&&id<=167)||id>=357){
+        if(!original_badge_fallback(id,&exe_)){
             badges_[i]=load_vga(asset_path(data/"W",std::to_string(club.badge_selector>>3)+".VGA"));
         }
         // TextWidth national/foreign names: longest word, then remove two

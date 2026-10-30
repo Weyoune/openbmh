@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/desk_state.hpp"
 
@@ -600,8 +601,7 @@ DeskState desk_from_game(const GameState& g, const LeImage& exe, uint64_t revisi
             *d.next_opponent < int(g.club_ids.size())) {
             const int opponent = *d.next_opponent;
             d.next_opponent_name = g.club_name(opponent);
-            const bool fallback = opponent == 0x0fff ||
-                (opponent > 0x59 && (opponent < 0x8a || opponent > 0xa7) && opponent < 0x165);
+            const bool fallback = original_badge_fallback(opponent,&exe);
             d.next_opponent_badge_fallback = fallback;
             if (!fallback) {
                 const size_t badge_at = size_t(opponent) * 2;

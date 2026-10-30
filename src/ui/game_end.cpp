@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/game_end.hpp"
 
@@ -288,7 +289,7 @@ Image GameEndTaxDialog::render(std::optional<Button> pressed) const {
 }
 bool source_badge_fallback(int token) {
     const int club=token&0x0fff;
-    return club==0x0fff || (club>89&&(club<138||club>167)&&club<357);
+    return original_badge_fallback(club);
 }
 void draw_source_dialog(Image& out,const SourceDialogAssets& assets,const TaxDialogProjection& p,
     bool gradient,std::optional<GameEndTaxDialog::Button> pressed) {

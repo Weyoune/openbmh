@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/team_statistics.hpp"
 
@@ -93,7 +94,7 @@ TeamStatisticsProjection team_statistics_from_game(const GameState& game, int te
     TeamStatisticsProjection out;
     out.runtime_team = team;
     out.mode = mode;
-    out.source_badge_fallback = team == 0x0fff || (team >= 90 && team <= 137) || (team >= 168 && team < 0x165);
+    out.source_badge_fallback = original_badge_fallback(team,&exe);
     out.badge_heap = game.club_heap_78;
     if (team != 0x165) {
         int region_team = team;

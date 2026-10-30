@@ -24,6 +24,10 @@
 
 namespace bmh {
 
+// Install the nine strength ranges from the loaded edition, never a shared replacement.
+void install_career_rules(const LeImage&);
+std::pair<int,int> career_strength_range(int league);
+
 // OpenBMH deviates from the original: uses the supported player-generation ranges and excludes reserved calendar positions when assigning managers.
 // GeneratePlayer with the supported rule profile patch GeneratePlayer2: new values for player `id` around
 // `level` (low 12 bits of `level_flags`; 0x1000 = leave the age at 0, 0x2000 = exactly

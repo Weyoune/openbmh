@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/transfer_market.hpp"
 
@@ -267,7 +268,7 @@ TaxDialogProjection poach_notice_from_game(const GameState& game,const PoachStar
     out.portrait=game.manager_records[base+0x221];
     if(out.portrait>14)throw FormatError("poach notice: invalid Original portrait");
     const int team=game.manager_teams[size_t(manager)];
-    out.badge_fallback=team==0x0fff || (team>89&&team<138) || (team>167&&team<357);
+    out.badge_fallback=original_badge_fallback(team);
     if(!out.badge_fallback) {
         if(team<0 || size_t(team)*2+2>game.club_heap_78.size())throw FormatError("poach notice: missing badge selector");
         out.badge_sprite=(int(game.club_heap_78[size_t(team)*2])|int(game.club_heap_78[size_t(team)*2+1])<<8)&0x1ff;

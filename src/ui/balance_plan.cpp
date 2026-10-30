@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/balance_plan.hpp"
 
@@ -52,7 +53,7 @@ BalanceState balance_from_game(const GameState& g,const BalancePlanDraft& d,cons
  const int portrait=rec+0x221<g.manager_records.size()?g.manager_records[rec+0x221]:0;
  if(portrait>14)throw FormatError("balance: invalid Source manager portrait");
  const int team=g.manager_teams[size_t(d.manager)];
- const bool fallback=team==0x0fff||(team>89&&team<138)||(team>167&&team<357);
+ const bool fallback=original_badge_fallback(team);
  int badge=0;if(!fallback){if(team<0||size_t(team)*2+2>g.club_heap_78.size())throw FormatError("balance: missing Source badge selector");badge=(int(g.club_heap_78[size_t(team)*2])|int(g.club_heap_78[size_t(team)*2+1])<<8)&0x1ff;}
  const uint8_t compact_dialog_frame=g.memory.has(::bmh::layout::CompactDialogFrame)?g.memory.u8(::bmh::layout::CompactDialogFrame):exe.u8(::bmh::layout::CompactDialogFrame);
  for(auto* projection:{&s.read_only_notice,&s.close_notice}){projection->portrait=portrait;projection->badge_fallback=fallback;projection->badge_sprite=badge;projection->compact_dialog_frame=compact_dialog_frame!=0;}

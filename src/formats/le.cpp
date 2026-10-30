@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/le.hpp"
-#include "formats/rule_base.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -43,7 +42,6 @@ LeImage load_le(const std::filesystem::path& path) {
         const uint32_t base = word(sizeof kImageMagic), size = word(sizeof kImageMagic + 4);
         if (raw.size() != sizeof kImageMagic + 8 + size_t(size)) throw FormatError("OpenBMH image: wrong size");
         LeImage img = LeImage::from_bytes(base, Bytes(raw.begin() + sizeof kImageMagic + 8, raw.end()));
-        apply_rule_base(img);
         return img;
     }
     auto u8 = [&](size_t o) -> uint32_t {
@@ -133,7 +131,6 @@ LeImage load_le(const std::filesystem::path& path) {
             }
         }
     }
-    apply_rule_base(img);
     return img;
 }
 

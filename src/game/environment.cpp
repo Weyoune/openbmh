@@ -3,9 +3,12 @@
 #include "game/environment.hpp"
 #include <algorithm>
 #include <cstdlib>
+#include <utility>
 
 namespace bmh {
 namespace {
+bool supported_environment = true; // Synthetic state tests explicitly use the verified monthly model.
+
 uint32_t youth_at(int manager) { return layout::EnvironmentYouthTeams + uint32_t(manager) * 0x24; }
 uint32_t spending_at(int manager, int item) {
     return layout::Spending + uint32_t(manager) * 0x24 + uint32_t(item) * 4;
@@ -29,6 +32,21 @@ uint32_t academy_paid(const GameState& g, int manager) {
         uint32_t(g.manager_records.at(at + 2)) << 16 | uint32_t(g.manager_records.at(at + 3)) << 24;
 }
 }
+void install_environment_rules(const LeImage& exe) {
+    for (size_t i=0;i<kEnvironmentStep.size();++i) {
+        const uint32_t at=layout::EnvironmentBudgetSteps+uint32_t(i);
+        if (!exe.contains(at) || exe.u8(at)==0) { supported_environment=false; return; }
+        kEnvironmentStep[i]=int32_t(exe.u8(at))*1000;
+    }
+    uint64_t fingerprint = 14695981039346656037ull;
+    for (const auto [first,last] : {std::pair{layout::EnvironmentVerifiedCodeBegin,layout::EnvironmentVerifiedCodeEnd},std::pair{layout::EnvironmentVerifiedHookBegin,layout::EnvironmentVerifiedHookEnd}}) {
+        if (!exe.contains(first) || !exe.contains(last-1)) { supported_environment=false; return; }
+        for (uint32_t at=first;at<last;++at) fingerprint=(fingerprint ^ exe.u8(at))*1099511628211ull;
+    }
+    // Fingerprints identify verified behaviour, not filenames, dates or artwork.
+    supported_environment = fingerprint==0xc2488a656f340e99ull || fingerprint==0x19adba7ef3eda507ull;
+}
+bool environment_rules_supported() { return supported_environment; }
 int32_t environment_monthly_cost(const GameState& g, int manager, int item) {
     const auto value = g.memory.u32(spending_at(manager, item));
     if (item == kYouthAcademy && legacy_academy(g, manager) && academy_paid(g, manager) >= value) return 0;
@@ -39,6 +57,7 @@ bool environment_academy_active(const GameState& g, int manager) {
     return value != 0 && (!legacy_academy(g, manager) || academy_paid(g, manager) >= value);
 }
 EnvironmentState environment_state(const GameState& g, int manager) {
+    if (!supported_environment) throw FormatError("environment: this original program variant is not verified");
     validate_manager(g, manager);
     EnvironmentState result;
     for (int i = 0; i < kEnvironmentItems; ++i) {
@@ -56,6 +75,7 @@ EnvironmentState environment_state(const GameState& g, int manager) {
 }
 EnvironmentResult set_environment(GameState& g, int manager, int item, int level, std::string* message) {
     if (message) message->clear();
+    if (!supported_environment) return EnvironmentResult::invalid;
     if (manager < 0 || size_t(manager) >= g.manager_teams.size() || item < 0 || item >= kEnvironmentItems ||
         level < 0 || level > 6 || !g.memory.has(spending_at(manager, item) + 3))
         return EnvironmentResult::invalid;

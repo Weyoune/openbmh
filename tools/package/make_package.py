@@ -10,7 +10,7 @@ import zipfile
 
 
 def validate(directory, windows):
-    products = {'openbmh_play.exe', 'openbmh_cli.exe'} if windows else {'openbmh_play', 'openbmh_cli'}
+    products = {'OpenBMH.exe', 'openbmh_cli.exe'} if windows else {'OpenBMH', 'openbmh_cli'}
     documents = {'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'ACKNOWLEDGEMENTS.md', 'CONTRIBUTING.md'}
     licenses = {'README.md', 'LGPL-2.1.txt', 'Nuked-OPL3-notices.txt', 'LZMA-SDK.txt', 'SDL2-HIDAPI-BSD.txt',
                 'SDL2-HIDAPI-options.txt', 'SDL2-HIDAPI-original.txt', 'SDL2-yuv2rgb.txt',
@@ -33,7 +33,7 @@ def validate(directory, windows):
         if not allowed:
             raise RuntimeError('Unexpected package entry: ' + relative.as_posix())
     required = products | documents | {'docs/licenses/' + name for name in licenses}
-    required.add('docs/release/0.1/RELEASE_NOTES.md')
+    required.add('docs/release/1.0/RELEASE_NOTES.md')
     if required - present:
         raise RuntimeError('Missing package entries: ' + ', '.join(sorted(required - present)))
     if windows and not {'vcruntime140.dll', 'msvcp140.dll'} <= present:

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/incoming_transfer.hpp"
 #include "ui/game_end.hpp"
@@ -80,8 +81,7 @@ int source_seller_team_token(const IncomingTransferDecisionState& state) {
 }
 
 bool source_neutral_seller_token(int token) {
-    return (token >= 90 && token <= 137) || token == 0x0fff ||
-           (token >= 168 && token <= 356);
+    return original_badge_fallback(token);
 }
 } // namespace
 

@@ -10,7 +10,6 @@
 #include "formats/binary.hpp"
 #include "formats/font.hpp"
 #include "formats/le.hpp"
-#include "formats/rule_base.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/pending_offer.hpp"
 
@@ -93,8 +94,7 @@ void manager_identity(const GameState& game, int manager, TaxDialogProjection& o
     // reserves 14 for the manager-placeholder tile drawn from KB0.VGA.
     if (out.portrait > 14) throw FormatError("pending offer UI: invalid Source manager portrait");
 
-    out.badge_fallback = team == 0x0fff || (team > 89 && team < 138) ||
-                         (team > 167 && team < 357);
+    out.badge_fallback = original_badge_fallback(team);
     if (out.badge_fallback) {
         out.badge_sprite = 0;
     } else {
