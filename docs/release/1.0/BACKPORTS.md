@@ -4,14 +4,10 @@ Baseline: v0.1.2. The release branch keeps the existing public history; the base
 
 | Later change | Decision |
 |---|---|
-| 8326a23: host filenames/path display, setup input guards | Included; direct-installation code, no launcher/converter dependency |
+| 8326a23: host filenames/path display, setup input guards | Included; direct-installation code, uses direct original-installation data |
 | e1d17d8: explicit quit confirmation | Included; cancellation preserves current owner/state |
 | c8f04d0: reschedule undo replay bit | Included; restores original target-day availability |
-| b879d5b: standalone original message texts | Included as a focused adaptation; no native-content dependency |
-| 978a014: edition-specific restored match-group expansion | Pending compatibility verification; no OBW save changes will be taken |
-| 0b2354c: native file flows and English media | OBW paths excluded; applicable legacy filename correction reviewed separately |
-| 856d38c / 500354c: RmlUI/WARP startup | Not applicable to the restored SDL Classic application; do not bring back RmlUI |
-| 0.3 Modern manager placement correction | Excluded; belongs to Dreierpack Manager, not faithful Classic behaviour |
+| b879d5b: standalone original message texts | Included as a focused adaptation; reads the original message table |
 
 Version 1.0 no longer rewrites loaded rule tables to a shared profile. Original strength ranges and environment price steps are installed from the supplied edition. Environment implementations outside verified program fingerprints remain unverified, never silently enabled by a directory name.
 

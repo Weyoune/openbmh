@@ -10,7 +10,7 @@ ctest --test-dir build --output-on-failure
 
 The public checkout does not include game data. Tests that require a game installation are conditional; configure with `-DBMH_DATA="path/to/game"` to make locally available data eligible. Private saved-game fixtures are not supplied by the project. Read the test output to distinguish executed and skipped checks.
 
-Main programs are `openbmh_play` (graphical game) and `openbmh_cli` (console and protocol). Single-configuration generators put them in the build directory; multi-configuration generators normally add a configuration directory. On Windows they have the `.exe` suffix.
+Main programs are `OpenBMH` (graphical game) and `openbmh_cli` (console and protocol). Single-configuration generators put them in the build directory; multi-configuration generators normally add a configuration directory. On Windows they have the `.exe` suffix.
 
 ## Windows
 
@@ -45,7 +45,7 @@ Use native toolchain/dependency architectures consistently. A terminal executabl
 ## Run with your data
 
 ```sh
-build/openbmh_play --data "path/to/game" --save-directory "path/to/saves"
+build/OpenBMH --data "path/to/game" --save-directory "path/to/saves"
 build/openbmh_cli --console --data "path/to/game" --saves "path/to/saves" --seed 1
 ```
 

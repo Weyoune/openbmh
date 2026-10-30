@@ -144,7 +144,7 @@ int main(int argc, char** argv) {
             std::printf("OpenBMH %s\n", bmh::kOpenBmhVersion);
             return 0;
         } else if (is("--help") || is("-h")) {
-            std::printf("usage: openbmh_play [<game directory | BMH.EXE | game.zip | game.7z>] [--seed <Watcom seed>] "
+            std::printf("usage: OpenBMH [<game directory | BMH.EXE | game.zip | game.7z>] [--seed <Watcom seed>] "
                         "[--save-directory <directory>] [--mute] [--volume <0..1>] [--no-music] [--live-frame-ms <0..1000>]\n");
             return 0;
         } else if (args[i].rfind("--", 0) != 0 && data.empty()) {

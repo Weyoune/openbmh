@@ -98,8 +98,10 @@ int main(int argc, char** argv) {
                   training_camp_price_text(content, 7) == "& 350.000",
                   "FLTD prices use its actual base price, pound prefix and one-half conversion");
         } else {
-            check(training_camp_price_text(content, 0) == "150.000" + texts[17],
-                  "German default price text remains unchanged");
+            auto currency_sample = content;
+            currency_sample.prices[0] = 150000;
+            check(training_camp_price_text(currency_sample, 0) == "150.000" + texts[17],
+                  "German currency suffix is retained independently of edition resort prices");
         }
         auto widgets = load_vga(asset_path(data / "KB", "52.VGA"));
         for(int i=0;i<9;++i){

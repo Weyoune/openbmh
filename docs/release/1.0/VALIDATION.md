@@ -3,7 +3,7 @@
 Status: implementation candidate, not final-release acceptance.
 
 - Linux x64 Release build: all targets compiled.
-- CTest: 32 passed, 157 skipped, zero failures (189 registered tests). Skips require separately configured original-data or save fixtures; they are not acceptance passes.
+- CTest: 33 passed, 157 skipped, zero failures (190 registered tests). Skips require separately configured original-data or save fixtures; they are not acceptance passes.
 - Synthetic tests cover unchanged executable image loading, nine original strength ranges, atomic rejection of malformed ranges, unsupported environment guards, and legacy/extended/truncated crest gates.
 - Public source scan: zero findings; generated differences catalogue matches source markers.
 - Version output: both GUI and console identify 1.0.0-rc.1.
@@ -12,6 +12,10 @@ Status: implementation candidate, not final-release acceptance.
 
 Still required: dedicated original-game/GUI/save roundtrips, completing the original-defect audit, per-edition gameplay review, Windows/macOS native checks and release-package acceptance. No final 1.0 tag is justified by these checks alone.
 
-## Source export versus retained history
+Source archives contain the audited current tree. The optional full-history audit is a separate check; published Git history has not been rewritten.
 
-The restored Classic tree passes the source-only guard. The retained 0.2/0.3 history still contains launcher artwork and editor QA screenshots, which the old Classic guard classifies as binary content; this is not a clean all-history audit. CI checks the current tree actually exported by the source-package tool. The stricter `check_public_tree.py --history` command remains available for a separate repository-history audit. No history has been rewritten and no historical assets are added to the Classic source archive.
+## Follow-up original-data checks
+
+Twenty-six additional private-data checks passed across BMH CD and Diamond 3.6/3.7: exact loaded fixture tables, manager selection, standard dialogs, training camps, tactics, banking, settings and player cards. The Diamond 3.6 two-manager fixture also passed the human-buyer transfer and rescheduling suites. A currency-format fixture had assumed the Diamond resort price for all German editions; its fixed-price check now uses an explicit synthetic price, and the CD test passes without changing game data or product prices. These are automated render/interaction and engine checks, not a claim of complete interactive playthroughs.
+
+The market-player retirement regression failed before the correction with an age wrap from 47 to 16 and passed afterward. It checks market boundaries, unique relocation, unaffected extra slots, new-career setup and unchanged random draw counts for a young club player.

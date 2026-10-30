@@ -19,7 +19,6 @@ Unless a page says otherwise, integer fields are little endian. Legacy strings u
 | Audio containers | `S/2000` through `S/2003` | [SOUND](SOUND.md) | `src/audio/container.cpp`, `original.cpp` |
 | Executable data | German LE and English X-32 images | [LE](LE.md), [executable layout](EXECUTABLE_LAYOUT.md) | `src/formats/le.cpp`, `src/launch/fltd.cpp` |
 | IFF crest template | `WAPPEN.LBM` | [WAPPEN](WAPPEN.md) | Not loaded by OpenBMH |
-| OpenBMH world, save and pack (concept) | `*.obw`, `*.obs`, `*.obp`, `*.obt` | [OBW](OBW.md) | Planned for 0.2 |
 
 German and English editions can share a physical format while differing in text, league contents, executable layout and currency. Select the edition through the supplied installation; do not rename files or patch a save header to simulate another version. Original English V2.20 save import is a separate compatibility limitation from English installation support.
 

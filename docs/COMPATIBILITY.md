@@ -25,7 +25,7 @@ normal completed-career handling remains separate.
 
 ## Original edition rules in 1.0
 
-Loaded executable images are not rewritten to the former shared rule profile. Career strength ranges are read from all nine pairs of the original table. Normalized simulation values from 0.2/NextGen are not backported.
+Loaded executable images retain their own rule tables. Career strength ranges are read from all nine pairs of the supplied original table.
 
 The six-budget monthly environment implementation has been checked against the provided CD and Diamond 3.6/3.7 program code. Its budget increments are read from that program's own table. Capability recognition uses verified code fingerprints, never directory names. Unrecognized environment implementations cannot be edited or simulated through a guessed model; they require separate compatibility verification. Older Diamond academy patches are not silently treated as the monthly model. The old floppy executable remains unsupported, and Football Limited remains experimental.
 

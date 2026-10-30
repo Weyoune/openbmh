@@ -1,6 +1,6 @@
 # Text, encoding and editions
 
-The installation supplies game text and names. The command vocabulary stays stable across editions; it is not translated into the selected game's display language. German and English installation data can have different text, league contents, executable layouts and currency presentation. English support remains experimental as described in the [release notes](../release/0.1/RELEASE_NOTES.md).
+The installation supplies game text and names. The command vocabulary stays stable across editions; it is not translated into the selected game's display language. German and English installation data can have different text, league contents, executable layouts and currency presentation. English support remains experimental as described in the [release notes](../release/1.0/RELEASE_NOTES.md).
 
 Legacy bytes are decoded at the display boundary. Client-facing text is intended to be UTF-8, while save and database offsets refer to legacy byte pools. Avoid using a displayed name as a persistent identifier: names may be edited, ambiguous or rendered differently. Prefer the ID domain required by the current command.
 

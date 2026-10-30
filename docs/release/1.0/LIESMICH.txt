@@ -1,0 +1,22 @@
+OpenBMH 1.0
+
+Eigenstaendige Community-Umsetzung von Bundesliga Manager Hattrick mit der
+Original-Oberflaeche. Originaldateien werden nicht mitgeliefert.
+
+Das Paket vollstaendig entpacken und OpenBMH starten (Windows: OpenBMH.exe).
+Die eigene Spielinstallation oder deren ausfuehrbare Datei auswaehlen.
+Ein gesondertes, beschreibbares Verzeichnis fuer Spielstaende wird empfohlen.
+
+Beispiel:
+  OpenBMH --data "path/to/game" --save-directory "path/to/saves"
+
+Deutsche CD-kompatible Versionen und gepruefte Diamond-Ausgaben sind die
+primaeren Ziele. Football Limited ist experimentell; die alte Disketten-EXE
+wird nicht unterstuetzt. Bestehende Spielstaende vorher sichern.
+
+Quellen, Plattformhinweise und bekannte Einschraenkungen stehen in README.md
+und docs/release/1.0/RELEASE_NOTES.md. Reproduzierbare Fehler bitte ueber den
+Issue-Tracker des Repositorys melden; keine Originaldateien hochladen.
+
+Eigener Programmcode: GPL-3.0-only. Lizenzen und Hinweise fuer eingebundene
+Komponenten stehen in LICENSE und THIRD_PARTY_NOTICES.md.
