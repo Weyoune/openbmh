@@ -3,6 +3,7 @@
 #include "formats/le.hpp"
 #include "game/messages.hpp"
 #include "game/career.hpp"
+#include "game/calendar.hpp"
 #include "game/environment.hpp"
 #include "game/schedule.hpp"
 
@@ -15,6 +16,7 @@ inline LeImage load_executable(const std::filesystem::path& path) {
     install_fixture_tables(executable);
     install_message_texts(executable);
     install_career_rules(executable);
+    install_calendar_rules(executable);
     install_environment_rules(executable);
     return executable;
 }

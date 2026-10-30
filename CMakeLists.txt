@@ -245,6 +245,7 @@ add_library(bmhcore STATIC
     src/game/weekly.cpp
     src/game/messages.cpp
     src/game/table.cpp
+    src/game/calendar.cpp
     src/game/week.cpp
     src/game/lineup.cpp
     src/game/national.cpp
@@ -1127,3 +1128,7 @@ set_tests_properties(season_player_reset_tests PROPERTIES TIMEOUT 10)
 add_executable(lineup_foreign_limit_tests tests/lineup_foreign_limit_tests.cpp)
 target_link_libraries(lineup_foreign_limit_tests PRIVATE bmhcore)
 add_test(NAME lineup_foreign_limit_tests COMMAND lineup_foreign_limit_tests)
+
+add_executable(calendar_epoch_tests tests/calendar_epoch_tests.cpp)
+target_link_libraries(calendar_epoch_tests PRIVATE bmhui)
+add_test(NAME calendar_epoch_tests COMMAND calendar_epoch_tests)

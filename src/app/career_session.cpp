@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/badge_policy.hpp"
+#include "game/calendar.hpp"
 #include "formats/executable_layout.hpp"
 #include "app/career_session.hpp"
 
@@ -544,6 +545,7 @@ static void install_league_sizes(const LeImage& exe) {
     install_career_rules(exe);
     install_environment_rules(exe);
     install_original_badge_policy(exe);
+    install_calendar_rules(exe);
 }
 
 CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_seed)

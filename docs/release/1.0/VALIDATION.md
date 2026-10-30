@@ -3,7 +3,7 @@
 Scope: recorded automated/original-data checks. Exact final source revision and native platform build records accompany the published release.
 
 - Linux x64 Release build: all targets compiled.
-- CTest: 34 passed, 157 skipped, zero failures (191 registered tests). Skips require separately configured original-data or save fixtures; they are not acceptance passes.
+- CTest: 35 passed, 157 skipped, zero failures (192 registered tests). Skips require separately configured original-data or save fixtures; they are not acceptance passes.
 - Synthetic tests cover unchanged executable image loading, nine original strength ranges, atomic rejection of malformed ranges, unsupported environment guards, and legacy/extended/truncated crest gates.
 - Public source scan: zero findings; generated differences catalogue matches source markers.
 - Version output: both GUI and console identify 1.0.0-rc.1.
@@ -31,3 +31,5 @@ Long-run diagnostics with seed 4711 and the existing explicit contract-renewal p
 After the final lineup, qualification and once-per-player season-reset corrections, each German edition completed 600 turns using seed 4711. Original CD reached twelve season-end desks; Diamond 3.6 and 3.7 reached eleven each. With the existing explicit contract-renewal and advertising policies enabled, all three simulator runs returned success, with no duplicate club players or other invariant failures. With contract renewals alone, all three still completed 600 turns without duplicate club players; only the test policy's excessive-debt warning remained. The latter is not presented as a successful financial strategy.
 
 The duplicate-player defect was reproduced and captured before correction: a temporary offer referenced a player already owned by a club, then the extended market-retirement pass regenerated that player a second time. Frozen private before/after saves and a cached-reference regression support the correction. Save-envelope diagnostics use a separate RNG and do not consume either gameplay stream.
+
+Calendar epoch regression covers the original CD and Diamond parameters, engine weekdays, desktop dates, save-header dates, year rollover and atomic rejection of invalid/unknown setup instructions. The original and checked Diamond date routines differ only in their weekday/year operands. After installing the original CD calendar parameters, the 600-turn run with contract and advertising policies completed eleven season-end desks without invariant failures.

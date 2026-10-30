@@ -113,7 +113,7 @@ struct DeskState {
     uint64_t revision = 0;
 };
 
-// Original DeskDate2, including its four-year leap cycle and Wednesday epoch.
+// Original DeskDate2, including its four-year leap cycle and edition-specific epoch.
 DeskDate desk_date(uint32_t day_counter, const LeImage& executable);
 DeskState desk_from_save(const SaveState&, const LeImage&, uint64_t revision = 0);
 // Uses authoritative typed fields where StaticMemory contains stale copies.

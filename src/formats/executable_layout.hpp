@@ -1986,3 +1986,5 @@ inline constexpr auto EnvironmentVerifiedHookEnd = 0x7b020;
 }
 
 namespace bmh::layout { inline constexpr auto ForeignBadgeGateInstruction = 0x10070; }
+
+namespace bmh::layout { inline constexpr auto CalendarDateSetup = 0x21270; }

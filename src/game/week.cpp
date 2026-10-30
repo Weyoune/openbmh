@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "game/week.hpp"
+#include "game/calendar.hpp"
 
 #include "game/matchday.hpp"
 #include "game/lineup.hpp"
@@ -93,9 +94,7 @@ int attribute(Player& p, int area, bool write, int delta, int max) {
 }  // namespace
 
 int weekday_code(uint32_t date) {
-    int c = int(date % 7) + 2;
-    if (c > 6) c = int(date % 7) - 5;
-    return c;
+    return int((date % 7 + uint32_t(calendar_epoch().weekday)) % 7);
 }
 
 void familiarity_decay(GameState& g, GameRandom& game, WatcomRandom& rand) {

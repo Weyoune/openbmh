@@ -15,3 +15,5 @@ The automatic lineup reads the original foreign-player limit switch: enabled edi
 Known limits: Football Limited remains experimental, the floppy executable is unsupported, and intentional implementation differences remain listed in docs/DIFFERENCES.md. The supplied original-defect catalogue is an ongoing compatibility reference, not a claim that all its entries have received independent runtime acceptance.
 
 The season reset processes each player only once, including temporary offer references to an active club player. This prevents double ageing and regeneration of a still-owned player into a second club. The correction is covered by a synthetic cached-offer regression and long runs through eleven to twelve season-end desks.
+
+The start year and weekday are read from the supplied edition for the desktop, engine and save-list headers. Original CD therefore starts in 1995 on Saturday; checked Diamond editions retain 2026 on Wednesday. The original date arithmetic remains intact.

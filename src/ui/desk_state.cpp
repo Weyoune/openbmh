@@ -2,6 +2,7 @@
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/desk_state.hpp"
+#include "game/calendar.hpp"
 
 #include <algorithm>
 #include <set>
@@ -462,7 +463,11 @@ void validate_desk_state(const DeskState& d) {
 
 DeskDate desk_date(uint32_t counter, const LeImage& exe) {
     if (counter == 0xffff || counter > 3000000) throw FormatError("desk: unsupported date counter");
-    DeskDate d; d.weekday = int((counter + 2) % 7);
+    // Partial data-only images use the explicitly installed calendar. Full
+    // executable images must supply their verified original date setup.
+    const auto epoch = exe.contains(layout::CalendarDateSetup)
+        ? calendar_epoch_from_executable(exe) : calendar_epoch();
+    DeskDate d; d.weekday = int((counter + uint32_t(epoch.weekday)) % 7);
     int cycle = 3, years = 0;
     while (counter > uint32_t(364 + (cycle == 4))) {
         if (cycle == 4) { cycle = 0; --counter; }
@@ -479,7 +484,7 @@ DeskDate desk_date(uint32_t counter, const LeImage& exe) {
         d.day -= month_days();
         if (++d.month == 13) { d.month = 1; ++years; }
     }
-    d.year = 2026 + years;
+    d.year = epoch.year + years;
     return d;
 }
 

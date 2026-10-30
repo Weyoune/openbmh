@@ -1991,3 +1991,13 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `EnglishSixTeamFixtureTable` | `0x6eed4` | English image adapter |
 | `EnglishTwelveTeamFixtureTable` | `0x6f0bc` | English image adapter |
 | `EnglishTwentyTeamFixtureTable` | `0x6ee40` | English image adapter |
+
+## Verified edition-dependent parameters
+
+| Field | Address | Use |
+|---|---|---|
+| `CalendarDateSetup` | `0x21270` | Verified date setup: weekday byte at +4, initial year dword at +13. Original CD uses 1995/Saturday; checked Diamond editions use 2026/Wednesday. |
+| `ForeignBadgeGateInstruction` | `0x10070` | Verified original drawing gate; operand at +3 selects neutral foreign crests or individual W-sheet selectors. |
+| `EnvironmentBudgetSteps` | `0xa50ff` | Six budget increments in the verified monthly environment implementation. |
+
+Calendar presentation, engine weekday processing and save-list headers share the supplied installation's epoch. The original four-year date arithmetic is preserved; this reader does not substitute a different calendar system or rewrite the installation. Unknown date setup instructions and invalid values are rejected.

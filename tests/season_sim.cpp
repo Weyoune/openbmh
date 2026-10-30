@@ -371,6 +371,10 @@ int main(int argc, char** argv) {
                 ++seasons;
             }  // (the next kickoff runs the season change)
         }
+        if (const char* final_save = std::getenv("SIM_FINAL_SAVE")) {
+            WatcomRandom envelope(1); // Diagnostic export must not change either gameplay stream.
+            write_savegame(final_save, make_savegame(g, envelope));
+        }
         print_first_league_results(g, "run end");
         if (std::getenv("SIM_ADVERTISING")) std::printf("%d advertising contracts accepted (SIM_ADVERTISING=1)\n", ad_contracts);
         if (std::getenv("SIM_INTERVENE")) std::printf("%d interventions (substitution at minute 30, re-rated)\n", interventions);

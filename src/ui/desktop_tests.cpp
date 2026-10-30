@@ -601,11 +601,17 @@ int main(int argc, char** argv) {
         const std::filesystem::path data = argv[1]; const auto exe = bmh::test::load_executable(asset_path(data,"BMH.exe"));
         paired_selection_matrix(exe);
         if(argc>3)paired_saved_projection(argv[3],exe);
-        // Gregorian dates are an independent oracle for the original's observed year range.
+        // The date arithmetic is checked against a controlled epoch aligned with
+        // the original leap cycle, independently of the installation's start year.
+        auto oracle_exe = exe;
+        const uint8_t oracle_year[] = {0xea,0x07,0,0};
+        const uint8_t oracle_weekday = 2;
+        oracle_exe.patch(layout::CalendarDateSetup+13,oracle_year,4);
+        oracle_exe.patch(layout::CalendarDateSetup+4,&oracle_weekday,1);
         using namespace std::chrono;
         const sys_days epoch = year{2026}/7/1;
         for (uint32_t i = 0; i < 1461; ++i) {
-            const auto d = desk_date(i,exe); const year_month_day oracle(epoch + days{i});
+            const auto d = desk_date(i,oracle_exe); const year_month_day oracle(epoch + days{i});
             check(d.year == int(oracle.year()) && d.month == int(unsigned(oracle.month())) &&
                   d.day == int(unsigned(oracle.day())),"calendar/leap boundary mismatch");
         }

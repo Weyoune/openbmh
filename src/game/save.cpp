@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "game/save.hpp"
+#include "game/calendar.hpp"
 
 #include <cstdio>
 #include <cstring>
@@ -25,7 +26,7 @@ void put32(Bytes& d, size_t at, uint32_t x) {
     for (int i = 0; i < 4 && at + size_t(i) < d.size(); i++) d[at + size_t(i)] = uint8_t(x >> (8 * i));
 }
 
-// DeskDate2(date, buffer, 0): "TT.MM.JJJJ" of a day counter (day 0 = 1 July 2026; a
+// DeskDate2(date, buffer, 0): "TT.MM.JJJJ" of a day counter (day 0 = 1 July of the supplied edition; a
 // four-year leap cycle that starts with the third year).
 std::string date_text(uint32_t counter) {
     static const int kDays[13] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
@@ -45,7 +46,7 @@ std::string date_text(uint32_t counter) {
         if (++month == 13) month = 1, ++years;
     }
     char buf[16];
-    std::snprintf(buf, sizeof buf, "%02d.%02d.%04d", day, month, 2026 + years);
+    std::snprintf(buf, sizeof buf, "%02d.%02d.%04d", day, month, calendar_epoch().year + years);
     return buf;
 }
 
