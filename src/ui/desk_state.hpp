@@ -107,6 +107,7 @@ struct DeskState {
     bool mailbox_notification_pending = false; // MailboxRecipientMask active-manager bit; transient, non-FBM
     std::optional<DeskItem> menu_layout_shortcut; // final bar cell returns native record 53/kind 72, then dispatches MEN
     std::array<uint8_t, 5> automation{};
+    std::optional<std::array<uint8_t, 22>> automation_formation;
     std::array<std::optional<bool>, 10> warnings{};
     std::vector<DeskItem> items; // Original linked-list drawing / hit-test order.
     std::string source;

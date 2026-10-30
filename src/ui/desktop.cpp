@@ -218,7 +218,14 @@ void DesktopScreen::draw_item(Image& out, const DeskItem& item) const {
             copy(out, icons_, 97, 111, x + 3 + i * 33, y + 2, 32, 30);
             const auto value = state_.automation[i];
             if ((i == 4 ? value & 1 : value) != 0) copy(out, icons_, 129 + i * 16, 111, x + i * 33 + 10, y + 4, 17, 11);
-            // Individual automatic-formation dots need a separately verified renderer.
+            if (i == 0 && value != 0 && state_.automation_formation) {
+                const auto& formation = *state_.automation_formation;
+                // The original miniature excludes the keeper and unused positions.
+                for (int row = 1; row < 11; ++row)
+                    if (formation[size_t(row)] != 0)
+                        rect(out, x + 10 + formation[size_t(row)] * 15 / 18,
+                             y + 5 + formation[size_t(row + 11)], 1, 1, 0x27);
+            }
         }
         break;
     case 15:
@@ -274,6 +281,20 @@ Image DesktopScreen::render() const {
              0x4b, 299, 0xcf, 0x14, 0x14);
         if (shortcut_hover_record_ >= 0)
             text(out, 0, 235, texts_[text_id(::bmh::layout::Desktop_Render_TextPointer + uint32_t(shortcut_hover_record_) * 4)], 0x5f, 319);
+    }
+    if (layout_drag_ && layout_preview_) {
+        const auto selected = std::find_if(visible.items.begin(), visible.items.end(),
+            [&](const DeskItem& item) { return item.id == layout_drag_->item; });
+        if (selected != visible.items.end()) {
+            draw_item(out, *selected);
+            const auto& item = *selected;
+            const int w = item.width - (item.kind >= 50 && !item.open ? 8 : 0);
+            const int h = item.height - (item.kind >= 50 && !item.open ? 8 : 0);
+            rect(out, item.x, item.y, w, 1, 0x27);
+            rect(out, item.x, item.y + h - 1, w, 1, 0x27);
+            rect(out, item.x, item.y, 1, h, 0x27);
+            rect(out, item.x + w - 1, item.y, 1, h, 0x27);
+        }
     }
     return out;
 }
@@ -722,6 +743,7 @@ std::string DesktopScreen::state_json() const {
            ",\"shortcut_hover_record\":" + std::to_string(shortcut_hover_record_) +
            ",\"socket_confirmation_armed\":" + std::string(socket_confirmation_armed_ ? "true" : "false") +
            ",\"bin_mode\":" + std::string(bin_mode_ ? "true" : "false") +
+           ",\"dragging_item\":" + (layout_drag_ ? std::to_string(layout_drag_->item) : "null") +
            ",\"pending_action\":" + (pending_ ? desk_request_json(*pending_) : "null") +
            ",\"last_rejection\":" + (last_rejection_.empty() ? "null" : json_quote(last_rejection_)) + "}";
     return out;

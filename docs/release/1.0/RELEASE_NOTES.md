@@ -1,3 +1,13 @@
+# OpenBMH 1.0.1
+
+The automatic-lineup monitor now draws the selected formation from the actual manager formation table. Outdoor, indoor and custom formation slots retain their original coordinates and palette. Dragging a desktop element shows the original yellow outline, which disappears when the drag ends.
+
+SDL video initialization now precedes the initial native file picker. On macOS this lets SDL establish the Cocoa application and keyboard activation policy before the picker creates or modifies NSApp. It addresses keyboard input missing throughout the game, including entering the manager name. A native macOS regression checks the activation policy after the picker initialization/shutdown lifecycle.
+
+Native interactive Mac keyboard acceptance remains human QA; automated checks do not represent physical typing on a user's Mac.
+
+---
+
 # OpenBMH 1.0.0
 
 Classic direct-installation runtime restored from v0.1.2. The game executable is OpenBMH / OpenBMH.exe; openbmh_cli remains available.

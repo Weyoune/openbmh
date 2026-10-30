@@ -31,6 +31,7 @@
 #include "launch/file_dialog.hpp"
 #include "launch/game_data.hpp"
 #include "version.hpp"
+#include "app/video_session.hpp"
 #include "app/live_matchday_events.hpp"
 #include "audio/playback.hpp"
 #include "app/audio.hpp"
@@ -151,6 +152,9 @@ int main(int argc, char** argv) {
             data = launch::path_from_utf8(args[i]);
         }
     }
+    std::optional<app::VideoSession> video;
+    try { video.emplace(); }
+    catch (const std::exception& error) { show_start_error(error.what()); return 1; }
     // the game: as given (directory, EXE or archive); else the directory OpenBMH itself lies in,
     // when it holds a playable game (the simplest install: openbmh next to BMH.EXE); else
     // chosen in the file dialog
@@ -194,7 +198,6 @@ int main(int argc, char** argv) {
         ui::StartupFlow flow(data, save_directory);
         std::unique_ptr<app::CareerSession> session;
         uint64_t revision = 0;
-        if (SDL_Init(SDL_INIT_VIDEO) != 0) throw FormatError(SDL_GetError());
         openbmh::audio::Playback playback;
         std::string audio_error;
         playback.initialize(audio_error);  // Audio is optional; the game continues without a device.
@@ -3903,11 +3906,9 @@ int main(int argc, char** argv) {
         SDL_DestroyWindow(window);
         mouse_sound.detach(); // Remove event producers before closing the audio device.
         playback.shutdown();
-        SDL_Quit();
         return 0;
     } catch (const std::exception& e) {
         std::fprintf(stderr, "error: %s\n", e.what());
-        SDL_Quit();
         return 1;
     }
 }

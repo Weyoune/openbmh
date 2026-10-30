@@ -33,3 +33,9 @@ After the final lineup, qualification and once-per-player season-reset correctio
 The duplicate-player defect was reproduced and captured before correction: a temporary offer referenced a player already owned by a club, then the extended market-retirement pass regenerated that player a second time. Frozen private before/after saves and a cached-reference regression support the correction. Save-envelope diagnostics use a separate RNG and do not consume either gameplay stream.
 
 Calendar epoch regression covers the original CD and Diamond parameters, engine weekdays, desktop dates, save-header dates, year rollover and atomic rejection of invalid/unknown setup instructions. The original and checked Diamond date routines differ only in their weekday/year operands. After installing the original CD calendar parameters, the 600-turn run with contract and advertising policies completed eleven season-end desks without invariant failures.
+
+## 1.0.1 desktop and macOS regressions
+
+The desktop feedback test checks selected saved formations against their original table, compares changed miniature pixels, and checks the original yellow outline during a drag and its removal afterward. Private CD and Diamond render captures use the original assets. The SDL lifetime test checks initialization before the picker scope, normal destruction and failed initialization cleanup.
+
+A macOS-only native Cocoa test initializes SDL before the native picker lifecycle, checks regular activation, creates a keyboard-focused window and verifies that a Cocoa key event produces both SDL key and text events. This automated native event test supplements human keyboard QA; it is not a claim of physical typing on the user's machine.

@@ -488,6 +488,18 @@ DeskDate desk_date(uint32_t counter, const LeImage& exe) {
     return d;
 }
 
+namespace {
+void project_automation_formation(DeskState& desk, const Bytes& formations, bool indoor) {
+    const int selected = desk.automation[0];
+    if (selected == 0) return;
+    if (selected > 8) throw FormatError("desktop: invalid automatic formation");
+    const size_t offset = size_t(desk.manager_slot) * 0x160 + size_t(indoor) * 0xb0 + size_t(selected - 1) * 22;
+    if (offset + 22 > formations.size()) throw FormatError("desktop: missing automatic formation");
+    desk.automation_formation.emplace();
+    std::copy_n(formations.begin() + offset, 22, desk.automation_formation->begin());
+}
+}
+
 DeskState desk_from_save(const SaveState& s, const LeImage& exe, uint64_t revision) {
     StaticMemory memory(s);
     auto manager = block_copy(s, ::bmh::layout::ManagerRecords), tactics = block_copy(s, ::bmh::layout::TacticsBoards), options = block_copy(s, ::bmh::layout::ManagerAutomation);
@@ -510,6 +522,7 @@ DeskState desk_from_save(const SaveState& s, const LeImage& exe, uint64_t revisi
     project_table_position(d, table_source);
     project_drawer_rows(d, exe, manager, s.pool(0), offsets, position_history,
                         results_by_opponent, rounds, std::nullopt);
+    project_automation_formation(d, block_copy(s, layout::Formations), false);
     d.source = "original_save_read_only"; return d;
 }
 
@@ -520,6 +533,7 @@ DeskState desk_from_game(const GameState& g, const LeImage& exe, uint64_t revisi
     auto d = project(g.memory, {g.manager_records, g.tactics, g.manager_options, g.stocks, g.club_heap_78, g.club_names,
                      g.club_ids, g.squad_slots, g.players, g.team_morale, g.manager_teams, g.league_rounds},
                      exe, g.level, g.date, g.season_day(), g.season, revision);
+    project_automation_formation(d, g.formations, g.indoor);
     // DeskDate only auto-opens for an ordinary club manager; the national
     // runtime (0x165) suppresses this consumer while manual mailbox access remains valid.
     if (d.runtime_club != kNoTeam && d.manager_slot >= 0 && d.manager_slot < 32 && g.memory.has(::bmh::layout::MailboxRecipientMask))
