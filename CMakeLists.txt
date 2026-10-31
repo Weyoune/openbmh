@@ -1202,6 +1202,8 @@ add_library(bmhworld12 STATIC
     src/game/world12/world.cpp
     src/game/world12/codec.cpp
     src/game/world12/fixtures.cpp
+    src/game/world12/calendar.cpp
+    src/game/world12/progression.cpp
     src/game/world12/save.cpp
     src/game/world12/match_projection.cpp
     src/cli/json.cpp)
@@ -1212,3 +1214,5 @@ target_link_libraries(world12_tests PRIVATE bmhworld12)
 add_test(NAME world12_tests COMMAND world12_tests)
 add_executable(world12_validate tools/world12/validate_world.cpp)
 target_link_libraries(world12_validate PRIVATE bmhworld12)
+add_executable(world12_calendar_validate tools/world12/validate_calendar.cpp)
+target_link_libraries(world12_calendar_validate PRIVATE bmhworld12 bmhlaunch)
