@@ -3,6 +3,7 @@
 #include "game/world12/catalogue.hpp"
 #include "formats/m3d.hpp"
 #include <map>
+#include <optional>
 namespace bmh::world12 {
 struct PlayerRecord {
     PlayerId id;Player attributes;uint8_t bonus=0;uint16_t cards=0;
@@ -28,8 +29,14 @@ struct Loan {
     PlayerId player;ClubId owner,borrower;uint8_t months=0;
     bool operator==(const Loan&)const=default;
 };
+struct ManagerFinance {
+    int32_t balance=0;
+    uint32_t credit=0,income=0,expenses=0,bonus_paid=0;
+    bool operator==(const ManagerFinance&)const=default;
+};
 struct Manager {
     uint8_t seat=0;std::string name;ClubId club;LeagueId start_league;uint8_t portrait=0;
+    std::optional<ManagerFinance> finance={};
     bool operator==(const Manager&)const=default;
 };
 struct CrestResource {std::string path;uint8_t cell=0;bool operator==(const CrestResource&)const=default;};

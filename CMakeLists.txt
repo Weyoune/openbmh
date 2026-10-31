@@ -1211,10 +1211,11 @@ add_library(bmhworld12 STATIC
     src/game/world12/save.cpp
     src/game/world12/match_projection.cpp
     src/game/world12/ai_match.cpp
+    src/game/world12/manager_finance.cpp
     src/cli/json.cpp)
 target_include_directories(bmhworld12 PUBLIC src)
 target_link_libraries(bmhworld12 PUBLIC bmhcore)
-add_library(bmhworld12_app STATIC src/app/world12_cups.cpp)
+add_library(bmhworld12_app STATIC src/app/world12_cups.cpp src/app/world12_manager.cpp)
 target_link_libraries(bmhworld12_app PUBLIC bmhworld12)
 add_library(bmhworld12_ui STATIC src/ui/world12_other_games.cpp)
 target_link_libraries(bmhworld12_ui PUBLIC bmhui bmhworld12)
@@ -1242,6 +1243,9 @@ add_test(NAME world12_match_tests COMMAND world12_match_tests)
 add_executable(world12_other_games_tests tests/world12_other_games_tests.cpp)
 target_link_libraries(world12_other_games_tests PRIVATE bmhworld12_ui bmhworld12_app)
 add_test(NAME world12_other_games_tests COMMAND world12_other_games_tests)
+add_executable(world12_manager_finance_tests tests/world12_manager_finance_tests.cpp)
+target_link_libraries(world12_manager_finance_tests PRIVATE bmhworld12_app)
+add_test(NAME world12_manager_finance_tests COMMAND world12_manager_finance_tests)
 add_executable(setup_country_symbol_tests tests/setup_country_symbol_tests.cpp)
 target_link_libraries(setup_country_symbol_tests PRIVATE bmhui)
 add_test(NAME setup_country_symbol_tests COMMAND setup_country_symbol_tests)

@@ -23,7 +23,7 @@ The complete source package retains both countries so a later *new* game can cho
 
 ## Stable schema and progression
 
-League IDs retain their fourteen reserved catalogue slots. Disabled slots have no members, rounds or results; they are metadata identities, not live leagues or substitute club lists. Database schema versions 2–4 store strict Germany/England/International scope booleans; versions 3/4 add persistent match/development/club-record fields. Version-1 full master worlds remain readable as the default full scope. Scoped world/save roundtrips retain the selection. Developed worlds and played club records cannot be re-scoped as fresh master data.
+League IDs retain their fourteen reserved catalogue slots. Disabled slots have no members, rounds or results; they are metadata identities, not live leagues or substitute club lists. Database schema versions 2–5 store strict Germany/England/International scope booleans; versions 3/4 add persistent match/development/club-record fields and version 5 adds optional manager finances. Version-1 full master worlds remain readable as the default full scope. Scoped world/save roundtrips retain the selection. Developed worlds and played club records cannot be re-scoped as fresh master data.
 
 Calendar import drops disabled domestic appointments. Shared European club events require club play, while national tournaments/friendlies require International. Calendar/save validation rejects disabled-country events reintroduced by malformed data. Initial cup selection does not read or consume randomness for an excluded country.
 

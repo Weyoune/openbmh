@@ -76,3 +76,10 @@ Added mixed BMH/FLTD other-games UI ([contract](OTHER_GAMES_UI.md)):
 - Typed domestic cup views expose stored rounds/stages, Source detail windows and complete view. Existing assets/renderer, Core club averages, detail labels and extra-time/penalty/return-leg formatting are reused. Uninitialized European/national data is explicitly unavailable rather than manufactured.
 - Typed owner identities and local-token/global-club mappings keep navigation/team-info requests distinct from legacy engine IDs. Legacy dispatch refuses typed requests. Model and supplied-asset geometry/action checks cover the merged finals and eight selectors; private demo views are explicitly labeled synthetic examples.
 - The overview is ready for the pending typed GUI-career owner. Initial supercup selection and remaining competition backends are not claimed complete.
+
+Added first persistent human-manager state ([contract](MANAGER_STATE.md)):
+
+- Optional manager finances preserve cash/credit, income/expense counters and paid-player-bonus totals in world schema version 5. Older manager states remain explicitly uninitialized; no starting balance is guessed.
+- A narrow legacy financial extractor and typed booking adapter reuse Original `book_money`, including credit checks, forced/statistical bookings, no-money mode and word wrapping. The application owner checks seat/club/scope/revision and publishes only changed state with its revision; applied payments cannot be replayed.
+- 288 direct-Core financial cases, ownership/codec/snapshot tests and private Original-save extraction/booking checks passed. These do not convert the old career, initialize a complete new career or unlock human match simulation.
+- Source-compatible initial money, tactics/lineups, contracts, bank policy, daily finance and GUI-career integration remain pending.
