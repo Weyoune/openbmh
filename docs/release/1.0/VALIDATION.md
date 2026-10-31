@@ -39,3 +39,7 @@ Calendar epoch regression covers the original CD and Diamond parameters, engine 
 The desktop feedback test checks selected saved formations against their original table, compares changed miniature pixels, and checks the original yellow outline during a drag and its removal afterward. Private CD and Diamond render captures use the original assets. The SDL lifetime test checks initialization before the picker scope, normal destruction and failed initialization cleanup.
 
 A macOS-only native Cocoa test initializes SDL before the native picker lifecycle, checks regular activation, creates a keyboard-focused window and verifies that a Cocoa key event produces both SDL key and text events. This automated native event test supplements human keyboard QA; it is not a claim of physical typing on the user's machine.
+
+## 1.0.2 close-button regression
+
+The desktop feedback test checks that the left corner requests removal instead of entering drag mode, that the remaining layout chain is intact, and that the release after acknowledgement does not activate an underlying icon. A subsequent independent click remains usable. Right-button movement and its temporary yellow outline remain covered. The user confirmed the 1.0.1 automation and Mac keyboard corrections.

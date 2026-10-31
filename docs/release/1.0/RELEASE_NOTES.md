@@ -1,3 +1,11 @@
+# OpenBMH 1.0.2
+
+A left click on an open desktop widget's upper-left close button now hides that widget through the normal validated layout transaction. The close button no longer starts a drag or shows the moving outline. Moving an element with the right mouse button remains available.
+
+The close action consumes its matching mouse release even if the engine has already removed the widget, preventing an accidental click on an icon underneath. The automation and macOS keyboard fixes from 1.0.1 remain unchanged.
+
+---
+
 # OpenBMH 1.0.1
 
 The automatic-lineup monitor now draws the selected formation from the actual manager formation table. Outdoor, indoor and custom formation slots retain their original coordinates and palette. Dragging a desktop element shows the original yellow outline, which disappears when the drag ends.

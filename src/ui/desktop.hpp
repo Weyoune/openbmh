@@ -71,6 +71,8 @@ private:
     mutable std::vector<uint8_t> sound_ids_;
     struct LayoutDrag { int item=-1, grab_x=0, grab_y=0, start_x=0, start_y=0, folder=-1; bool moved=false, folder_child=false, drawer_handle=false, right_button=false; };
     std::optional<LayoutDrag> layout_drag_;
+    bool drawer_close_release_pending_ = false;
+    DeskRequest close_drawer(const DeskItem& item);
     std::optional<DeskState> layout_preview_;
     void text(Image&, int x, int baseline, std::string_view, uint8_t color, int right = -1) const;
     void sprite_text(Image&, int x, int baseline, std::string_view, int font) const;

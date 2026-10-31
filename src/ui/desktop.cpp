@@ -327,8 +327,30 @@ std::optional<DeskItem> DesktopScreen::folder_child_at(int x,int y) const {
     return std::nullopt;
 }
 
+DeskRequest DesktopScreen::close_drawer(const DeskItem& item) {
+    if (item.id < 1 || item.id >= 54 || item.kind < 50 || item.kind > 71 || !item.open) return {};
+    const auto& record = state_.layout_records[size_t(item.id)];
+    const int previous = record[6], next = record[5];
+    if (previous >= 54 || next >= 54 || record[12] != item.kind ||
+        state_.layout_records[size_t(previous)][5] != item.id ||
+        (next != 0 && state_.layout_records[size_t(next)][6] != item.id)) return {};
+    auto action = request(DeskRequestKind::change_layout, item, 2);
+    action.layout_operation = DeskLayoutOperation::toggle_quickbar_drawer;
+    action.layout_target_item = item.id;
+    for (size_t i = 0; i < 54; ++i)
+        std::copy(state_.layout_records[i].begin(), state_.layout_records[i].end(), action.layout_before.begin() + i * 16);
+    action.layout_after = action.layout_before;
+    action.layout_after[size_t(previous) * 16 + 5] = uint8_t(next);
+    if (next != 0) action.layout_after[size_t(next) * 16 + 6] = uint8_t(previous);
+    action.layout_after[size_t(item.id) * 16 + 5] = 0xff;
+    action.layout_after[size_t(item.id) * 16 + 6] = 0xff;
+    sound_ids_.push_back(12);
+    pending_ = action;
+    return action;
+}
+
 DeskRequest DesktopScreen::pointer_down(int x, int y, bool right) {
-    if (pending_) return {};
+    if (pending_ || drawer_close_release_pending_) return {};
     if (socket_release_pending_) return {}; // DeskDate waits here for the first RMB release.
     sample_shortcut_pointer(x, y);
     shortcut_hover_record_ = -1; // DeskDate clears its tooltip on event2/event8 before dispatch.
@@ -366,19 +388,22 @@ DeskRequest DesktopScreen::pointer_down(int x, int y, bool right) {
         const int inset = item.kind >= 50 && !item.open ? 8 : 0;
         if (item.disabled || x < item.x || y < item.y || x >= item.x + item.width - inset ||
             y >= item.y + item.height - inset) continue;
+        if (!right && item.kind >= 50 && item.open && state_.drawer_handles &&
+            x <= item.x + 3 && y <= item.y + 3) {
+            auto action = close_drawer(item);
+            drawer_close_release_pending_ = action.kind != DeskRequestKind::none;
+            return action;
+        }
         if (right && !state_.drawer_handles) return {};
         if (right && bin_mode_ && item.kind!=12) return {};
         if (!right && item.kind==55 && item.open && !state_.national_team &&
             x-item.x-4>34 && x-item.x-4<87) return {}; // Original ticket-price scale.
         if (!right && item.kind==64 && item.open) return {}; // Source automation controls remain clicks.
         const bool drawer_handle=item.kind>=50&&state_.drawer_handles&&x<=item.x+3&&y<=item.y+3;
-        if(item.kind>=50&&!drawer_handle&&!right) return {};
-        if(!right&&!drawer_handle) return {}; // Source LMB activates; RMB starts a drag.
+        if (!right) return {}; // LMB closes/activates; RMB alone starts a drag.
         layout_drag_ = LayoutDrag{item.id, x - item.x, y - item.y, item.x, item.y, -1, false, false, drawer_handle, right};
         layout_preview_ = state_;
         // RemovesBinModeIcon/RestoresChildBinMode run at RMB press, even if no motion follows.
-        // The existing LMB handle drag differs from that Source path; do not
-        // invent its sound mapping here.
         if (right) sound_ids_.insert(sound_ids_.end(), {12, 15});
         return {};
     }
@@ -386,7 +411,7 @@ DeskRequest DesktopScreen::pointer_down(int x, int y, bool right) {
 }
 
 bool DesktopScreen::pointer_move(int x, int y) {
-    if (pending_ || socket_release_pending_) return false;
+    if (pending_ || socket_release_pending_ || drawer_close_release_pending_) return false;
     if (!layout_drag_ || !layout_preview_) return sample_shortcut_pointer(x, y);
     auto& drag = *layout_drag_;
     auto found = std::find_if(layout_preview_->items.begin(), layout_preview_->items.end(),
@@ -404,6 +429,10 @@ bool DesktopScreen::pointer_move(int x, int y) {
 }
 
 DeskRequest DesktopScreen::pointer_up(int x, int y, bool right) {
+    if (drawer_close_release_pending_) {
+        if (!right) drawer_close_release_pending_ = false;
+        return {}; // The close owns its release even after the widget was removed by ACK.
+    }
     if (socket_release_pending_) {
         if (right) socket_release_pending_ = false;
         return {}; // First socket RMB release is only the Source wait barrier.
@@ -621,9 +650,9 @@ DeskRequest DesktopScreen::click(int x, int y, bool right) {
         }
         if (item.disabled || right) return {};
         if (item.kind < 50) return request(item.kind == 12 ? DeskRequestKind::advance_turn : DeskRequestKind::open_menu, item);
-        // DeskDate only handles Ticket/Calendar/Automation body clicks;
-        // drawer open/close is exclusively the compact quickbar operation.
-        if (item.open && state_.drawer_handles && x <= item.x + 3 && y <= item.y + 3) return {};
+        // The corner closes through the same transaction as the quickbar.
+        if (item.open && state_.drawer_handles && x <= item.x + 3 && y <= item.y + 3)
+            return close_drawer(item);
         if (item.kind == 58 && item.open) return request(DeskRequestKind::advance_turn, item);
         if (item.kind == 55 && item.open && !state_.national_team && x - item.x - 4 > 34 && x - item.x - 4 < 87)
             return request(DeskRequestKind::change_ticket_price, item, (x - item.x - 4 - 35) / 3 + 8);

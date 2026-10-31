@@ -6,6 +6,7 @@
 #include "formats/savestate.hpp"
 #include "formats/executable_layout.hpp"
 #include <filesystem>
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
@@ -57,6 +58,38 @@ int main(int argc,char**argv)try{
     const auto second=DesktopScreen(data,state).render();
     check(first.pixels!=second.pixels,"changing selected formation left the monitor unchanged");
     capture(output,"formation-1.ppm",first,palette);capture(output,"formation-2.ppm",second,palette);
+    state.drawer_handles=true;
+    state.items={{2,20,20,32,25,0,0,0,false,false},{1,20,20,173,40,64,0,0,true,false}};
+    state.layout_records[0][5]=2;
+    state.layout_records[2][5]=1; state.layout_records[2][6]=0;
+    state.layout_records[1][5]=0; state.layout_records[1][6]=2;
+    state.layout_records[1][12]=64; state.layout_records[1][13]=0x80;
+    DesktopScreen widget_drag(data,state);
+    widget_drag.pointer_down(21,21,true);
+    widget_drag.pointer_move(61,61);
+    const auto widget_move=widget_drag.pointer_up(61,61,true);
+    check(widget_move.kind==DeskRequestKind::change_layout && widget_move.layout_operation==DeskLayoutOperation::move_item,
+          "right-button widget movement was replaced by closing");
+    DesktopScreen close(data,state);
+    capture(output,"close-before.ppm",close.render(),palette);
+    const auto removal=close.pointer_down(21,21,false);
+    check(removal.kind==DeskRequestKind::change_layout &&
+          removal.layout_operation==DeskLayoutOperation::toggle_quickbar_drawer &&
+          removal.layout_target_item==1,"left corner did not request widget removal");
+    check(removal.layout_after[2*16+5]==0 && removal.layout_after[16+5]==0xff &&
+          removal.layout_after[16+6]==0xff,"corner removal corrupted the remaining layout chain");
+    check(close.state_json().find("\"dragging_item\":null")!=std::string::npos,
+          "close corner incorrectly entered drag mode");
+    check(!close.pointer_move(100,100),"close press turned into movement");
+    auto removed=state; removed.revision=state.revision+1; removed.items.erase(removed.items.begin()+1);
+    for(size_t i=0;i<54;++i)std::copy_n(removal.layout_after.begin()+i*16,16,removed.layout_records[i].begin());
+    close.acknowledge(removed);
+    check(close.pointer_up(21,21,false).kind==DeskRequestKind::none,
+          "close release activated the icon underneath the removed widget");
+    capture(output,"close-after.ppm",close.render(),palette);
+    check(close.pointer_up(21,21,false).kind==DeskRequestKind::open_menu,
+          "close release barrier consumed a subsequent independent click");
+    state.layout_records={}; state.layout_records[0][5]=1;
     state.items={{1,20,20,32,25,0,0,0,false,false}};state.drawer_handles=true;
     DesktopScreen drag(data,state);const auto normal=drag.render();
     const auto idle=drag.state_json();
