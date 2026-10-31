@@ -88,13 +88,13 @@ void Document::set_player(size_t id,const PlayerValues& v){
     uint32_t skills=0;for(int i=0;i<7;++i)skills|=uint32_t(v.skills[i])<<(i*2);
     p.w368=(p.w368&0x07ffc000u)|skills|uint32_t(v.nation&31)<<27;
     next.raw_player_bonus_values.at(id)=uint8_t(v.bonus|((v.nation>>5)<<7));
-    if(encode_database(next)!=encode_database(db_)){db_=std::move(next);dirty_=true;changes_.push_back("record:"+std::to_string(id));}
+    if(encode_database(next)!=encode_database(db_)){db_=std::move(next);dirty_=true;changes_.push_back("player:"+std::to_string(id));}
 }
 void Document::set_club(size_t id,std::string name,int kit,int start,int length){
     if(kit<0||kit>255||start<0||start>15||length<1||length>16||size_t(start+length)>name.size())throw FormatError("Ungueltige Farbe oder Kurznamens-Auswahl.");
     auto next=db_;rename(next.pools[0],next.raw_club_name_offsets,id,name);next.club_names.at(id)=std::move(name);next.raw_club_kit_selectors.at(id)=uint8_t(kit);
     if(id<next.counts.n42)next.raw_club_short_name_offsets.at(id)=uint8_t((start<<4)|(length-1));
-    if(encode_database(next)!=encode_database(db_)){db_=std::move(next);dirty_=true;changes_.push_back("record:"+std::to_string(id));}
+    if(encode_database(next)!=encode_database(db_)){db_=std::move(next);dirty_=true;changes_.push_back("club:"+std::to_string(id));}
 }
 void Document::move_player(size_t id,int destination,int swap){
     const int source=club_of(id);if(source<0||destination<0||destination>=int(profile_.counts.league_teams)||source==destination)throw FormatError("Kaderwechsel nur zwischen zwei Ligavereinen moeglich.");
