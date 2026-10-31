@@ -1497,6 +1497,8 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         if (!choice || !session->confirm_manager(flow.options(), *choice, error)) return "manager: " + error;
         flow.resume_manager_selection(session->selection_context(++revision));
     } else if (result.request == ui::FlowRequest::new_career) {
+        if(flow.pending_career() && flow.pending_career()->options.country_selection)
+            return "1.2 country selection requires the typed career adapter; legacy initialization is disabled";
         if (!session) session = std::make_unique<app::CareerSession>(data, seed);
         if (enable_autosave) session->configure_autosave_directory(save_directory);
         const ui::NewCareerRequest* request = flow.pending_career();

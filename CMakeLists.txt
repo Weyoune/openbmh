@@ -1200,6 +1200,7 @@ endif()
 add_library(bmhworld12 STATIC
     src/game/world12/catalogue.cpp
     src/game/world12/world.cpp
+    src/game/world12/world_scope.cpp
     src/game/world12/codec.cpp
     src/game/world12/fixtures.cpp
     src/game/world12/standings.cpp
@@ -1229,6 +1230,9 @@ add_test(NAME world12_cups_tests COMMAND world12_cups_tests)
 add_executable(world12_cup_draw_tests tests/world12_cup_draw_tests.cpp)
 target_link_libraries(world12_cup_draw_tests PRIVATE bmhworld12_app)
 add_test(NAME world12_cup_draw_tests COMMAND world12_cup_draw_tests)
+add_executable(world12_scope_tests tests/world12_scope_tests.cpp)
+target_link_libraries(world12_scope_tests PRIVATE bmhworld12_app)
+add_test(NAME world12_scope_tests COMMAND world12_scope_tests)
 add_executable(setup_country_symbol_tests tests/setup_country_symbol_tests.cpp)
 target_link_libraries(setup_country_symbol_tests PRIVATE bmhui)
 add_test(NAME setup_country_symbol_tests COMMAND setup_country_symbol_tests)

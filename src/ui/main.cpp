@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
         for (int i = 1; i < argc; ++i) {
             std::string arg = argv[i];
             if (arg == "--help") {
-                std::puts("openbmh_ui --data BMH [--save original.FBM] [--save-directory dir] [--pitch-context outdoor|indoor] [--league-symbol source|dual] [--dump screen.bmp] [--script inputs.txt]\n"
+                std::puts("openbmh_ui --data BMH [--save original.FBM] [--save-directory dir] [--pitch-context outdoor|indoor] [--league-symbol source|countries] [--dump screen.bmp] [--script inputs.txt]\n"
                           "Script: left X Y / right X Y / move X Y / hold X Y MS / text NAME / key ENTER|BACKSPACE|ESC|letter.\n"
                           "Script context injection: resume PATH (decimal original master IDs in observed selection order).\n"
                           "Native coordinates: 320x240. manager_confirmed waits for updated order; final new_career waits for engine.\n"
@@ -101,8 +101,8 @@ int main(int argc, char** argv) {
             if (arg == "--save-directory") save_directory = argv[i];
             if(arg=="--league-symbol") {
                 const std::string value=argv[i];
-                if(value!="source" && value!="dual")throw FormatError("league symbol must be source or dual");
-                league_symbol=value=="dual"?ui::SetupLeagueSymbol::germany_england:ui::SetupLeagueSymbol::source;
+                if(value!="source" && value!="dual" && value!="countries")throw FormatError("league symbol must be source or countries");
+                league_symbol=value!="source"?ui::SetupLeagueSymbol::country_selection:ui::SetupLeagueSymbol::source;
             }
             if (arg == "--pitch-context") {
                 const std::string value = argv[i];

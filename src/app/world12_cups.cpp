@@ -14,9 +14,11 @@ std::vector<CupDrawNotice> install_domestic_cup_fields(CareerSnapshot& state,
         std::any_of(state.league_rounds.begin(),state.league_rounds.end(),[](auto round){return round!=0;}))
         throw std::invalid_argument("world12: initial cup fields require an unstarted season");
     auto candidate=state;GameRandom game(state.game_seed);
-    candidate.cups=initial_domestic_cup_fields(candidate.world,Country::germany,german,sources.german,game);
-    auto english_fields=initial_domestic_cup_fields(candidate.world,Country::england,english,sources.english,game);
-    candidate.cups.insert(candidate.cups.end(),english_fields.begin(),english_fields.end());
+    if(candidate.world.catalogue.scope.germany)candidate.cups=initial_domestic_cup_fields(candidate.world,Country::germany,german,sources.german,game);
+    if(candidate.world.catalogue.scope.england) {
+        auto english_fields=initial_domestic_cup_fields(candidate.world,Country::england,english,sources.english,game);
+        candidate.cups.insert(candidate.cups.end(),english_fields.begin(),english_fields.end());
+    }
     candidate.game_seed=game.seed();candidate.validate();
     std::vector<CupDrawNotice> notices;
     for(const auto& cup:candidate.cups)if(auto notice=cup_draw_notice(candidate.world,cup))notices.push_back(std::move(*notice));

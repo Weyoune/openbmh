@@ -6,7 +6,6 @@ All source art and the generated VGA remain externally supplied content. The
 public repository contains this compositor and synthetic tests only.
 """
 import argparse
-import collections
 import hashlib
 import json
 from pathlib import Path
@@ -44,42 +43,18 @@ def tile(atlas, x, y):
 
 
 def compose(german, english):
-    """Keep original texels at 1:1 size; overlap the two existing silhouettes."""
-    de_on, en_on = tile(german, 0, 40), tile(english, 0, 40)
-    background = collections.Counter(de_on).most_common(1)[0][0]
-    if collections.Counter(en_on).most_common(1)[0][0] != background:
-        raise ValueError('The two controls have incompatible background indices')
-    enabled = de_on[:]
-    for y in range(1, HEIGHT - 1):
-        for x in range(1, WIDTH - 1):
-            enabled[y * WIDTH + x] = background
-    # English control behind, German control in front. Both retain the source
-    # shading/texture, with no scaling, generated contours or flag repainting.
-    for sprite, destination_x in ((en_on, 1), (de_on, 21)):
-        points = [(x, y) for y in range(1, HEIGHT - 1) for x in range(1, WIDTH - 1)
-                  if sprite[y * WIDTH + x] != background]
-        if not points:
-            raise ValueError('Source country sprite is empty')
-        left = min(x for x, _ in points)
-        right = max(x for x, _ in points)
-        if destination_x + right - left >= WIDTH - 1:
-            raise ValueError('Source country silhouette exceeds the native control')
-        for x, y in points:
-            enabled[y * WIDTH + destination_x + x - left] = sprite[y * WIDTH + x]
-    # Recover the actual Original red cross (including its shaded edge) from
-    # the globe's off/on difference. Do not invent a grey-only disabled state.
-    world_off, world_on = tile(german, 51, 0), tile(german, 51, 40)
-    disabled = enabled[:]
-    cross_pixels = 0
-    for y in range(1, HEIGHT - 1):
-        for x in range(1, WIDTH - 1):
-            index = y * WIDTH + x
-            if world_off[index] != world_on[index]:
-                disabled[index] = world_off[index]
-                cross_pixels += 1
-    if not cross_pixels:
-        raise ValueError('Source disabled control has no cross overlay')
-    return encode_vga(WIDTH, HEIGHT * 2, disabled + enabled)
+    """Copy the four complete Original controls without repainting any texel."""
+    rows = bytearray(WIDTH * 4 * HEIGHT * 2)
+    for active in range(2):
+        controls = [tile(german, 0, active * HEIGHT),
+                    tile(english, 0, active * HEIGHT),
+                    tile(german, WIDTH, active * HEIGHT),
+                    tile(german, 0, HEIGHT * 2)]
+        for control, pixels in enumerate(controls):
+            for y in range(HEIGHT):
+                start = (active * HEIGHT + y) * WIDTH * 4 + control * WIDTH
+                rows[start:start + WIDTH] = pixels[y * WIDTH:(y + 1) * WIDTH]
+    return encode_vga(WIDTH * 4, HEIGHT * 2, rows)
 
 
 def prepare(german, english):
@@ -92,8 +67,8 @@ def prepare(german, english):
     report = {'format': 'openbmh-setup-symbol-12', 'sources': {
         'german_atlas_sha256': sha(de_atlas), 'english_atlas_sha256': sha(en_atlas),
         'palette_sha256': sha(de_palette)}, 'output_sha256': sha(result),
-        'dimensions': [WIDTH, HEIGHT * 2], 'frames': ['crossed-out', 'enabled'],
-        'method': 'Original texels, 1:1 size, English behind German, Original globe cross overlay'}
+        'dimensions': [WIDTH * 4, HEIGHT * 2], 'controls': ['germany', 'england', 'international', 'load'], 'frames': ['crossed-out', 'enabled'],
+        'method': 'Four independent Original controls, 1:1 texels, including Original crossed-out states'}
     return result, report
 
 

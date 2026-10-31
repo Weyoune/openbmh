@@ -8,7 +8,7 @@ from prepare_setup_symbol import compose, prepare, read_member, decode_vga, enco
 
 class SetupSymbolTests(unittest.TestCase):
     def atlases(self):
-        german = (102, 80, bytearray([7] * (102 * 80)))
+        german = (102, 120, bytearray([7] * (102 * 120)))
         english = (51, 80, bytearray([7] * (51 * 80)))
         for atlas, left, color in ((german, 12, 23), (english, 13, 47)):
             width, _, pixels = atlas
@@ -18,24 +18,23 @@ class SetupSymbolTests(unittest.TestCase):
         german[2][20 * 102 + 51 + 25] = 199  # authored off-state cross texel
         return german, english
 
-    def test_original_texels_and_cross_overlay(self):
+    def test_four_complete_original_controls(self):
+        from prepare_setup_symbol import tile
         de, en = self.atlases()
         width, height, result = decode_vga(compose(de, en))
-        self.assertEqual((width, height), (51, 80))
-        off, on = result[:51 * 40], result[51 * 40:]
-        self.assertIn(23, on)
-        self.assertIn(47, on)
-        self.assertNotIn(199, on)
-        changed = [i for i, (a, b) in enumerate(zip(off, on)) if a != b]
-        self.assertEqual(changed, [20 * 51 + 25])
-        self.assertEqual(off[changed[0]], 199)
-        self.assertLessEqual(set(on), {7, 23, 24, 25, 47, 48, 49})
+        self.assertEqual((width, height), (204, 80))
+        for state in range(2):
+            expected = [tile(de, 0, state * 40), tile(en, 0, state * 40),
+                        tile(de, 51, state * 40), tile(de, 0, 80)]
+            for control in range(4):
+                for y in range(40):
+                    start = (state * 40 + y) * 204 + control * 51
+                    self.assertEqual(result[start:start + 51], expected[control][y * 51:(y + 1) * 51])
+        self.assertEqual(result[20 * 204 + 2 * 51 + 25], 199)
+        self.assertNotEqual(result[20 * 204 + 2 * 51 + 25], result[60 * 204 + 2 * 51 + 25])
 
-    def test_rejects_missing_cross_or_unsupported_atlas(self):
-        de, en = self.atlases()
-        de[2][20 * 102 + 51 + 25] = 7
-        with self.assertRaises(ValueError):
-            compose(de, en)
+    def test_rejects_unsupported_atlas(self):
+        _, en = self.atlases()
         with self.assertRaises(ValueError):
             compose((50, 40, bytearray(50 * 40)), en)
 
@@ -51,7 +50,7 @@ class SetupSymbolTests(unittest.TestCase):
                     archive.writestr('M3PC.COL', palette)
             self.assertEqual(read_member(a, 'KB/20.VGA'), encode_vga(*de))
             result, report = prepare(a, b)
-            self.assertEqual(decode_vga(result)[:2], (51, 80))
+            self.assertEqual(decode_vga(result)[:2], (204, 80))
             self.assertEqual(report['frames'], ['crossed-out', 'enabled'])
             with zipfile.ZipFile(b, 'w') as archive:
                 archive.writestr('KB/20.VGA', encode_vga(*en))

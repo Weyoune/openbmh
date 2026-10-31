@@ -3,6 +3,7 @@
 #include <stdexcept>
 
 #include "ui/setup.hpp"
+#include "ui/flow.hpp"
 #include "formats/executable_layout.hpp"
 #include "formats/resource_bundle.hpp"
 
@@ -19,17 +20,27 @@ int main(int argc, char** argv) {
         check(before == SetupOptions{}, "original defaults");
         check(screen.render().pixels.size() == 320*240, "native framebuffer");
         if(bmh::resource_exists(std::filesystem::path(argv[1])/"KB"/"SETUP12.VGA")) {
-            SetupScreen dual(argv[1],SetupLeagueSymbol::germany_england);
-            const auto source_image=screen.render(),dual_image=dual.render();
-            const auto setup_source=bmh::load_le(asset_path(argv[1],"BMH.exe"));
-            const int league_x=setup_source.u8(bmh::layout::Setup_FormatError_RuntimeField9);
-            int changed_pixels=0;
-            for(int y=0;y<240;++y)for(int x=0;x<320;++x)if(source_image.pixels[size_t(y)*320+x]!=dual_image.pixels[size_t(y)*320+x]) {
-                check(x>=league_x && x<league_x+51 && y>=199 && y<239,"dual map changes another setup control");++changed_pixels;
+            SetupScreen countries(argv[1],SetupLeagueSymbol::country_selection);
+            const auto source_image=screen.render(),country_image=countries.render();
+            int changed=0;
+            for(int y=0;y<240;++y)for(int x=0;x<320;++x)if(source_image.pixels[size_t(y)*320+x]!=country_image.pixels[size_t(y)*320+x]) {
+                check(x>=46 && x<274 && y>=199,"country controls changed another setup row");++changed;
             }
-            check(changed_pixels>100 && dual.options()==screen.options(),"dual-country symbol missing or changes gameplay options");
-            check(dual.click(league_x+15,214).changed && !dual.options().league,"dual map no longer toggles league play");
-            check(dual.render().pixels!=dual_image.pixels,"disabled dual map has no visible state");
+            check(changed>100 && countries.options().country_selection,"four-country controls missing");
+            check(countries.click(65,214).changed && !countries.options().germany && countries.options().england,"Germany is not independently selectable");
+            check(countries.click(124,214).changed && !countries.options().league && countries.options().world,"International-only selection unavailable");
+            check(!countries.click(183,214).changed && countries.options().world,"last active game scope can be disabled");
+            check(countries.render().pixels!=country_image.pixels,"disabled country controls are not crossed out");
+            countries.click(65,214);countries.click(183,214);
+            check(setup_game_scope(countries.options())==bmh::world12::GameScope{true,false,false},"Germany-only scope mapping incorrect");
+            check(countries.click(242,214).request==SetupRequest::load_game,"fourth control does not load");
+            check(!countries.click(100,214).changed,"control gap toggles a country");
+            countries.click(183,214);countries.click(260,135);
+            check(countries.options().managers==2 && !countries.click(65,214).changed && countries.options().league,
+                "multiplayer can remove its last club system");
+            StartupFlow pending(argv[1],{},SetupLeagueSymbol::country_selection);
+            check(pending.click(10,210,true).request==FlowRequest::new_career && pending.pending_career() &&
+                pending.pending_career()->managers.empty(),"country selection entered a legacy German manager picker");
         }
         check(!screen.click(-1, 30).changed && !screen.click(320, 239, true).changed, "outside viewport");
         check(screen.click(130, 214).request == SetupRequest::none, "gap between controls");

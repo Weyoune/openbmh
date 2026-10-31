@@ -810,6 +810,10 @@ void CareerSession::apply_options(const ui::SetupOptions& o) {
 }
 
 bool CareerSession::confirm_manager(const ui::SetupOptions& options, const ui::ManagerChoice& choice, std::string& error) {
+    if(options.country_selection) {
+        error="1.2 country selection requires the typed career adapter";
+        return false;
+    }
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
         top_scorers_owner_ || top_scorers_dispatch_active_ || stadium_.block_expansion || other_games_owner_ || other_games_dispatch_active_) { error = "strengths_active"; return false; }
     if (!options_applied_) apply_options(options);

@@ -484,6 +484,11 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
             return {true, FlowRequest::submenu_opened};
         }
         if (r.request == SetupRequest::new_game) {
+            if(setup_.options().country_selection) {
+                setup_game_scope(setup_.options());
+                pending_=std::make_unique<NewCareerRequest>(NewCareerRequest{setup_.options(),{}});
+                return {true,FlowRequest::new_career};
+            }
             manager_ = std::make_unique<ManagerScreen>(data_, 0);
             return {true, FlowRequest::none};
         }

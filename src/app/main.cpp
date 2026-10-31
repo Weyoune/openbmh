@@ -201,7 +201,7 @@ int main(int argc, char** argv) {
         install_runtime_profile(load_data_profile(data));
         const Palette palette = load_palette(ui::asset_path(data, "M3PC.COL"));
         const auto league_symbol=resource_exists(data/"KB"/"SETUP12.VGA")?
-            ui::SetupLeagueSymbol::germany_england:ui::SetupLeagueSymbol::source;
+            ui::SetupLeagueSymbol::country_selection:ui::SetupLeagueSymbol::source;
         ui::StartupFlow flow(data,save_directory,league_symbol);
         std::unique_ptr<app::CareerSession> session;
         uint64_t revision = 0;

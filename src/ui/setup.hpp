@@ -7,6 +7,7 @@
 
 #include "formats/le.hpp"
 #include "formats/vga.hpp"
+#include "game/world12/scope.hpp"
 
 namespace bmh::ui {
 
@@ -20,11 +21,13 @@ struct SetupOptions {
     int mode = 3;
     bool league = true;
     bool world = true;
+    // Extended 1.2 setup; legacy profiles continue using league/world only.
+    bool country_selection=false,germany=true,england=true;
     bool operator==(const SetupOptions&) const = default;
 };
 
 enum class SetupRequest { none, new_game, load_game };
-enum class SetupLeagueSymbol { source,germany_england };
+enum class SetupLeagueSymbol { source,country_selection };
 struct SetupResult {
     bool changed = false;
     SetupRequest request = SetupRequest::none;
@@ -44,7 +47,7 @@ public:
 private:
     SetupOptions options_;
     Image background_, atlas_;
-    std::array<Image,2> league_symbols_;
+    std::array<std::array<Image,2>,4> country_controls_;
     std::array<int, 8> button_x_{}, button_y_{};
     std::array<int, 8> joining_arrow_permission_{};
     std::array<int, 4> minimum_{}, maximum_{};
@@ -58,5 +61,6 @@ private:
 // Match DOS filename case on Linux without modifying or renaming original files.
 std::filesystem::path asset_path(const std::filesystem::path& directory, const std::string& name);
 std::string setup_json(const SetupOptions& options);
+bmh::world12::GameScope setup_game_scope(const SetupOptions&);
 
 }  // namespace bmh::ui

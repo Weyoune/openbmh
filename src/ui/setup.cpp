@@ -10,6 +10,7 @@
 
 namespace bmh::ui {
 namespace {
+constexpr std::array<int,4> country_button_x={46,105,164,223};
 
 std::string folded(std::string s) {
     for (char& c : s) c = char(std::tolower(static_cast<unsigned char>(c)));
@@ -71,11 +72,11 @@ SetupScreen::SetupScreen(const std::filesystem::path& data,SetupLeagueSymbol sym
         throw FormatError("setup: unsupported original option table; verify this edition first");
     if (joining_arrow_permission_ != std::array<int, 8>{0, 1, 1, 0, 0, 1, 1, 0})
         throw FormatError("setup: unsupported Original joining-arrow table; verify this edition first");
-    if(symbol==SetupLeagueSymbol::germany_england) {
+    if(symbol==SetupLeagueSymbol::country_selection) {
         const auto prepared=load_vga(asset_path(data/"KB","SETUP12.VGA"));
-        for(int active=0;active<2;++active) {
-            league_symbols_[size_t(active)]=dual_country_button(prepared,active!=0);
-        }
+        options_.country_selection=true;
+        for(size_t control=0;control<4;++control)for(int active=0;active<2;++active)
+            country_controls_[control][size_t(active)]=country_setup_button(prepared,control,active!=0);
     }
 }
 
@@ -92,7 +93,20 @@ SetupScreen::SetupScreen(const std::filesystem::path& data, SetupOptions current
 SetupResult SetupScreen::click(int x, int y, bool right) {
     if (x < 0 || y < 0 || x >= 320 || y >= 240) return {};
     if (right) return {false, SetupRequest::new_game};
-    if (!joining_) {
+    if(!joining_ && options_.country_selection && y>=199 && y<239) {
+        for(size_t i=0;i<4;++i)if(x>=country_button_x[i]&&x<country_button_x[i]+51) {
+            if(i==3)return {false,SetupRequest::load_game};
+            const auto before=options_;
+            if(i==0)options_.germany=!options_.germany;
+            if(i==1)options_.england=!options_.england;
+            if(i==2)options_.world=!options_.world;
+            options_.league=options_.germany||options_.england;
+            if((!options_.league&&!options_.world)||(options_.managers>1&&!options_.league))options_=before;
+            return {options_!=before,SetupRequest::none};
+        }
+        return {};
+    }
+    if (!joining_ && !options_.country_selection) {
         for (int i = 0; i < 3; ++i) {
             if (x >= toggle_x_[i] && x <= toggle_x_[i] + 0x33 && y > 198 && y < 240) {
                 if (i == 2) return {false, SetupRequest::load_game};
@@ -167,13 +181,17 @@ Image SetupScreen::render() const {
         copy_rect(out, strip, 0, 0, (0x9d - width / 2) & 0xff,
                   button_y_[i] + 4 + 0x10 - height / 2, width, height, true);
     }
-    if (!joining_)
+    if(!joining_ && options_.country_selection) {
+        // Clear the former three-control strip before drawing the four controls.
+        const auto background=background_.pixels[239*320];
+        for(int y=199;y<240;++y)for(int x=46;x<274;++x)out.at(x,y)=background;
+        const bool active[]={options_.germany,options_.england,options_.world,true};
+        for(size_t i=0;i<4;++i)copy_rect(out,country_controls_[i][size_t(active[i])],0,0,country_button_x[i],199,51,40);
+    } else if (!joining_)
         for (int i = 0; i < 3; ++i) {
             const bool active = i == 0 ? options_.league : i == 1 ? options_.world : true;
             copy_rect(out, atlas_, toggle_source_x_[i], toggle_source_y_[i * 2 + int(active)],
                       toggle_x_[i], 199, 0x33, 0x28);
-            if(i==0 && !league_symbols_[size_t(active)].pixels.empty())
-                copy_rect(out,league_symbols_[size_t(active)],0,0,toggle_x_[i],199,51,40);
         }
     return out;
 }
@@ -183,8 +201,14 @@ std::string setup_json(const SetupOptions& o) {
     s << "{\"duration\":" << o.duration << ",\"unlimited\":" << (o.duration == 5 ? "true" : "false")
       << ",\"difficulty\":" << o.difficulty + 1 << ",\"managers\":" << o.managers
       << ",\"mode\":" << o.mode << ",\"league\":" << (o.league ? "true" : "false")
-      << ",\"world\":" << (o.world ? "true" : "false") << '}';
+      << ",\"world\":" << (o.world ? "true" : "false");
+    if(o.country_selection)s<<",\"country_selection\":true,\"germany\":"<<(o.germany?"true":"false")<<",\"england\":"<<(o.england?"true":"false");
+    s<<'}';
     return s.str();
+}
+bmh::world12::GameScope setup_game_scope(const SetupOptions& options) {
+    if(!options.country_selection || options.league!=(options.germany||options.england))throw FormatError("setup: country scope requires the 1.2 selection controls");
+    bmh::world12::GameScope scope{options.germany,options.england,options.world};scope.validate();return scope;
 }
 
 }  // namespace bmh::ui

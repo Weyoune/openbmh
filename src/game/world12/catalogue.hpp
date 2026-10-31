@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #pragma once
 #include "game/world12/identity.hpp"
+#include "game/world12/scope.hpp"
 #include <array>
 #include <string>
 #include <vector>
@@ -8,8 +9,8 @@ namespace bmh::world12 {
 struct League {
     LeagueId id;Country country=Country::germany;uint8_t local_index=0,clubs=0,relegation=0;
     std::string name;
-    bool playable=false;
-    int rounds()const{return 2*(int(clubs)-1);}
+    bool playable=false,active=true;
+    int rounds()const{return active?2*(int(clubs)-1):0;}
     bool operator==(const League&)const=default;
 };
 struct LadderGroup {std::vector<LeagueId> leagues;uint8_t relegation=0;bool operator==(const LadderGroup&)const=default;};
@@ -20,9 +21,10 @@ struct CountryRules {
     bool operator==(const CountryRules&)const=default;
 };
 struct Catalogue {
+    GameScope scope;
     std::array<League,14> leagues;
     std::array<CountryRules,2> playable_countries;
-    static Catalogue dual_classic();
+    static Catalogue dual_classic(GameScope scope={});
     const League& league(LeagueId)const;
     const CountryRules& rules(Country)const;
     std::vector<LeagueId> table_leagues(TableGroup)const;

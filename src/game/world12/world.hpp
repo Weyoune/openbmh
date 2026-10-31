@@ -40,4 +40,7 @@ struct World {
     Country national_coach_country(uint8_t seat)const;
     bool operator==(const World&)const=default;
 };
+// Filter an immutable imported master world before manager selection. Countries
+// are removed as entities, never demoted into an AI/foreign fallback league.
+World select_world_scope(const World& source,GameScope);
 }
