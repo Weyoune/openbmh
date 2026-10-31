@@ -4,6 +4,7 @@
 #include "alltime_table.hpp"
 #include <algorithm>
 #include "game/table.hpp"
+#include "game/schedule.hpp"
 #include "ui/manager.hpp"
 #include "ui/setup.hpp"
 namespace bmh::ui { namespace {
