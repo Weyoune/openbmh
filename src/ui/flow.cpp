@@ -179,7 +179,7 @@ void StartupFlow::show_manager_join(std::vector<ManagerChoice> existing, Selecti
             context.club_order[size_t(choice.selection_club)] != choice.master_club)
             throw FormatError("join: existing identity does not match the engine roster");
     }
-    auto setup=std::make_unique<SetupScreen>(data_, desktop_->state().options);
+    auto setup=std::make_unique<SetupScreen>(data_, desktop_->state().options,setup_symbol_);
     join_origin_=*desktop_->pending(); join_choices_=std::move(existing);
     join_context_revision_=context.revision; join_setup_=std::move(setup);
     manager_.reset(); joining_=true; join_options_pending_=join_choice_pending_=false;
@@ -212,7 +212,7 @@ void StartupFlow::acknowledge_manager_join(CareerInitializationResult result) {
             throw FormatError("join: existing manager identity changed");
     }
     // All renderers must accept the new projection before exposing it to the player.
-    StartupFlow candidate(data_,save_directory_);
+    StartupFlow candidate(data_,save_directory_,setup_symbol_);
     candidate.desktop_=std::make_unique<DesktopScreen>(data_,result.desktop);
     candidate.engine_attached_=true; candidate.attach_preparation_context(std::move(result.preparation));
     auto next_choices=join_choices_;

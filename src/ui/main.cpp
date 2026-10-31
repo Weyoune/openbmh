@@ -78,11 +78,12 @@ static std::string pointer_input(std::string_view type, int x, int y) {
 int main(int argc, char** argv) {
     fs::path data = ".", dump, script, save, save_directory;
     std::optional<bool> indoor;
+    auto league_symbol=ui::SetupLeagueSymbol::source;
     try {
         for (int i = 1; i < argc; ++i) {
             std::string arg = argv[i];
             if (arg == "--help") {
-                std::puts("openbmh_ui --data BMH [--save original.FBM] [--save-directory dir] [--pitch-context outdoor|indoor] [--dump screen.bmp] [--script inputs.txt]\n"
+                std::puts("openbmh_ui --data BMH [--save original.FBM] [--save-directory dir] [--pitch-context outdoor|indoor] [--league-symbol source|dual] [--dump screen.bmp] [--script inputs.txt]\n"
                           "Script: left X Y / right X Y / move X Y / hold X Y MS / text NAME / key ENTER|BACKSPACE|ESC|letter.\n"
                           "Script context injection: resume PATH (decimal original master IDs in observed selection order).\n"
                           "Native coordinates: 320x240. manager_confirmed waits for updated order; final new_career waits for engine.\n"
@@ -91,13 +92,18 @@ int main(int argc, char** argv) {
                           "Game changes remain pending until an explicit engine acknowledgement; RMT closes idle menus.");
                 return 0;
             }
-            if (arg != "--data" && arg != "--dump" && arg != "--script" && arg != "--save" && arg != "--save-directory" && arg != "--pitch-context") throw FormatError("unknown option: " + arg);
+            if (arg != "--data" && arg != "--dump" && arg != "--script" && arg != "--save" && arg != "--save-directory" && arg != "--pitch-context" && arg!="--league-symbol") throw FormatError("unknown option: " + arg);
             if (++i == argc) throw FormatError("missing value for " + arg);
             if (arg == "--data") data = argv[i];
             if (arg == "--dump") dump = argv[i];
             if (arg == "--script") script = argv[i];
             if (arg == "--save") save = argv[i];
             if (arg == "--save-directory") save_directory = argv[i];
+            if(arg=="--league-symbol") {
+                const std::string value=argv[i];
+                if(value!="source" && value!="dual")throw FormatError("league symbol must be source or dual");
+                league_symbol=value=="dual"?ui::SetupLeagueSymbol::germany_england:ui::SetupLeagueSymbol::source;
+            }
             if (arg == "--pitch-context") {
                 const std::string value = argv[i];
                 if (value != "outdoor" && value != "indoor") throw FormatError("pitch context must be outdoor or indoor");
@@ -106,7 +112,7 @@ int main(int argc, char** argv) {
         }
         if (save_directory.empty()) save_directory = data;
         install_fixture_tables(load_le(ui::asset_path(data, "BMH.exe")));
-        ui::StartupFlow screen(data, save_directory);
+        ui::StartupFlow screen(data, save_directory,league_symbol);
         if (indoor && save.empty()) throw FormatError("pitch context requires a reference save");
         if (!save.empty()) screen.load_reference(save, indoor);
         Palette palette = load_palette(ui::asset_path(data, "M3PC.COL"));

@@ -2,6 +2,7 @@
 #include "formats/executable_layout.hpp"
 #include "formats/resource_bundle.hpp"
 #include "ui/setup.hpp"
+#include "ui/setup_country_symbol.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -43,7 +44,7 @@ std::filesystem::path asset_path(const std::filesystem::path& directory, const s
     return found;
 }
 
-SetupScreen::SetupScreen(const std::filesystem::path& data)
+SetupScreen::SetupScreen(const std::filesystem::path& data,SetupLeagueSymbol symbol)
     : background_(load_vga(asset_path(data / "KB", "134.VGA"))),
       atlas_(load_vga(asset_path(data / "KB", "20.VGA"))) {
     if (background_.width != 320 || background_.height != 240)
@@ -70,10 +71,18 @@ SetupScreen::SetupScreen(const std::filesystem::path& data)
         throw FormatError("setup: unsupported original option table; verify this edition first");
     if (joining_arrow_permission_ != std::array<int, 8>{0, 1, 1, 0, 0, 1, 1, 0})
         throw FormatError("setup: unsupported Original joining-arrow table; verify this edition first");
+    if(symbol==SetupLeagueSymbol::germany_england) {
+        const auto palette=load_palette(asset_path(data,"M3PC.COL"));
+        for(int active=0;active<2;++active) {
+            Image original(51,40);
+            copy_rect(original,atlas_,toggle_source_x_[0],toggle_source_y_[active],0,0,51,40);
+            league_symbols_[size_t(active)]=dual_country_button(original,palette,active!=0);
+        }
+    }
 }
 
-SetupScreen::SetupScreen(const std::filesystem::path& data, SetupOptions current)
-    : SetupScreen(data) {
+SetupScreen::SetupScreen(const std::filesystem::path& data, SetupOptions current,SetupLeagueSymbol symbol)
+    : SetupScreen(data,symbol) {
     if (current.managers < minimum_[2] || current.managers > maximum_[2])
         throw FormatError("setup: joining manager count outside Original range");
     options_ = current;
@@ -165,6 +174,8 @@ Image SetupScreen::render() const {
             const bool active = i == 0 ? options_.league : i == 1 ? options_.world : true;
             copy_rect(out, atlas_, toggle_source_x_[i], toggle_source_y_[i * 2 + int(active)],
                       toggle_x_[i], 199, 0x33, 0x28);
+            if(i==0 && !league_symbols_[size_t(active)].pixels.empty())
+                copy_rect(out,league_symbols_[size_t(active)],0,0,toggle_x_[i],199,51,40);
         }
     return out;
 }

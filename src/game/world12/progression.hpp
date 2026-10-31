@@ -26,6 +26,7 @@ struct CompletedLeagueRound {LeagueId league;uint8_t round=0;std::vector<LeagueR
 // outcomes or consumes either gameplay RNG to satisfy a calendar transition.
 std::optional<DayTicket> prepare_day(const CareerSnapshot&);
 void commit_league_day(CareerSnapshot&,const DayTicket&,const std::vector<CompletedLeagueRound>&);
-void commit_day(CareerSnapshot&,const DayTicket&,const std::vector<CompletedLeagueRound>&,
+struct DayPresentation {std::vector<CupDrawNotice> cup_draws;};
+DayPresentation commit_day(CareerSnapshot&,const DayTicket&,const std::vector<CompletedLeagueRound>&,
     const std::vector<CupLegResult>&);
 }

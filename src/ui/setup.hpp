@@ -24,6 +24,7 @@ struct SetupOptions {
 };
 
 enum class SetupRequest { none, new_game, load_game };
+enum class SetupLeagueSymbol { source,germany_england };
 struct SetupResult {
     bool changed = false;
     SetupRequest request = SetupRequest::none;
@@ -33,9 +34,9 @@ struct SetupResult {
 // Render and hit testing share the same tables. Coordinates are native 320x240.
 class SetupScreen {
 public:
-    explicit SetupScreen(const std::filesystem::path& data);
+    explicit SetupScreen(const std::filesystem::path& data,SetupLeagueSymbol symbol=SetupLeagueSymbol::source);
     // Original joining-manager setup: continue from the active setup values.
-    SetupScreen(const std::filesystem::path& data, SetupOptions current);
+    SetupScreen(const std::filesystem::path& data, SetupOptions current,SetupLeagueSymbol symbol=SetupLeagueSymbol::source);
     const SetupOptions& options() const { return options_; }
     SetupResult click(int x, int y, bool right_button = false);
     Image render() const;
@@ -43,6 +44,7 @@ public:
 private:
     SetupOptions options_;
     Image background_, atlas_;
+    std::array<Image,2> league_symbols_;
     std::array<int, 8> button_x_{}, button_y_{};
     std::array<int, 8> joining_arrow_permission_{};
     std::array<int, 4> minimum_{}, maximum_{};

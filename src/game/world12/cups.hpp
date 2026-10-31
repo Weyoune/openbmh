@@ -6,6 +6,14 @@ namespace bmh { class LeImage; }
 namespace bmh::world12 {
 using DomesticCup=CountryRules::Cup;
 Country cup_country(DomesticCup);
+// Presentation only: a domestic draw belongs to the whole country ladder,
+// even if its human manager's club has already been knocked out.
+bool show_domestic_draw(const World&,DomesticCup);
+struct CupDrawNotice {
+    DomesticCup cup=DomesticCup::german_cup;
+    uint8_t source_entry=0,round=0;
+    std::vector<Fixture> fixtures;
+};
 // No interpretation of indoor/national/group-stage events as domestic knockouts.
 std::optional<std::vector<DomesticCup>> domestic_cups_on(const OtherAppointment&);
 struct CupRound {
@@ -42,4 +50,5 @@ struct CupLegResult {
 // Atomic score/leg transition; unresolved ties and missing draws leave it intact.
 void commit_cup_leg(KnockoutStage&,const CupLegResult&,const World&);
 void validate_cup_programmes(const World&,const std::vector<KnockoutStage>&);
+std::optional<CupDrawNotice> cup_draw_notice(const World&,const KnockoutStage&);
 }

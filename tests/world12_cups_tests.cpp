@@ -131,6 +131,18 @@ int main()try {
     check(domestic_cups_on({0,CalendarDomain::germany,0x2020})->size()==2,"German cup/supercup mask lost");
     auto german=stage(world,DomesticCup::german_cup,{0},0,4,3);
     auto english=stage(world,DomesticCup::fa_cup,{5},28,4,3);
+    auto audience=world;
+    check(!cup_draw_notice(audience,german) && !cup_draw_notice(audience,english),"AI-only world opens cup draws");
+    audience.managers={{0,"German manager",world.membership[4].clubs[0],{4},0}};
+    audience.validate();
+    check(cup_draw_notice(audience,german).has_value() && !cup_draw_notice(audience,english),
+        "draw visibility ignores the manager's country or lower domestic division");
+    check(!show_domestic_draw(audience,DomesticCup::league_cup) && !show_domestic_draw(audience,DomesticCup::english_supercup),
+        "English subsidiary cup draws shown to German-only managers");
+    audience.managers.push_back({1,"English manager",world.membership[9].clubs[0],{9},1});audience.validate();
+    check(cup_draw_notice(audience,german).has_value() && cup_draw_notice(audience,english).has_value(),"mixed-country managers lose their draws");
+    audience.managers.erase(audience.managers.begin());
+    check(!show_domestic_draw(audience,DomesticCup::german_cup) && show_domestic_draw(audience,DomesticCup::fa_cup),"draw audience persists after last country manager leaves");
     auto foreign=draw(world,{5},4);
     rejects([&]{KnockoutStage::from_source(DomesticCup::german_cup,image(DomesticCup::german_cup,0,8,3,0x2c),0,foreign,world);},"foreign entrants accepted");
     rejects([&]{KnockoutStage::from_source(DomesticCup::fa_cup,image(DomesticCup::german_cup,0,8,3,0x2c),0,foreign,world);},"German source used as English rules");
@@ -148,6 +160,7 @@ int main()try {
     CareerSnapshot state;state.world=world;state.results=SeasonResults::empty(world.catalogue);
     state.calendar=CalendarCursor{SeasonCalendar::from_sources(world.catalogue,de,en),0,0};
     state.cups={german,english};state.watcom_seed=91;state.game_seed=27;
+    state.world.managers={{0,"German manager",world.membership[4].clubs[0],{4},0}};
     for(int day=0;day<3;++day) {
         auto ticket=*prepare_day(state);check(ticket.cups.size()==2,"same-day country cups overwritten");
         std::vector<CompletedLeagueRound> leagues;
@@ -158,7 +171,14 @@ int main()try {
         auto invalid=cups;invalid.back().scores.pop_back();
         rejects([&]{commit_day(state,ticket,leagues,invalid);},"partial English cup batch committed");
         check(state==before,"rejected English result changed German cup, league scores or date");
-        commit_day(state,ticket,leagues,cups);
+        auto ai_only=state;ai_only.world.managers.clear();
+        const auto hidden=commit_day(ai_only,ticket,leagues,cups);
+        check(hidden.cup_draws.empty(),"AI-only daily progression emitted draw UI");
+        const auto shown=commit_day(state,ticket,leagues,cups);
+        check(shown.cup_draws.size()==size_t(day<2?1:0),"draw not filtered to the human manager's country");
+        if(!shown.cup_draws.empty())check(shown.cup_draws[0].cup==DomesticCup::german_cup,"English draw emitted for a German-only career");
+        ai_only.world.managers=state.world.managers;
+        check(ai_only==state,"hiding draws changed cup results, league scores, date or RNG");
         const auto committed=state;
         rejects([&]{commit_day(state,ticket,leagues,cups);},"cup day replay accepted");check(state==committed,"replayed cup day mutated career");
         state=read_save(make_save(state));check(state==committed,"cup history or ownership lost on reload");

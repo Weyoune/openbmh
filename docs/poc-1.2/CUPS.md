@@ -20,6 +20,10 @@ The source entry number is local to its country and competition. German entry 0 
 
 Domestic calendar masks route independently: `0x20` is the country's national cup and `0x2000` its supercup. English `0x4002` is the League Cup; German `0x4002` remains an indoor event. Indoor, European and national-team appointments cannot be satisfied by a domestic cup receipt.
 
+Domestic draw presentation requires at least one human manager with a current league club in that country's ladder. A manager in a lower division qualifies, even if their club is no longer in the cup field. Germany-only careers receive no English domestic draw notices, England-only careers receive no German ones, and mixed-country careers receive both. `cup_draw_notice` applies the same rule to initial draws; `commit_day` returns filtered notices for subsequent round/stage draws. Return legs and completed finals do not emit a new draw. Source display settings can further suppress presentation in the future application presenter.
+
+This is a presentation filter only. AI-country result processing, stage links, shared dates and RNG states remain identical with or without the audience. Synthetic tests compare both paths directly.
+
 ## Results, draws and transaction boundaries
 
 Each round keeps its first-leg fixture orientation and the original score/phase words. The existing `bmh::cup_tie` calculation determines qualifiers, including aggregate and away-goal handling. Return-leg fixtures reverse the original pairing. Unresolved ties are rejected rather than assigned an arbitrary winner.

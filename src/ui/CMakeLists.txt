@@ -2,6 +2,7 @@
 # SDL-independent UI; shared file formats and game logic come from bmhcore.
 add_library(bmhui STATIC
     setup.cpp
+    setup_country_symbol.cpp
     manager.cpp
     flow.cpp
     desk_state.cpp

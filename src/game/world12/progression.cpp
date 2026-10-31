@@ -28,7 +28,7 @@ std::optional<DayTicket> prepare_day(const CareerSnapshot& state){
 void commit_league_day(CareerSnapshot& state,const DayTicket& ticket,const std::vector<CompletedLeagueRound>& completed){
     commit_day(state,ticket,completed,{});
 }
-void commit_day(CareerSnapshot& state,const DayTicket& ticket,const std::vector<CompletedLeagueRound>& completed,
+DayPresentation commit_day(CareerSnapshot& state,const DayTicket& ticket,const std::vector<CompletedLeagueRound>& completed,
     const std::vector<CupLegResult>& cup_results){
     const auto expected=prepare_day(state);if(!expected||*expected!=ticket)throw std::invalid_argument("world12: stale or changed day ticket");
     size_t required_count=0;
@@ -45,6 +45,7 @@ void commit_day(CareerSnapshot& state,const DayTicket& ticket,const std::vector<
     for(size_t i=0;i<completed.size();++i){const auto& got=completed[i];const auto& plan=ticket.leagues[i];if(got.league!=plan.appointment.league||got.round!=plan.appointment.round||got.results.size()!=plan.matches.size())throw std::invalid_argument("world12: score batch is for another competition/round");
         for(size_t m=0;m<got.results.size();++m){const auto&score=got.results[m];if(!score.played||score.home>15||score.away>15||state.results.result(state.world.catalogue,got.league,got.round,int(m)).played)throw std::invalid_argument("world12: missing, invalid or already committed result");}}
     auto staged=state;
+    DayPresentation presentation;
     for(size_t i=0;i<cup_results.size();++i) {
         const auto& result=cup_results[i]; const auto& plan=ticket.cups[i];
         if(result.cup!=plan.cup || result.source_entry!=plan.source_entry || result.revision!=plan.revision)
@@ -56,11 +57,16 @@ void commit_day(CareerSnapshot& state,const DayTicket& ticket,const std::vector<
                 result.next_stage->source_entry!=stage->next_entry || result.next_stage->revision!=0)
                 throw std::invalid_argument("world12: linked cup stage and its original draw are required");
             staged.cups.push_back(*result.next_stage);
+            if(auto notice=cup_draw_notice(staged.world,staged.cups.back()))presentation.cup_draws.push_back(std::move(*notice));
         } else if(result.next_stage)throw std::invalid_argument("world12: unexpected linked cup stage");
+        else if(!result.next_draw.empty()) {
+            if(auto notice=cup_draw_notice(staged.world,*stage))presentation.cup_draws.push_back(std::move(*notice));
+        }
     }
     for(const auto& round:completed){for(size_t m=0;m<round.results.size();++m)staged.results.result(staged.world.catalogue,round.league,round.round,int(m))=round.results[m];staged.league_rounds[round.league.value]=round.round;}
     ++staged.calendar->next_day;++staged.calendar->revision;++staged.date;
     validate_cup_programmes(staged.world,staged.cups);
     state=std::move(staged);
+    return presentation;
 }
 }

@@ -14,6 +14,19 @@ Country cup_country(DomesticCup cup) {
     }
     throw std::invalid_argument("world12: unknown domestic cup");
 }
+bool show_domestic_draw(const World& world,DomesticCup cup) {
+    const auto country=cup_country(cup);
+    for(const auto& manager:world.managers) {
+        const auto& club=world.clubs.at(manager.club);
+        if(club.kind==ClubKind::club && club.league.valid() && club.country==country) return true;
+    }
+    return false;
+}
+std::optional<CupDrawNotice> cup_draw_notice(const World& world,const KnockoutStage& stage) {
+    stage.validate(world);
+    if(!show_domestic_draw(world,stage.cup) || stage.complete() || stage.next_leg()!=1) return std::nullopt;
+    return CupDrawNotice{stage.cup,stage.source_entry,uint8_t(stage.rounds.size()),stage.next_fixtures()};
+}
 std::optional<std::vector<DomesticCup>> domestic_cups_on(const OtherAppointment& appointment) {
     if(appointment.domain!=CalendarDomain::germany && appointment.domain!=CalendarDomain::england) return std::nullopt;
     const bool english=appointment.domain==CalendarDomain::england;

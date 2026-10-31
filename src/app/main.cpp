@@ -199,7 +199,7 @@ int main(int argc, char** argv) {
     try {
         install_runtime_profile(load_data_profile(data));
         const Palette palette = load_palette(ui::asset_path(data, "M3PC.COL"));
-        ui::StartupFlow flow(data, save_directory);
+        ui::StartupFlow flow(data, save_directory,ui::SetupLeagueSymbol::germany_england);
         std::unique_ptr<app::CareerSession> session;
         uint64_t revision = 0;
         openbmh::audio::Playback playback;

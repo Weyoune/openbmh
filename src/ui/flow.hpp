@@ -90,8 +90,9 @@ struct FlowResult {
 
 class StartupFlow {
 public:
-    explicit StartupFlow(const std::filesystem::path& data, std::filesystem::path save_directory = {})
-        : data_(data), save_directory_(save_directory.empty() ? data : std::move(save_directory)), setup_(data) {}
+    explicit StartupFlow(const std::filesystem::path& data, std::filesystem::path save_directory = {},
+        SetupLeagueSymbol symbol=SetupLeagueSymbol::source)
+        : data_(data), save_directory_(save_directory.empty() ? data : std::move(save_directory)), setup_symbol_(symbol),setup_(data,symbol) {}
     FlowResult click(int x, int y, bool right = false, bool double_click = false);
     FlowResult pointer_down(int x,int y,bool right=false);
     FlowResult process_timer_expired(int pointer_x = 0, int pointer_y = 0);
@@ -418,6 +419,7 @@ private:
     void acknowledge_contract_mutation(ContractsState, DeskState, PreparationState, ContractActionKind);
     std::filesystem::path data_;
     std::filesystem::path save_directory_;
+    SetupLeagueSymbol setup_symbol_;
     SetupScreen setup_;
     std::unique_ptr<ManagerScreen> manager_;
     std::vector<ManagerChoice> confirmed_;
