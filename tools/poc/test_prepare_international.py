@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Synthetic encoder/reader tests; no Original game content required."""
 import unittest
-from prepare_international import decode_vga, encode_vga, legacy_name, read_master, write_master, words
+from prepare_international import decode_vga, encode_vga, legacy_name, read_master, write_master, words, repeated_native_images
 
 class ProfileDataTests(unittest.TestCase):
     def test_master_identity_and_sizes(self):
@@ -29,6 +29,13 @@ class ProfileDataTests(unittest.TestCase):
             self.assertEqual(decoded[y*304:y*304+76],before[y*304:y*304+76])
             self.assertEqual(decoded[y*304+114:(y+1)*304],before[y*304+114:(y+1)*304])
         with self.assertRaises(ValueError):encode_vga(4,4,b'123')
+
+    def test_shared_original_placeholder(self):
+        clubs=[{'crest':str(i)} for i in range(7)]
+        assets={str(i):{'files':{'native':'shared' if i<6 else 'real'}} for i in range(7)}
+        import hashlib
+        found=repeated_native_images(clubs,assets,lambda path: {'shared':b'placeholder','real':b'individual-crest'}[path])
+        self.assertEqual(found,{hashlib.sha256(b'placeholder').hexdigest()})
 
     def test_original_encoding(self):
         self.assertEqual(legacy_name('Müller'),b'M}LLER')

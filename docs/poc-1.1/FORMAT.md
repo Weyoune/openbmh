@@ -38,7 +38,7 @@ The M3D table order and encoding remain unchanged. Kit selectors scale with all 
 
 The preparation script keeps original player words and original IDs, appends supplemental players and records the source-to-runtime club mapping. Existing twelve-club foreign cores are retained; additional clubs are ranked by donor mean player strength. Missing-person data are not silently fetched or invented. Every supplied provenance/fictional-field note is retained in the private import report.
 
-Crests are fitted into 38-by-38 cells of 304-by-38 VGA sheets, using the supplied VGA palette. No PNG/SVG decoder is needed at runtime. Transparency is index zero for these generated crest cells. Existing protected crest cells remain intact. Asset source and rights notes remain separate from the application's GPL license.
+Crests are fitted into 38-by-38 cells of 304-by-38 VGA sheets, using the supplied VGA palette. No PNG/SVG decoder is needed at runtime. Transparency is index zero for these generated crest cells. Existing protected crest cells remain intact. Repeated Original placeholder images are rejected rather than counted as real club crests. Missing crests use explicitly fictional vector monograms, and dark monochrome logos can use a light contrast variant; both are recorded per club. Asset source and rights notes remain separate from the application's GPL license.
 
 The offline preparation utility accepts local paths:
 

@@ -10,6 +10,7 @@ import collections
 import datetime
 import hashlib
 import io
+import html
 import json
 from pathlib import Path
 import shutil
@@ -94,6 +95,16 @@ def encode_vga(width, height, pixels):
 def find_file(root, name):
     return next(p for p in root.iterdir() if p.name.upper() == name.upper())
 
+def repeated_native_images(clubs, assets, read):
+    """Detect shared Original fallback images without baking in game pixels/hashes."""
+    counts = collections.Counter()
+    for club in clubs:
+        file = assets.get(club.get('crest'), {}).get('files', {}).get('native')
+        if file:
+            counts[sha(read(file))] += 1
+    return {digest for digest, count in counts.items() if count >= 5}
+
+
 def build(source, donor, output):
     from PIL import Image, ImageDraw, ImageOps
     import cairosvg
@@ -106,6 +117,7 @@ def build(source, donor, output):
         table = lambda name: json.loads(archive.read('world/' + name + '.json'))['items']
         clubs, players, competitions, nations = (table(n) for n in ('clubs','players','competitions','nations'))
         assets = {a['key']:a for a in json.loads(archive.read('assets/index.json'))['items']}
+        fallback_images = repeated_native_images(clubs, assets, archive.read)
         by_team = collections.defaultdict(list)
         for p in players:
             if p.get('team'): by_team[p['team']].append(p)
@@ -219,12 +231,29 @@ def build(source, donor, output):
                 if not path:continue
                 try:
                     data=archive.read(path)
+                    if kind == 'native' and sha(data) in fallback_images:
+                        error = 'shared-original-placeholder'
+                        continue
                     if path.lower().endswith('.svg'):data=cairosvg.svg2png(bytestring=data,output_width=152,output_height=152)
-                    image=Image.open(io.BytesIO(data)).convert('RGBA');break
+                    image=Image.open(io.BytesIO(data)).convert('RGBA')
+                    if image.getchannel('A').getbbox() is None:
+                        image = None
+                        error = 'empty-image'
+                        continue
+                    break
                 except Exception as exc:error=type(exc).__name__
             fictional=image is None
             if fictional:
-                image=Image.new('RGBA',(38,38));d=ImageDraw.Draw(image);d.polygon([(6,3),(31,3),(30,24),(19,35),(7,24)],fill=rgb[64+index%16],outline='white');d.text((12,11),str(index%100),fill='white')
+                # Vector monograms are explicit fictional club-specific replacements.
+                name = legacy_name(club['name']['default']).decode('ascii')
+                initials = ''.join(w[0] for w in name.split() if w not in ('FC','FK','CF','AC','SC','NK','SK'))[:3] or name[:3]
+                color = '#%02x%02x%02x' % rgb[64 + index % 16]
+                svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38"><path d="M5 3H33L31 24L19 35L7 24Z" fill="{color}" stroke="#f0f5f3" stroke-width="2"/><path d="M8 9H30" stroke="#f0f5f3"/><text x="19" y="23" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="bold" fill="white">{html.escape(initials)}</text></svg>'
+                image=Image.open(io.BytesIO(cairosvg.svg2png(bytestring=svg.encode()))).convert('RGBA')
+            foreground = [(r,g,b) for r,g,b,a in image.getdata() if a >= 128]
+            contrast_adjusted = bool(foreground) and sum(max(pixel) for pixel in foreground)/len(foreground) < 60
+            if contrast_adjusted:
+                alpha=image.getchannel('A');image=Image.new('RGBA',image.size,(238,244,240,0));image.putalpha(alpha)
             image=ImageOps.contain(image,(36,36),method=Image.Resampling.LANCZOS)
             canvas=Image.new('RGBA',(38,38));canvas.alpha_composite(image,((38-image.width)//2,(38-image.height)//2))
             pixels=bytearray()
@@ -236,7 +265,7 @@ def build(source, donor, output):
             dst=sheet(cell//8)
             for y in range(38):dst[y*304+(cell%8)*38:y*304+(cell%8)*38+38]=pixels[y*38:(y+1)*38]
             badges[index]=(badges[index]&~511)|cell
-            crest_report.append({'club':club['id'],'runtime_team':index,'cell':cell,'asset':club.get('crest'),'source':asset.get('source'),'license':asset.get('license'),'fictional':fictional,'last_decode_error':error})
+            crest_report.append({'club':club['id'],'runtime_team':index,'cell':cell,'asset':club.get('crest'),'source':asset.get('source'),'license':asset.get('license'),'fictional':fictional,'contrast_adjusted':contrast_adjusted,'last_decode_error':error})
         db['badges']=words(badges)
         # Every Original player word and all German starting rosters remain unchanged.
         original_db = read_master(master)
@@ -258,6 +287,7 @@ def build(source, donor, output):
             vga=encode_vga(width,height,pix); assert decode_vga(vga)[2]==pix;target.write_bytes(vga)
         (output/'OBMHPROF.INI').write_text('[OpenBMH]\nprofile=classic-plus-1\n',encoding='ascii')
         report={'profile':'classic-plus-1','base_sha256':sha(master),'donor_sha256':sha(donor.read_bytes()),'output_sha256':sha(encoded),'league_sizes':SIZES,'club_count':445,'player_count':3334,'source_to_runtime':old_new,'selected_additions':selected,'rosters':roster_report,'fictional_club_fields':{'new_clubs':['/kit/selector','/short_name_offset'],'policy':'deterministic existing Classic kit palette and automatic stadium initialization'},'additional_players':field_provenance,'crests':crest_report,'content_license':json.loads(archive.read('manifest.json')).get('content_license'),'distribution':'Private prepared data; content rights/provenance unchanged. No game content belongs in public source/binary artifacts.'}
+        report['prepared_files_sha256'] = {f.relative_to(output).as_posix():sha(f.read_bytes()) for f in sorted(output.rglob('*')) if f.is_file()}
         (output/'IMPORT-REPORT.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
         print(json.dumps({'output':str(output),'clubs':445,'players':3334,'foreign_crests':len(crest_report),'fictional_crests':sum(c['fictional'] for c in crest_report),'sha256':sha(encoded)}))
 
