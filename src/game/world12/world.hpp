@@ -9,10 +9,17 @@ struct PlayerRecord {
     bool operator==(const PlayerRecord& p)const{return id==p.id&&attributes.name==p.attributes.name&&attributes.w35c==p.attributes.w35c&&attributes.w368==p.attributes.w368&&attributes.w364==p.attributes.w364&&bonus==p.bonus&&cards==p.cards;}
 };
 enum class ClubKind:uint8_t { club,national_team };
+struct ClubSeasonStats {
+    std::array<uint8_t,42> counters{};
+    std::array<ClubId,8> opponents;
+    std::array<uint16_t,8> dates{};
+    bool operator==(const ClubSeasonStats&)const=default;
+};
 struct ClubRecord {
     ClubId id;std::string name;Country country=Country::germany;ClubKind kind=ClubKind::club;
     LeagueId league;CrestId crest;uint8_t kit=0,rating=0,short_span=0;
     uint16_t match_flags=0;uint8_t morale=25;
+    ClubSeasonStats season_stats;
     std::array<RosterSlot,24> roster;
     bool operator==(const ClubRecord&)const=default;
 };
@@ -27,6 +34,8 @@ struct Manager {
 };
 struct CrestResource {std::string path;uint8_t cell=0;bool operator==(const CrestResource&)const=default;};
 struct World {
+    int32_t development_balance=0;
+    uint8_t trend_rotation=0;
     Catalogue catalogue=Catalogue::dual_classic();
     std::map<PlayerId,PlayerRecord> players;
     std::map<ClubId,ClubRecord> clubs;

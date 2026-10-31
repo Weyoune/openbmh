@@ -1,6 +1,6 @@
 # 1.2 match integration
 
-The typed world now invokes the existing ported `MatchEngine` for actual AI league scoring phases. It no longer needs a supplied result for this bounded operation. This is not yet a complete matchday or playable career adapter.
+The typed world now invokes the existing ported `MatchEngine` for actual AI league scoring phases. It no longer needs a supplied result for this bounded operation. A separate [post-match adapter](AFTER_MATCH.md) now handles AI records, morale and development, including complete league groups. This is not yet a complete matchday or playable career adapter.
 
 ## Identity and country context
 
@@ -16,7 +16,7 @@ Empty context retains the original positional lookup for legacy careers. A proje
 
 The function stages both random streams and the projected match state. It publishes player attributes/card words, roster order/flags, club formation/match flags and low morale bits only after the simulation and full world validation succeed. Global player membership cannot move between clubs through this boundary. Stale player/club/manager/RNG ownership, malformed formations and unsupported short-squad forfeits reject without publishing match effects or RNG. An external change detected at late commit remains intact; it is not overwritten by a stale match result.
 
-World schema version 3 stores player `cards` and club `match_flags`/`morale`. Version-1/2 imported worlds remain readable with initial defaults. The existing development O1.2 snapshot embeds these fields through the world codec. A probe's post-scoring snapshot verifies that codec; it is not a resumable complete in-match career save.
+World schema version 3 introduced player `cards` and club `match_flags`/`morale`; version 4 adds global development state and typed club records. Earlier imported worlds remain readable with initial defaults. The existing development O1.2 snapshot embeds these fields through the world codec. A probe's post-scoring snapshot verifies that codec; it is not a resumable complete in-match career save.
 
 ## Evidence and limits
 
@@ -27,4 +27,4 @@ World schema version 3 stores player `cards` and club `match_flags`/`morale`. Ve
 - `world12_ai_validate` runs seven fixtures from the real typed master using supplied reference state/rules/referee data, then checks post-scoring world-state snapshots. Weather/attendance are explicit probe inputs rather than a complete generated matchday.
 - The older `week199_capture` diagnostic does **not** pass full Original side-record equivalence (1/88 full records). A separate clean `ada105f` build produces byte-identical diagnostic output to this change, so that diagnostic exposes no newly introduced difference. It is not reported as a passing Original oracle.
 
-Still required: the full matchday owner, generated weather/attendance/referee selection, after-match development/morale/economy/statistics, forfeit settlement, human tactics/live interventions, cup/national match setup, match-event translation and the typed GUI-career adapter. No league day or career date is advanced by this scoring API.
+Still required: the full matchday owner, generated weather/attendance/referee selection, human economy/manager statistics and optional presentation/awards, forfeit settlement, human tactics/live interventions, cup/national match setup, match-event translation and the typed GUI-career adapter. AI development/morale/club records are covered by the separate settlement API. No league day or career date is advanced by these bounded APIs.

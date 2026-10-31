@@ -10,7 +10,9 @@
 int main(int argc,char** argv)try {
     using namespace bmh;
     using namespace bmh::world12;
-    if(argc!=3)throw std::runtime_error("usage: world12_ai_validate <WORLD12.JSON> <supplied reference rules directory>");
+    if(argc!=3&&argc!=4)throw std::runtime_error("usage: world12_ai_validate <WORLD12.JSON> <supplied reference rules directory> [--settle]");
+    const bool settle=argc==4;
+    if(settle&&std::string(argv[3])!="--settle")throw std::runtime_error("unknown AI probe option");
     const auto source=decode_world(read_file(argv[1]));
     const std::filesystem::path data=argv[2];
     const auto profile=load_data_profile(data);install_runtime_profile(profile);
@@ -25,16 +27,17 @@ int main(int argc,char** argv)try {
         const auto& clubs=source.membership[league].clubs;
         const bmh::world12::Fixture fixture{clubs.at(0),clubs.at(1)};
         auto world=source;GameRandom game(37);WatcomRandom random(91);
-        const auto outcome=simulate_ai_league_match(world,base,fixture,conditions,game,random);
+        const auto outcome=settle?simulate_and_settle_ai_league_match(world,base,fixture,conditions,game,random):simulate_ai_league_match(world,base,fixture,conditions,game,random);
         CareerSnapshot snapshot;snapshot.world=world;snapshot.results=SeasonResults::empty(world.catalogue);
         snapshot.date=conditions.date;snapshot.game_seed=game.seed();snapshot.watcom_seed=random.seed();
         if(read_save(make_save(snapshot))!=snapshot)throw std::runtime_error("source-backed post-scoring state failed snapshot roundtrip");
         std::cout<<source.catalogue.league({league}).name<<": clubs "<<fixture.home.value<<"-"<<fixture.away.value
             <<" score "<<int(outcome.score.home)<<":"<<int(outcome.score.away)<<" end "<<int(outcome.end_minute)
-            <<" G="<<outcome.game_draws<<" W="<<outcome.watcom_draws<<"; match-state snapshot passed\n";
+            <<" G="<<outcome.game_draws<<" W="<<outcome.watcom_draws<<" settled="<<outcome.settled
+            <<" balance="<<world.development_balance<<" rotation="<<int(world.trend_rotation)<<"; match-state snapshot passed\n";
         total_goals+=outcome.score.home+outcome.score.away;++completed;
     }
     std::cout<<completed<<" actual Original AI scoring-phase matches, "<<total_goals<<" goals. Weather/attendance are explicit probe inputs.\n"
-        <<"No after-match development/economy, human tactics or complete career progression is claimed.\n";
+        <<(settle?"Original AI records, morale and development settled; no human finances or complete career progression claimed.\n":"No after-match development/economy, human tactics or complete career progression is claimed.\n");
     return 0;
 }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}

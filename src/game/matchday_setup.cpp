@@ -966,6 +966,12 @@ void man_marking(GameState& g, int own_manager, int own, int other_manager, int 
 
 }  // namespace
 
+void reset_match_played_flags(GameState& g) {
+    for(size_t s=0;s<kSquadSlotCount && s<g.squad_slots.size();++s) {
+        const auto slot=g.squad_slots[s];
+        if((slot&0xfff)!=0xfff)g.players.at(slot&0xfff).w364&=~0x1000u;
+    }
+}
 void kick_off(GameState& g, std::vector<MatchGroup>& groups, const MatchdayContext& ctx, WatcomRandom& rand,
               GameRandom& game, MinuteReport& report, bool select_sportschau, uint16_t club_threshold) {
     // LiveSceneVisible = 1 - CareerSession_DispatchLiveTactic_RuntimeField3, set by the caller of DayCompetitions2 right after the
@@ -975,10 +981,7 @@ void kick_off(GameState& g, std::vector<MatchGroup>& groups, const MatchdayConte
     g.sportschau_selection_available = false;
     g.sportschau_club_threshold = club_threshold;
     if (select_sportschau) reset_sportschau_selection(g);
-    for (size_t s = 0; s < kSquadSlotCount && s < g.squad_slots.size(); s++) {
-        const uint16_t slot = g.squad_slots[s];
-        if ((slot & 0x0FFF) != 0x0FFF) g.players.at(slot & 0x0FFF).w364 &= ~0x1000u;  // not played yet
-    }
+    reset_match_played_flags(g);
     // tactics board byte 0x10: 0 starts, 0x7f on the bench, 0x7e not in the squad
     for (size_t k = 0; k < g.manager_teams.size(); k++) {
         const SquadRange range = squad_range(g.manager_teams[k]);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "game/environment.hpp"
+#include "game/match.hpp"
 #include "game/matchday.hpp"
 
 #include <algorithm>
@@ -302,8 +303,11 @@ void update_club_table(GameState& g, int home, int away, int hg, int ag) {
     auto add16 = [&](size_t o, int v) { wr16(g.club_table, o, uint16_t(rd16(g.club_table, o) + v)); };
     // Only the first league and the regional leagues keep points in this table (the
     // condition tests the home club only).
-    const bool league = home < kLeagueSizes[0] || (home >= 90 && home < runtime_dimensions.league_teams);
-    const int win_points = kThreePoints[league_of(home)] ? 3 : 2;
+    const int league_class=match_team_league(g,home);
+    const bool league = g.projected_match_clubs.empty()?
+        home < kLeagueSizes[0] || (home >= 90 && home < runtime_dimensions.league_teams):
+        league_class==0 || league_class>=5;
+    const int win_points = kThreePoints[league_class] ? 3 : 2;
     if (league) {
         add16(H + 0x20, hg);
         add16(H + 0x22, ag);
@@ -452,7 +456,7 @@ void develop_players(GameState& g, const MatchGroup& grp, int m, GameRandom& gam
                     } else {
                         v = int8_t(std::clamp<int>(v, 0x23, 0x41));
                     }
-                    if (sh != 0) g.development_balance += v - old;
+                    if (sh != 0) g.development_balance=std::bit_cast<int32_t>(uint32_t(g.development_balance)+uint32_t(int32_t(v-old)));
                     w = (w & ~(0x7Fu << sh)) + (uint32_t(int32_t(v)) << sh);
                 }
                 p.w35c = w;

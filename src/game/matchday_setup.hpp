@@ -59,6 +59,8 @@ void match_weather(MatchGroup& grp, int m, const MatchdayContext& ctx, GameRando
 // `cls` (MatchEngineRuntimeField9[type]: 0 league, 1-4 cups with their own card counters, 0xFF none).
 // `index` is the team's position in the flat fixture list (home 0, away 1, ...).
 void prepare_team(GameState& g, int team, int cls, int index);
+// Kick-off clears played markers after lineup preparation and before ratings.
+void reset_match_played_flags(GameState&);
 
 // DayCompetitions2(..., 1): builds the match groups of the competitions in `competitions`
 // (SavedCompetition) and prepares all teams. Returns the groups in the order of the original.

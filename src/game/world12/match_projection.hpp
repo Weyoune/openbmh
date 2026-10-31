@@ -22,5 +22,8 @@ private:
     std::vector<PlayerRecord> originals_;
     std::vector<ClubRecord> original_clubs_;
     std::vector<Manager> original_managers_;
+    std::map<uint16_t,ClubId> record_opponents_;
+    int32_t original_development_balance_=0;
+    uint8_t original_trend_rotation_=0;
 };
 }
