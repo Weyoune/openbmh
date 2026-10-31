@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/data_profile.hpp"
 #include "formats/savestate.hpp"
+#include "game/profile_runtime.hpp"
+#include "game/state.hpp"
+#include "game/weekly.hpp"
+#include "game/schedule.hpp"
 #include "formats/executable_layout.hpp"
 #include <filesystem>
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
@@ -26,6 +31,21 @@ int main()try {
         check(decoded.block(bmh::layout::PlayerConditionTechniqueForm).size == profile.counts.players * 4,
               "player block ignored configured profile counts");
     }
+    bmh::install_runtime_profile(expanded);
+    check(bmh::squad_range(163).first==3912 && bmh::squad_range(163).count==24,
+          "last international club does not have a full-size squad");
+    check(bmh::squad_range(bmh::kNoTeam).first==4080 && bmh::kNoTeam==383,
+          "national squad overlaps the expanded clubs/pool");
+    check(bmh::slot_team(3935)==163 && bmh::slot_team(3936)==-1,
+          "absolute slot ownership was truncated or misclassified");
+    uint8_t sizes[9];std::copy(expanded.leagues.begin(),expanded.leagues.end(),sizes);
+    bmh::set_league_sizes(sizes);
+    check(bmh::league_table_teams(6)==20 && bmh::league_table_teams(5)==18,
+          "England incorrectly shares the smaller foreign fixture table");
+    bmh::install_runtime_profile(classic);std::copy(classic.leagues.begin(),classic.leagues.end(),sizes);bmh::set_league_sizes(sizes);
+    check(bmh::runtime_dimensions.record_teams==168,"Classic cup-only rating boundary changed");
+    check(bmh::squad_range(90).first==2160 && bmh::squad_range(90).count==16 && bmh::kNoTeam==357,
+          "switching back did not restore original squad conventions");
     auto invalid=expanded;invalid.counts.players=4095;bool rejected=false;
     try{invalid.validate();}catch(const bmh::FormatError&){rejected=true;}
     check(rejected,"Player-ID sentinel collision accepted");

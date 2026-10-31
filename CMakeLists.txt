@@ -220,6 +220,7 @@ add_library(bmhcore STATIC
     src/game/league_pairings.cpp
     src/game/source_tip.cpp
     src/game/table_forecast.cpp
+    src/game/profile_runtime.cpp
     src/game/state.cpp
     src/game/rating.cpp
     src/game/match.cpp

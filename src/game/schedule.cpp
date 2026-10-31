@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "game/schedule.hpp"
+#include "game/profile_runtime.hpp"
 #include "formats/executable_layout.hpp"
 #include "formats/le.hpp"
 
@@ -123,16 +124,16 @@ std::vector<Fixture> generate_fixtures(int teams, int matchday, int rounds, int 
     return out;
 }
 
-int league_table_teams(int league) { return league < 5 ? kLeagueSizes[0] : kLeagueSizes[5]; }
+int league_table_teams(int league) { return runtime_dimensions.expanded ? kLeagueSizes[league] : (league < 5 ? kLeagueSizes[0] : kLeagueSizes[5]); }
 
 void set_league_sizes(const uint8_t (&sizes)[kLeagueCount]) {
     int total = 0;
     for (int l = 0; l < kLeagueCount; l++) total += sizes[l];
     const auto has_table = [](int teams) { return teams == 20 || teams == 18 || teams == 16 || teams == 12; };
-    if (total != 138 || !has_table(sizes[0]) || !has_table(sizes[5]))
-        throw std::invalid_argument("league sizes do not describe 138 league teams with fixture tables");
+    if (total != runtime_dimensions.league_teams || !has_table(sizes[0]) || !has_table(sizes[5]))
+        throw std::invalid_argument("league sizes do not match the installed profile and fixture tables");
     for (int l = 0; l < kLeagueCount; l++)
-        if (sizes[l] < 2 || sizes[l] > (l < 5 ? sizes[0] : sizes[5]))
+        if (sizes[l] < 2 || (!runtime_dimensions.expanded && sizes[l] > (l < 5 ? sizes[0] : sizes[5])) || (runtime_dimensions.expanded && !has_table(sizes[l])))
             throw std::invalid_argument("a league is larger than its fixture table");
     for (int l = 0; l < kLeagueCount; l++) kLeagueSizes[l] = sizes[l];
 }

@@ -32,8 +32,8 @@ constexpr size_t kBoard = 0x840;        // tactics board of a manager
 constexpr size_t kBoardSlot = 0x58;
 constexpr uint32_t kTransferList = ::bmh::layout::EditorList;  // 44 entries of 0x58 bytes, one per pool slot
 constexpr uint32_t kListEntry = 0x58;
-constexpr size_t kPoolSlots = 0xb70;    // CareerRuntimeField: first squad slot of the transfer pool
-constexpr int kLeagueClubs = 0x8a;      // CareerSession_DispatchLineup_RuntimeField
+const int& kPoolSlots = runtime_dimensions.pool_first;    // CareerRuntimeField: first squad slot of the transfer pool
+const int& kLeagueClubs = runtime_dimensions.league_teams;      // CareerSession_DispatchLineup_RuntimeField
 constexpr int kBigSquadClubs = 90;      // TeamsWithSquads
 
 // Offers and incidents (Bool): 1 in WeeklyRuntimeField[kind] is only possible while the
@@ -154,8 +154,9 @@ int squad_count(const GameState& g, int team, int flags) {
 
 // SlotTeam: club of an absolute squad slot (-1 for the pool).
 int slot_team(int slot) {
-    if (slot < kBigSquadClubs * 24) return slot / 24;
-    if (slot < int(kPoolSlots)) return (slot - kBigSquadClubs * 24) / 16 + kBigSquadClubs;
+    const int large=runtime_dimensions.big_squad_teams;
+    if (slot < large * 24) return slot / 24;
+    if (slot < int(kPoolSlots)) return (slot - large * 24) / 16 + large;
     return -1;
 }
 
@@ -605,7 +606,7 @@ void transfer_bid(GameState& g, int slot, uint32_t list, bool high, int months, 
             const int r = rand.range(int16_t(need) + 3, int16_t(need) + 0xd);
             if (int16_t(diff) < r) score += int(int16_t(need + 0xe - diff)) * 16 + 100;
             else score -= int16_t(diff) * 8;
-            const int8_t* wanted = team < kBigSquadClubs ? kWantedBig : kWantedSmall;
+            const int8_t* wanted = team < runtime_dimensions.big_squad_teams ? kWantedBig : kWantedSmall;
             int16_t d = int16_t(wanted[position] - int8_t(count[position]));
             if (d < 0) {
                 score += int(d) << 8;

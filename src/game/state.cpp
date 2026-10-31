@@ -11,9 +11,9 @@ namespace bmh {
 namespace {
 
 // Squad table layout constants of V2.24 (TeamsWithSquads, LargeSquadClubCount, NoTeamSquadStart).
-constexpr int kBigSquadTeams = 90;
-constexpr size_t kNoTeamSquadStart = 3072;
-constexpr int kTeamsWithSquads = 168;
+const int& kBigSquadTeams = runtime_dimensions.big_squad_teams;
+const int& kNoTeamSquadStart = runtime_dimensions.national_slots_first;
+const int& kTeamsWithSquads = runtime_dimensions.record_teams;
 
 // C-style signed division by 8 as compiled by Watcom (rounds toward zero).
 int div8(int x) { return x / 8; }
@@ -158,7 +158,7 @@ void GameState::formation_position(int team, int slot, int& x, int& y) const {
 SquadRange squad_range(int team) {
     if (team == kNoTeam) return {kNoTeamSquadStart, 24};
     if (team < kBigSquadTeams) return {size_t(team) * 24, 24};
-    if (team < 138) return {size_t(team) * 16 + kBigSquadTeams * 8, 16};
+    if (team < runtime_dimensions.league_teams) return {size_t(team) * 16 + kBigSquadTeams * 8, 16};
     return {0, 0};
 }
 

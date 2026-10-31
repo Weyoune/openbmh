@@ -12,12 +12,12 @@ namespace bmh {
 
 namespace {
 
-constexpr size_t kPoolSlots = 2928;   // CareerRuntimeField: the clubs' squads end here
-constexpr size_t kTailFrom = 2928 + 40;
-constexpr size_t kTailTo = 2972;      // CareerRuntimeField2
-constexpr size_t kExtraSlots = 3096;  // CareerSession_DataDirectory_RuntimeField4: 54 extra players from here
-constexpr size_t kSquadSlots = 3096 + 54;
-constexpr int kLeagueTeams = 138;     // CareerSession_DispatchLineup_RuntimeField
+const int& kPoolSlots = runtime_dimensions.pool_first;   // CareerRuntimeField: the clubs' squads end here
+const int& kTailFrom = runtime_dimensions.market_special_first;
+const int& kTailTo = runtime_dimensions.free_first;      // CareerRuntimeField2
+const int& kExtraSlots = runtime_dimensions.extra_slots_first;  // CareerSession_DataDirectory_RuntimeField4: 54 extra players from here
+const int& kSquadSlots = runtime_dimensions.total_slots;
+const int& kLeagueTeams = runtime_dimensions.league_teams;     // CareerSession_DispatchLineup_RuntimeField
 
 // LeagueSizes: clubs per league; LeagueStrengthRanges: (minimum, maximum) strength per league.
 // (the clubs per league are kLeagueSizes, schedule.hpp)

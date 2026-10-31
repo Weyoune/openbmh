@@ -16,6 +16,7 @@
 #include "formats/savestate.hpp"
 #include "formats/textd.hpp"
 #include "game/memory.hpp"
+#include "game/profile_runtime.hpp"
 #include "game/random.hpp"
 #include "game/reality_motion.hpp"
 
@@ -26,7 +27,7 @@ struct TransferDecisionEvent;
 struct HumanBuyerSaleHooks;
 
 // Special team id used by the original for "no club" / the player pool (0x165).
-constexpr int kNoTeam = 0x165;
+inline const int& kNoTeam = runtime_dimensions.national_first;
 
 // Squad slot values (u16 in table *SquadSlots):
 //   bits 0-11  player id, 0xFFF = empty slot
