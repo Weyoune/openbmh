@@ -3,6 +3,7 @@
 #include "game/cup.hpp"
 #include "formats/le.hpp"
 #include "fixture_tables.hpp"
+#include "world12_fixture.hpp"
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
@@ -13,23 +14,8 @@ void check(bool condition,const char* message) {if(!condition)throw std::runtime
 template<class Function> void rejects(Function function,const char* message) {
     bool rejected=false;try{function();}catch(const std::exception&){rejected=true;}check(rejected,message);
 }
-World fixture_world() {
-    World world;uint32_t club_id=100000,player_id=200000;
-    for(const auto& league:world.catalogue.leagues) {
-        auto& membership=world.membership[league.id.value];membership.league=league.id;
-        for(int c=0;c<league.clubs;++c) {
-            ClubRecord club;club.id={club_id++};club.name="Club "+std::to_string(club.id.value);
-            club.country=league.country;club.league=league.id;club.crest={club.id.value};
-            world.crests[club.crest]={"W/TEST.VGA",0};
-            for(int p=0;p<11;++p) {
-                PlayerRecord player;player.id={player_id++};player.attributes={"Player "+std::to_string(player.id.value),50u|(60u<<7)|(65u<<14),0,0};
-                world.players[player.id]=player;club.roster[size_t(p)]={player.id,1};
-            }
-            membership.clubs.push_back(club.id);world.clubs[club.id]=club;
-        }
-    }
-    world.validate();return world;
-}
+World fixture_world() {return bmh::test::world12::complete_world();}
+
 std::vector<Fixture> draw(const World& world,LeagueId league,int matches) {
     const auto& clubs=world.membership[league.value].clubs;std::vector<Fixture> fixtures;
     for(int m=0;m<matches;++m)fixtures.push_back({clubs[size_t(2*m)],clubs[size_t(2*m+1)]});

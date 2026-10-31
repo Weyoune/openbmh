@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "game/world12/cups.hpp"
 #include "game/world12/codec.hpp"
+#include "app/world12_cups.hpp"
 #include "game/cup.hpp"
 #include "launch/fltd.hpp"
 #include "formats/le.hpp"
@@ -40,5 +41,13 @@ int main(int argc,char** argv)try {
     }
     std::cout<<verified<<" source stages verified; "<<unsupported<<" require additional stage adapters.\n"
              <<"Metadata probes use synthetic club pairings, not the original entry draws or simulated matches.\n";
+    if(!unsupported) {
+        CareerSnapshot state;state.world=world;state.results=SeasonResults::empty(world.catalogue);state.game_seed=37;state.watcom_seed=91;
+        const auto ranking=[&](Country country){CountryCupRanking result;for(uint8_t i=0;i<5;++i)result[i]=world.membership.at(world.catalogue.starting_league(country,i).value).clubs;return result;};
+        bmh::app::world12::install_domestic_cup_fields(state,ranking(Country::germany),ranking(Country::england),{german,english});
+        for(const auto& cup:state.cups)std::cout<<"Initial cup "<<int(cup.cup)<<": "<<cup.rounds.front().fixtures.size()*2<<" qualifying/main entrants, "<<cup.seeded.size()<<" seeded clubs\n";
+        if(read_save(make_save(state))!=state)throw std::runtime_error("source-backed initial cup save roundtrip failed");
+        std::cout<<"Source-backed initial fields and typed save roundtrip passed. Input ranking is the supplied world membership order, not an independently verified previous-season table.\n";
+    }
     return unsupported?2:0;
 }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}

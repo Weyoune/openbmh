@@ -51,4 +51,7 @@ struct CupLegResult {
 void commit_cup_leg(KnockoutStage&,const CupLegResult&,const World&);
 void validate_cup_programmes(const World&,const std::vector<KnockoutStage>&);
 std::optional<CupDrawNotice> cup_draw_notice(const World&,const KnockoutStage&);
+// Read-only completion preview used by the draw owner before publishing a leg.
+// A first leg returns no qualifiers; a finished linked stage includes its seeds.
+std::vector<ClubId> cup_leg_qualifiers(const KnockoutStage&,const std::vector<uint16_t>& scores,const World&);
 }

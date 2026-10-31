@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "game/career.hpp"
+#include "game/cup_draw_rules.hpp"
 #include "game/matchday.hpp"
 #include "game/month.hpp"
 #include "game/national.hpp"
@@ -862,29 +863,11 @@ void order_cup_ties(GameState& g, int teams, int offset) {
             list = mem.pointer(::bmh::layout::CupTable + 25 * 0x28) + uint32_t(offset) * 2;
         }
     }
-    static const uint8_t kWeight[10] = {3, 1, 0, 0, 2, 0, 0, 0, 7, 0};  // SeasonRuntimeField24
-    const int lower = league_first_team(2);
-    std::vector<uint8_t> w;
-    for (int i = 0; i < teams; i += 2) {
-        const uint32_t at = list + uint32_t(i) * 2;
-        if (int16_t(mem.u16(at + 2)) >= lower && int16_t(mem.u16(at)) < lower) {
-            const uint16_t t = mem.u16(at);
-            mem.set16(at, mem.u16(at + 2));
-            mem.set16(at + 2, t);
-        }
-        w.push_back(uint8_t(kWeight[club_league(mem.u16(at))] + kWeight[club_league(mem.u16(at + 2))]));
-    }
-    for (int i = 0; i < teams / 2 - 1; i++)
-        for (int j = i + 1; j < teams / 2; j++)
-            if (w[size_t(i)] < w[size_t(j)]) {
-                std::swap(w[size_t(i)], w[size_t(j)]);
-                for (uint32_t k = 0; k < 2; k++) {
-                    const uint32_t x = list + uint32_t(i) * 4 + k * 2, y = list + uint32_t(j) * 4 + k * 2;
-                    const uint16_t t = mem.u16(x);
-                    mem.set16(x, mem.u16(y));
-                    mem.set16(y, t);
-                }
-            }
+    std::vector<Fixture> pairs;
+    for(int i=0;i<teams;i+=2)pairs.push_back({int16_t(mem.u16(list+uint32_t(i)*2)),int16_t(mem.u16(list+uint32_t(i+1)*2))});
+    const int lower=league_first_team(2);
+    order_national_cup_pairs(pairs,[&](int team){return CupDrawClass{team>=lower,cup_league_weight(club_league(team))};});
+    for(size_t i=0;i<pairs.size();++i){mem.set16(list+uint32_t(i)*4,uint16_t(pairs[i].home));mem.set16(list+uint32_t(i)*4+2,uint16_t(pairs[i].away));}
 }
 
 }  // namespace
@@ -982,12 +965,10 @@ void cup_fields_english(GameState& g, GameRandom& game, const uint8_t (&ranks)[4
     StaticMemory& mem = g.memory;
     english_competition_blocks(mem);
     auto shuffle = [&](uint32_t list, uint32_t n) {  // Uint32T2 = PrepareEvent
-        for (uint32_t i = 0; i < n; i++) {
-            const uint32_t j = uint32_t(game.range(0, int(n) - 1));
-            const uint16_t a = mem.u16(list + i * 2);
-            mem.set16(list + i * 2, mem.u16(list + j * 2));
-            mem.set16(list + j * 2, a);
-        }
+        initial_cup_shuffle(int(n),game,[&](int i,int j){
+            const uint32_t a=list+uint32_t(i)*2,b=list+uint32_t(j)*2;
+            const uint16_t value=mem.u16(a);mem.set16(a,mem.u16(b));mem.set16(b,value);
+        });
     };
     uint32_t n = 0;
     for (int l = 0; l < 4; l++)
@@ -1040,12 +1021,10 @@ void cup_field(GameState& g, GameRandom& game, const std::function<void(const ch
             if (const int m = g.manager_of(team); m >= 0)
                 g.manager_records.at(size_t(m) * 0xB0C + 0xda + 1 + size_t(std::min<int>(g.season, 0x31)) * 3) = 1;
         }
-    for (uint32_t i = 0; i < 0x40; i++) {  // PrepareEvent
-        const uint32_t j = uint32_t(game.range(0, 0x3f));
-        const uint16_t a = mem.u16(kField + i * 2);
-        mem.set16(kField + i * 2, mem.u16(kField + j * 2));
-        mem.set16(kField + j * 2, a);
-    }
+    initial_cup_shuffle(64,game,[&](int i,int j){
+        const uint32_t a=kField+uint32_t(i)*2,b=kField+uint32_t(j)*2;
+        const uint16_t value=mem.u16(a);mem.set16(a,mem.u16(b));mem.set16(b,value);
+    });
     if (mem.u8(::bmh::layout::LeaguePresentationOptions + 5 * 9) != 0) return;  // the draw display is switched off
     observe_cup_draw(g, SeasonCupDrawPhase::draw, cup_draw);
     if (pause) pause("the national cup draw (CupDrawFromGame)");

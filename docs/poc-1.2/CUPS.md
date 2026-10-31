@@ -1,6 +1,6 @@
 # Country-owned domestic cup stages
 
-This is the 1.2 score/progression adapter, not yet the application's complete cup simulation path. Initial qualification, the actual original draws, human-manager effects and match simulation still need their owning application adapters.
+The 1.2 adapters now cover domestic entrant selection, original draw algorithms and atomic score/stage progression. They are not yet the application's complete cup simulation path: match simulation, human-manager effects and other competition/economy ownership still need integration.
 
 ## Source rules and ownership
 
@@ -28,7 +28,15 @@ This is a presentation filter only. AI-country result processing, stage links, s
 
 Each round keeps its first-leg fixture orientation and the original score/phase words. The existing `bmh::cup_tie` calculation determines qualifiers, including aggregate and away-goal handling. Return-leg fixtures reverse the original pairing. Unresolved ties are rejected rather than assigned an arbitrary winner.
 
-After a non-terminal round, the draw owner must supply `next_draw`. It must contain exactly the preceding winners. After a linked stage ends, `next_stage` must match the source link and include every qualifier and seeded club. This adapter neither invents draw order nor consumes RNG in place of the original selection/draw routines. Home ordering and original draw-related simulation effects remain the draw owner's responsibility.
+The low-level stage transition requires a complete `next_draw` after a non-terminal round, containing exactly the preceding winners. After a linked stage ends, `next_stage` must match the source link and include every qualifier and seeded club. This stage validator does not consume RNG.
+
+The application owner in `src/app/world12_cups.*` now supplies those receipts automatically. It stages the career and random stream, invokes the shared original draw kernels, validates all country results/links, then publishes both state and RNG seed together. Failure in England also rolls back Germany's already prepared draw. The day API expects the match owner's staged post-match snapshot; it does not simulate scores or account for missing match RNG draws.
+
+Initial fields use explicit rank-ordered lists for all five leagues in each country, validated against the world's exact memberships. Germany selects 18 + 18 + 14 + 14 clubs. England selects 20 + 20 + 20 + 8 for the FA Cup and 20 + 20 + 4 for the League Cup. Each English Premier League seed prefix is shuffled separately from its qualifying field; its stored order is reversed to match the Original's backwards read of the reserved prefix. Membership order must not be substituted for a previous-season ranking by a running career.
+
+`game/cup_draw_rules.hpp` is shared by the legacy and typed paths: initial fields use one GameRandom draw per slot; later shuffles use two Watcom draws per entrant. Later pairs join the first and last remaining elements. The original lower-division home priority, league weights and exchange-sort tie ordering are retained. The original entry-0 restriction on later national home ordering also remains; English proper-cup/League-Cup successor stages are not silently treated as German entry 0. First legs and terminal finals make no next-field draws. The source's terminal-stage return is preserved.
+
+Initial semantic tie ordering runs independently of whether a human sees the draw. Hiding an AI-country presentation is not the legacy source's display-off early return. Display visibility therefore cannot change participant selection, home order or RNG. Remaining legacy overview/manager bookkeeping and financial/title effects still need their typed owners; they are not implemented by displaying a notice.
 
 `prepare_day` identifies each pending domestic cup leg alongside the day's league fixtures. `commit_day` validates the complete country/league/cup batch on a staged career, then publishes results, stage transitions and the shared date together. Missing results, missing successors, invalid draws and stale/replayed tickets preserve the previous career. Unsupported non-league events continue to block advancement explicitly.
 
@@ -36,8 +44,8 @@ The development O1.2 snapshot schema `OBMH12S3` retains stage links, seeded part
 
 ## Evidence and remaining integration
 
-Synthetic tests cover mixed German/English cup days, atomic rollback with concurrent league results, stale tickets, aggregate/away-goal resolution, seeded qualification, linked stages and truncated saves. A complete test-score programme accounts for 63 German-cup, 67 FA-Cup and 73 League-Cup matches, with save/reload after every calendar day. These 203 matches use supplied test outcomes, not the match engine.
+Synthetic tests cover mixed German/English cup days, atomic rollback with concurrent league results, stale tickets, aggregate/away-goal resolution, seeded qualification, linked stages and truncated saves. A complete test-score programme accounts for 63 German-cup, 67 FA-Cup and 73 League-Cup matches, with save/reload after every calendar day. The automatic-draw owner additionally verifies 176 initial GameRandom draws and 420 later Watcom draws over that programme. Reversed ranking inputs prove qualification follows rank rather than numerical club IDs. These 203 matches use supplied test outcomes, not the match engine.
 
-`world12_cups_validate` checks all eight supported stage descriptors against locally supplied German/FLTD source rules and a typed world. Its pairings are explicitly synthetic metadata probes; it does not validate original entrant selection or a played career. Private input/output files stay outside the public repository.
+`world12_cups_validate` checks all eight supported stage descriptors against locally supplied German/FLTD source rules and a typed world. It also creates the three initial fields from supplied world membership order and checks their typed save roundtrip. Its descriptor pairings are synthetic metadata probes; its membership order is not an independently verified previous-season table. It does not validate a played career. Private input/output files stay outside the public repository.
 
-Still required: original field-selection/draw ownership with transactional RNG, European/group/indoor/national competition adapters, source-compatible premiums/title/manager records, complete application progression and native multiplayer QA.
+Still required: match simulation/after-match integration, supercup participant selection, European/group/indoor/national competition adapters, source-compatible premiums/title/manager records, complete application progression and native multiplayer QA.

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "game/cup.hpp"
+#include "game/cup_draw_rules.hpp"
 
 #include <algorithm>
 #include <array>
@@ -468,30 +469,16 @@ void swap16(StaticMemory& mem, uint32_t a, uint32_t b) {
 // descending sort on each tie's combined league weight. Kept in this Core module so
 // finish_cup can expose the Original draw before the inner sort and retain its outer sort.
 void order_national_cup_ties(GameState& g, int teams, int offset) {
-    StaticMemory& mem = g.memory;
-    const uint32_t list = mem.pointer(cup_entry_address(0)) + uint32_t(offset) * 2;
-    static constexpr uint8_t kWeight[10] = {3, 1, 0, 0, 2, 0, 0, 0, 7, 0};
-    const int lower = league_first_team(2);
-    std::vector<uint8_t> weights;
-    weights.reserve(size_t(teams / 2));
-    auto team = [&](int i) { return int16_t(mem.u16(list + uint32_t(i) * 2)); };
-    auto swap_pair = [&](int a, int b) {
-        swap16(mem, list + uint32_t(a) * 2, list + uint32_t(b) * 2);
-        swap16(mem, list + uint32_t(a + 1) * 2, list + uint32_t(b + 1) * 2);
-    };
-    for (int i = 0; i < teams; i += 2) {
-        if (lower <= team(i + 1) && team(i) < lower)
-            swap16(mem, list + uint32_t(i) * 2, list + uint32_t(i + 1) * 2);
-        auto league = [](int t) { return t > (kNoTeam - 1) ? 0 : team_league(t); };
-        const int la = league(team(i)), lb = league(team(i + 1));
-        weights.push_back(uint8_t(kWeight[la < 10 ? la : 9] + kWeight[lb < 10 ? lb : 9]));
-    }
-    for (int i = 0; i < teams / 2 - 1; ++i)
-        for (int j = i + 1; j < teams / 2; ++j)
-            if (weights[size_t(i)] < weights[size_t(j)]) {
-                std::swap(weights[size_t(i)], weights[size_t(j)]);
-                swap_pair(i * 2, j * 2);
-            }
+    StaticMemory& mem=g.memory;
+    const uint32_t list=mem.pointer(cup_entry_address(0))+uint32_t(offset)*2;
+    std::vector<Fixture> pairs;
+    for(int i=0;i<teams;i+=2)pairs.push_back({int16_t(mem.u16(list+uint32_t(i)*2)),int16_t(mem.u16(list+uint32_t(i+1)*2))});
+    const int lower=league_first_team(2);
+    order_national_cup_pairs(pairs,[&](int team){
+        const int league=team>(kNoTeam-1)?0:team_league(team);
+        return CupDrawClass{team>=lower,cup_league_weight(league)};
+    });
+    for(size_t i=0;i<pairs.size();++i){mem.set16(list+uint32_t(i)*4,uint16_t(pairs[i].home));mem.set16(list+uint32_t(i)*4+2,uint16_t(pairs[i].away));}
 }
 
 bool source_cup_draw_enabled(const StaticMemory& mem, int competition) {
@@ -708,11 +695,7 @@ void advance_cup(GameState& g, int id, WatcomRandom& rand, MinuteReport& report,
     const int count = int(winners.size());  // local_14
     if (mem.u8(e + 0x14) & 0x20) {
         // the draw
-        for (int i = 0; i < count; i++) {
-            const int a = rand.range(0, count - 1);
-            const int b = rand.range(0, count - 1);
-            std::swap(winners[size_t(b)], winners[size_t(a)]);
-        }
+        subsequent_cup_shuffle(count,rand,[&](int a,int b){std::swap(winners[size_t(a)],winners[size_t(b)]);});
     }
     if (!(mem.u8(e + 0x14) & 4)) {
         // a group stage: the teams go round the groups, taken from the end

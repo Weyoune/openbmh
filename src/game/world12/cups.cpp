@@ -176,6 +176,20 @@ void commit_cup_leg(KnockoutStage& stage,const CupLegResult& result,const World&
     }
     stage=std::move(staged);
 }
+std::vector<ClubId> cup_leg_qualifiers(const KnockoutStage& stage,const std::vector<uint16_t>& scores,const World& world) {
+    stage.validate(world);
+    if(stage.complete() || scores.empty() || scores.size()!=stage.rounds.back().fixtures.size())
+        throw std::invalid_argument("world12: invalid pending cup leg score count");
+    const auto leg=stage.next_leg();
+    for(auto score:scores)if((score>>10)>2 || (stage.two_legs() && leg==1 && (score>>10)))
+        throw std::invalid_argument("world12: invalid pending cup score phase");
+    auto round=stage.rounds.back();
+    if(leg==1)round.first_leg=scores;else round.second_leg=scores;
+    if(!resolved(round,stage.two_legs()))return {};
+    auto qualified=winners(round,stage.flags);
+    if(stage.rounds.size()==stage.planned_rounds)qualified.insert(qualified.end(),stage.seeded.begin(),stage.seeded.end());
+    return qualified;
+}
 void validate_cup_programmes(const World& world,const std::vector<KnockoutStage>& stages) {
     if(stages.size()>5*bmh::kCupEntries)throw std::invalid_argument("world12: too many domestic cup stages");
     std::map<DomesticCup,const KnockoutStage*> previous;
