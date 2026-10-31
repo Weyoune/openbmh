@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <type_traits>
 namespace bmh::app::world12 {
+static_assert(std::is_nothrow_move_assignable_v<bmh::world12::World>);
 static_assert(std::is_nothrow_copy_assignable_v<std::optional<bmh::world12::ManagerFinance>>);
 static_assert(std::is_nothrow_copy_assignable_v<std::optional<bmh::world12::ManagerTactics>>);
 bmh::world12::TacticalOutcome apply_manager_tactical_action(bmh::world12::World& world,ManagerActionOwner& owner,
@@ -15,7 +16,17 @@ bmh::world12::TacticalOutcome apply_manager_tactical_action(bmh::world12::World&
     const auto manager=std::find_if(world.managers.begin(),world.managers.end(),[&](const auto& row){return row.seat==identity.seat;});
     if(manager==world.managers.end() || manager->club!=identity.club)throw std::invalid_argument("world12: tactical action belongs to another manager/club");
     const auto result=bmh::world12::calculate_manager_tactical_action(world,identity.seat,action,policy);
-    if(result.changed){manager->tactics=result.tactics;++owner.revision;}
+    if(result.changed) {
+        if(result.lineup) {
+            auto candidate=world;
+            const auto index=size_t(manager-world.managers.begin());candidate.managers[index].tactics=result.tactics;
+            candidate.clubs.at(identity.club).roster=result.lineup->roster;
+            for(size_t row=0;row<24;++row)if(!result.lineup->roster[row].empty())
+                candidate.players.at(result.lineup->roster[row].player).cards=result.lineup->cards_by_row[row];
+            candidate.validate();world=std::move(candidate);
+        }else manager->tactics=result.tactics;
+        ++owner.revision;
+    }
     return result;
 }
 bmh::world12::ManagerMoneyOutcome book_manager_funds(bmh::world12::World& world,ManagerActionOwner& owner,

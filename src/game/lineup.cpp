@@ -900,6 +900,44 @@ bool auto_pitch_set_piece_takers_source(GameState& g, int manager_slot, int runt
     return true;
 }
 
+bool swap_pitch_roster_rows_source(GameState& g,int manager,int team,int first_row,int second_row,
+    uint16_t first_slot,uint16_t second_slot,bool foreign_rule_enabled) {
+    if(manager<0 || manager>3 || size_t(manager)>=g.manager_teams.size() || g.manager_teams[size_t(manager)]!=team ||
+        team<0 || size_t(team)>=g.club_ids.size() || g.lineups_frozen || first_row<0 || second_row<0 || first_row==second_row ||
+        g.tactics.size()<size_t(manager+1)*0x840 || g.manager_options.size()<size_t(manager+1)*5 || g.player_cards.size()!=g.players.size())return false;
+    const auto range=squad_range(team);
+    if((range.count!=16 && range.count!=24) || size_t(first_row)>=range.count || size_t(second_row)>=range.count ||
+        range.first+range.count>g.squad_slots.size())return false;
+    const size_t first=range.first+size_t(first_row),second=range.first+size_t(second_row);
+    const auto first_id=size_t(first_slot&0xfff),second_id=size_t(second_slot&0xfff);
+    if(g.squad_slots[first]!=first_slot || g.squad_slots[second]!=second_slot || first_id==0xfff || second_id==0xfff ||
+        first_id>=g.players.size() || second_id>=g.players.size() ||
+        ((g.players[first_id].w364>>16)&0x1f)!=0 || ((g.players[second_id].w364>>16)&0x1f)!=0 ||
+        (foreign_rule_enabled && ((first_row<11)!=(second_row<11))))return false;
+    const size_t board_base = size_t(manager) * 0x840;
+    auto* a = g.tactics.data() + board_base + size_t(first_row) * 0x58;
+    auto* b = g.tactics.data() + board_base + size_t(second_row) * 0x58;
+    const uint8_t ax = a[0x41], ay = a[0x42], bx = b[0x41], by = b[0x42];
+    // Original SquadSlotsBoardEntriesChangePlaces moves the player/tactics entry, then restores
+    // the 0xc000 role bits to their roster rows. Preserve bit 12 and the
+    // player id with the entry; keep the starter/bench flags with the slot.
+    g.squad_slots[first] = uint16_t((second_slot & 0x1fff) | (first_slot & 0xc000));
+    g.squad_slots[second] = uint16_t((first_slot & 0x1fff) | (second_slot & 0xc000));
+    std::swap_ranges(a, a + 0x58, b);
+    a[0x41] = ax; a[0x42] = ay; b[0x41] = bx; b[0x42] = by;
+    // GatedByParamLive is applied to every marked row, not just the two swapped
+    // players. Keep card-side row identity synchronized with the roster.
+    for (size_t row = 0; row < range.count; ++row) {
+        const uint16_t slot = g.squad_slots[range.first + row];
+        if ((slot & 0xc000) == 0) continue;
+        const size_t id = slot & 0x0fff;
+        if (id >= g.players.size()) continue;
+        g.player_cards[id] = uint16_t((g.player_cards[id] & 0xffe0) | uint16_t(row));
+    }
+    g.manager_options.at(size_t(manager) * 5) = 0; // source manual mode selects DispatchLiveOverview
+    return true;
+}
+
 bool set_player_order_source(GameState& g, int manager_slot, int runtime_club, int row, int player, int aspect, int value) {
     if (manager_slot < 0 || size_t(manager_slot) >= g.manager_teams.size() || g.manager_teams[size_t(manager_slot)] != runtime_club ||
         aspect < 0 || aspect > 3 || row < 0 || row >= 24)

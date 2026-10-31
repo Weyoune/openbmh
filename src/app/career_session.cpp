@@ -5971,27 +5971,11 @@ bool CareerSession::dispatch_lineup(const ui::LineupRequest& request, uint64_t& 
         error = "Dieser Wechsel benötigt eine Bestätigung der Ausländerregel.";
         return false;
     }
-    const size_t board_base = size_t(active) * 0x840;
-    auto* a = g_.tactics.data() + board_base + size_t(request.first_row) * 0x58;
-    auto* b = g_.tactics.data() + board_base + size_t(request.second_row) * 0x58;
-    const uint8_t ax = a[0x41], ay = a[0x42], bx = b[0x41], by = b[0x42];
-    // Original SquadSlotsBoardEntriesChangePlaces moves the player/tactics entry, then restores
-    // the 0xc000 role bits to their roster rows. Preserve bit 12 and the
-    // player id with the entry; keep the starter/bench flags with the slot.
-    g_.squad_slots[first] = uint16_t((second_slot & 0x1fff) | (first_slot & 0xc000));
-    g_.squad_slots[second] = uint16_t((first_slot & 0x1fff) | (second_slot & 0xc000));
-    std::swap_ranges(a, a + 0x58, b);
-    a[0x41] = ax; a[0x42] = ay; b[0x41] = bx; b[0x42] = by;
-    // GatedByParamLive is applied to every marked row, not just the two swapped
-    // players. Keep card-side row identity synchronized with the roster.
-    for (size_t row = 0; row < range.count; ++row) {
-        const uint16_t slot = g_.squad_slots[range.first + row];
-        if ((slot & 0xc000) == 0) continue;
-        const size_t id = slot & 0x0fff;
-        if (id >= g_.players.size()) continue;
-        g_.player_cards[id] = uint16_t((g_.player_cards[id] & 0xffe0) | uint16_t(row));
+    if(!swap_pitch_roster_rows_source(g_,active,request.runtime_club,request.first_row,request.second_row,
+            first_slot,second_slot,exe_.u8(::bmh::layout::ForeignPlayerLimitEnabled)!=0)) {
+        error = "Der Spielerwechsel ist im aktuellen Aufstellungszustand nicht freigegeben.";
+        return false;
     }
-    g_.manager_options.at(size_t(active) * 5) = 0; // source manual mode selects DispatchLiveOverview
     ++revision;
     return true;
 }

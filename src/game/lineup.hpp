@@ -108,6 +108,12 @@ bool set_pitch_set_piece_taker_source(GameState& g, int manager_slot, int runtim
 bool auto_pitch_set_piece_takers_source(GameState& g, int manager_slot, int runtime_club,
                                         const std::array<uint16_t, 3>& expected_old_values);
 
+// Prepared, pre-match human roster exchange. The session owns screen/revision
+// and injury/foreign-rule confirmations; this helper rejects those special
+// cases until they have an explicit confirmation owner. No RNG is consumed.
+bool swap_pitch_roster_rows_source(GameState&,int manager,int team,int first,int second,
+    uint16_t expected_first,uint16_t expected_second,bool foreign_rule_enabled);
+
 // ORDER (PitchScreen with desk flag 0x20, H2 p. 43): the four instructions of a starter on
 // the tactics board, bytes +2..+5 - 0 defensive/offensive, 1 running, 2 commitment, 3 fighting
 // (the live scene reads +5, rating.cpp). A click in a bar sets the value from the mouse

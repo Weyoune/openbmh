@@ -62,9 +62,29 @@ TacticalOutcome calculate_manager_tactical_action(const World& world,uint8_t sea
             action.old_depth,action.old_lane,action.depth,action.lane);break;
     case TacticalActionKind::weights:
         allowed=set_pitch_automatic_weight_source(local,0,0,action.aspect,action.old_weights,action.new_weights);break;
+    case TacticalActionKind::swap: {
+        const auto& roster=world.clubs.at(manager->club).roster;
+        if(action.second_row<0 || action.second_row>=24 || roster[size_t(action.row)]!=action.first_slot ||
+            roster[size_t(action.second_row)]!=action.second_slot)return result;
+        allowed=swap_pitch_roster_rows_source(local,0,0,action.row,action.second_row,local.squad_slots[size_t(action.row)],
+            local.squad_slots[size_t(action.second_row)],policy.foreign_rule_enabled);
+        if(allowed) {
+            TacticalLineup lineup;std::vector<PlayerId> mapping;
+            for(const auto& slot:roster)if(!slot.empty())mapping.push_back(slot.player);
+            for(size_t row=0;row<24;++row) {
+                const auto raw=local.squad_slots[row];if((raw&0xfff)==0xfff)continue;
+                const auto id=raw&0xfff;lineup.roster[row]={mapping.at(id),uint16_t(((raw&0x8000)?1:0)|((raw&0x4000)?2:0)|((raw&0x2000)?4:0)|((raw&0x1000)?8:0))};
+                lineup.cards_by_row[row]=local.player_cards.at(id);
+            }
+            result.lineup=lineup;
+        }
+        break;
+    }
     default:throw std::invalid_argument("world12: unsupported tactical action");
     }
-    if(allowed){result.allowed=true;result.tactics=manager_tactics_from_legacy(local,0);result.changed=result.tactics!=before;}
+    if(allowed){result.allowed=true;result.tactics=manager_tactics_from_legacy(local,0);result.changed=result.tactics!=before;
+        if(result.lineup){const auto& roster=world.clubs.at(manager->club).roster;result.changed|=result.lineup->roster!=roster;
+            for(size_t row=0;row<24;++row)if(!result.lineup->roster[row].empty())result.changed|=world.players.at(result.lineup->roster[row].player).cards!=result.lineup->cards_by_row[row];}}
     return result;
 }
 }
