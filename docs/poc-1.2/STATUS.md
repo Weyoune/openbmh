@@ -28,3 +28,10 @@ Added weekday alignment and league-table projection:
 - Synthetic comparisons checked 1,170 table configurations directly against the existing Classic implementation for 18/20-team leagues. The newly scheduled ten-team English group separately completed a balanced 18-match-per-club table. Result validation now rejects scores outside the Classic 0–15 goal range at the model/save boundary as well as at day commit.
 
 Remaining: shared application progression, cup handling and promotion settlement, human manager/tactics projection and match-event translation, application save ownership, German country picker and all dependent UI views, complete editor integration, three-season/multiplayer/native release QA. The old loader intentionally rejects the new profile until these gates are complete. No 1.2 binaries are released at this stage.
+
+Added domestic cup score/progression adapter ([details](CUPS.md)):
+
+- Country-owned original stage metadata, wide club identities, separate legs/results/revisions and original aggregate/away-goal resolution. FA Cup and League Cup qualifying stages retain their seeded clubs and linked main/final stages.
+- Shared daily transactions can now publish complete league and supported domestic-cup result batches atomically. Missing draws, unresolved ties, incomplete successor stages or foreign/stale results leave every competition and the date unchanged. Indoor/shared/national events still block this domestic-only adapter.
+- The development snapshot schema now retains complete cup stage histories and pending return legs. Synthetic tests completed all three domestic cup structures with 203 test-score matches and daily save/reload. All eight supported stage descriptors imported successfully from the private supplied source rules; those metadata probes use synthetic draws.
+- Actual original entrant selection/draw calls and their RNG/effects, match simulation, premiums and human/title statistics remain application integration work. This is not a completed playable cup career or a 1.2 release.
