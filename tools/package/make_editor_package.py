@@ -21,7 +21,7 @@ def package(build,game,out):
         'Vollstaendig entpacken und obdeddi.exe starten. COMMUNITY.OBD ueber Oeffnen waehlen.\n'
         'Spieler und Vereine bearbeiten; Suche, Sortierung und Kaderwechsel stehen zur Verfuegung.\n'
         'Speichern ersetzt die OBD erst nach geprueftem Backup im Unterverzeichnis backups.\n'
-        'Assets werden nicht bearbeitet. Festes Ligaset und feste Datensatzanzahlen bleiben erhalten.\n'
+        'Vereinslogos: PNG/JPEG/BMP importieren, zuschneiden, drehen und spiegeln; Vorschau im Originalformat. Andere Assets bleiben unveraendert. Festes Ligaset und feste Datensatzanzahlen bleiben erhalten.\n'
         'Classic-Eigenheit: Viele Werte werden beim Karrierestart neu erzeugt. Bestehende Spielstaende bleiben unveraendert.\n'
         'Tasten: Strg+O oeffnen, Strg+S speichern. Alternativ: obdeddi.exe "Pfad\\COMMUNITY.OBD".\n\n'
         'GPL-3.0-only; vollstaendige passende Quellen und Abhaengigkeiten separat:\n'

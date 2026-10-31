@@ -4,9 +4,9 @@ A small native Windows data editor for the standalone OpenBMH 1.1 COMMUNITY.OBD 
 
 ## Use
 
-Extract the separate editor package and start `obdeddi.exe`. Open a COMMUNITY.OBD with the Open button or Ctrl+O. A file path may also be passed on the command line. Search and sortable virtual lists cover players and clubs; the club filter applies to players. No artwork is decoded or presented for editing.
+Extract the separate editor package and start `obdeddi.exe`. Open a COMMUNITY.OBD with the Open button or Ctrl+O. A file path may also be passed on the command line. Search and sortable virtual lists cover players and clubs; the club filter applies to players. Artwork is decoded only on demand in the separate club-logo dialog.
 
-Player fields include names, position, nationality, age, form/technique/condition, bonus and the seven Classic skills. Displayed strength is derived, not a second independent field. Club fields include names, the stored short-name span and existing kit selectors. League sizes and record counts stay fixed. Country rows and rules are not editable. League players can move between squads or swap places; temporary/reserve-table players cannot be reassigned as if they were ordinary roster members.
+Player fields include names, position, nationality, age, form/technique/condition, bonus and the seven Classic skills. Displayed strength is derived, not a second independent field. Club fields include names, the stored short-name span and existing kit selectors. League sizes and record counts stay fixed. Country rows and rules are not editable. Club logos can be imported from PNG/JPEG/BMP, cropped by source-pixel coordinates, freely rotated and mirrored. The before/after preview uses the actual 38×38 Original palette and bright background; shared crest cells are cloned into a free cell. Other artwork is not editable. League players can move between squads or swap places; temporary/reserve-table players cannot be reassigned as if they were ordinary roster members.
 
 Classic new-career generation is deliberately retained: many stored player values are randomized/recalculated when a career starts. Editing the database does not modify an existing saved game. This limitation is visible in the player form.
 

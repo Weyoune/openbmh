@@ -3,6 +3,8 @@
 #include "formats/m3d.hpp"
 #include "formats/data_profile.hpp"
 #include <map>
+#include <array>
+#include "formats/vga.hpp"
 namespace bmh::obdeddi {
 struct PlayerValues {
     std::string name;
@@ -20,6 +22,9 @@ public:
     int club_of(size_t player) const;
     void set_player(size_t,const PlayerValues&);
     void set_club(size_t,std::string name,int kit,int short_start,int short_length);
+    std::array<uint32_t,1444> logo(size_t club) const;
+    std::array<uint32_t,1444> preview_logo(const std::array<uint32_t,1444>& rgba) const;
+    void set_logo(size_t club,const std::array<uint32_t,1444>& rgba);
     void move_player(size_t player,int club,int swap_player=-1);
     // Returns the verified backup path, or an empty path for a no-op.
     std::filesystem::path save();
@@ -32,6 +37,10 @@ private:
     bool dirty_=false;
     std::vector<int> owners_;
     std::vector<std::string> changes_;
+    std::map<std::string,Bytes> changed_assets_;
+    Image logo_sheet(int page) const;
+    Image convert_logo(const std::array<uint32_t,1444>&) const;
+    std::array<uint32_t,256> palette() const;
     void refresh_owners();
 };
 std::string sha256(const Bytes&);

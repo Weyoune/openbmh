@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "obdeddi/document.hpp"
 #include "cli/json.hpp"
+#include "formats/palette.hpp"
 #include "miniz.h"
 #include "Sha256.h"
 #include <algorithm>
@@ -108,12 +109,46 @@ void Document::move_player(size_t id,int destination,int swap){
     else{word(slots,size_t(to)*2,le16(slots,size_t(from)*2));word(slots,size_t(from)*2,4095);for(int team:{source,destination}){std::vector<uint16_t> list;for(int row=0;row<24;++row){auto v=le16(slots,size_t(team*24+row)*2);if((v&4095)!=4095)list.push_back(v);}for(int row=0;row<24;++row)word(slots,size_t(team*24+row)*2,row<int(list.size())?uint16_t((list[size_t(row)]&0x7fff)|(row<11?0x8000:0)):4095);}}
     db_.squad_list=std::move(slots);refresh_owners();dirty_=true;changes_.push_back("roster:player:"+std::to_string(id)+":"+std::to_string(source)+">"+std::to_string(destination));
 }
+std::array<uint32_t,256> Document::palette() const {
+    const auto& data=entries_.at(key(entries_,"M3PC.COL"));if(data.size()!=768)throw FormatError("Ungueltige Palette.");
+    std::array<uint32_t,256> colors{};for(size_t i=0;i<256;++i)colors[i]=0xff000000u|uint32_t(vga_dac_rgb8(data[i*3]))<<16|uint32_t(vga_dac_rgb8(data[i*3+1]))<<8|vga_dac_rgb8(data[i*3+2]);return colors;
+}
+Image Document::logo_sheet(int page) const {
+    const auto name="W/"+std::to_string(page)+".VGA";
+    const auto changed=changed_assets_.find(name);if(changed!=changed_assets_.end())return decode_vga(changed->second);
+    return decode_vga(entries_.at(key(entries_,name)));
+}
+std::array<uint32_t,1444> Document::logo(size_t club) const {
+    if(club>=profile_.national_first)throw FormatError("Kein Vereinslogo.");
+    const int cell=le16(db_.raw_club_badge_selectors,club*2)&511;const auto sheet=logo_sheet(cell/8);if(sheet.width!=304||sheet.height!=38)throw FormatError("Ungueltiger Wappenbogen.");
+    const auto colors=palette();std::array<uint32_t,1444> out{};for(int y=0;y<38;++y)for(int x=0;x<38;++x)out[size_t(y*38+x)]=colors[sheet.pixels[size_t(y*304+(cell%8)*38+x)]];return out;
+}
+Image Document::convert_logo(const std::array<uint32_t,1444>& rgba) const {
+    const auto colors=palette();Image image(38,38,94);std::map<int,Image> sheets;
+    for(int y=0;y<38;++y)for(int x=0;x<38;++x){int votes[4]{};for(int club=0;club<90;++club){int cell=le16(db_.raw_club_badge_selectors,size_t(club)*2)&511;auto it=sheets.find(cell/8);if(it==sheets.end())it=sheets.emplace(cell/8,logo_sheet(cell/8)).first;if(it->second.width!=304||it->second.height!=38)throw FormatError("Ungueltiger Wappenbogen.");auto value=it->second.pixels[size_t(y*304+(cell%8)*38+x)];if(value>=92&&value<=95)++votes[value-92];}
+        const int background=92+int(std::max_element(votes,votes+4)-votes);auto c=rgba[size_t(y*38+x)];int alpha=int(c>>24);int red=(int(c>>16&255)*alpha+int(colors[size_t(background)]>>16&255)*(255-alpha)+127)/255;int green=(int(c>>8&255)*alpha+int(colors[size_t(background)]>>8&255)*(255-alpha)+127)/255;int blue=(int(c&255)*alpha+int(colors[size_t(background)]&255)*(255-alpha)+127)/255;
+        int best=0,distance=2147483647;for(int i=0;i<256;++i){int dr=int(colors[size_t(i)]>>16&255)-red,dg=int(colors[size_t(i)]>>8&255)-green,db=int(colors[size_t(i)]&255)-blue;int d=dr*dr+dg*dg+db*db;if(d<distance){best=i;distance=d;}}image.at(x,y)=uint8_t(best);
+    }return image;
+}
+std::array<uint32_t,1444> Document::preview_logo(const std::array<uint32_t,1444>& rgba) const {auto image=convert_logo(rgba);auto colors=palette();std::array<uint32_t,1444> out{};for(size_t i=0;i<1444;++i)out[i]=colors[image.pixels[i]];return out;}
+void Document::set_logo(size_t club,const std::array<uint32_t,1444>& rgba){
+    if(club>=profile_.national_first)throw FormatError("Kein Vereinslogo.");
+    auto selectors=db_.raw_club_badge_selectors;const auto old=le16(selectors,club*2);int cell=old&511;int references=0;bool used[512]{};
+    for(size_t i=0;i<db_.counts.clubs;++i){int c=le16(selectors,i*2)&511;used[c]=true;references+=c==cell;}
+    if(references>1){auto free=std::find(used,used+512,false);if(free==used+512)throw FormatError("Keine freie Wappenzelle vorhanden.");cell=int(free-used);}
+    Image sheet;try{sheet=logo_sheet(cell/8);}catch(const std::out_of_range&){sheet=Image(304,38,94);}catch(const FormatError&){if(entries_.count("W/"+std::to_string(cell/8)+".VGA"))throw;sheet=Image(304,38,94);}
+    if(sheet.width!=304||sheet.height!=38)throw FormatError("Ungueltiger Wappenbogen.");auto image=convert_logo(rgba);
+    for(int y=0;y<38;++y)for(int x=0;x<38;++x)sheet.at((cell%8)*38+x,y)=image.at(x,y);
+    Bytes encoded;const auto put=[&](uint32_t v,int count){for(int i=0;i<count;++i)encoded.push_back(uint8_t(v>>(8*i)));};Bytes payload;
+    for(size_t i=0;i<sheet.pixels.size();i+=128){auto count=std::min(size_t(128),sheet.pixels.size()-i);payload.push_back(uint8_t(count-1));payload.insert(payload.end(),sheet.pixels.begin()+i,sheet.pixels.begin()+i+count);}payload.push_back(0);put(304,2);put(38,2);put(uint32_t(payload.size()),4);encoded.insert(encoded.end(),payload.begin(),payload.end());
+    const auto name="W/"+std::to_string(cell/8)+".VGA";changed_assets_[name]=std::move(encoded);word(db_.raw_club_badge_selectors,club*2,uint16_t((old&~511)|cell));dirty_=true;changes_.push_back("logo:club:"+std::to_string(club));
+}
 std::filesystem::path Document::save(){
     if(!dirty_)return {};
     Lock lock(path_);if(read_file(path_)!=original_)throw FormatError("OBD wurde seit dem Oeffnen extern geaendert. Bitte neu oeffnen.");
     const auto master=encode_database(db_);
-    if(master==entries_.at(key(entries_,"M3D.MAN"))){dirty_=false;changes_.clear();return {};}
-    auto changed=entries_;changed[key(changed,"M3D.MAN")]=master;
+    if(changed_assets_.empty()&&master==entries_.at(key(entries_,"M3D.MAN"))){dirty_=false;changes_.clear();return {};}
+    auto changed=entries_;changed[key(changed,"M3D.MAN")]=master;for(const auto&[name,data]:changed_assets_){auto found=std::find_if(changed.begin(),changed.end(),[&](const auto& item){return upper(item.first)==upper(name);});if(found==changed.end())changed[name]=data;else found->second=data;}
     auto&manifestBytes=changed.at(key(changed,"PACKAGE.JSON"));auto manifest=cli::parse_json(std::string(manifestBytes.begin(),manifestBytes.end()));cli::Json::Object hashes;
     for(const auto&[name,bytes]:changed)if(upper(name)!="PACKAGE.JSON")hashes.emplace(name,sha256(bytes));
     (*manifest.object())["files"]=std::move(hashes);
@@ -136,6 +171,6 @@ std::filesystem::path Document::save(){
         std::filesystem::rename(temp,path_);
 #endif
     }catch(...){std::error_code ec;std::filesystem::remove(temp,ec);throw;}
-    entries_=std::move(changed);original_=output;dirty_=false;changes_.clear();return backup;
+    entries_=std::move(changed);original_=output;dirty_=false;changes_.clear();changed_assets_.clear();return backup;
 }
 }
