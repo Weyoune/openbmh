@@ -6,6 +6,18 @@
 #include <type_traits>
 namespace bmh::app::world12 {
 static_assert(std::is_nothrow_copy_assignable_v<std::optional<bmh::world12::ManagerFinance>>);
+static_assert(std::is_nothrow_copy_assignable_v<std::optional<bmh::world12::ManagerTactics>>);
+bmh::world12::TacticalOutcome apply_manager_tactical_action(bmh::world12::World& world,ManagerActionOwner& owner,
+    const ManagerActionIdentity& identity,const bmh::world12::TacticalAction& action,bmh::world12::TacticalPolicy policy) {
+    if(!owner.scope || identity.scope!=owner.scope || identity.revision!=owner.revision || owner.revision==std::numeric_limits<uint64_t>::max())
+        throw std::invalid_argument("world12: stale tactical manager action");
+    world.validate();
+    const auto manager=std::find_if(world.managers.begin(),world.managers.end(),[&](const auto& row){return row.seat==identity.seat;});
+    if(manager==world.managers.end() || manager->club!=identity.club)throw std::invalid_argument("world12: tactical action belongs to another manager/club");
+    const auto result=bmh::world12::calculate_manager_tactical_action(world,identity.seat,action,policy);
+    if(result.changed){manager->tactics=result.tactics;++owner.revision;}
+    return result;
+}
 bmh::world12::ManagerMoneyOutcome book_manager_funds(bmh::world12::World& world,ManagerActionOwner& owner,
     const ManagerActionIdentity& identity,int difficulty,int32_t amount,bool force,bool statistics) {
     if(!owner.scope||identity.scope!=owner.scope||identity.revision!=owner.revision||owner.revision==std::numeric_limits<uint64_t>::max())

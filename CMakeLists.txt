@@ -1212,6 +1212,7 @@ add_library(bmhworld12 STATIC
     src/game/world12/match_projection.cpp
     src/game/world12/ai_match.cpp
     src/game/world12/manager_finance.cpp
+    src/game/world12/manager_tactics.cpp
     src/cli/json.cpp)
 target_include_directories(bmhworld12 PUBLIC src)
 target_link_libraries(bmhworld12 PUBLIC bmhcore)
@@ -1246,6 +1247,9 @@ add_test(NAME world12_other_games_tests COMMAND world12_other_games_tests)
 add_executable(world12_manager_finance_tests tests/world12_manager_finance_tests.cpp)
 target_link_libraries(world12_manager_finance_tests PRIVATE bmhworld12_app)
 add_test(NAME world12_manager_finance_tests COMMAND world12_manager_finance_tests)
+add_executable(world12_manager_tactics_tests tests/world12_manager_tactics_tests.cpp)
+target_link_libraries(world12_manager_tactics_tests PRIVATE bmhworld12_app)
+add_test(NAME world12_manager_tactics_tests COMMAND world12_manager_tactics_tests)
 add_executable(world12_ai_day_tests tests/world12_ai_day_tests.cpp)
 target_link_libraries(world12_ai_day_tests PRIVATE bmhworld12_app)
 add_test(NAME world12_ai_day_tests COMMAND world12_ai_day_tests)

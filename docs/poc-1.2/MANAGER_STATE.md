@@ -24,4 +24,4 @@ The owner scope/revision is runtime request ownership and is not source/mod data
 - Ownership tests cover sparse manager seats, missing state, wrong clubs/scopes, rejected payments, replay protection and codec/snapshot persistence.
 - Additional private checks extract a manager from the supplied Original save and match direct bookings for three signed amounts. The reference save is read-only and is not converted or overwritten.
 
-Human lineup/tactics, contracts/bonus inputs, source-compatible initial career setup, bank/loan policies, daily/weekly/monthly finances and the GUI/CLI request binding remain pending. This financial slice is not a completed playable human career or a 1.2 release.
+Human lineup/full tactics (see the newer [tactical scalar adapter](MANAGER_TACTICS.md)), contracts/bonus inputs, source-compatible initial career setup, bank/loan policies, daily/weekly/monthly finances and the GUI/CLI request binding remain pending. This financial slice is not a completed playable human career or a 1.2 release.

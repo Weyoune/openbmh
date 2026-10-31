@@ -34,9 +34,21 @@ struct ManagerFinance {
     uint32_t credit=0,income=0,expenses=0,bonus_paid=0;
     bool operator==(const ManagerFinance&)const=default;
 };
+struct ManagerTacticalRow {
+    std::array<uint8_t,4> orders{};
+    uint8_t partner=255,depth=0,lane=0;
+    bool operator==(const ManagerTacticalRow&)const=default;
+};
+struct ManagerTactics {
+    std::array<ManagerTacticalRow,24> rows;
+    uint8_t automatic_weights=0,automatic_formation=0;
+    bool operator==(const ManagerTactics&)const=default;
+};
+void validate_manager_tactics(const ManagerTactics&);
 struct Manager {
     uint8_t seat=0;std::string name;ClubId club;LeagueId start_league;uint8_t portrait=0;
     std::optional<ManagerFinance> finance={};
+    std::optional<ManagerTactics> tactics={};
     bool operator==(const Manager&)const=default;
 };
 struct CrestResource {std::string path;uint8_t cell=0;bool operator==(const CrestResource&)const=default;};
