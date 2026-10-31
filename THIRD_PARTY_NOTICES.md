@@ -19,14 +19,3 @@ Only the public-domain C decoding subset is taken from the 7-Zip source package.
 Nuked OPL3 is linked into the audio implementation. A binary distribution must retain its LGPL notices and provide the corresponding library source and the materials needed to exercise the LGPL's modification and relinking rights. For a source release, the vendored implementation and its build files are included. Binary distributors must also satisfy the source-distribution obligations of OpenBMH's GPL license. Merely copying license texts does not replace these obligations.
 
 Native platform libraries, such as GTK on Linux, may be required at runtime even when they are not bundled. Compiler runtime files included with a binary package retain their own terms. See the package's file list and platform notes for the actual distribution.
-
-## Natural Earth country outlines
-
-The tiny England/Germany outlines in `src/ui/country_glyphs.hpp` are derived from Natural Earth's public-domain 1:50m admin-0 map subunits. They are geographic data, independent of original BMH/FLTD assets. Rendering and generator code are OpenBMH-owned GPL-3.0-only code.
-
-- Source: https://github.com/nvkelso/natural-earth-vector/blob/master/geojson/ne_50m_admin_0_map_subunits.geojson
-- Terms: https://www.naturalearthdata.com/about/terms-of-use/
-- Input SHA-256: `b1df8433477614c89e6b724990a7ab3733ec647559863321b6255c3fa3fce3ec`
-- Reproduce: `python3 tools/world12/generate_country_glyphs.py source.geojson src/ui/country_glyphs.hpp`
-
-Made with Natural Earth. The original full geographic dataset is not needed at runtime or bundled with the game.

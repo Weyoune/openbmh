@@ -72,11 +72,9 @@ SetupScreen::SetupScreen(const std::filesystem::path& data,SetupLeagueSymbol sym
     if (joining_arrow_permission_ != std::array<int, 8>{0, 1, 1, 0, 0, 1, 1, 0})
         throw FormatError("setup: unsupported Original joining-arrow table; verify this edition first");
     if(symbol==SetupLeagueSymbol::germany_england) {
-        const auto palette=load_palette(asset_path(data,"M3PC.COL"));
+        const auto prepared=load_vga(asset_path(data/"KB","SETUP12.VGA"));
         for(int active=0;active<2;++active) {
-            Image original(51,40);
-            copy_rect(original,atlas_,toggle_source_x_[0],toggle_source_y_[active],0,0,51,40);
-            league_symbols_[size_t(active)]=dual_country_button(original,palette,active!=0);
+            league_symbols_[size_t(active)]=dual_country_button(prepared,active!=0);
         }
     }
 }

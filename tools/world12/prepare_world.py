@@ -33,8 +33,10 @@ def pool_string(pool,offset):return pool[offset:].split(b'\0',1)[0].decode('asci
 def names_from_table(folder):
     values=rows(folder,'playernames');return {int(x['nameid']):x['name'] for x in values}
 
-def prepare(base,tables,output):
+def prepare(base,tables,output,english):
     if output.exists():raise ValueError('Output must not exist')
+    from prepare_setup_symbol import prepare as prepare_symbol
+    setup_symbol,setup_report=prepare_symbol(base,english)
     with zipfile.ZipFile(base) as archive:
         raw=archive.read('M3D.MAN');db=read_master(raw,445,3334,194,4104)
         asset_entries={n:archive.read(n) for n in archive.namelist() if n.startswith(('W/','KB/','F/','S/')) or n in ('M3PC.COL','M3.DAT','M3.MEN','TEXTD.BLK','RUNTIME.DAT')}
@@ -171,6 +173,7 @@ def prepare(base,tables,output):
     for page,pixels in pages.items():asset_entries['W/'+str(page)+'.VGA']=encode_vga(304,38,pixels)
     world={'format':'openbmh-world-12','version':1,'profile':'dual-classic-1','players':players,'clubs':clubs,'leagues':members,'crests':crests,'loans':[],'managers':[]}
     asset_entries['WORLD12.JSON']=(json.dumps(world,separators=(',',':'))+'\n').encode();asset_entries['OBMHPROF.INI']=b'[OpenBMH]\nprofile=dual-classic-1\n'
+    asset_entries['KB/SETUP12.VGA']=setup_symbol;provenance['setup_symbol']=setup_report
     asset_entries['PACKAGE.json']=(json.dumps({'format':'openbmh-community-12','profile':'dual-classic-1','playable':False,'requires':'runtime:dual-classic-1','files':{n:sha(v) for n,v in asset_entries.items()}},indent=2)+'\n').encode()
     output.mkdir(parents=True)
     with zipfile.ZipFile(output/'COMMUNITY.OBD','w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
@@ -179,4 +182,4 @@ def prepare(base,tables,output):
     print(json.dumps({'league_clubs':sum(len(x['clubs']) for x in members),'clubs':len(clubs),'players':len(players),'max_player_id':next_player-1,'max_crest_cell':next_crest-1,'playable':False,'obd_bytes':(output/'COMMUNITY.OBD').stat().st_size}))
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--base',type=Path,required=True);p.add_argument('--ea-tables',type=Path,required=True);p.add_argument('--out',type=Path,required=True);a=p.parse_args();prepare(a.base,a.ea_tables,a.out)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--base',type=Path,required=True);p.add_argument('--ea-tables',type=Path,required=True);p.add_argument('--english-data',type=Path,required=True);p.add_argument('--out',type=Path,required=True);a=p.parse_args();prepare(a.base,a.ea_tables,a.out,a.english_data)
