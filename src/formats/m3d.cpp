@@ -40,7 +40,7 @@ Database load_database(const std::filesystem::path& path, const DbCounts& c) {
     Bytes lens = r.take(8);
     size_t len_clubs = le16(lens, 0), len_players = le16(lens, 2), len_refs = le16(lens, 4), len_stadiums = le16(lens, 6);
 
-    Database db;
+    Database db; db.counts=c;
     db.raw_player_bonus_values = r.take(c.n66 + 0x32);
     Bytes club_pool = r.take(len_clubs);
     Bytes player_pool = r.take(len_players);
@@ -57,8 +57,8 @@ Database load_database(const std::filesystem::path& path, const DbCounts& c) {
     db.raw_foreign_club_strength = r.take(0xFB);
     db.raw_league_auxiliary_bytes = r.take(0xBD);
     db.raw_referee_properties = r.take(0x32);
-    db.raw_club_kit_selectors = r.take(0x1A3);
-    db.raw_club_short_name_offsets = r.take(0xA8);
+    db.raw_club_kit_selectors = r.take(c.clubs);
+    db.raw_club_short_name_offsets = r.take(c.n42);
     db.squad_list = r.take((c.n66 - 4) * 2 + 0x6C);
     Bytes w35c = r.take(c.players * 4), w368 = r.take(c.players * 4), w364 = r.take(c.players * 4);
     if (r.pos != d.size()) throw FormatError("M3D: trailing data, table sizes do not match");

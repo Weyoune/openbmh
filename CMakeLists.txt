@@ -213,6 +213,7 @@ add_library(bmhcore STATIC
     src/formats/textd.cpp
     src/formats/fbm.cpp
     src/formats/le.cpp
+    src/formats/data_profile.cpp
     src/formats/m3d.cpp
     src/formats/savestate.cpp
     src/game/schedule.cpp
@@ -1152,3 +1153,7 @@ endif()
 add_executable(desktop_feedback_tests tests/desktop_feedback_tests.cpp)
 target_link_libraries(desktop_feedback_tests PRIVATE bmhui)
 bmh_add_data_test(NAME desktop_feedback_tests COMMAND desktop_feedback_tests "${BMH_DATA}")
+
+add_executable(data_profile_tests tests/data_profile_tests.cpp)
+target_link_libraries(data_profile_tests PRIVATE bmhcore)
+add_test(NAME data_profile_tests COMMAND data_profile_tests)

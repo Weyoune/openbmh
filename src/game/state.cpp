@@ -21,7 +21,7 @@ int div8(int x) { return x / 8; }
 }  // namespace
 
 GameState GameState::from_save(const SaveState& save, const DbCounts& c) {
-    GameState g;
+    GameState g; g.counts=c;
     const SaveBlock& squads = save.block(::bmh::layout::SquadSlots);
     for (size_t i = 0; i + 1 < squads.size; i += 2)
         g.squad_slots.push_back(uint16_t(save.data(::bmh::layout::SquadSlots)[i] | save.data(::bmh::layout::SquadSlots)[i + 1] << 8));

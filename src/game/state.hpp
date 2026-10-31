@@ -36,6 +36,7 @@ constexpr uint16_t kEmptySlot = 0x0FFF;
 constexpr uint16_t kSlotInLineup = 0x8000;
 
 struct GameState {
+    DbCounts counts{};
     std::vector<uint16_t> squad_slots;  // *SquadSlots, all squads back to back (see squad_range)
     std::vector<Player> players;        // *PlayerConditionTechniqueForm / *PlayerSkillWords / *PlayerIdentityWords, names not filled
     std::vector<uint8_t> team_morale;   // *TeamMorale, per team: bits 0-5 morale / 2, bits 6-7 flags

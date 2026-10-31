@@ -16,6 +16,8 @@ struct DbCounts {
     uint32_t players = 2574;
     uint32_t n42 = 168;
     uint32_t n66 = 3096;
+    uint32_t league_teams = 138;
+    uint32_t cup_teams = 30;
 };
 
 // A player as stored in the three parallel u32 tables of the database/savegame
@@ -61,6 +63,7 @@ struct Player {
 };
 
 struct Database {
+    DbCounts counts{};
     std::vector<std::string> club_names;
     std::vector<std::string> referees;
     std::vector<std::string> stadiums;

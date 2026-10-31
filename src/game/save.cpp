@@ -59,7 +59,7 @@ Bytes save_stream(const GameState& live) {
     const GameState& g = coach ? swapped : live;
     const bool records = g.memory.has(::bmh::layout::ClubSeasonRecords) && g.memory.u32(::bmh::layout::ClubSeasonRecords) != 0;
     Bytes stream;
-    for (const SaveBlock& b : save_layout(DbCounts{}, records)) {
+    for (const SaveBlock& b : save_layout(g.counts, records)) {
         Bytes d(b.size, 0);
         if (b.heap) {
             switch (b.address) {

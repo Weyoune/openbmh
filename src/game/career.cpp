@@ -101,7 +101,7 @@ void startup_players(GameState& g, GameRandom& game, WatcomRandom& rand) {
 namespace bmh {
 
 GameState startup_state(const LeImage& exe, const Database& db, const Bytes& m3_men, const Bytes& m3_dat) {
-    const DbCounts counts;
+    const DbCounts counts=db.counts;
     const std::vector<SaveBlock> layout = save_layout(counts, true);
     Bytes stream;
     for (const SaveBlock& b : layout) {

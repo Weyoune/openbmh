@@ -106,7 +106,7 @@ constexpr BlockDef kBlocks[] = {
 SaveState::SaveState(const Bytes& stream, const DbCounts& c) : stream_(stream) {
     // Teams in league play and cup-only teams are not part of DbCounts yet;
     // these are the V2.24 values (CareerSession_DispatchLineup_RuntimeField, CareerSession_InstallLeagueSizes_RuntimeField6).
-    constexpr uint32_t kTeams = 138, kCupTeams = 30;
+    const uint32_t kTeams = c.league_teams, kCupTeams = c.cup_teams;
     size_t pos = 0;
     uint32_t last_pointer = 0;
     for (const BlockDef& d : kBlocks) {
@@ -177,7 +177,7 @@ const SaveBlock& SaveState::block(uint32_t address) const {
 namespace bmh {
 
 std::vector<SaveBlock> save_layout(const DbCounts& c, bool club_records) {
-    constexpr uint32_t kTeams = 138, kCupTeams = 30;
+    const uint32_t kTeams = c.league_teams, kCupTeams = c.cup_teams;
     std::vector<SaveBlock> out;
     size_t pos = 0;
     for (const BlockDef& d : kBlocks) {
