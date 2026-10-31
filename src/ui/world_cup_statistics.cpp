@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/executable_layout.hpp"
 #include "world_cup_statistics.hpp"
 
@@ -97,7 +98,7 @@ WorldCupStatisticsProjection world_cup_statistics_from_game(const GameState& gam
             throw FormatError("World Cup statistics: placement names a nation outside 0..61");
     out.badge_heap = game.club_heap_78;
     for (int nation = 0; nation < kNationCount; ++nation) {
-        const int team = 0x165 + nation;
+        const int team = kNoTeam + nation;
         if (size_t(team) >= game.club_ids.size())
             throw FormatError("World Cup statistics: national-team identity is unavailable");
         out.country_names[size_t(nation)] = game.club_name(team);
@@ -145,7 +146,7 @@ std::optional<uint8_t> world_cup_nation_at(const WorldCupStatisticsProjection& p
 WorldCupStatisticsRequest world_cup_selection_request(const WorldCupStatisticsProjection& p,
                                                        std::optional<uint8_t> nation) {
     if (!p.can_select_opponent || !nation || *nation == 0 || *nation >= kNationCount) return {};
-    return {WorldCupStatisticsRequestKind::select_opponent, 0x165 + *nation};
+    return {WorldCupStatisticsRequestKind::select_opponent, kNoTeam + *nation};
 }
 
 WorldCupStatisticsScreen::WorldCupStatisticsScreen(const std::filesystem::path& data,
@@ -169,7 +170,7 @@ void WorldCupStatisticsScreen::draw_flag(Image& out, uint8_t nation, int x, int 
 }
 
 void WorldCupStatisticsScreen::draw_badge(Image& out, uint8_t nation, int x, int y) const {
-    const int team = 0x165 + nation;
+    const int team = kNoTeam + nation;
     if (size_t(team) * 2 + 1 >= projection_.badge_heap.size()) return;
     const uint16_t selector = uint16_t(projection_.badge_heap[size_t(team) * 2] |
         uint16_t(projection_.badge_heap[size_t(team) * 2 + 1]) << 8) & 0x1ff;

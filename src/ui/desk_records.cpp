@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/desk_records.hpp"
 
@@ -43,7 +44,7 @@ uint8_t source_team_color(const GameState& g,int team) {
 DeskRecordsState fair_play_state_from_game(const GameState& g, int league, const Image& underlay,int manager_slot) {
     if(league<0||league>=9) throw FormatError("fair play: invalid Source league");
     const int first=league_first_team(league), count=kLeagueSizes[league];
-    if(first<0||count<=0||first+count>138||g.club_ids.size()<size_t(first+count))
+    if(first<0||count<=0||first+count>runtime_dimensions.league_teams||g.club_ids.size()<size_t(first+count))
         throw FormatError("fair play: incomplete Source league");
     std::vector<int16_t> teams(static_cast<size_t>(count)); std::vector<uint32_t> keys(static_cast<size_t>(count));
     for(int i=0;i<count;++i) {

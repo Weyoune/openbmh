@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/club_player_detail.hpp"
@@ -46,8 +47,8 @@ ClubPlayerDetailProjection club_player_detail_from_game(const GameState& g,
     for(int i=0;i<2;++i){
         const int id=i?c.secondary_club:c.primary_club;if(id<0||id==0xffff)continue;
         ClubPlayerDetailClub club;club.runtime_team=id;club.original_full_name=g.club_name(id);club.original_short_name=club.original_full_name;
-        if(id<168){
-            const uint8_t raw=g.memory.u8(::bmh::layout::ClubShortNameOffsets+uint32_t(id));
+        if(id<runtime_dimensions.record_teams){
+            const uint8_t raw=g.club_short_offset(id);
             club.original_short_name=club.original_short_name.substr(raw>>4,(raw&15)+1);
         }
         // SourceBadgeFallback consults the selector only for real atlas clubs.
@@ -98,7 +99,7 @@ ClubPlayerDetailScreen::ClubPlayerDetailScreen(const std::filesystem::path& data
         }
         // TextWidth national/foreign names: longest word, then remove two
         // trailing characters until FNT3 fits57 pixels.
-        if(id>=168 && small_.text_width(club.original_short_name)>57){
+        if(id>=runtime_dimensions.record_teams && small_.text_width(club.original_short_name)>57){
             std::string longest;size_t at=0;
             while(at<club.original_short_name.size()){
                 const size_t end=club.original_short_name.find(' ',at);

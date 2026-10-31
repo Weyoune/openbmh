@@ -121,7 +121,7 @@ int human_correction(GameState& g, RatingContext& ctx, int manager, int rank, in
 }  // namespace
 
 int team_rating(GameState& g, int team, const RatingProfile& profile, RatingContext& ctx, int* keeper) {
-    if (team >= 168 && team != kNoTeam) {
+    if (team >= runtime_dimensions.record_teams && team != kNoTeam) {
         // Clubs without squad: per group a random value around the level of the club
         // (ForeignClubStrength bits 5-7 -> RatingRuntimeField2), +2 if the group's strength bit is set
         // (bit 3, 3, 2, 1 for goal, defence, midfield, attack: RatingRuntimeField3) and a style
@@ -130,7 +130,7 @@ int team_rating(GameState& g, int team, const RatingProfile& profile, RatingCont
         static const uint8_t kStrongBit[4] = {3, 3, 2, 1};
         static const int8_t kStyle[8] = {0, 6, 0, -6, 0, -6, 0, 6};
         if (!ctx.rand) throw std::invalid_argument("team_rating: a team without squad needs the Watcom generator");
-        const uint8_t s = g.foreign_strength.at(size_t(team - 168));
+        const uint8_t s = g.foreign_strength.at(size_t(team - runtime_dimensions.record_teams));
         int16_t total = 0;
         for (int i = 0; i < 4; i++) {
             const int level = kLevel[s >> 5];

@@ -14,7 +14,7 @@
 
 namespace bmh::ui {
 namespace {
-constexpr size_t kPoolFirst = 0xb70;
+const int& kPoolFirst = runtime_dimensions.pool_first;
 constexpr int kMarketEntries = 40;
 constexpr uint32_t kTransferTable = ::bmh::layout::EditorList;
 constexpr uint32_t kTransferEntrySize = 0x58;

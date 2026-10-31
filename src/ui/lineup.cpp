@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/lineup.hpp"
 
@@ -44,7 +45,7 @@ LineupState project(const StaticMemory& memory, const LeImage& exe, const std::v
     if (out.runtime_club < 0 || (out.runtime_club >= limit && !national))
         throw FormatError("lineup: only domestic league squads are supported");
     const size_t count = national || out.runtime_club < split ? 24 : 16;
-    const size_t first = national ? 3072 : out.runtime_club < split ? size_t(out.runtime_club) * 24 : size_t(out.runtime_club) * 16 + split * 8;
+    const size_t first = national ? runtime_dimensions.national_slots_first : out.runtime_club < split ? size_t(out.runtime_club) * 24 : size_t(out.runtime_club) * 16 + split * 8;
     const size_t board_base = size_t(out.manager_slot) * 0x840;
     if (first + count > squad.size() || board_base + count * 0x58 > tactics.size() || size_t(out.manager_slot) * 5 >= options.size())
         throw FormatError("lineup: truncated squad/tactics/options");

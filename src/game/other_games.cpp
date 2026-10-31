@@ -156,13 +156,13 @@ OtherGamesClubMetadata source_metadata(const GameState& game, int team) {
             uint16_t(game.manager_records[kNationalOriginalClub + 1]) << 8));
         manager_owned = original_club == team;
     }
-    if (team >= 168 && !manager_owned) {
-        const size_t at = size_t(team - 168);
+    if (team >= runtime_dimensions.record_teams && !manager_owned) {
+        const size_t at = size_t(team - runtime_dimensions.record_teams);
         if (at >= game.foreign_strength.size()) invalid("missing Source foreign-strength byte");
         out.foreign_strength = game.foreign_strength[at];
         return out;
     }
-    if (team >= 168 && team != kNoTeam)
+    if (team >= runtime_dimensions.record_teams && team != kNoTeam)
         invalid("manager-controlled foreign-club row needs live TeamRating W-generator context");
     constexpr std::array<uint16_t, 5> kFlags{0x0f1, 0x0f2, 0x0f4, 0x0f8, 0x0ff};
     for (size_t i = 0; i < kFlags.size(); ++i)

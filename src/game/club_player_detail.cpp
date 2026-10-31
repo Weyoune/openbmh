@@ -31,9 +31,9 @@ int source_manager(const GameState& g, int club) {
 
 int club_of_slot(int slot) {
     if (slot < 0) return -1;
-    if (slot < 90 * 24) return slot / 24;
-    if (slot < 90 * 24 + 48 * 16) return (slot - 90 * 8) / 16;
-    if (slot >= 3072 && slot < 3096) return kNoTeam;
+    if (slot < runtime_dimensions.big_squad_teams * 24) return slot / 24;
+    if (slot < runtime_dimensions.pool_first) return (slot - runtime_dimensions.big_squad_teams * 8) / 16;
+    if (slot >= runtime_dimensions.national_slots_first && slot < runtime_dimensions.extra_slots_first) return kNoTeam;
     return -1;
 }
 
@@ -72,7 +72,7 @@ ClubPlayerDetailContext club_player_detail_context(const GameState& g, const Clu
         out.primary_club = -1;
     } else {
         if (s.rendered_row < 0 || s.rendered_row >= 24 || s.runtime_team < 0 ||
-            (s.runtime_team >= 138 && s.runtime_team != kNoTeam))
+            (s.runtime_team >= runtime_dimensions.league_teams && s.runtime_team != kNoTeam))
             throw std::invalid_argument("player detail: invalid runtime club");
         const auto range = squad_range(s.runtime_team);
         if (range.first + range.count > g.squad_slots.size()) throw std::invalid_argument("player detail: truncated squad");

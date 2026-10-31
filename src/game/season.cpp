@@ -28,7 +28,7 @@ namespace {
 
 constexpr uint32_t kTransferList = ::bmh::layout::EditorList;  // 44 entries of 0x58 bytes
 constexpr uint32_t kListEntry = 0x58;
-constexpr size_t kPoolSlots = 0xb70;         // CareerRuntimeField
+const int& kPoolSlots = runtime_dimensions.pool_first;         // CareerRuntimeField
 constexpr uint32_t kOffers = ::bmh::layout::OfferSlots;        // OfferSlots: 4 offers, -1 = free
 constexpr size_t kBoard = 0x840;             // tactics board of a manager
 constexpr size_t kBoardSlot = 0x58;
@@ -173,7 +173,7 @@ void club_balance(GameState& g, int team, WatcomRandom& rand) {
 namespace {
 
 // TeamLeague2: the league of a club; ids above 0x164 (national teams) count as league 0
-int club_league(int team) { return team > 0x164 ? 0 : team_league(team); }
+int club_league(int team) { return team > (kNoTeam - 1) ? 0 : team_league(team); }
 
 // The European entrants (Career_CompetitionPointersEnglish_ExecutableField25 UEFA Cup, Career_CompetitionPointersEnglish_RuntimeField14 Champions League,
 // Career_CompetitionPointersEnglish_ExecutableField19 Cup Winners' Cup) and their counts (Career_EuropeanClub_ExecutableField / Career_EuropeanClub_ExecutableField2 / Career_EuropeanClub_ExecutableField3).
@@ -279,9 +279,9 @@ void observe_initial_international_groups(GameState& g, WatcomRandom& rand, int 
                 for(int position:{fixture.home,fixture.away}) {
                     const int team=mem.u16(teams+uint32_t(position)*2);
                     const bool manager_national=mem.has(::bmh::layout::CupDraw_FormatError_RuntimeField2)&&mem.has(::bmh::layout::CupDraw_FormatError_RuntimeField3)&&
-                        mem.u16(::bmh::layout::CupDraw_FormatError_RuntimeField2)==0x165&&mem.u16(::bmh::layout::CupDraw_FormatError_RuntimeField3)==team;
+                        mem.u16(::bmh::layout::CupDraw_FormatError_RuntimeField2)==kNoTeam&&mem.u16(::bmh::layout::CupDraw_FormatError_RuntimeField3)==team;
                     const bool human_owned=g.manager_of(team)>=0||manager_national;
-                    if(team<168||team==kNoTeam||!human_owned)continue;
+                    if(team<runtime_dimensions.record_teams||team==kNoTeam||!human_owned)continue;
                     SeasonCupDrawEvent::GroupAverageSnapshot snapshot;
                     snapshot.runtime_id=uint16_t(team);
                     snapshot.values={team_average(g,team,0x0f1,&rand).value,
@@ -320,7 +320,7 @@ void european_setup(GameState& g, GameRandom& game, WatcomRandom& rand, const Se
     constexpr uint32_t kField0 = ::bmh::layout::Field0;
     if (!mem.has(kField0)) mem.add_block(kField0, 0x30);
     const int s = g.season % 4;
-    const int base = 0xbd + 0x8a + 0x1e;  // ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField3 + CareerSession_DispatchLineup_RuntimeField + CareerSession_InstallLeagueSizes_RuntimeField6
+    const int base = 0xbd + runtime_dimensions.league_teams + 0x1e;  // ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField3 + CareerSession_DispatchLineup_RuntimeField + CareerSession_InstallLeagueSizes_RuntimeField6
     int n = 1;
     std::vector<uint16_t> last;
     if (s % 2 == 0) {
@@ -390,7 +390,7 @@ void european_setup(GameState& g, GameRandom& game, WatcomRandom& rand, const Se
 void european_fields(GameState& g, GameRandom& game, WatcomRandom& rand) {
     StaticMemory& mem = g.memory;
     Entrants en{mem};
-    const int pool = 0x8a + 0x1e;  // CareerSession_DispatchLineup_RuntimeField + CareerSession_InstallLeagueSizes_RuntimeField6: the first foreign club
+    const int pool = runtime_dimensions.league_teams + 0x1e;  // CareerSession_DispatchLineup_RuntimeField + CareerSession_InstallLeagueSizes_RuntimeField6: the first foreign club
     auto pick = [&](int from) {
         int t;
         do t = rand.range(from, from + 6); while (en.find(t) != 0);
@@ -759,7 +759,7 @@ void season_accounts(GameState& g, int m, GameRandom& game, WatcomRandom& rand, 
 // swaps twice for them (no change), once otherwise.
 void change_places(GameState& g, int a, int b) {
     StaticMemory& mem = g.memory;
-    if (a >= 0x8a + 0x1e || b >= 0x8a + 0x1e) return;
+    if (a >= runtime_dimensions.league_teams + 0x1e || b >= runtime_dimensions.league_teams + 0x1e) return;
     auto swap_bytes = [](std::vector<uint8_t>& v, size_t x, size_t y, size_t n) {
         for (size_t i = 0; i < n; i++)
             if (x + i < v.size() && y + i < v.size()) std::swap(v[x + i], v[y + i]);
@@ -776,7 +776,7 @@ void change_places(GameState& g, int a, int b) {
             else if (v == uint16_t(b)) mem.set16(at + uint32_t(i) * 2, uint16_t(a));
         }
     };
-    const bool league_clubs = a < 0x8a && b < 0x8a;
+    const bool league_clubs = a < runtime_dimensions.league_teams && b < runtime_dimensions.league_teams;
     if (league_clubs)
         for (uint32_t k = 0; k < 200; k++) {  // loans: seller and buyer
             const uint32_t e = mem.u32(::bmh::layout::Career_RemoveJoinLoans_RuntimeField + k * 4);
@@ -786,21 +786,28 @@ void change_places(GameState& g, int a, int b) {
             buyer = buyer == a ? b : buyer == b ? a : buyer;
             mem.set32(::bmh::layout::Career_RemoveJoinLoans_RuntimeField + k * 4, (e & 0xfff) | uint32_t(seller) << 12 | uint32_t(buyer) << 22);
         }
-    if (!g.club_table.empty() && a < 0xa8 && b < 0xa8) swap_bytes(g.club_table, size_t(a) * 0x4a, size_t(b) * 0x4a, 0x4a);
+    if (!g.club_table.empty() && a < runtime_dimensions.record_teams && b < runtime_dimensions.record_teams) swap_bytes(g.club_table, size_t(a) * 0x4a, size_t(b) * 0x4a, 0x4a);
     std::swap(g.club_ids.at(size_t(a)), g.club_ids.at(size_t(b)));
     swap_bytes(g.club_heap_bc, size_t(a) * 2, size_t(b) * 2, 2);
     std::swap(g.team_morale.at(size_t(a)), g.team_morale.at(size_t(b)));
-    swap_mem8(::bmh::layout::ClubShortNameOffsets);
-    swap_mem8(::bmh::layout::ClubKitSelectors);
+    if (runtime_dimensions.expanded) {
+        std::swap(g.club_short_offsets.at(size_t(a)), g.club_short_offsets.at(size_t(b)));
+        std::swap(g.club_kits.at(size_t(a)), g.club_kits.at(size_t(b)));
+    } else {
+        swap_mem8(::bmh::layout::ClubShortNameOffsets);
+        swap_mem8(::bmh::layout::ClubKitSelectors);
+    }
     swap_bytes(g.club_heap_78, size_t(a) * 2, size_t(b) * 2, 2);
     std::swap(g.team_flags.at(size_t(a)), g.team_flags.at(size_t(b)));
     if (league_clubs) {
-        swap_bytes(g.club_heap_b8, size_t(a) * 2, size_t(b) * 2, 2);
+        if (runtime_dimensions.expanded) std::swap(g.club_heap_b8.at(size_t(a)), g.club_heap_b8.at(size_t(b)));
+        else swap_bytes(g.club_heap_b8, size_t(a) * 2, size_t(b) * 2, 2);
         swap_bytes(g.position_history, size_t(a) * 0x1a, size_t(b) * 0x1a, 0x1a);
         const SquadRange ra = squad_range(a), rb = squad_range(b);
         for (size_t i = 0; i < ra.count; i++) std::swap(g.squad_slots.at(ra.first + i), g.squad_slots.at(rb.first + i));
     }
-    swap_bytes(g.club_heap_b8, size_t(a) * 2, size_t(b) * 2, 2);
+    if (runtime_dimensions.expanded) std::swap(g.club_heap_b8.at(size_t(a)), g.club_heap_b8.at(size_t(b)));
+        else swap_bytes(g.club_heap_b8, size_t(a) * 2, size_t(b) * 2, 2);
     replace(::bmh::layout::Titles, 0x1c2);  // title holders
     replace(::bmh::layout::Career_CompetitionPointersEnglish_ExecutableField28, 2);
     if (!mem.has(::bmh::layout::CareerSession_FormatError_RuntimeField6) || mem.u8(::bmh::layout::CareerSession_FormatError_RuntimeField6) == 0) {
@@ -830,7 +837,7 @@ void change_places(GameState& g, int a, int b) {
             const uint16_t w = v == uint16_t(a) ? uint16_t(b) : v == uint16_t(b) ? uint16_t(a) : v;
             g.manager_records.at(at) = uint8_t(w), g.manager_records.at(at + 1) = uint8_t(w >> 8);
         }
-        swap_bytes(g.manager_results, size_t(a) * 10 + m * 0x690, size_t(b) * 10 + m * 0x690, 10);
+        swap_bytes(g.manager_results, size_t(a) * 10 + m * (runtime_dimensions.record_teams * 10), size_t(b) * 10 + m * (runtime_dimensions.record_teams * 10), 10);
     }
 }
 
@@ -1080,7 +1087,7 @@ bool release_player(GameState& g, int slot, GameRandom& game, WatcomRandom& rand
     }
     const int team = slot_team(slot);
     const bool foreign = nationality(g, player) != 0;
-    const int start = foreign ? 0xbec : 0xb9c, count = foreign ? 0x14 : 0x50;  // FirstFreeSlotSquad
+    const int start = foreign ? runtime_dimensions.foreign_free_first : runtime_dimensions.free_first, count = foreign ? 0x14 : 0x50;  // FirstFreeSlotSquad
     int free = -1;
     for (int s = start; s < start + count && free < 0; s++)
         if (g.squad_slots.at(size_t(s)) == 0x0FFF) free = s;
@@ -1168,7 +1175,7 @@ void season_players(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteRe
         int8_t owner = -1;            // local_24: the club's human manager
         size_t board_first = 0;       // local_3c
         std::vector<bool> processed(g.players.size(), false);
-        for (int s = 0; s < 0xc00 && !report.unsupported; s++) {
+        for (int s = 0; s < runtime_dimensions.national_slots_first && !report.unsupported; s++) {
             for (;;) {
                 const int player = g.squad_slots.at(size_t(s)) & 0xFFF;
                 if (player == 0xFFF) break;
@@ -1186,7 +1193,7 @@ void season_players(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteRe
                 }
                 Player& p = g.players.at(size_t(player));
                 bool leaves = false;
-                if (s < 0xb70 && (p.w35c >> 27) == 0x1f) {
+                if (s < runtime_dimensions.pool_first && (p.w35c >> 27) == 0x1f) {
                     // out for his career
                     bool gone = true;
                     if (owner != -1) {
@@ -1267,8 +1274,8 @@ void season_players(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteRe
         g.lineups_frozen = false;
     }
     for (size_t l = 0; l < g.league_rounds.size() && l < 9; l++) g.league_rounds[l] = 0;
-    fill8(::bmh::layout::DeskRecords_Teams_RuntimeField, 0x114, 0);
-    for (size_t i = 0; i < size_t(0x8a) * 0x1a && i < g.position_history.size(); i++) g.position_history[i] = 0;
+    fill8(::bmh::layout::DeskRecords_Teams_RuntimeField, uint32_t(g.counts.league_teams * 2), 0);
+    for (size_t i = 0; i < size_t(runtime_dimensions.league_teams) * 0x1a && i < g.position_history.size(); i++) g.position_history[i] = 0;
     std::fill(g.results.begin(), g.results.end(), uint8_t(0xcc));
 }
 
@@ -1654,8 +1661,8 @@ void initialize_european_qualification_seed(GameState& g) {
     if (g.memory.u16(entry + 0x22) == 0 && g.memory.u16(entry + 0x24) == 0) {
         // OpenBMH deviates from the original: initializes the empty EM qualifier
         // seeds with national teams, preventing club zero from entering the EM.
-        g.memory.set16(entry + 0x22, 357);
-        g.memory.set16(entry + 0x24, 358);
+        g.memory.set16(entry + 0x22, kNoTeam);
+        g.memory.set16(entry + 0x24, (kNoTeam + 1));
     }
 }
 
@@ -1663,20 +1670,20 @@ bool career_season_setup(GameState& g, GameRandom& game, WatcomRandom& rand, Min
                          const std::function<void(const char*)>& pause,
                          const SeasonCupDrawHook& cup_draw) {
     StaticMemory& mem = g.memory;
-    g.team_morale.at(0x165) |= 0x80;
-    for (int team = 0; team < 0x8a; team++) {
+    g.team_morale.at(kNoTeam) |= 0x80;
+    for (int team = 0; team < runtime_dimensions.league_teams; team++) {
         club_balance(g, team, rand);
         auto_lineup(g, team, g.manager_of(team) >= 0 ? 0xe4 : 100);  // (byte 100 - 0x80 for humans)
     }
     // the title holders of the cup entries (+0x22): none yet, the placeholder clubs
-    const uint16_t first_small = 90;  // TeamsWithSquads
-    const uint16_t foreign = 189 + 138 + 30;  // ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField3 + CareerSession_DispatchLineup_RuntimeField + CareerSession_InstallLeagueSizes_RuntimeField6 (0x165)
+    const uint16_t first_small = uint16_t(league_first_team(5));  // TeamsWithSquads
+    const uint16_t foreign = 189 + runtime_dimensions.league_teams + 30;  // ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField3 + CareerSession_DispatchLineup_RuntimeField + CareerSession_InstallLeagueSizes_RuntimeField6 (0x165)
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField2, foreign);
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField6, uint16_t(first_small + 7));
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField, 7);
     if (kEnglishCompetitions) mem.set16(::bmh::layout::CupTable + 28 * 0x28 + 0x22, 7);  // (EN: the FA Cup proper, SeasonRuntimeField8)
-    mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField5, uint16_t(first_small + 0x1f));
-    mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField4, uint16_t(first_small + 0x13));
+    mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField5, uint16_t(league_first_team(7) + 7));
+    mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField4, uint16_t(league_first_team(6) + 7));
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField3, uint16_t(foreign + 1));
     initialize_european_qualification_seed(g);
     mem.set16(::bmh::layout::Career_CompetitionPointersEnglish_ExecutableField28, 0);

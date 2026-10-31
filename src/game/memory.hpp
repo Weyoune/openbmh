@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "formats/savestate.hpp"
+#include "formats/executable_layout.hpp"
 
 namespace bmh {
 
@@ -34,7 +35,15 @@ public:
     explicit StaticMemory(const SaveState& save) {
         for (const SaveBlock& b : save.blocks())
             if (!b.heap && b.size != 0 && !blocks_.count(b.address))
-                blocks_[b.address].assign(save.stream().begin() + b.offset, save.stream().begin() + b.offset + b.size);
+                {
+                    // Expanded tails live in typed GameState vectors. Keep guest
+                    // memory at Original extents to avoid aliasing adjacent globals.
+                    size_t size = b.size;
+                    if (b.address == layout::ClubKitSelectors) size = std::min(size, size_t(419));
+                    if (b.address == layout::ClubShortNameOffsets) size = std::min(size, size_t(168));
+                    if (b.address == layout::ManagerMatchHistory) size = std::min(size, size_t(8400));
+                    blocks_[b.address].assign(save.stream().begin() + b.offset, save.stream().begin() + b.offset + size);
+                }
     }
 
     // A global the savegame does not store (e.g. a work list the original rebuilds before

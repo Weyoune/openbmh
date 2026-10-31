@@ -76,6 +76,7 @@ struct Database {
     Bytes raw_player_bonus_values, raw_database_metadata, raw_club_auxiliary_words, raw_club_badge_selectors, raw_foreign_club_strength, raw_league_auxiliary_bytes, raw_referee_properties, raw_club_kit_selectors, raw_club_short_name_offsets;
 };
 
-Database load_database(const std::filesystem::path& path, const DbCounts& counts = {});
+Database load_database(const std::filesystem::path& path, const DbCounts& counts);
+Database load_database(const std::filesystem::path& path);
 
 }  // namespace bmh

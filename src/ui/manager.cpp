@@ -263,7 +263,7 @@ void ManagerScreen::portrait(Image& out, int x, int y, int id) const {
 }
 void ManagerScreen::badge(Image& out, int x, int y, int id) const {
     border(out, x, y);
-    if (id>=90 && id<original_badge_gate(exe_)) { copy(out, widgets_, 8, 0, x, y, 38, 38); return; }
+    if (original_badge_fallback(id, &exe_)) { copy(out, widgets_, 8, 0, x, y, 38, 38); return; }
     int sprite = le16(db_.raw_club_badge_selectors, size_t(id) * 2) & 0x1ff;
     auto atlas = load_vga(asset_path(data_ / "W", std::to_string(sprite >> 3) + ".VGA"));
     copy(out, atlas, (sprite & 7) * 38, 0, x, y, 38, 38);

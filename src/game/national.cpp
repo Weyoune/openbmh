@@ -19,7 +19,7 @@ constexpr size_t kBoard = 0x840;          // one manager's tactics board (24 x 0
 constexpr size_t kBoardSlot = 0x58;
 constexpr uint32_t kDesktops = ::bmh::layout::Desktops;   // desktop layouts, 0x360 per manager slot
 constexpr size_t kDesktop = 0x360;
-constexpr size_t kPoolSlots = 0xb70;      // CareerRuntimeField: the clubs' squads end here
+const int& kPoolSlots = runtime_dimensions.pool_first;      // CareerRuntimeField: the clubs' squads end here
 constexpr uint8_t kNominated[4] = {3, 5, 7, 5};  // NationalRuntimeField: keepers, defence, midfield, attack
 
 // the manager's team (record +0x290) as the port caches it

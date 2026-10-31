@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/sportschau.hpp"
@@ -478,8 +479,8 @@ Image SportschauMatchReport::render_report(size_t visible_log_entries,
     text(out, heading_, 0, 54, home_name, 0x5f, 156);
     text(out, heading_, 156, 54, away_name, 0x5f, 312);
 
-    const bool home_domestic = fixture_.home_team < 168;
-    const bool away_domestic = fixture_.away_team < 168;
+    const bool home_domestic = fixture_.home_team < runtime_dimensions.record_teams;
+    const bool away_domestic = fixture_.away_team < runtime_dimensions.record_teams;
     // Some Original club abbreviation bytes are unavailable because the
     // source-side temporary buffer was never initialized. Keep the known
     // header, badge, score and report visible, and omit only that abbreviation.

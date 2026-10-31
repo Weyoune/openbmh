@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/desk_state.hpp"
@@ -40,7 +41,7 @@ std::string pool_name(const Bytes& names, const std::vector<uint16_t>& offsets, 
 }
 
 int executable_league(const LeImage& exe, int team) {
-    if (team < 0 || team >= 138 || !exe.contains(::bmh::layout::LeagueSizes + 8)) return -1;
+    if (team < 0 || team >= runtime_dimensions.league_teams || !exe.contains(::bmh::layout::LeagueSizes + 8)) return -1;
     int first = 0;
     for (int league = 0; league < 9; ++league) {
         if (!exe.contains(::bmh::layout::LeagueSizes + uint32_t(league))) return -1;
@@ -80,7 +81,7 @@ void project_drawer_rows(DeskState& d, const LeImage& exe, const Bytes& managers
     auto rank_curve = [&](int team, DeskRankCurve& curve) {
         curve.runtime_team = team;
         curve.team_name = pool_name(club_names, club_ids, team);
-        if (team == 0x165) {
+        if (team == kNoTeam) {
             // TablePosition returns rank 2 for this special national row;
             // QuoteNationalFriendlyMatch uses its native no-team squad (no random rating).
             curve.current_position = 2;
@@ -100,16 +101,16 @@ void project_drawer_rows(DeskState& d, const LeImage& exe, const Bytes& managers
             curve.samples.push_back({round + 1, int((packed >> ((round % 3) * 5)) & 0x1f)});
         }
         if (!curve.samples.empty()) curve.current_position = curve.samples.back().source_rank;
-        if (game && team < 138) curve.strength = team_average(*game, team, 0x1ff).value;
+        if (game && team < runtime_dimensions.league_teams) curve.strength = team_average(*game, team, 0x1ff).value;
     };
-    rank_curve(d.runtime_club < 0 ? 0x165 : d.runtime_club, d.rank_curves[0]);
+    rank_curve(d.runtime_club < 0 ? kNoTeam : d.runtime_club, d.rank_curves[0]);
     if (authenticated_rival && *authenticated_rival >= 0 && *authenticated_rival != d.runtime_club)
         rank_curve(*authenticated_rival, d.rank_curves[1]);
 
     // SourceDrawerTeam reads only the prepared opponent's venue history. Other
     // teams' names need not be available to render this manager's current Desk.
-    if (!authenticated_rival || *authenticated_rival < 0 || *authenticated_rival >= 168) return;
-    const size_t at = manager * 0x690 + size_t(*authenticated_rival) * 10;
+    if (!authenticated_rival || *authenticated_rival < 0 || *authenticated_rival >= runtime_dimensions.record_teams) return;
+    const size_t at = manager * (runtime_dimensions.record_teams * 10) + size_t(*authenticated_rival) * 10;
     if (at + 10 > manager_results.size()) return;
     const bool present = std::any_of(manager_results.begin() + at,
         manager_results.begin() + at + 10, [](uint8_t value) { return value != 0xff; });
@@ -307,7 +308,7 @@ DeskState project(const StaticMemory& memory, const Tables& t, const LeImage& ex
     d.warnings[3] = remaining < 4;
     const int max24 = exe.u16(::bmh::layout::TeamsWithSquads), league_teams = exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
     if (!d.national_team && d.runtime_club >= league_teams) throw FormatError("desk: cup-only squad projection not supported");
-    const size_t first = d.national_team ? 3072 : size_t(d.runtime_club < max24 ? d.runtime_club * 24 : d.runtime_club * 16 + max24 * 8);
+    const size_t first = d.national_team ? runtime_dimensions.national_slots_first : size_t(d.runtime_club < max24 ? d.runtime_club * 24 : d.runtime_club * 16 + max24 * 8);
     const size_t count = d.national_team ? 24 : (d.runtime_club < max24 ? 24 : 16);
     if (t.squads.size() < first + count || t.tactics.size() < size_t(d.manager_slot) * 0x840 + count * 0x58)
         throw FormatError("desk: truncated squad/tactics");
@@ -691,8 +692,8 @@ DeskState desk_from_game(const GameState& g, const LeImage& exe, uint64_t revisi
 DeskState load_reference_desk(const std::filesystem::path& path, const LeImage& exe) {
     auto fbm = load_savegame(path);
     if (!fbm.checksum_ok) throw FormatError("desk: FBM checksum mismatch");
-    if (fbm.version != "V2.24") throw FormatError("desk: unsupported FBM version");
-    DbCounts counts{exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField), exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField3), exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField2), exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField4)};
+    if (fbm.version != (exe.expanded_profile() ? "O1.1" : "V2.24")) throw FormatError("desk: unsupported FBM version");
+    DbCounts counts{exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField), exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField3), exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField2), exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField4), uint32_t(exe.u16(layout::CareerSession_DispatchLineup_RuntimeField)), 30};
     SaveState save(fbm.stream, counts);
     auto d = desk_from_save(save, exe);
     validate_desk_state(d);

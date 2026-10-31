@@ -1412,7 +1412,13 @@ inline constexpr auto NationalFriendlyPayerPrefixText = 0xa000f;
 inline constexpr auto NextDeskManager = 0xbd6cc;
 inline constexpr auto NoClubText = 0xaec74;
 inline constexpr auto NoPlayerText = 0xaec78;
+// Legacy symbol name: this is the league+cup team count, NOT a squad slot offset.
 inline constexpr auto NoTeamSquadStart = 0xa2c38;
+inline constexpr auto ProfileSmallSquadClubs = 0xa2c32;
+inline constexpr auto ProfilePoolFirst = 0xa2c56;
+inline constexpr auto ProfileFreeFirst = 0xa2c5a;
+inline constexpr auto ProfileForeignFreeFirst = 0xa2c5e;
+inline constexpr auto ProfileNationalSlotsFirst = 0xa2c62;
 inline constexpr auto OfferSlots = 0xbb844;
 inline constexpr auto Opportunities_FormatError_RuntimeField = 0xa3a6e;
 inline constexpr auto Opportunities_FormatError_RuntimeField2 = 0xa3a80;

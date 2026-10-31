@@ -9,6 +9,7 @@ namespace bmh {
 // Installed alongside the loaded edition's other runtime tables. Club selectors
 // remain database/savegame data; this only reproduces the original drawing gate.
 inline int original_foreign_badge_end = 138;
+inline bool expanded_badges = false;
 
 inline int original_badge_gate(const LeImage& exe) {
     constexpr auto instruction = layout::ForeignBadgeGateInstruction;
@@ -25,10 +26,12 @@ inline int original_badge_gate(const LeImage& exe) {
 
 inline void install_original_badge_policy(const LeImage& exe) {
     original_foreign_badge_end = original_badge_gate(exe);
+    expanded_badges = exe.expanded_profile();
 }
 
 inline bool original_badge_fallback(int token, const LeImage* exe = nullptr) {
     const int team = token & 0xfff;
+    if (exe ? exe->expanded_profile() : expanded_badges) return team == 0xfff;
     const int end = exe ? original_badge_gate(*exe) : original_foreign_badge_end;
     return team == 0xfff || (team >= 90 && team < end) || (team >= 168 && team < 357);
 }

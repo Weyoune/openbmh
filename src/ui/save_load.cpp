@@ -185,7 +185,7 @@ bool SaveLoadScreen::info_press(int x, int y) {
     try {
         const auto saved = load_savegame(entries_.at(size_t(selected_)).path);
         const auto& h = saved.plain_header;
-        if (!saved.checksum_ok || saved.version != "V2.24" || h.size() < 172 || h[0] < 1 || h[0] > 4)
+        if (!saved.checksum_ok || (saved.version != "V2.24" && saved.version != "O1.1") || h.size() < 172 || h[0] < 1 || h[0] > 4)
             throw FormatError("save/load: invalid native information header");
         const auto field = [&](size_t at, size_t count) {
             const auto end = h.begin() + at + count;

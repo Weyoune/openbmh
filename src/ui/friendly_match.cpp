@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "ui/friendly_match.hpp"
 
 #include <algorithm>
@@ -80,7 +81,7 @@ FriendlyMatchScreen::FriendlyMatchScreen(const std::filesystem::path& data, Frie
       data_(data), next_request_id_(state_.first_request_id) {
     const bool valid_national_slot = state_.national_team && state_.runtime_team == bmh::kNoTeam;
     if (state_.manager_slot < 0 || state_.manager_slot > 3 || state_.runtime_team < 0 ||
-        (state_.runtime_team >= 168 && !valid_national_slot) ||
+        (state_.runtime_team >= runtime_dimensions.record_teams && !valid_national_slot) ||
         state_.revision == UINT64_MAX || !state_.first_request_id || state_.planner_count < 0 ||
         state_.planner_count > std::numeric_limits<int>::max() - 2)
         throw FormatError("friendly screen: invalid manager/request identity");
@@ -344,7 +345,7 @@ std::optional<FriendlyMatchRequest> FriendlyMatchScreen::click(int x, int y, boo
         const int row = (y-0x1d)/7;
         if (row < 0 || size_t(row) >= rows.size()) return std::nullopt;
         selected_opponent_ = rows[size_t(row)].runtime_team_id;
-        if (selected_opponent_ == state_.runtime_team || selected_opponent_ < 0 || selected_opponent_ >= 168) {
+        if (selected_opponent_ == state_.runtime_team || selected_opponent_ < 0 || selected_opponent_ >= runtime_dimensions.record_teams) {
             selected_opponent_ = -1;
             feedback_ = "Bitte einen anderen Ligaverein waehlen.";
             return std::nullopt;

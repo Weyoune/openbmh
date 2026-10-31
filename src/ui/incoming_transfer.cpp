@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/incoming_transfer.hpp"
@@ -62,7 +63,7 @@ std::string source_money(uint32_t value, int width, uint32_t numerator, uint32_t
 }
 
 int team_badge(const GameState& game, int team) {
-    if (team < 0 || team >= 168 || size_t(team) * 2 + 2 > game.club_heap_78.size()) return -1;
+    if (team < 0 || team >= runtime_dimensions.record_teams || size_t(team) * 2 + 2 > game.club_heap_78.size()) return -1;
     return (int(game.club_heap_78[size_t(team) * 2]) |
             int(game.club_heap_78[size_t(team) * 2 + 1]) << 8) & 0x1ff;
 }

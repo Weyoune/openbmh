@@ -452,9 +452,9 @@ Palette LiveMatchdayScreen::shot_palette(const Palette& base, const LiveShotEven
     for (int side = 0; side < 2; ++side) {
         const int team = group.fixtures.at(size_t(shot.match * 2 + side));
         if (team == -1) continue;
-        if (team < 0 || !state.memory.has(::bmh::layout::ClubKitSelectorsUnsigned + uint32_t(team)))
+        if (team < 0 || size_t(team) >= state.club_ids.size())
             throw FormatError("live shot: original club colours missing");
-        const int kit = state.memory.u8(::bmh::layout::ClubKitSelectorsUnsigned + uint32_t(team));
+        const int kit = state.club_kit(team);
         int shirt = kit >> 4, shorts = kit & 15;
         if (side == 0) { home_shirt = shirt; home_shorts = shorts; }
         else if (shorts == home_shorts || (shirt == home_shorts && shorts == home_shirt)) {

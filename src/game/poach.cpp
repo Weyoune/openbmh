@@ -16,9 +16,9 @@ constexpr size_t kRecordSize = 0xb0c;
 constexpr size_t kAttempts = 0x8b6;           // five player ids, 0xffff free
 constexpr uint32_t kTransferList = ::bmh::layout::EditorList;   // 44 rows of 0x58 bytes
 constexpr uint32_t kListRow = 0x58;
-constexpr size_t kPoolFirst = 0xb70;          // CareerRuntimeField: squad slot of list row 0
+const int& kPoolFirst = runtime_dimensions.pool_first;          // CareerRuntimeField: squad slot of list row 0
 constexpr uint32_t kOfferSlots = ::bmh::layout::OfferSlots;     // OfferSlots: 4 words, -1 free
-constexpr int kBigSquadClubs = 90;            // TeamsWithSquads
+const int& kBigSquadClubs = runtime_dimensions.big_squad_teams;            // TeamsWithSquads
 // Attempt: how many players of each position a club wants (MonthRuntimeField4 / MonthRuntimeField5)
 constexpr int8_t kWantedBig[4] = {2, 6, 7, 5}, kWantedSmall[4] = {2, 4, 5, 4};
 

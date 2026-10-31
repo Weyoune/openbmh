@@ -21,7 +21,7 @@ constexpr size_t kBoardSlot = 0x58;   // one slot of the board
 // Static league tables of V2.24 (not part of the savegame):
 // (European places per league, CareerSession_InstallLeagueSizes_RuntimeField, are kLeagueEurope of the loaded game; league 0 uses 4)
 // (the relegation places per league, CareerSession_InstallLeagueSizes_RuntimeField2, are kLeagueRelegation of the loaded game)
-constexpr int kLeagueTeams = 138;  // CareerSession_DispatchLineup_RuntimeField: clubs in the league system
+const int& kLeagueTeams = runtime_dimensions.league_teams;  // CareerSession_DispatchLineup_RuntimeField: clubs in the league system
 
 // Text of a pointer variable of the text table TextPointerTable.
 }  // namespace

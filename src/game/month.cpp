@@ -30,12 +30,12 @@ constexpr size_t kBoard = 0x840;        // tactics board of a manager
 constexpr size_t kBoardSlot = 0x58;
 constexpr uint32_t kTransferList = ::bmh::layout::EditorList;
 constexpr uint32_t kListEntry = 0x58;
-constexpr int kPoolFirst = 0xb70;       // CareerRuntimeField: the transfer list (40 slots + 4)
-constexpr int kFreeAgents = 0xb9c;      // CareerRuntimeField2: free agents (80 slots)
-constexpr int kForeignAgents = 0xbec;   // MonthRuntimeField: foreign free agents (20 slots)
-constexpr int kPoolEnd = 0xc00;         // LargeSquadClubCount
-constexpr int kBigSquadClubs = 90;      // TeamsWithSquads
-constexpr int kLeagueClubs = 0x8a;      // CareerSession_DispatchLineup_RuntimeField
+const int& kPoolFirst = runtime_dimensions.pool_first;       // CareerRuntimeField: the transfer list (40 slots + 4)
+const int& kFreeAgents = runtime_dimensions.free_first;      // CareerRuntimeField2: free agents (80 slots)
+const int& kForeignAgents = runtime_dimensions.foreign_free_first;   // MonthRuntimeField: foreign free agents (20 slots)
+const int& kPoolEnd = runtime_dimensions.national_slots_first;         // LargeSquadClubCount
+const int& kBigSquadClubs = runtime_dimensions.big_squad_teams;      // TeamsWithSquads
+const int& kLeagueClubs = runtime_dimensions.league_teams;      // CareerSession_DispatchLineup_RuntimeField
 
 // MonthRuntimeField2: development steps by strength / 10; the ten bytes after it (PlayerCard_PlayerCardMarketValue_RuntimeField)
 // are the extra value above 500 points.
@@ -162,8 +162,8 @@ bool in_pseudo_squad(const GameState& g, int slot) {
 void list_club_player(GameState& g, int first, int last, WatcomRandom& rand, MinuteReport& report) {
     const int8_t* wanted = first < kBigSquadClubs ? kWantedBig : kWantedSmall;  // Attempt
     for (;;) {
-        int16_t teams[138];
-        uint32_t keys[138];
+        std::vector<int16_t> teams(size_t(kLeagueClubs), 0);
+        std::vector<uint32_t> keys(size_t(kLeagueClubs), 0);
         int n = 0;  // local_14
         g.list_toggle = g.list_toggle + 1 == 2 ? 0 : g.list_toggle + 1;
         int best_line = 0;  // local_1c, keeps its value between the clubs
@@ -207,10 +207,10 @@ void list_club_player(GameState& g, int first, int last, WatcomRandom& rand, Min
                 n++;
             }
         }
-        int pick = 0x8a;  // sVar11
+        int pick = runtime_dimensions.league_teams;  // sVar11
         int slot = -1;    // unaff_EDI: the slot tried last
         if (n != 0) {
-            quicksort_by_key(teams, keys, n);
+            quicksort_by_key(teams.data(), keys.data(), n);
             for (pick = 0; pick < n; pick++) {
                 const int team = teams[pick];
                 const SquadRange range = squad_range(team);
@@ -229,7 +229,7 @@ void list_club_player(GameState& g, int first, int last, WatcomRandom& rand, Min
             }
             // (when no club had a fitting player the slot tried last is listed all the same)
         }
-        if (pick < 0x8a) {
+        if (pick < runtime_dimensions.league_teams) {
             list_player(g, slot, rand, report);
             return;
         }

@@ -420,7 +420,7 @@ void Console::register_transfer_commands() {
         Arg a;
         a.text = number;
         const auto id = to_int(a);
-        if (!id || *id < 0 || *id >= 138) fail("E_BAD_ARGUMENT", "club is club:<n> (ListPoachClubs)");
+        if (!id || *id < 0 || *id >= runtime_dimensions.league_teams) fail("E_BAD_ARGUMENT", "club is club:<n> (ListPoachClubs)");
         return int(*id);
     };
     Param club = detail::text("club");

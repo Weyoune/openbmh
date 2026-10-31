@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
+#include "formats/data_profile.hpp"
+#include "game/profile_runtime.hpp"
 #include "ui/live_timing.hpp"
 // openbmh_play - the UI of src/ui connected to the engine: options, manager dialogs, a new
 // career initialised by the engine (app/career_session.hpp) and its desk.
@@ -194,6 +196,7 @@ int main(int argc, char** argv) {
     }
     if (save_directory.empty()) save_directory = data;
     try {
+        install_runtime_profile(load_data_profile(data));
         const Palette palette = load_palette(ui::asset_path(data, "M3PC.COL"));
         ui::StartupFlow flow(data, save_directory);
         std::unique_ptr<app::CareerSession> session;
@@ -945,7 +948,7 @@ int main(int argc, char** argv) {
                 int manager, int source_slot, int list_entry,
                 const HumanBuyerSaleHooks& sale_hooks) -> int {
             if (!running || manager < 0 || manager >= 4 || list_entry < 40 || list_entry >= 44 ||
-                source_slot != 2928 + list_entry || !staged.memory.has(::bmh::layout::EditorList + uint32_t(list_entry) * 0x58 + 0x57))
+                source_slot != runtime_dimensions.pool_first + list_entry || !staged.memory.has(::bmh::layout::EditorList + uint32_t(list_entry) * 0x58 + 0x57))
                 return -1;
             const uint32_t row = ::bmh::layout::EditorList + uint32_t(list_entry) * 0x58;
             const int player = staged.squad_slots.at(size_t(source_slot)) & 0x0fff;

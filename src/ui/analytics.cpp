@@ -47,7 +47,7 @@ int32_t source_asset_mask_1e(const GameState& game, int manager) {
 }
 int source_manager_league(const GameState& game, const LeImage& exe, int manager) {
     const int team = game.manager_teams.at(size_t(manager));
-    if (team > 0x164) return 0; // TeamLeague2 special-team early return.
+    if (team > (kNoTeam - 1)) return 0; // TeamLeague2 special-team early return.
     int cumulative = 0;
     for (int league = 0; league < 9; ++league) {
         cumulative += exe.u8(::bmh::layout::LeagueSizes + uint32_t(league));

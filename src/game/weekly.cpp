@@ -125,7 +125,7 @@ bool source_pending_owner_valid(const GameState& g,const SourcePendingOwner& own
         int((word>>10)&0x0fff)==int(g.squad_slots[slot]&0x0fff);
 }
 
-int league_of(int team) { return team > 0x164 ? 0 : team_league(team); }  // TeamLeague2
+int league_of(int team) { return team > (kNoTeam - 1) ? 0 : team_league(team); }  // TeamLeague2
 
 }  // namespace
 
@@ -959,7 +959,7 @@ static bool remove_from_seller_impl(GameState& g, int seller, int player, Minute
                                     bool native_takeover) {
     player &= 0xFFF;
     if (seller == 0xFFF || seller == 0xFFFF) {
-        for (size_t s = kPoolSlots; s < 3072; s++)  // CareerRuntimeField .. LargeSquadClubCount
+        for (size_t s = kPoolSlots; s < runtime_dimensions.national_slots_first; s++)  // CareerRuntimeField .. LargeSquadClubCount
             if ((g.squad_slots[s] & 0xFFF) == player) g.squad_slots[s] = 0xFFF;
         return true;
     }
@@ -970,7 +970,7 @@ static bool remove_from_seller_impl(GameState& g, int seller, int player, Minute
         report.fail("transfer: the player is not in the seller's squad (internal error 0x21)");
         return false;
     }
-    for (size_t s = kPoolSlots; s < 2972; s++)  // CareerRuntimeField .. CareerRuntimeField2
+    for (size_t s = kPoolSlots; s < runtime_dimensions.free_first; s++)  // CareerRuntimeField .. CareerRuntimeField2
         if ((g.squad_slots[s] & 0xFFF) == player) g.squad_slots[s] = 0xFFF;
     for (size_t s = at; s + 1 < range.first + range.count; s++) g.squad_slots[s] = g.squad_slots[s + 1];
     g.squad_slots[range.first + range.count - 1] = 0xFFF;
@@ -2151,7 +2151,7 @@ HumanBuyerSaleResult settle_human_buyer_sale(GameState& g, const HumanBuyerSaleR
     if (free_agent) {
         // ReleasePlayer's canonical 0FFF seller scans the entire free-player pool,
         // not a fictitious seller squad. FFFF is not an alias for this seller.
-        if (g.squad_slots.size() < 3072)
+        if (g.squad_slots.size() < runtime_dimensions.national_slots_first)
             return fail("ReleasePlayer: free-agent pool is outside native squad storage");
     } else {
         const auto seller_range = squad_range(seller);
@@ -2525,7 +2525,7 @@ PendingOfferResult process_natural_pending_offers_after_desk(GameState& g,
         };
         if (record_team(0)!=kNoTeam) return false;
         const int club=record_team(4*kRecord);
-        if (club<0 || club>=138) return false;
+        if (club<0 || club>=runtime_dimensions.league_teams) return false;
         const auto squad=squad_range(club);
         if (squad.first+squad.count>g.squad_slots.size()) return false;
         for (size_t i=squad.first;i<squad.first+squad.count;++i)
@@ -2539,7 +2539,7 @@ PendingOfferResult process_natural_pending_offers_after_desk(GameState& g,
         if(offer==0xffffffffu || int(offer&31)!=manager)continue;
         const int team=native_team;
         const bool national_owner = takeover && team == kNoTeam;
-        if (team<0 || (team>=138 && !national_owner))
+        if (team<0 || (team>=runtime_dimensions.league_teams && !national_owner))
             return fail("AdvanceTurn: national or unknown owner is unsupported for normal-club offers");
         // AdvanceTurn scans raw offer words until the first owned player resolves in
         // an ordinary squad. A missing earlier player requires PresentLoanReturn's error
@@ -2662,7 +2662,7 @@ void transfer_list_countdown(GameState& g, GameRandom& game, WatcomRandom& rand,
                     // FindManagerForClub also recognizes the coach's temporarily saved
                     // club as owner 4 while manager 0 runs the national team.
                     return g.manager_of(club) >= 0 || (!g.manager_teams.empty() &&
-                        g.manager_teams[0] == 0x165 && mem.has(::bmh::layout::DeskActions_NationalOpponentManager_RuntimeField) &&
+                        g.manager_teams[0] == kNoTeam && mem.has(::bmh::layout::DeskActions_NationalOpponentManager_RuntimeField) &&
                         int(mem.u16(::bmh::layout::CupDraw_FormatError_RuntimeField3)) == club);
                 };
                 bool human_involved = human_participant(seller);

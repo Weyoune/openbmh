@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/league_pairings.hpp"
 
@@ -82,7 +83,7 @@ LeaguePairingsState league_pairings_from_game(const GameState& g,const LeaguePai
     //51329 ->LeagueName uses the league names prepared by6b98e, including
     //the shared Regionalliga A/B text and foreign country's Native name.
     //TeamStatistics_SourceLeagueName_RuntimeField's temporary prefix is only set around other callers, not this Desk.
-    const auto league_title=owner.league<5?league_name(g,owner.league):g.club_name(0x165+owner.league-4);
+    const auto league_title=owner.league<5?league_name(g,owner.league):g.club_name(kNoTeam+owner.league-4);
     if(owner.postponed_active) {
         out.title=message_text(g,::bmh::layout::LeaguePairings_FormatError_TextPointer12)+league_title;
         out.subtitle.clear();

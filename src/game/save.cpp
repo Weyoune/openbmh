@@ -94,6 +94,12 @@ Bytes save_stream(const GameState& live) {
             // the blocks GameState keeps in typed fields
             switch (b.address) {
                 case ::bmh::layout::ManagerRecords: put(d, g.manager_records); break;
+                case ::bmh::layout::ClubKitSelectors:
+                    if (g.counts.league_teams == 164) put(d, g.club_kits);
+                    break;
+                case ::bmh::layout::ClubShortNameOffsets:
+                    if (g.counts.league_teams == 164) put(d, g.club_short_offsets);
+                    break;
                 case ::bmh::layout::ManagerMatchHistory: put(d, g.manager_results); break;
                 case ::bmh::layout::ManagerRatings: put(d, g.manager_ratings); break;
                 case ::bmh::layout::LeagueResults: put(d, g.results); break;
@@ -140,7 +146,7 @@ Bytes save_header(const GameState& g) {
     for (int m = 0; m < managers && m < 4; m++) {
         const size_t rec = size_t(m) * 0xb0c;
         const int team = int16_t(g.manager_records.at(rec + 0x290) | g.manager_records.at(rec + 0x291) << 8);
-        const bool national = team == 0x165;
+        const bool national = team == kNoTeam;
         const size_t at = size_t(m) * 0x28;
         list[at] = national ? 0x1e : g.manager_records.at(rec + 0x210);  // (0x1e: high byte of the loop word)
         list[at + 1] = national ? 1 : 0;
@@ -156,7 +162,7 @@ Savegame make_savegame(const GameState& g, WatcomRandom& rand) {
     Savegame s;
     s.plain_header = save_header(g);
     s.id1 = 0;
-    s.version = "V2.24";
+    s.version = g.counts.league_teams == 164 ? "O1.1" : "V2.24";
     const uint32_t hi = uint32_t(rand.range(0, 0x8fff)), lo = uint32_t(rand.range(0, 0x8fff));
     s.id2 = lo + hi * 0x10000 + 1;
     s.key = uint8_t(rand.range(0, 0xff) + 'n');

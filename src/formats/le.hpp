@@ -43,10 +43,12 @@ public:
         return img;
     }
     const Bytes& bytes() const { return bytes_; }
+    bool expanded_profile() const { return expanded_profile_; }
 
     friend LeImage load_le(const std::filesystem::path& path);
 
 private:
+    bool expanded_profile_ = false;
     uint32_t base_ = 0;
     Bytes bytes_;
 };

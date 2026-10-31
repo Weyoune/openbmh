@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/desk_drawers.hpp"
 
@@ -54,7 +55,7 @@ std::optional<int> source_drawer_team(const DeskState& state, int local_kind) {
         // away-side swap. The drawer cases use those retained values: when
         // both are open, uVar21 is local48; otherwise it is local44.
         const int local44 = state.next_opponent.value_or(-1);
-        const int local48 = state.national_team ? 0x165 : state.runtime_club;
+        const int local48 = state.national_team ? kNoTeam : state.runtime_club;
         const int uVar21 = (open_count == 2) ? local48 : local44;
         const bool first_case = local_kind == pair[0];
         const int side = first_case ? (uVar21 != local48 ? local48 : local44) : uVar21;
@@ -182,7 +183,7 @@ void DeskDrawerRenderer::recent(Image& target, const DeskState& state, const Des
 }
 
 void DeskDrawerRenderer::head_to_head(Image& target, const DeskState& state, const DeskItem& item) const {
-    if (!state.next_opponent || *state.next_opponent < 0 || *state.next_opponent > 0xa7) {
+    if (!state.next_opponent || *state.next_opponent < 0 || *state.next_opponent >= runtime_dimensions.record_teams) {
         text(target, state, item.x + 1, item.y + 13, texts_[1207], 0x6a, item.x + 115); // DeskDrawersRuntimeField
         return;
     }

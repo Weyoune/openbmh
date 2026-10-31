@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/le.hpp"
+#include "formats/data_profile.hpp"
+#include "formats/executable_layout.hpp"
 
 #include <algorithm>
 #include <fstream>
@@ -36,13 +38,63 @@ void save_image(const LeImage& image, const std::filesystem::path& path) {
 }
 
 LeImage load_le(const std::filesystem::path& path) {
+    const auto profile = load_data_profile(path.parent_path());
+    const auto apply_profile = [&](LeImage img) {
+        if (!profile.extended()) return img;
+        const auto put = [&](uint32_t address, uint32_t value, int width) {
+            if (!img.contains(address) || !img.contains(address + uint32_t(width - 1)))
+                throw FormatError("profile: executable lacks verified data dimensions");
+            for (int b = 0; b < width; ++b) img.bytes_.at(address - img.base_ + uint32_t(b)) = uint8_t(value >> (8 * b));
+        };
+        if (img.u8(layout::LeagueSizes) != 18)
+            throw FormatError("profile: classic-plus-1 requires a German installation");
+        put(layout::CareerSession_DataDirectory_RuntimeField, profile.counts.clubs, 4);
+        put(layout::CareerSession_DataDirectory_RuntimeField3, profile.counts.players, 4);
+        put(layout::CareerSession_DataDirectory_RuntimeField2, profile.counts.n42, 4);
+        put(layout::CareerSession_DataDirectory_RuntimeField4, profile.counts.n66, 4);
+        put(layout::CareerSession_DispatchLineup_RuntimeField, profile.counts.league_teams, 2);
+        put(layout::TeamsWithSquads, profile.big_squad_teams, 2);
+        put(layout::NoTeamSquadStart, profile.counts.n42, 2);
+        put(layout::ProfileSmallSquadClubs, profile.counts.league_teams - profile.big_squad_teams, 2);
+        put(layout::ClubPlayerDetail_ClubPlayerDetailRedraw_RuntimeField, profile.counts.players, 4);
+        put(layout::ProfilePoolFirst, profile.pool_first(), 4);
+        put(layout::ProfileFreeFirst, profile.pool_first() + 44, 4);
+        put(layout::ProfileForeignFreeFirst, profile.pool_first() + 124, 4);
+        put(layout::ProfileNationalSlotsFirst, profile.national_slots_first(), 4);
+        for (size_t league = 0; league < profile.leagues.size(); ++league)
+            put(layout::LeagueSizes + uint32_t(league), profile.leagues[league], 1);
+        std::vector<int> foreign_days;
+        for (int day = 0; day < 365; ++day) {
+            const auto at = layout::CompetitionCalendar + uint32_t(day * 2);
+            const uint16_t flags = img.u16(at);
+            if ((flags & 0x4001) == 1 && day + 1 < 365) foreign_days.push_back(day + 1);
+            put(at, flags & ~0x10u, 2);
+        }
+        if (foreign_days.size() != 34) throw FormatError("profile: unsupported domestic calendar");
+        for (int target : {60, 110, 250, 290}) {
+            int chosen = -1;
+            for (int delta = 0; delta < 7 && chosen < 0; ++delta) {
+                const int day = target + delta;
+                if (img.u16(layout::CompetitionCalendar + uint32_t(day * 2)) == 0 &&
+                    std::find(foreign_days.begin(), foreign_days.end(), day) == foreign_days.end()) chosen = day;
+            }
+            if (chosen < 0) throw FormatError("profile: no calendar space for extra English fixtures");
+            foreign_days.push_back(chosen);
+        }
+        for (int day : foreign_days) {
+            const auto at = layout::CompetitionCalendar + uint32_t(day * 2);
+            put(at, img.u16(at) | 0x10, 2);
+        }
+        img.expanded_profile_ = true;
+        return img;
+    };
     const Bytes raw = read_file(path);
     if (raw.size() >= sizeof kImageMagic + 8 && std::equal(kImageMagic, kImageMagic + sizeof kImageMagic, raw.begin())) {
         const auto word = [&](size_t at) { return uint32_t(raw[at] | raw[at + 1] << 8 | raw[at + 2] << 16) | uint32_t(raw[at + 3]) << 24; };
         const uint32_t base = word(sizeof kImageMagic), size = word(sizeof kImageMagic + 4);
         if (raw.size() != sizeof kImageMagic + 8 + size_t(size)) throw FormatError("OpenBMH image: wrong size");
         LeImage img = LeImage::from_bytes(base, Bytes(raw.begin() + sizeof kImageMagic + 8, raw.end()));
-        return img;
+        return apply_profile(std::move(img));
     }
     auto u8 = [&](size_t o) -> uint32_t {
         if (o >= raw.size()) throw FormatError("LE: read beyond the file");
@@ -131,7 +183,7 @@ LeImage load_le(const std::filesystem::path& path) {
             }
         }
     }
-    return img;
+    return apply_profile(std::move(img));
 }
 
 }  // namespace bmh

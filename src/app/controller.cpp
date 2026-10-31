@@ -145,12 +145,12 @@ void serve_friendly_action(ui::StartupFlow& flow, CareerSession& session,
         const auto& national=*request.national_booking;
         const auto expected=FriendlyActions::national_owner(request);
         if(request.kind!=ui::FriendlyRequestKind::book||!request.quote_id||
-           request.runtime_team!=0x165||request.opponent<0x166||request.opponent>0x1a2||
+           request.runtime_team!=kNoTeam||request.opponent<(kNoTeam + 1)||request.opponent>(kNoTeam + 61)||
            request.season_day<0||request.season_day>365||request.planner_count<0||
            request.planner_count>253||request.revision!=revision||
            national.owner!=expected||national.quote.owner!=expected||
            national.season_day!=request.season_day||national.quote.terms.manager!=manager||
-           national.quote.terms.manager_team!=0x165||national.quote.terms.opponent!=request.opponent||
+           national.quote.terms.manager_team!=kNoTeam||national.quote.terms.opponent!=request.opponent||
            national.quote.terms.planner_count!=request.planner_count||
            national.quote.terms.home_team!=request.home_team||national.quote.terms.away_team!=request.away_team||
            national.quote.terms.payer_manager!=request.payer_manager||
@@ -232,7 +232,7 @@ void serve_friendly_action(ui::StartupFlow& flow, CareerSession& session,
 
     if (request.kind != ui::FriendlyRequestKind::book || request.quote_id == 0 ||
         request.season_day < 0 || request.season_day > 365 || request.opponent < 0 ||
-        request.opponent >= 168 || request.cost < 0 || request.planner_count > 253) {
+        request.opponent >= runtime_dimensions.record_teams || request.cost < 0 || request.planner_count > 253) {
         flow.reject_friendly_action("Die Angaben zum Spieltermin sind ungültig.");
         return;
     }
@@ -257,13 +257,13 @@ bool valid_national_friendly_family(const ui::StartupFlow& flow,const GameState&
     const auto* origin=flow.national_friendly_desk_owner();
     const auto* menu=flow.statistics_menu();
     const auto* desk=flow.desktop();
-    if(!owner||!origin||!menu||!desk||owner->desk_menu!=6||owner->runtime_team!=0x165||
+    if(!owner||!origin||!menu||!desk||owner->desk_menu!=6||owner->runtime_team!=kNoTeam||
        owner->manager<0||owner->revision!=revision||origin->kind!=ui::DeskRequestKind::open_menu||
        origin->menu_kind!=6||origin->manager_slot!=owner->manager||origin->revision!=revision||
        desk->state().revision!=revision||desk->state().manager_slot!=owner->manager||
        menu->state().owner.kind!=ui::DeskRequestKind::open_menu||menu->state().owner.menu_kind!=23||
        menu->state().owner.manager_slot!=owner->manager||menu->state().owner.revision!=revision||
-       size_t(owner->manager)>=game.manager_teams.size()||game.manager_teams[size_t(owner->manager)]!=0x165||
+       size_t(owner->manager)>=game.manager_teams.size()||game.manager_teams[size_t(owner->manager)]!=kNoTeam||
        !game.memory.has(::bmh::layout::ActiveManager)||int(game.memory.u8(::bmh::layout::ActiveManager))!=owner->manager)return false;
     return true;
 }
@@ -278,17 +278,17 @@ void serve_national_friendly_selection(ui::StartupFlow& flow,CareerSession& sess
     const auto& game=session.state();
     const auto& desk=flow.desktop()->state();
     const int manager=owner->manager;
-    if(owner->desk_menu!=6||owner->runtime_team!=0x165||owner->revision!=revision||
+    if(owner->desk_menu!=6||owner->runtime_team!=kNoTeam||owner->revision!=revision||
        desk_request->kind!=ui::DeskRequestKind::open_menu||desk_request->menu_kind!=6||
        desk_request->revision!=revision||desk_request->manager_slot!=manager||
        desk.revision!=revision||desk.manager_slot!=manager||manager<0||
-       size_t(manager)>=game.manager_teams.size()||game.manager_teams[size_t(manager)]!=0x165||
-       int(game.memory.u8(::bmh::layout::ActiveManager))!=manager||selected_team<0x166||selected_team>0x1a2) {
+       size_t(manager)>=game.manager_teams.size()||game.manager_teams[size_t(manager)]!=kNoTeam||
+       int(game.memory.u8(::bmh::layout::ActiveManager))!=manager||selected_team<(kNoTeam + 1)||selected_team>(kNoTeam + 61)) {
         flow.close_national_friendly_picker();
         return;
     }
     if(!presenter) { flow.close_national_friendly_picker(); return; }
-    ui::NationalFriendlyUi dialog_flow(*owner,national_friendly_identity(game,manager,0x165));
+    ui::NationalFriendlyUi dialog_flow(*owner,national_friendly_identity(game,manager,kNoTeam));
     auto venue=dialog_flow.select_opponent(game,selected_team);
     if(venue.kind!=ui::NationalFriendlyUiActionKind::show_question||!venue.question) {
         flow.close_national_friendly_picker();return;
@@ -321,7 +321,7 @@ void serve_national_friendly_selection(ui::StartupFlow& flow,CareerSession& sess
     }
     ui::FriendlyQuoteProjection projection;
     projection.request_id=quote_request.engine_owner->request_id;
-    projection.revision=revision;projection.manager_slot=manager;projection.runtime_team=0x165;
+    projection.revision=revision;projection.manager_slot=manager;projection.runtime_team=kNoTeam;
     projection.opponent=selected_team;projection.opponent_manager=quote.terms.opponent_manager;
     projection.payer_manager=quote.terms.payer_manager;projection.home_team=quote.terms.home_team;
     projection.away_team=quote.terms.away_team;projection.cost=quote.terms.cost;
@@ -336,7 +336,7 @@ void serve_national_friendly_selection(ui::StartupFlow& flow,CareerSession& sess
         projection.dates.push_back({day,mark});
     }
     ui::FriendlyMatchState calendar;
-    calendar.revision=revision;calendar.manager_slot=manager;calendar.runtime_team=0x165;
+    calendar.revision=revision;calendar.manager_slot=manager;calendar.runtime_team=kNoTeam;
     calendar.current_day=game.season_day();calendar.planner_count=quote.terms.planner_count;
     calendar.season_start_counter=game.season_start;calendar.mode_three=desk.options.mode==3;
     calendar.national_team=true;calendar.manager_name=ui::original_to_utf8(desk.manager_name);
@@ -957,7 +957,7 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
                 const int team=game.manager_teams[size_t(manager)];
                 if(team!=kNoTeam&&(team<0||size_t(team)>=game.team_flags.size()))
                     throw FormatError("fair play: active manager has no Source roster");
-                const int league=team>0x164?0:team_league(team);
+                const int league=team>(kNoTeam - 1)?0:team_league(team);
                 page=ui::fair_play_state_from_game(game,league,underlay,manager);
             } else {
                 page.kind=ui::DeskRecordKind::highscore;
@@ -2110,11 +2110,11 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
                 const auto& desk = flow.desktop()->state();
                 const int manager=request.manager_slot;
                 if(manager>=0&&size_t(manager)<game.manager_teams.size()&&
-                   game.manager_teams[size_t(manager)]==0x165) {
+                   game.manager_teams[size_t(manager)]==kNoTeam) {
                     const auto projection=ui::world_cup_statistics_from_game(game,
                         load_le(ui::asset_path(data,"BMH.exe")),
                         ui::WorldCupStatisticsOwner::friendly_match_nation_picker);
-                    flow.show_national_friendly_picker(projection,request,0x165);
+                    flow.show_national_friendly_picker(projection,request,kNoTeam);
                     return {};
                 }
                 LeagueFamilyActions(*session).apply(revision, [&] {

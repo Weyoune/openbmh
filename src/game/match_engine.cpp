@@ -78,7 +78,7 @@ MinuteReport MatchEngine::minute(int minute, int last_minute, int stoppage) {
 // Human teams use the places on their tactics board, also for the player's value.
 int MatchEngine::pick_player(int team, int mode, int exclude, MinuteReport& report, int preset) {
     mode &= 0x7F;  // 0x80 = reuse the squad of the previous call, same team here
-    if (team >= 138 && team != kNoTeam) return 0xFFF;  // clubs without squad: nobody, no draws
+    if (team >= runtime_dimensions.league_teams && team != kNoTeam) return 0xFFF;  // clubs without squad: nobody, no draws
     SquadRange range = squad_range(team);
     if (range.count == 0) return 0xFFF;
     RatingContext ctx{state.chance_rain, state.chance_temperature};
@@ -522,8 +522,8 @@ ForcedMatchEvent MatchEngine::event_impl(MatchGroup& g, int m, int s, int minute
     // Small-squad teams (id >= 90) only half of the time; teams without squads never. The
     // national team (0x165, squad nominated on the national team days) only while manager
     // slot 0 holds it (CupDraw_FormatError_RuntimeField2 == 0x165: a Bundestrainer's match).
-    if (!(team < 90 || rand.range(0, 1) == 0)) return result;
-    if (!(team < 138 || team == kNoTeam)) return result;
+    if (!(team < runtime_dimensions.big_squad_teams || rand.range(0, 1) == 0)) return result;
+    if (!(team < runtime_dimensions.league_teams || team == kNoTeam)) return result;
     if (team == kNoTeam && (state.manager_teams.empty() || state.manager_teams[0] != kNoTeam)) return result;
     const int manager = state.manager_of(team);  // FindManagerForClub, local_6c
     const bool human = manager >= 0;
@@ -944,7 +944,7 @@ void MatchEngine::side(MatchGroup& g, int m, int& s, int minute, int& own_att, i
     }
 
     // Goalkeeper of the opponent: the player in squad slot 0 if the formation puts it in goal.
-    if (!reality_played && (opp_team < 168 || opp_team == kNoTeam)) {
+    if (!reality_played && (opp_team < runtime_dimensions.record_teams || opp_team == kNoTeam)) {
         int x = 0, y = 0;
         state.formation_position(opp_team, 0, x, y);
         if (x == 0 && y == 4) keeper = state.squad_slots.at(squad_range(opp_team).first) & 0x0FFF;
@@ -979,7 +979,7 @@ void MatchEngine::side(MatchGroup& g, int m, int& s, int minute, int& own_att, i
         deflected = game.range(0, 5) == 0;
     }
     if (kind == 0) {
-        if (team >= 168 && team != kNoTeam) {
+        if (team >= runtime_dimensions.record_teams && team != kNoTeam) {
             // clubs without squad: the attack rating (TeamRating, profile 3), drawn
             RatingContext drawn;
             drawn.rand = &rand;
@@ -989,7 +989,7 @@ void MatchEngine::side(MatchGroup& g, int m, int& s, int minute, int& own_att, i
         }
     }
     if (keeper == 0xFFF) {
-        if (opp_team >= 168 && opp_team != kNoTeam) {
+        if (opp_team >= runtime_dimensions.record_teams && opp_team != kNoTeam) {
             // clubs without squad: the goalkeeping rating (profile 0), drawn
             RatingContext drawn;
             drawn.rand = &rand;
@@ -1196,7 +1196,7 @@ void MatchEngine::penalty_shootout(MatchGroup& g, int m, MinuteReport& report) {
             const int side = order[k];
             const int team = pair[side];
             int player = 0xFFF;
-            if (team < 138 || team == kNoTeam) {
+            if (team < runtime_dimensions.league_teams || team == kNoTeam) {
                 // a player who has not taken a penalty yet (after 100 tries the list restarts)
                 int tries = 0;
                 bool fresh;

@@ -46,7 +46,7 @@ int competition_class(int type) { return type >= 0 && type < 24 ? kCompetitionCl
 
 // TeamLeague2: league (0-8) of a club id, 9 for clubs outside the leagues.
 int league_of(int team) {
-    if (team > 0x164) return 0;
+    if (team > (kNoTeam - 1)) return 0;
     int end = 0;
     for (int l = 0; l < 9; l++) {
         end += kLeagueSizes[l];
@@ -129,10 +129,10 @@ SportschauFixtureView sportschau_fixture_view(const GameState& state, const Matc
         if (team >= 0 && size_t(team) * 2 + 1 < state.club_heap_78.size())
             badge_word = uint16_t(state.club_heap_78[size_t(team) * 2] |
                                   uint16_t(state.club_heap_78[size_t(team) * 2 + 1]) << 8);
-        if (team >= 0 && team < 0xa8) {
+        if (team >= 0 && team < runtime_dimensions.record_teams) {
             requires_font_fit = true;
             if (state.memory.has(::bmh::layout::ClubShortNameOffsets + uint32_t(team))) {
-                const uint8_t source = state.memory.u8(::bmh::layout::ClubShortNameOffsets + uint32_t(team));
+                const uint8_t source = state.club_short_offset(team);
                 const size_t offset = source >> 4;
                 const size_t length = (source & 0x0f) + 1;
                 if (offset <= full.size()) {
@@ -302,7 +302,7 @@ void update_club_table(GameState& g, int home, int away, int hg, int ag) {
     auto add16 = [&](size_t o, int v) { wr16(g.club_table, o, uint16_t(rd16(g.club_table, o) + v)); };
     // Only the first league and the regional leagues keep points in this table (the
     // condition tests the home club only).
-    const bool league = home < kLeagueSizes[0] || (home >= 90 && home < 138);
+    const bool league = home < kLeagueSizes[0] || (home >= 90 && home < runtime_dimensions.league_teams);
     const int win_points = kThreePoints[league_of(home)] ? 3 : 2;
     if (league) {
         add16(H + 0x20, hg);
@@ -404,7 +404,7 @@ void develop_players(GameState& g, const MatchGroup& grp, int m, GameRandom& gam
     const int type = grp.desc.at(0);
     for (int side = 0; side < 2; side++) {
         const int team = grp.fixtures.at(m * 2 + side);
-        if (!(team < 168 || team == kNoTeam)) continue;
+        if (!(team < runtime_dimensions.record_teams || team == kNoTeam)) continue;
         const uint8_t cls = (type == 0xb && team == kNoTeam) ? 3 : uint8_t(competition_class(type));
         const int manager = g.manager_of(team);
         const SquadRange range = squad_range(team);
@@ -586,7 +586,7 @@ bool league_screen_shown(const std::vector<uint8_t>& buttons, int param_1, int p
 
 
 int table_position(const GameState& g, int team) {
-    if (team >= 138) return 2;
+    if (team >= runtime_dimensions.league_teams) return 2;
     int league = league_of(team);
     int rounds = league < int(g.league_rounds.size()) ? g.league_rounds[league] : 0;
     if (rounds == 0) return -1;
@@ -667,8 +667,8 @@ void manager_match_record(GameState& g, const MatchGroup& grp, int m, int home_g
             rating = std::clamp(int16_t(rating), int16_t(0), int16_t(200));
             rate_manager(g, int(k), rating, 0);
         }
-        if (opp < 0xa8) {
-            size_t at = k * 0x690 + size_t(opp) * 10 + (side == 1 ? 5 : 0);
+        if (opp < runtime_dimensions.record_teams) {
+            size_t at = k * (runtime_dimensions.record_teams * 10) + size_t(opp) * 10 + (side == 1 ? 5 : 0);
             std::copy_backward(g.manager_results.begin() + at, g.manager_results.begin() + at + 4,
                                g.manager_results.begin() + at + 5);
             g.manager_results.at(at) = uint8_t(own + (against << 4));
@@ -717,6 +717,7 @@ void advance_league_rounds(GameState& g, uint32_t competitions, WatcomRandom& ra
         const int end = bit < 4 ? bit + 1 : 8;
         for (int c = bit; c < end; c++) {
             for (int league = kFirst[c]; league < kFirst[c] + kCount[c]; league++) {
+                if (runtime_dimensions.expanded && g.league_rounds.at(size_t(league)) >= 2 * (kLeagueSizes[league] - 1)) continue;
                 if (league == 0) {
                     for (size_t m = 0; m < g.manager_teams.size(); m++) {
                         advance_youth_teams(g, int(m), rand);

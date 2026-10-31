@@ -38,7 +38,7 @@ CalendarScreen::CalendarScreen(const std::filesystem::path& data, CalendarState 
     if (runtime_club >= 0) {
         // TeamLeague2 returns zero for team handles above0x164 (national included).
         int league = 0, boundary = 0;
-        if (runtime_club <= 0x164) {
+        if (runtime_club <= (kNoTeam - 1)) {
             for (; league < 9; ++league) {
                 boundary += exe_.u8(::bmh::layout::LeagueSizes + uint32_t(league));
                 if (runtime_club < boundary) break;

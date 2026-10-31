@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/executable_layout.hpp"
 #include "alltime_table.hpp"
 #include <algorithm>
@@ -25,11 +26,11 @@ void button(Image&out,const Image&a,const SpriteFont&spr,const LeImage&exe,int x
 }
 AllTimeTableState alltime_table_from_game(const GameState&g,const LeImage&exe,DeskRequest owner,const Image&underlay,int nation,bool relative){
  if(nation<0||nation>4)throw FormatError("alltime: nation outside 0..4");if(underlay.width!=320||underlay.height!=240)throw FormatError("alltime: parent underlay must be 320x240");AllTimeTableState s;s.owner=owner;s.underlay=underlay;s.nation=nation;s.relative=relative;s.mask=uint8_t((1U<<nation)|(relative?0x20:0));
- if(g.club_table.size()<168*0x4a)return s;s.has_data=true;s.records.resize(168);
- for(int t=0;t<168;++t){size_t b=size_t(t)*0x4a+0x1e;auto u=[&](int o){return uint16_t(g.club_table[b+size_t(o)]|uint16_t(g.club_table[b+size_t(o+1)])<<8);};auto&r=s.records[size_t(t)];r.points=u(0);r.goals_for=u(2);r.goals_against=u(4);r.wins=u(6);r.draws=u(8);r.losses=u(10);if(t<int(g.club_ids.size()))s.club_names[size_t(t)]=g.club_name(t);s.club_name_colors[size_t(t)]=team_color(g,t);}
- for(int n=0;n<5;++n)if(0x165+n<int(g.club_ids.size()))s.nation_names[size_t(n)]=g.club_name(0x165+n);
+ if(g.club_table.size()<runtime_dimensions.record_teams*0x4a)return s;s.has_data=true;s.records.resize(runtime_dimensions.record_teams);
+ for(int t=0;t<runtime_dimensions.record_teams;++t){size_t b=size_t(t)*0x4a+0x1e;auto u=[&](int o){return uint16_t(g.club_table[b+size_t(o)]|uint16_t(g.club_table[b+size_t(o+1)])<<8);};auto&r=s.records[size_t(t)];r.points=u(0);r.goals_for=u(2);r.goals_against=u(4);r.wins=u(6);r.draws=u(8);r.losses=u(10);if(t<int(g.club_ids.size()))s.club_names[size_t(t)]=g.club_name(t);s.club_name_colors[size_t(t)]=team_color(g,t);}
+ for(int n=0;n<5;++n)if(kNoTeam+n<int(g.club_ids.size()))s.nation_names[size_t(n)]=g.club_name(kNoTeam+n);
  const uint32_t start=kFirst+uint32_t(nation)*8;const int league=exe.u8(kLeague+uint32_t(nation));const uint32_t full=uint32_t(league_matchdays(league));
- for(int part=0;part<2;++part){int first=exe.u16(start+uint32_t(part)*4),end=exe.u16(::bmh::layout::AlltimeTable_AlltimeTableFromGame_RuntimeField+uint32_t(nation)*8+uint32_t(part)*4);for(int team=first;team<end;++team){if(team<0||team>=168)continue;const auto&r=s.records[size_t(team)];int played=int(r.wins)+r.draws+r.losses;if(!played)continue;uint32_t p=r.points,gf=r.goals_for,ga=r.goals_against;if(relative){p=p*full*10U/uint32_t(played);gf=gf*full*10U/uint32_t(played);ga=ga*full*10U/uint32_t(played);}AllTimeRow row;row.team=team;row.played=played;row.points=p;row.goals_for=gf;row.goals_against=ga;row.points_key=p*0x10001U+0x7d000000U;row.goal_key=gf*0x10001U-ga*0x10000U+0x7d000000U;s.rows.push_back(row);}}
+ for(int part=0;part<2;++part){int first=exe.u16(start+uint32_t(part)*4),end=exe.u16(::bmh::layout::AlltimeTable_AlltimeTableFromGame_RuntimeField+uint32_t(nation)*8+uint32_t(part)*4);for(int team=first;team<end;++team){if(team<0||team>=runtime_dimensions.record_teams)continue;const auto&r=s.records[size_t(team)];int played=int(r.wins)+r.draws+r.losses;if(!played)continue;uint32_t p=r.points,gf=r.goals_for,ga=r.goals_against;if(relative){p=p*full*10U/uint32_t(played);gf=gf*full*10U/uint32_t(played);ga=ga*full*10U/uint32_t(played);}AllTimeRow row;row.team=team;row.played=played;row.points=p;row.goals_for=gf;row.goals_against=ga;row.points_key=p*0x10001U+0x7d000000U;row.goal_key=gf*0x10001U-ga*0x10000U+0x7d000000U;s.rows.push_back(row);}}
  std::stable_sort(s.rows.begin(),s.rows.end(),[](const auto&a,const auto&b){if(a.points_key!=b.points_key)return a.points_key>b.points_key;return a.goal_key>b.goal_key;});if(s.rows.size()>24)s.rows.resize(24);return s;
 }
 AllTimeTableScreen::AllTimeTableScreen(const std::filesystem::path&data,AllTimeTableState s):state_(std::move(s)),data_(data),exe_(load_le(asset_path(data,"BMH.exe"))),font_(load_font(asset_path(data/"F","BMH3.FNT"))),header_(load_font(asset_path(data/"F","BMH2.FNT"))),sprite_(data),window_(load_vga(asset_path(data/"KB","56.VGA"))),buttons_(load_vga(asset_path(data/"KB","0.VGA"))),texts_(load_textd(asset_path(data,"TEXTD.BLK"))){if(state_.underlay.width!=320||state_.underlay.height!=240)throw FormatError("alltime: invalid parent frame");}

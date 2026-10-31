@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/player_card.hpp"
@@ -31,8 +32,8 @@ void validate(const PlayerCardState& s) {
     const auto& p=s.lineup.players.at(size_t(s.row));
     if(p.player_id!=(p.slot&0xfff)||p.row!=s.row)throw FormatError("player card: inconsistent player identity");
     if(s.statistics && s.statistics->months>12)throw FormatError("player statistics: more than twelve monthly samples");
-    if(s.loan&&(s.loan->owner<0||s.loan->owner>=168||s.loan->borrower!=s.lineup.runtime_club||
-        s.loan->borrower>=168||s.loan->months<0||s.loan->months>255||
+    if(s.loan&&(s.loan->owner<0||s.loan->owner>=runtime_dimensions.record_teams||s.loan->borrower!=s.lineup.runtime_club||
+        s.loan->borrower>=runtime_dimensions.record_teams||s.loan->months<0||s.loan->months>255||
         std::any_of(s.loan->badges.begin(),s.loan->badges.end(),[](int badge){return badge<0||badge>511;})))
         throw FormatError("player card: inconsistent ordinary loan context");
 }
@@ -67,7 +68,7 @@ void context(PlayerCardState& out,const StaticMemory& memory,const Bytes& club_h
             // the ordinary borrower row, not the lender's ClubInfo_FormatError_RuntimeField snapshot.
             PlayerCardLoan detail;
             detail.owner=int(loan>>12&0x3ff);detail.borrower=int(loan>>22&0x3ff);
-            if(detail.borrower!=out.lineup.runtime_club||detail.owner>=168||detail.borrower>=168||out.loan||!memory.has(::bmh::layout::ClubPlayerDetail_InvalidArgument_RuntimeField+i)){
+            if(detail.borrower!=out.lineup.runtime_club||detail.owner>=runtime_dimensions.record_teams||detail.borrower>=runtime_dimensions.record_teams||out.loan||!memory.has(::bmh::layout::ClubPlayerDetail_InvalidArgument_RuntimeField+i)){
                 out.unsupported_record="loan_record";continue;
             }
             detail.months=memory.u8(::bmh::layout::ClubPlayerDetail_InvalidArgument_RuntimeField+i);
@@ -125,7 +126,7 @@ PlayerCardState player_card_from_save(const SaveState& s,const LeImage& exe,int 
 }
 PlayerCardState player_card_from_game(const GameState& g,const LeImage& exe,int row,uint64_t revision) {
     Bytes short_names;
-    for(int club=0;club<exe.u16(::bmh::layout::CareerSession_DataDirectory_RuntimeField2);++club)short_names.push_back(g.memory.u8(::bmh::layout::ClubShortNameOffsets+club));
+    for(int club=0;club<exe.u16(::bmh::layout::CareerSession_DataDirectory_RuntimeField2);++club)short_names.push_back(g.club_short_offset(club));
     auto out=project(lineup_from_game(g,exe,revision),exe,row,g.club_heap_78,g.club_ids,g.club_names,short_names);
     context(out,g.memory,g.club_heap_78,g.club_ids,g.club_names,short_names);
     const size_t months=size_t(out.lineup.manager_slot)*0xb0c+0x286;

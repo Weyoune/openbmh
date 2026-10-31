@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/flow.hpp"
 
@@ -1353,7 +1354,7 @@ void StartupFlow::show_transfer_offer(PreparationState preparation, OutgoingTran
         editor.manager_slot != request->manager_slot || editor.runtime_club != request->runtime_club ||
         (!poach && (editor.list_entry != request->bid.list_entry || editor.source_slot != request->bid.source_slot ||
         editor.player != request->bid.player)) ||
-        (poach && (editor.list_entry<40 || editor.list_entry>43 || editor.source_slot!=2928+editor.list_entry ||
+        (poach && (editor.list_entry<40 || editor.list_entry>43 || editor.source_slot!=runtime_dimensions.pool_first+editor.list_entry ||
                    editor.player<0 || editor.initial_action_loan)) || editor.revision != preparation.desktop.revision ||
         preparation.desktop.revision != request->revision + 1)
         throw FormatError("transfer offer: invalid opening acknowledgement");

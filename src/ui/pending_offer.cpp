@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/pending_offer.hpp"
@@ -35,7 +36,7 @@ int pending_offer_owner_team(const GameState& game, int manager) {
         throw FormatError("pending offer UI: missing retained Source club");
     const int team = int(game.manager_records[base + 0x290]) |
         (int(game.manager_records[base + 0x291]) << 8);
-    if (team >= 138) throw FormatError("pending offer UI: invalid retained Source club");
+    if (team >= runtime_dimensions.league_teams) throw FormatError("pending offer UI: invalid retained Source club");
     return team;
 }
 
@@ -59,8 +60,8 @@ bool pending_offer_spare_buyer(const GameState& game, int raw_offer_slot, int ex
     const int buyer = team_at(4);
     const uint32_t offer = ::bmh::layout::OfferSlots + uint32_t(raw_offer_slot) * 4;
     const uint32_t list = ::bmh::layout::EditorList + uint32_t(raw_offer_slot + 40) * 0x58;
-    const size_t pool = 0xb70 + size_t(raw_offer_slot + 40);
-    if (team_at(0) != kNoTeam || buyer >= 138 || buyer != expected_team || !game.memory.has(offer + 3) ||
+    const size_t pool = runtime_dimensions.pool_first + size_t(raw_offer_slot + 40);
+    if (team_at(0) != kNoTeam || buyer >= runtime_dimensions.league_teams || buyer != expected_team || !game.memory.has(offer + 3) ||
         !game.memory.has(list + 0x57) || pool >= game.squad_slots.size())
         return false;
     const uint32_t word = game.memory.u32(offer);
@@ -69,7 +70,7 @@ bool pending_offer_spare_buyer(const GameState& game, int raw_offer_slot, int ex
     if (word == 0xffffffffu || int(word & 31) != owner ||
         player == 0xfff || size_t(player) >= game.players.size() ||
         (game.squad_slots[pool] & 0xfff) != player || game.memory.u16(list) != buyer ||
-        seller >= 138 || seller == buyer || (owner > 0 && team_at(size_t(owner)) != seller))
+        seller >= runtime_dimensions.league_teams || seller == buyer || (owner > 0 && team_at(size_t(owner)) != seller))
         return false;
     return true;
 }

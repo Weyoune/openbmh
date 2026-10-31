@@ -261,7 +261,7 @@ int32_t stadium_required_attendance(const GameState& source, int manager) {
     if (manager < 0 || manager > 4) throw FormatError("stadium attendance: invalid manager");
     GameState g = source;
     const int team = g.manager_teams.at(size_t(manager));
-    const int league = team > 0x164 ? 0 : team_league(team);
+    const int league = team > (kNoTeam - 1) ? 0 : team_league(team);
     if (league < 0 || league >= kLeagueCount)
         throw FormatError("stadium attendance: manager has no Source league");
     const int home_games = league_matchdays(league) / 2;

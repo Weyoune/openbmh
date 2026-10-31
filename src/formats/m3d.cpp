@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/m3d.hpp"
+#include "formats/data_profile.hpp"
 
 #include <cstring>
 
@@ -33,6 +34,10 @@ std::string pool_string(const Bytes& pool, size_t offset) {
 }
 
 }  // namespace
+
+Database load_database(const std::filesystem::path& path) {
+    return load_database(path, load_data_profile(path.parent_path()).counts);
+}
 
 Database load_database(const std::filesystem::path& path, const DbCounts& c) {
     Bytes d = read_file(path);

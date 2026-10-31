@@ -482,7 +482,7 @@ void order_national_cup_ties(GameState& g, int teams, int offset) {
     for (int i = 0; i < teams; i += 2) {
         if (lower <= team(i + 1) && team(i) < lower)
             swap16(mem, list + uint32_t(i) * 2, list + uint32_t(i + 1) * 2);
-        auto league = [](int t) { return t > 0x164 ? 0 : team_league(t); };
+        auto league = [](int t) { return t > (kNoTeam - 1) ? 0 : team_league(t); };
         const int la = league(team(i)), lb = league(team(i + 1));
         weights.push_back(uint8_t(kWeight[la < 10 ? la : 9] + kWeight[lb < 10 ? lb : 9]));
     }

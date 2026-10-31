@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/league_table.hpp"
 
@@ -145,7 +146,7 @@ LeagueTableState project_league_table(const bmh::GameState& game, int manager_sl
     // not a TEXTD entry at the domestic league-title address.
     state.league_name = league_id < 5
         ? original_to_utf8(bmh::league_name(game, league_id))
-        : original_to_utf8(game.club_name(0x165 + league_id - 4));
+        : original_to_utf8(game.club_name(kNoTeam + league_id - 4));
     state.header_text = original_to_utf8(bmh::message_text(game, ::bmh::layout::LeagueTable_OriginalToUtf8_TextPointer2));
     // SelectsOriginalPanelWhenClear selects the original panel when SolidPanelBackground is clear.
     // Older/minimal saves may not serialize this presentation option.

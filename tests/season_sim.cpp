@@ -55,7 +55,7 @@ void check_state(const GameState& g, const std::string& when, Checks& c) {
     std::set<int> seen;
     // (only the clubs' squads up to format field = 0xb70: the national squad and the other
     //  lists behind them hold club players a second time)
-    for (size_t s = 0; s < g.squad_slots.size() && s < 0xb70; s++) {
+    for (size_t s = 0; s < g.squad_slots.size() && s < size_t(runtime_dimensions.pool_first); s++) {
         const int id = g.squad_slots[s] & 0xfff;
         if (id == 0xfff) continue;
         if (!seen.insert(id).second) c.fail("player in two squad slots", when + " player " + std::to_string(id));
@@ -81,7 +81,7 @@ bool capture_duplicate(const GameState& before, const GameState& after,
                        const std::filesystem::path& directory) {
     std::set<int> seen;
     int duplicate = -1;
-    for (size_t slot = 0; slot < 2928 && slot < after.squad_slots.size(); ++slot) {
+    for (size_t slot = 0; slot < size_t(runtime_dimensions.pool_first) && slot < after.squad_slots.size(); ++slot) {
         const int id = after.squad_slots[slot] & 0xfff;
         if (id != 0xfff && !seen.insert(id).second) { duplicate = id; break; }
     }

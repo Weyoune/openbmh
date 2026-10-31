@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/executable_layout.hpp"
 #include "series_records.hpp"
 
@@ -50,7 +51,7 @@ SeriesRecordsProjection series_records_from_game(const GameState& game, const Le
         throw FormatError("series records: manager record missing");
     const size_t manager_at = size_t(manager_slot) * kManagerRecord;
     const int team = int(read16(game.manager_records, manager_at + 0x290));
-    if (team < 0 || team > 0x165)
+    if (team < 0 || team > kNoTeam)
         throw FormatError("series records: invalid Source manager club");
 
     SeriesRecordsProjection out;
@@ -58,7 +59,7 @@ SeriesRecordsProjection series_records_from_game(const GameState& game, const Le
     out.runtime_team = team;
     out.gradient_text = (!game.memory.has(::bmh::layout::TextGradientDisabled) || game.memory.u8(::bmh::layout::TextGradientDisabled) == 0) &&
                         exe.u8(::bmh::layout::TextGradientMode) == 2;
-    if (team >= 0x5a || game.club_table.size() < 168 * kClubRecord) {
+    if (team >= 0x5a || game.club_table.size() < runtime_dimensions.record_teams * kClubRecord) {
         out.source_available = false; // TeamLeague shows SeriesRecordsRuntimeField outside its 0..89 table range.
         return out;
     }
@@ -106,7 +107,7 @@ SeriesRecordsScreen::SeriesRecordsScreen(const std::filesystem::path& data,
       texts_(load_textd(asset_path(data, "TEXTD.BLK"))),
       font_(load_font(asset_path(data / "F", "BMH3.FNT"))) {
     if (projection_.manager_slot < 0 || projection_.manager_slot >= 4 ||
-        projection_.runtime_team < 0 || projection_.runtime_team > 0x165 ||
+        projection_.runtime_team < 0 || projection_.runtime_team > kNoTeam ||
         (projection_.source_available &&
          (projection_.league < 0 || projection_.league >= kLeagueCount ||
           projection_.league_row < 0 || projection_.league_row >= kLeagueSizes[size_t(projection_.league)])) ||

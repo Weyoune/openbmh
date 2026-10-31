@@ -90,6 +90,8 @@ GameState GameState::from_save(const SaveState& save, const DbCounts& c) {
     auto bytes = [&](uint32_t address) {
         return std::vector<uint8_t>(save.data(address), save.data(address) + save.block(address).size);
     };
+    g.club_kits = bytes(layout::ClubKitSelectors);
+    g.club_short_offsets = bytes(layout::ClubShortNameOffsets);
     g.manager_results = bytes(::bmh::layout::ManagerMatchHistory);
     g.manager_ratings = bytes(::bmh::layout::ManagerRatings);
     g.position_history = bytes(::bmh::layout::LeagueRankHistory);
@@ -111,6 +113,13 @@ GameState GameState::from_save(const SaveState& save, const DbCounts& c) {
     g.player_name_offsets = words16(::bmh::layout::PlayerNameOffsets);
     g.season = int16_t(save.data(::bmh::layout::SeasonIndex)[0] | save.data(::bmh::layout::SeasonIndex)[1] << 8);
     return g;
+}
+
+uint8_t GameState::club_kit(int team) const {
+    return counts.league_teams == 164 ? club_kits.at(size_t(team)) : memory.u8(layout::ClubKitSelectors + uint32_t(team));
+}
+uint8_t GameState::club_short_offset(int team) const {
+    return counts.league_teams == 164 ? club_short_offsets.at(size_t(team)) : memory.u8(layout::ClubShortNameOffsets + uint32_t(team));
 }
 
 int GameState::manager_of(int team) const {

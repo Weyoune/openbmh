@@ -153,7 +153,7 @@ std::string original_literal(const LeImage& exe, uint32_t address) {
 }
 
 int source_league(const LeImage& exe, int team) {
-    if (team > 0x164) return 0;
+    if (team > (kNoTeam - 1)) return 0;
     if (team < 0) invalid("negative team for Source league lookup");
     int cumulative = 0;
     for (int league = 0; league < 9; ++league) {

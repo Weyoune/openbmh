@@ -22,8 +22,8 @@ struct AllTimeTableState {
     Image underlay;
     std::vector<AllTimeRecord> records;
     std::array<std::string,5> nation_names{};
-    std::array<std::string,168> club_names{};
-    std::array<uint8_t,168> club_name_colors{};
+    std::vector<std::string> club_names = std::vector<std::string>(size_t(runtime_dimensions.record_teams));
+    std::vector<uint8_t> club_name_colors = std::vector<uint8_t>(size_t(runtime_dimensions.record_teams));
     std::vector<AllTimeRow> rows;
     int nation=0;
     uint8_t mask=1;

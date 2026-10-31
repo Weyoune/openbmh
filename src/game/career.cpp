@@ -154,7 +154,7 @@ GameState startup_state(const LeImage& exe, const Database& db, const Bytes& m3_
                 if (b.heap) {
                     for (size_t i = 0; i < db.players.size() && 4 * i + 3 < data.size(); i++) {
                         uint32_t w = b.address == ::bmh::layout::PlayerConditionTechniqueForm ? db.players[i].w35c : b.address == ::bmh::layout::PlayerSkillWords ? db.players[i].w368 : db.players[i].w364;
-                        if (b.address == ::bmh::layout::PlayerSkillWords && i + 32 >= db.players.size())
+                        if (b.address == ::bmh::layout::PlayerSkillWords && !runtime_dimensions.expanded && i + 32 >= db.players.size())
                             w = (w & 0x07ffffffu) | uint32_t(exe.u8(::bmh::layout::Career_BuildStadium_RuntimeField4 - uint32_t(db.players.size() - i))) << 27;
                         for (int k = 0; k < 4; k++) data[4 * i + size_t(k)] = uint8_t(w >> (8 * k));
                     }
@@ -213,14 +213,14 @@ void new_career_markets_and_moods(GameState& g, GameRandom& game, WatcomRandom& 
 }
 
 bool new_career_players(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteReport& report) {
-    for (size_t slot = 0; slot < 2928; slot++) {
+    for (size_t slot = 0; slot < runtime_dimensions.pool_first; slot++) {
         const int id = g.squad_slots.at(slot) & 0x0fff;
         if (id == 0x0fff) continue;
         Player& p = g.players.at(size_t(id));
         p.w364 |= uint32_t(rand.range(4, 0x10)) << 21;
         p.w368 = (p.w368 & 0xffffc000u) + uint32_t(rand.range(0, 0x3fff));
     }
-    for (int slot = 3096; slot < 3096 + 0x36; slot++)
+    for (int slot = runtime_dimensions.extra_slots_first; slot < runtime_dimensions.extra_slots_first + 0x36; slot++)
         if (!release_player(g, slot, game, rand, report)) return false;
     return !report.unsupported;
 }
@@ -258,7 +258,7 @@ bool human_club(const GameState& g, int team) {
     const int managers = g.memory.u8(::bmh::layout::ManagerCount);
     for (int m = 0; m < managers; m++)
         if (team_of(g, m) == uint16_t(team)) return true;
-    return team_of(g, 0) == 0x165 && team_of(g, 4) == uint16_t(team);
+    return team_of(g, 0) == kNoTeam && team_of(g, 4) == uint16_t(team);
 }
 
 // OpenBMH deviates from the original: skips reserved calendar positions when assigning a joining manager to a club.
@@ -431,17 +431,17 @@ bool career_add_manager(GameState& g, const LeImage& exe, int m, const CareerMan
     if (!g.memory.has(::bmh::layout::ManagerCount) || m < 0 || m >= 4 ||
         g.memory.u8(::bmh::layout::ManagerCount) > 4 || m >= g.memory.u8(::bmh::layout::ManagerCount) ||
         size_t(m) >= g.manager_teams.size() || g.manager_records.size() < 5 * kRecord ||
-        choice.team < 0 || choice.team >= 168 || size_t(choice.team) >= g.club_ids.size() ||
+        choice.team < 0 || choice.team >= runtime_dimensions.record_teams || size_t(choice.team) >= g.club_ids.size() ||
         choice.league < 0 || choice.league > 4 || choice.strength < 0 || choice.strength > 2 ||
         choice.portrait < 0 || choice.portrait > 11 || choice.name.size() > 24 ||
         g.tactics.size() < size_t(m + 1) * 0x840 ||
         g.manager_ratings.size() < size_t(m + 1) * 0x3c ||
-        g.manager_results.size() < g.manager_teams.size() * 0x690 ||
-        g.squad_slots.size() < kSquadSlots || g.club_ids.size() < 168 ||
-        g.team_morale.size() < 168 || g.team_flags.size() < 168 ||
-        g.club_heap_bc.size() < 168 * 2 || g.club_heap_78.size() < 168 * 2 ||
-        g.club_heap_b8.size() < 168 || g.position_history.size() < 138 * 0x1a ||
-        (!g.club_table.empty() && g.club_table.size() < 168 * 0x4a) ||
+        g.manager_results.size() < g.manager_teams.size() * (runtime_dimensions.record_teams * 10) ||
+        g.squad_slots.size() < kSquadSlots || g.club_ids.size() < runtime_dimensions.record_teams ||
+        g.team_morale.size() < runtime_dimensions.record_teams || g.team_flags.size() < runtime_dimensions.record_teams ||
+        g.club_heap_bc.size() < runtime_dimensions.record_teams * 2 || g.club_heap_78.size() < runtime_dimensions.record_teams * 2 ||
+        g.club_heap_b8.size() < runtime_dimensions.record_teams || g.position_history.size() < runtime_dimensions.league_teams * 0x1a ||
+        (!g.club_table.empty() && g.club_table.size() < runtime_dimensions.record_teams * 0x4a) ||
         g.player_bonus.size() < g.players.size() || g.player_cards.size() < g.players.size() ||
         !exe.contains(::bmh::layout::Career_CareerAddManager_ExecutableField) || !exe.contains(::bmh::layout::Career_BuildStadium_RuntimeField3 + 0x15 * 5) ||
         !exe.contains(::bmh::layout::Career_BuildStadium_RuntimeField + 4 * 0x17 + 0x15)) {
@@ -554,7 +554,7 @@ bool career_add_manager(GameState& g, const LeImage& exe, int m, const CareerMan
             new_board_entry(g, m, int(i), int(slot), rand);
             g.tactics.at(size_t(m) * 0x840 + i * 0x58 + 0xd) = 100;
         }
-    for (size_t i = 0; i < 0x690; i++) g.manager_results.at(size_t(m) * 0x690 + i) = 0xff;
+    for (size_t i = 0; i < (runtime_dimensions.record_teams * 10); i++) g.manager_results.at(size_t(m) * (runtime_dimensions.record_teams * 10) + i) = 0xff;
     const uint8_t level = mem.u8(::bmh::layout::Difficulty);
     const uint32_t money = level == 0 ? 50000000u : 4000000u - level * 200000u;
     put32(r, rec + 0x314, money);

@@ -1,9 +1,20 @@
 # International-league POC
 
-Working branch: poc/1.1-international, based on v1.0.2. The stable main line is separate.
+Working branch: `poc/1.1-international`, based on `v1.0.2`. Stable main remains separate.
 
-The explicit `OBMHPROF.INI` profile marker selects classic-plus-1; missing metadata retains the original Classic mode. Unknown or inconsistent metadata is rejected. Profiles define database counts and roster boundaries, with tests for the existing layout, the expanded layout and packed-player limits.
+Implemented:
 
-Target: five German divisions unchanged, international sizes 18/20/18/18, 164 league clubs, 24 roster slots and normally 20 starting players per league club. The expanded runtime needs 4,158 roster and auxiliary slots. Player IDs remain below the 4,095 empty sentinel; absolute slot references must not be truncated to twelve bits.
+- Explicit `OBMHPROF.INI` metadata; unmarked installations retain Classic dimensions.
+- Five German divisions unchanged; international sizes 18/20/18/18, 164 league clubs.
+- Twenty starting players and 24 slots per league club; 4,158 runtime roster/auxiliary slots.
+- Profile-aware master-database and executable-data views, preserving executable bytes on disk.
+- Count-derived club records, opponent histories, kit/short-name and fair-play tables.
+- Per-league fixtures and 38 foreign calendar dates, with smaller leagues stopping at 34 rounds.
+- Extended save identity `O1.1`; Classic retains `V2.24` and its existing dimensions.
+- Offline private data preparation, provenance, crest fitting and Original-format VGA output.
 
-This is a development status, not a claim of completed expanded gameplay. Next stages migrate semantic limits and index-dependent buffers, prepare the private dataset, distinguish extended save identity, and verify two complete seasons. No original data or rendered proprietary assets belong in this public tree. Classic readers retain their default counts and byte structure.
+Local integration evidence so far: the expanded career completed 180 turns with seed 1 (three season ends), and another 180 with seed 11 (two season ends). No simulator invariant violations or contract-policy errors were reported. These are automated manager-policy runs, not claims of complete human gameplay QA or validation of all editions/platforms.
+
+The prepared private dataset has 445 club/country entries, 3,334 players and 263 individual foreign club crests. Original German rosters and all 2,574 Original player word records are preserved by assertions during preparation. All 263 foreign crests have supplied assets; no fictional crest fallback was needed. Donor fields retain their real/fictional provenance. No original game content is committed here.
+
+Remaining release gates: complete configured regression tests, explicit save/reload and cross-profile rejection checks, screenshots of the expanded tables/crests, and platform package validation. See [FORMAT.md](FORMAT.md) for dimensions, preparation and distribution boundaries. A development commit is not a completed release claim.

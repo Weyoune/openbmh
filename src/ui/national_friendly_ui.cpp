@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/executable_layout.hpp"
 #include "national_friendly_ui.hpp"
 
@@ -6,9 +7,9 @@
 
 namespace bmh::ui {
 namespace {
-constexpr int kNationalTeam = 0x165;
-constexpr int kFirstNationTeam = 0x166; // Nation zero is intentionally not selectable.
-constexpr int kLastNationTeam = 0x165 + 61;
+const int& kNationalTeam = kNoTeam;
+int first_nation_team() { return kNoTeam + 1; } // Nation zero is intentionally not selectable.
+int last_nation_team() { return kNoTeam + 61; }
 
 TaxDialogProjection question(const NationalFriendlyIdentity& identity, uint16_t flags,
                              int manager, const GameState& game, std::string body) {
@@ -70,14 +71,14 @@ NationalFriendlyUiAction NationalFriendlyUi::show(TaxDialogProjection p) const {
 
 NationalFriendlyUiAction NationalFriendlyUi::select_opponent(const GameState& g, int team) {
     if (stage_ != NationalFriendlyUiStage::picker) return {};
-    if (team < kFirstNationTeam || team > kLastNationTeam) return cancel();
+    if (team < first_nation_team() || team > last_nation_team()) return cancel();
     opponent_ = team;
     stage_ = NationalFriendlyUiStage::venue_question;
     return show(question(identity_, 0x606, caller_.manager, g, bmh::message_text(g, ::bmh::layout::Controller_ClubFriendlyState_TextPointer)));
 }
 
 NationalFriendlyUiAction NationalFriendlyUi::answer_venue(bool yes) {
-    if (stage_ != NationalFriendlyUiStage::venue_question || opponent_ < kFirstNationTeam) return {};
+    if (stage_ != NationalFriendlyUiStage::venue_question || opponent_ < first_nation_team()) return {};
     manager_home_ = yes;
     stage_ = NationalFriendlyUiStage::quote_pending;
     NationalFriendlyUiAction a;

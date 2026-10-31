@@ -9,7 +9,6 @@
 #include <sstream>
 
 #include "game/messages.hpp"
-#include "game/state.hpp"
 #include "ui/manager.hpp"
 #include "ui/setup.hpp"
 

@@ -35,9 +35,9 @@ constexpr uint8_t kCompetitionClass[24] = {0, 1, 2, 2, 2, 3, 3, 3, 3, 255, 0, 25
 // Crowd interest per descriptor type (MatchdaySetupRuntimeField).
 constexpr uint8_t kTypeInterest[24] = {5, 5, 10, 15, 12, 10, 5, 10, 5, 10, 5, 31, 10, 10, 10, 0, 0, 1, 0, 0, 0, 12, 0, 0};
 // Number of clubs taking part in league play (CareerSession_DispatchLineup_RuntimeField).
-constexpr int kLeagueClubCount = 0x8a;
+const int& kLeagueClubCount = runtime_dimensions.league_teams;
 // Squad slots checked by the driver (CareerRuntimeField).
-constexpr size_t kSquadSlotCount = 0xb70;
+const int& kSquadSlotCount = runtime_dimensions.pool_first;
 
 // The attendance tables MatchdaySetup_Attendance_ExecutableField .. MatchdaySetupRuntimeField2 as one block, because the original
 // indexes them with league classes 0-7 although they only have four entries: classes 4-7
@@ -76,7 +76,7 @@ void wr16(Bytes& b, size_t o, uint16_t v) { b.at(o) = uint8_t(v), b.at(o + 1) = 
 
 // TeamLeague2: league of a club, 0 for the special ids above 0x164, 9 outside the leagues.
 int league_of(int team) {
-    if (team > 0x164) return 0;
+    if (team > (kNoTeam - 1)) return 0;
     return team_league(team);
 }
 
@@ -376,7 +376,7 @@ void indoor_tournament_draw(GameState& g, GameRandom& game, WatcomRandom& rand) 
     indoor_tournament_reset(g);
     uint8_t attempts = 0;
     const int guest = rand.range(0, 1);
-    if (guest != 0) mem.set16(kTeams, uint16_t(rand.range(90, 137)));
+    if (guest != 0) mem.set16(kTeams, uint16_t(rand.range(runtime_dimensions.domestic_teams, runtime_dimensions.league_teams - 1)));
     int count = guest != 0;
     int n = rand.range(5, 7);
     uint8_t lo = 0, hi = uint8_t(kLeagueSizes[0]);
@@ -431,7 +431,7 @@ void indoor_tournament_draw(GameState& g, GameRandom& game, WatcomRandom& rand) 
     int sum = 0;  // IndoorTournamentReset
     for (uint32_t k = 0; k < 8; k++) {
         const int t = mem.u16(kTeams + k * 2);
-        const int league = t > 0x164 ? 0 : team_league(t);  // TeamLeague2
+        const int league = t > (kNoTeam - 1) ? 0 : team_league(t);  // TeamLeague2
         if (league < 2) sum += (0x26 - table_position(g, t)) - kLeagueSizes[0] * league;
         else if (league < 5) sum += 1;
         else sum += 0x19;
@@ -563,6 +563,7 @@ std::vector<MatchGroup> setup_matchday(GameState& g, uint32_t competitions, cons
         for (int k = from; k < to; k++) {
             // FixturesFromGenerateFixtures(k)
             for (int league = kGroupLeague[k]; league < kGroupLeague[k] + kGroupLeagues[k]; league++) {
+                if (runtime_dimensions.expanded && g.league_rounds.at(size_t(league)) >= 2 * (kLeagueSizes[league] - 1)) continue;
                 turn_step = "setup: winter postponements";
                 winter_postponements(g, ctx.season_day, league, game, rand);
                 const int round = g.league_rounds.at(size_t(league));
@@ -886,7 +887,7 @@ bool select_live_match(GameState& g, int home, int away) {
 // record +0x8ac / 16 + 40.
 void man_marking(GameState& g, int own_manager, int own, int other_manager, int other, int chance, int rate,
                  WatcomRandom& rand) {
-    constexpr int kLeagueTeams = 138;  // CareerSession_DispatchLineup_RuntimeField
+    const int kLeagueTeams = runtime_dimensions.league_teams;  // CareerSession_DispatchLineup_RuntimeField
     if (g.indoor || own >= kLeagueTeams || other >= kLeagueTeams || (own_manager < 0 && other_manager < 0)) return;
     if (other_manager >= 0)
         for (size_t s = 0; s < 24; s++) {

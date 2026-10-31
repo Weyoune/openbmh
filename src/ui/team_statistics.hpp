@@ -45,7 +45,7 @@ struct TeamStatisticsProjection {
     int active_manager_slot = -1;
     int active_manager_team = -1;
     std::string active_manager_team_name;
-    std::array<uint8_t, 0x690> active_manager_results{};
+    std::vector<uint8_t> active_manager_results = std::vector<uint8_t>(size_t(runtime_dimensions.record_teams) * 10);
     bool has_active_head_to_head = false;
     bool source_has_league_panel = true;
     bool source_has_head_to_head = false;

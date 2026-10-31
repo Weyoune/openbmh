@@ -53,7 +53,7 @@ struct ClubPlayerDetailContext {
 
 // OpenTransferEditor passes actual slots CareerRuntimeField + entry (0..39) for ordinary
 // transfer-market pool cards. It never turns the entry into a squad row.
-constexpr int kClubPlayerDetailMarketPoolFirst = 0xb70;
+inline const int& kClubPlayerDetailMarketPoolFirst = runtime_dimensions.pool_first;
 constexpr int kClubPlayerDetailMarketPoolCount = 40;
 
 // Resolves runtime club, explicit row and Source loan/national ownership without

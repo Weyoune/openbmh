@@ -103,7 +103,7 @@ void rate_side(GameState& g, const MatchSetup& m, int side, int previous6, Watco
         }
     }
     if (side == 0) {
-        int league = team > 0x164 ? 0 : team_league(team);  // TeamLeague2
+        int league = team > (kNoTeam - 1) ? 0 : team_league(team);  // TeamLeague2
         int base = kLeagueCrowd[league < 10 ? league : 9] * 1000;
         if (unsigned(rand.range(base + 3000, base + 6000)) < unsigned(m.spectators)) {
             // a human manager's side with record +0x289 set suffers more from a full house

@@ -2,6 +2,7 @@
 #include "formats/badge_policy.hpp"
 #include "game/calendar.hpp"
 #include "formats/executable_layout.hpp"
+#include "formats/data_profile.hpp"
 #include "app/career_session.hpp"
 
 #include <stdexcept>
@@ -71,7 +72,7 @@ int national_opportunities_rank(const GameState& game,int team,std::array<uint8_
     ranks.fill(1);
     const int rounds=game.league_rounds.empty()?0:int8_t(game.league_rounds.at(0));
     if(rounds<2||rounds>=league_matchdays(0))return 0;
-    return team>=138?9:0;
+    return team>=runtime_dimensions.league_teams?9:0;
 }
 
 uint8_t source_runtime_byte(const GameState& state,const std::map<uint32_t,uint8_t>& runtime,
@@ -548,8 +549,13 @@ static void install_league_sizes(const LeImage& exe) {
     install_calendar_rules(exe);
 }
 
+static std::filesystem::path install_session_profile(const std::filesystem::path& data) {
+    install_runtime_profile(load_data_profile(data));
+    return data;
+}
+
 CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_seed)
-    : data_directory_(data), exe_(load_le(data / "BMH.exe")),
+    : data_directory_(install_session_profile(data)), exe_(load_le(data / "BMH.exe")),
       db_(load_database(data / "M3D.MAN")),
       texts_(load_textd(data / "TEXTD.BLK")),
       rand_(watcom_seed) {
@@ -576,7 +582,7 @@ CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_
 
 CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_seed,
                              const std::filesystem::path& save_path)
-    : data_directory_(data), exe_(load_le(data / "BMH.exe")), db_(load_database(data / "M3D.MAN")),
+    : data_directory_(install_session_profile(data)), exe_(load_le(data / "BMH.exe")), db_(load_database(data / "M3D.MAN")),
       texts_(load_textd(data / "TEXTD.BLK")), rand_(watcom_seed) {
     install_league_sizes(exe_);
     turn_driver_.alternate_match_event_roll = exe_.u8(::bmh::layout::AlternateEventRoll) != 0;
@@ -586,8 +592,8 @@ CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_
     session_id_ = next_session_id.fetch_add(1, std::memory_order_relaxed);
     initialize_club_modal_runtime();
     const Savegame file = load_savegame(save_path);
-    if (!file.checksum_ok || file.version != "V2.24") throw std::runtime_error("savegame: unsupported or damaged FBM");
-    const DbCounts counts{exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField), exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField3), exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField2), exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField4)};
+    if (!file.checksum_ok || file.version != (runtime_dimensions.expanded ? "O1.1" : "V2.24")) throw std::runtime_error("savegame: unsupported or damaged FBM");
+    const DbCounts counts{exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField), exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField3), exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField2), exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField4), db_.counts.league_teams, db_.counts.cup_teams};
     const SaveState save(file.stream, counts);
     g_ = GameState::from_save(save, counts);
     // CompetitionPointers2, after DeskDate2: these are process statics, not FBM fields.
@@ -1278,7 +1284,7 @@ std::optional<ui::StrengthsIdentity> CareerSession::begin_friendly_opponent_tabl
         uint64_t revision,std::string& error) {
     error.clear();
     const auto request=strengths_open_request(revision);
-    if(!request||request->identity.runtime_club>=168||request->identity.source_param2||
+    if(!request||request->identity.runtime_club>=runtime_dimensions.record_teams||request->identity.source_param2||
        league_family_owner_||strengths_owner_||league_pairings_draft_) {
         error="friendly table: unavailable club entry";return {};
     }
@@ -1326,7 +1332,7 @@ std::optional<int> CareerSession::resolve_friendly_table_opponent(
     if(visible.runtime_team_id!=request.runtime_team||visible.club_identity_key!=request.expected_club_identity||
        visible.runtime_team_id<0||size_t(visible.runtime_team_id)>=g_.club_ids.size()||
        visible.club_identity_key!=int(g_.club_ids[size_t(visible.runtime_team_id)])||
-       normal.rank!=row+1||normal.runtime_team_id<0||normal.runtime_team_id>=168||
+       normal.rank!=row+1||normal.runtime_team_id<0||normal.runtime_team_id>=runtime_dimensions.record_teams||
        size_t(normal.runtime_team_id)>=g_.club_ids.size()||
        normal.club_identity_key!=int(g_.club_ids[size_t(normal.runtime_team_id)])) {
         error="friendly table: opponent row identity changed";return {};
@@ -1783,13 +1789,13 @@ std::optional<CareerSession::LiveOverviewProjection> CareerSession::open_running
             // CupGroupOverviewEffects resolves this exact active descriptor through FindCup(selector, ordinal).
             const int competition_id = int16_t(g_.memory.u16(cup_entry_address(entry_index)+0x18));
             int stable_team = request.runtime_team;
-            if (stable_team > 0x164) {
+            if (stable_team > (kNoTeam - 1)) {
                 const size_t backup = 4 * 0xb0c + 0x290;
                 if (request.manager_slot != 0 || backup + 2 > g_.manager_records.size())
                     throw FormatError("live overview: unsupported national cup owner");
                 stable_team = int(uint16_t(g_.manager_records[backup] | uint16_t(g_.manager_records[backup+1])<<8));
             }
-            if (stable_team < 0 || stable_team >= 138 || size_t(stable_team) >= g_.club_ids.size())
+            if (stable_team < 0 || stable_team >= runtime_dimensions.league_teams || size_t(stable_team) >= g_.club_ids.size())
                 throw FormatError("live overview: missing stable cup owner identity");
             ui::OtherGamesIdentity identity;
             identity.manager_slot=request.manager_slot; identity.runtime_team=request.runtime_team;
@@ -2259,7 +2265,7 @@ std::optional<ui::StrengthsIdentity> CareerSession::dispatch_family_table_team_i
         if(poach_selection && *poach_selection) {
             const auto chosen=club_player_detail_context(next,**poach_selection);
             if(chosen.selection.runtime_team!=selected_team || chosen.source_slot<0 ||
-               chosen.source_slot>=0xb70 || chosen.human_loan)
+               chosen.source_slot>=runtime_dimensions.pool_first || chosen.human_loan)
                 throw FormatError("poach: card returned a different ordinary squad player");
             refreshed.expected_family_word=next.memory.u16(family_word_at);
             // A successful param1=1 selection leaves50775 here. Its common
@@ -2575,12 +2581,12 @@ std::optional<ui::TopScorersState> CareerSession::open_top_scorers(
                 throw FormatError("top scorers: unsupported national-coach owner");
             stable_team = int(uint16_t(g_.manager_records[backup] |
                                        uint16_t(g_.manager_records[backup + 1]) << 8));
-        } else if (team < 0 || team >= 138) {
+        } else if (team < 0 || team >= runtime_dimensions.league_teams) {
             throw FormatError("top scorers: manager team is outside Source league scope");
         }
-        if (stable_team < 0 || stable_team >= 138 || size_t(stable_team) >= g_.club_ids.size())
+        if (stable_team < 0 || stable_team >= runtime_dimensions.league_teams || size_t(stable_team) >= g_.club_ids.size())
             throw FormatError("top scorers: missing stable club identity");
-        const int league = team > 0x164 ? 0 : team_league(team);
+        const int league = team > (kNoTeam - 1) ? 0 : team_league(team);
         if (league < 0 || league > 8)
             throw FormatError("top scorers: manager has no supported Source league");
 
@@ -2645,7 +2651,7 @@ std::optional<CareerSession::TopScorersDispatch> CareerSession::dispatch_top_sco
             (backup + 2 <= g_.manager_records.size() ?
                 int(uint16_t(g_.manager_records[backup] |
                              uint16_t(g_.manager_records[backup + 1]) << 8)) : -1) : identity.runtime_team;
-        if (identity_team < 0 || identity_team >= 138 ||
+        if (identity_team < 0 || identity_team >= runtime_dimensions.league_teams ||
             size_t(identity_team) >= g_.club_ids.size() ||
             int(g_.club_ids[size_t(identity_team)]) != identity.club_identity)
             throw FormatError("top scorers: stable club identity changed");
@@ -2748,9 +2754,9 @@ std::optional<ui::OpportunitiesState> CareerSession::open_opportunities(
         const int manager=request.manager_slot,team=g_.manager_teams[size_t(manager)];
         const int league=national_source_case?0:team_league(team);
         if(national_source_case) {
-            if(team!=0x165||league!=0)throw FormatError("opportunities: invalid national menu-6 owner");
+            if(team!=kNoTeam||league!=0)throw FormatError("opportunities: invalid national menu-6 owner");
             if(stable_identity<0)throw FormatError("opportunities: missing national Desk identity");
-        } else if(team<0||team>=138||size_t(team)>=g_.club_ids.size()||league<0||league>=9)
+        } else if(team<0||team>=runtime_dimensions.league_teams||size_t(team)>=g_.club_ids.size()||league<0||league>=9)
             throw FormatError("opportunities: unsupported team/league");
         if(underlay.width!=320||underlay.height!=240)throw FormatError("opportunities: expected captured 320x240 desktop");
         const uint32_t choice_at=::bmh::layout::CareerSession_FormatError_ExecutableField+uint32_t(manager)*2;
@@ -2787,7 +2793,7 @@ std::optional<CareerSession::OpportunitiesDispatch> CareerSession::dispatch_oppo
            uint32_t(g_.date)!=current.identity.day_counter||
            size_t(current.identity.runtime_team)>=g_.club_ids.size()||
            (!national_source_case&&int(g_.club_ids[size_t(current.identity.runtime_team)])!=current.identity.stable_club_identity)||
-           (national_source_case&&(current.identity.runtime_team!=0x165||
+           (national_source_case&&(current.identity.runtime_team!=kNoTeam||
                                   current.identity.stable_club_identity<0)))
             throw FormatError("opportunities: desk owner changed");
         OpportunitiesDispatch result;result.page=current;
@@ -2867,14 +2873,14 @@ std::optional<ui::OtherGamesState> CareerSession::open_other_games(
                      uint16_t(next.manager_records[record + 0x291]) << 8) != uint16_t(team))
             throw FormatError("other games: manager record does not own the active team");
         int stable_team = team;
-        if (team > 0x164) {
+        if (team > (kNoTeam - 1)) {
             const size_t backup = 4 * 0xb0c + 0x290;
             if (manager != 0 || backup + 2 > next.manager_records.size())
                 throw FormatError("other games: unsupported national-coach owner");
             stable_team = int(uint16_t(next.manager_records[backup] |
                                        uint16_t(next.manager_records[backup + 1]) << 8));
         }
-        if (stable_team < 0 || stable_team >= 138 || size_t(stable_team) >= next.club_ids.size())
+        if (stable_team < 0 || stable_team >= runtime_dimensions.league_teams || size_t(stable_team) >= next.club_ids.size())
             throw FormatError("other games: missing stable manager club identity");
 
         const uint8_t source_view = next.memory.u8(::bmh::layout::CareerSession_DispatchOtherGames_RuntimeField + uint32_t(manager));
@@ -2965,13 +2971,13 @@ std::optional<CareerSession::OtherGamesDispatch> CareerSession::dispatch_other_g
                 uint16_t(id.runtime_team))
             throw FormatError("other games: manager record changed");
         int stable_team = id.runtime_team;
-        if (id.runtime_team > 0x164) {
+        if (id.runtime_team > (kNoTeam - 1)) {
             const size_t backup = 4 * 0xb0c + 0x290;
             if (id.manager_slot != 0 || backup + 2 > g_.manager_records.size())
                 throw FormatError("other games: unsupported national owner");
             stable_team = int(uint16_t(g_.manager_records[backup] | uint16_t(g_.manager_records[backup + 1]) << 8));
         }
-        if (stable_team < 0 || stable_team >= 138 || size_t(stable_team) >= g_.club_ids.size() ||
+        if (stable_team < 0 || stable_team >= runtime_dimensions.league_teams || size_t(stable_team) >= g_.club_ids.size() ||
             int(g_.club_ids[size_t(stable_team)]) != id.club_identity)
             throw FormatError("other games: stable club identity changed");
         if (request.action == ui::OtherGamesAction::team_info) {
@@ -3020,10 +3026,10 @@ std::optional<CareerSession::OtherGamesDispatch> CareerSession::dispatch_other_g
                uint16_t(next.manager_records[active_record+0x290]|
                    uint16_t(next.manager_records[active_record+0x291])<<8)!=uint16_t(id.runtime_team))
                 throw FormatError("other games: TeamInfo changed the active manager record");
-            const int retained_team=id.runtime_team>0x164
+            const int retained_team=id.runtime_team>(kNoTeam - 1)
                 ? int(uint16_t(next.manager_records[4*0xb0c+0x290]|
                     uint16_t(next.manager_records[4*0xb0c+0x291])<<8)) : id.runtime_team;
-            if(retained_team<0||retained_team>=138||size_t(retained_team)>=next.club_ids.size()||
+            if(retained_team<0||retained_team>=runtime_dimensions.league_teams||size_t(retained_team)>=next.club_ids.size()||
                int(next.club_ids[size_t(retained_team)])!=id.club_identity)
                 throw FormatError("other games: TeamInfo changed the stable desk club identity");
 
@@ -3576,7 +3582,7 @@ std::optional<CareerSession::TransferOfferEditorDispatch> CareerSession::open_tr
         !g_.memory.has(::bmh::layout::ActiveManager) || g_.memory.u8(::bmh::layout::ActiveManager) != request.manager_slot ||
         request.runtime_club != g_.manager_teams[size_t(request.manager_slot)] ||
         request.bid.manager != request.manager_slot || request.bid.list_entry < 0 || request.bid.list_entry >= 40 ||
-        request.bid.source_slot != 2928 + request.bid.list_entry || request.selected_players.size() > 1) {
+        request.bid.source_slot != runtime_dimensions.pool_first + request.bid.list_entry || request.selected_players.size() > 1) {
         error = "transfer offer: stale, nested or unsupported marked opening";
         return std::nullopt;
     }
@@ -3638,7 +3644,7 @@ std::optional<CareerSession::PoachDispatch> CareerSession::open_poach(
         result.start = start_poach(next_state, manager_slot, squad_slot, next_rand);
         if (result.start.status == PoachStatus::ready) {
             const int row = 0x28 + result.start.offer_row;
-            const TransferOfferEditorRequest input{manager_slot, g_.manager_teams[size_t(manager_slot)], row, 2928 + row,
+            const TransferOfferEditorRequest input{manager_slot, g_.manager_teams[size_t(manager_slot)], row, runtime_dimensions.pool_first + row,
                 result.start.player, next_state.memory.u16(::bmh::layout::EditorList + uint32_t(row) * 0x58 + 8), 0, false, true};
             auto owner = open_transfer_offer_editor_source(next_state, input, next_game, next_rand);
             if (!owner.supported) { error = owner.reason; return std::nullopt; }
@@ -3761,7 +3767,7 @@ bool CareerSession::dispatch_poach_ui(const ui::TransferMarketRequest& request,
                     throw FormatError("poach: selection is not an ordinary squad row");
                 const auto player=club_player_detail_context(next,*selection);
                 slot=player.source_slot;
-                if(slot<0 || slot>=0xb70 || slot_team(slot)!=selection->runtime_team ||
+                if(slot<0 || slot>=runtime_dimensions.pool_first || slot_team(slot)!=selection->runtime_team ||
                    (next.squad_slots.at(size_t(slot))&0xfff)!=selection->player_id)
                     throw FormatError("poach: stale player selection");
             }
@@ -3926,7 +3932,7 @@ std::optional<CareerSession::TransferMarketPreviewDispatch> CareerSession::previ
         if (request.preview_snapshot_index != -1 || request.squad_row != -1 || request.bid.manager != request.manager_slot ||
             request.bid.list_entry < 0 || request.bid.list_entry >= 40 ||
             request.bid.source_slot != request.preview_source_slot ||
-            request.preview_source_slot != 0xb70 + request.bid.list_entry ||
+            request.preview_source_slot != runtime_dimensions.pool_first + request.bid.list_entry ||
             request.bid.player != request.expected_player) {
             error = "transfer market: mismatched preview listing identity";
             return std::nullopt;
@@ -7203,7 +7209,7 @@ ui::PreparationState CareerSession::preparation_projection(const GameState& stat
             uint16_t(state.manager_records.at(size_t(stadium.manager_slot) * 0xb0c + 0x2ad)) << 8;
         const int source_team = int16_t(uint16_t(state.manager_records.at(size_t(stadium.manager_slot) * 0xb0c + 0x290)) |
             uint16_t(state.manager_records.at(size_t(stadium.manager_slot) * 0xb0c + 0x291)) << 8);
-        const int source_league = source_team > 0x164 ? 0 : team_league(source_team);
+        const int source_league = source_team > (kNoTeam - 1) ? 0 : team_league(source_team);
         if (source_league < 0 || size_t(source_league) >= state.league_rounds.size())
             throw FormatError("stadium source league is outside the live league table");
         stadium.live_league_round = state.league_rounds.at(size_t(source_league));
@@ -7947,7 +7953,7 @@ bool CareerSession::dispatch_stadium(const ui::StadiumRequest& supplied_request,
     }
     if (request.manager_slot != active || active < 0 || active > 3 ||
         size_t(active) >= g_.manager_teams.size() || request.runtime_club != g_.manager_teams[size_t(active)] ||
-        request.runtime_club < 0 || request.runtime_club >= 357 ||
+        request.runtime_club < 0 || request.runtime_club >= kNoTeam ||
         size_t(request.runtime_club) >= g_.club_ids.size() ||
         request.stable_club_identity != std::optional<int>(int(g_.club_ids[size_t(request.runtime_club)])) ||
         request.revision != revision || revision == UINT64_MAX || !g_.memory.has(::bmh::layout::GameMode)) {

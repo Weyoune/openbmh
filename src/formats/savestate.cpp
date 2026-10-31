@@ -31,7 +31,7 @@ constexpr BlockDef kBlocks[] = {
     {::bmh::layout::Cup_AdvanceCup_RuntimeField3, false, 1, Count::None, 0, false},       {::bmh::layout::LiveMatchday_FormatError_RuntimeField14, false, 6, Count::None, 0, false},
     {::bmh::layout::ManagerRecords, false, 0x373c, Count::None, 0, false},  // 5 manager records of 0xB0C bytes
     {::bmh::layout::Loans, false, 0x1e0, Count::None, 0, false},
-    {::bmh::layout::ManagerMatchHistory, false, 0x20d0, Count::None, 0, false},  // form history: 5 managers x 168 teams x 10
+    {::bmh::layout::ManagerMatchHistory, false, 0, Count::N42, 50, false},  // form history: 5 managers x 168 teams x 10
     {::bmh::layout::MatchdayGroupDescriptors, false, 0x4e0, Count::None, 0, false},   {::bmh::layout::ManagerAutomation, false, 0x14, Count::None, 0, false},
     {::bmh::layout::Desktops, false, 0x10e0, Count::None, 0, false},  // desktop layouts (.MEN), 5 x 0x360
     {::bmh::layout::CareerSession_DispatchToto_RuntimeField, false, 1, Count::None, 0, false},       {::bmh::layout::Cup_AdvanceCup_RuntimeField4, false, 1, Count::None, 0, false},
@@ -43,7 +43,7 @@ constexpr BlockDef kBlocks[] = {
     {::bmh::layout::Placements, false, 0x50, Count::None, 0, false},    {::bmh::layout::ActiveSelectors, false, 8, Count::None, 0, false},
     {::bmh::layout::Career_CareerAddManager_RuntimeField2, false, 0x90, Count::None, 0, false},    {::bmh::layout::DeskActions_SubmitPoolsCoupon_RuntimeField, false, 0x2c, Count::None, 0, false},
     {::bmh::layout::NextDeskManager, false, 8, Count::None, 0, false},       {::bmh::layout::Savestate_Layout_ExecutableField8, false, 10, Count::None, 0, false},
-    {::bmh::layout::DeskPosition, false, 1, Count::None, 0, false},       {::bmh::layout::DeskRecords_Teams_RuntimeField, false, 0x114, Count::None, 0, false},
+    {::bmh::layout::DeskPosition, false, 1, Count::None, 0, false},       {::bmh::layout::DeskRecords_Teams_RuntimeField, false, 0, Count::Teams, 2, false},
     {::bmh::layout::CareerSession_FormatError_RuntimeField7, false, 2, Count::None, 0, false},       {::bmh::layout::Cup_AdvanceCup_RuntimeField6, false, 6, Count::None, 0, false},
     {::bmh::layout::CurrentMatchday, false, 4, Count::None, 0, false},       // seed of the game RNG (GameRandom)
     {::bmh::layout::ClubPlayerDetail_InvalidArgument_RuntimeField3, false, 1, Count::None, 0, false},       {::bmh::layout::CoachActive, false, 1, Count::None, 0, false},
@@ -51,12 +51,12 @@ constexpr BlockDef kBlocks[] = {
     {::bmh::layout::CareerDuration, false, 1, Count::None, 0, false},       {::bmh::layout::GameMode, false, 1, Count::None, 0, false},
     {::bmh::layout::CompetitionSelection, false, 4, Count::None, 0, false},       {::bmh::layout::ManagerCount, false, 1, Count::None, 0, false},  // number of managers
     {::bmh::layout::SavedCompetition, false, 4, Count::None, 0, false},       {::bmh::layout::Difficulty, false, 1, Count::None, 0, false},
-    {::bmh::layout::StockExchange, false, 0x450, Count::None, 0, false},   {::bmh::layout::FundBlock, false, 0xa8, Count::None, 0, false},
+    {::bmh::layout::StockExchange, false, 0x450, Count::None, 0, false},   {::bmh::layout::FundBlock, false, 0, Count::N42, 1, false},
     {::bmh::layout::Coupon, false, 100, Count::None, 0, false},     {::bmh::layout::Savestate_Layout_ExecutableField2, false, 3, Count::None, 0, false},
     {::bmh::layout::Savestate_Layout_ExecutableField, false, 1, Count::None, 0, false},       {::bmh::layout::AdGroupId, false, 1, Count::None, 0, false},
     {::bmh::layout::OfferSlots, false, 0x10, Count::None, 0, false},    {::bmh::layout::ForeignClubStrength, false, 0xfb, Count::None, 0, false},
-    {::bmh::layout::Career_Put_ExecutableField3, false, 0xbd, Count::None, 0, false},    {::bmh::layout::ClubShortNameOffsets, false, 0xa8, Count::None, 0, false},
-    {::bmh::layout::ClubKitSelectors, false, 0x1a3, Count::None, 0, false},   {::bmh::layout::Savestate_Layout_ExecutableField7, false, 0x18, Count::None, 0, false},
+    {::bmh::layout::Career_Put_ExecutableField3, false, 0xbd, Count::None, 0, false},    {::bmh::layout::ClubShortNameOffsets, false, 0, Count::N42, 1, false},
+    {::bmh::layout::ClubKitSelectors, false, 0, Count::Clubs, 1, false},   {::bmh::layout::Savestate_Layout_ExecutableField7, false, 0x18, Count::None, 0, false},
     {::bmh::layout::ClubInfo_FormatError_RuntimeField, false, 0x420, Count::None, 0, false},   {::bmh::layout::Career_CareerManagersEnd_RuntimeField, false, 0x18, Count::None, 0, false},
     {::bmh::layout::ClubInfo_FormatError_RuntimeField2, false, 0xc, Count::None, 0, false},     {::bmh::layout::DeskActions_Unsupported_RuntimeField, false, 4, Count::None, 0, false},
     {::bmh::layout::Career_RemoveJoinLoans_RuntimeField, false, 800, Count::None, 0, false},     {::bmh::layout::ClubPlayerDetail_InvalidArgument_RuntimeField, false, 200, Count::None, 0, false},
@@ -98,7 +98,7 @@ constexpr BlockDef kBlocks[] = {
     {::bmh::layout::Career_EuropeanClub_ExecutableField, false, 1, Count::None, 0, false},       {::bmh::layout::Career_EuropeanClub_ExecutableField2, false, 1, Count::None, 0, false},
     {::bmh::layout::Career_EuropeanClub_ExecutableField3, false, 1, Count::None, 0, false},       {::bmh::layout::Career_CompetitionPointersEnglish_ExecutableField24, false, 0x28, Count::None, 0, false},
     {::bmh::layout::Career_CompetitionPointersEnglish_ExecutableField29, false, 0x14, Count::None, 0, false},    {::bmh::layout::ClubSeasonRecords, false, 4, Count::None, 0, false},
-    {::bmh::layout::ClubSeasonRecords, true, 0x3090, Count::None, 0, true},    // club records (168 x 74), only if pointer != 0
+    {::bmh::layout::ClubSeasonRecords, true, 0, Count::N42, 74, true},    // club records (168 x 74), only if pointer != 0
 };
 
 }  // namespace

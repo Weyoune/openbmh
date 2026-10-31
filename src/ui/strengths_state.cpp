@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "game/state.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/strengths_state.hpp"
 
@@ -176,7 +177,7 @@ StrengthsProjection strengths_from_game(const GameState& game, int manager_slot,
 
     const int first = league_first_team(league);
     const int size = kLeagueSizes[league];
-    if (first < 0 || first + size > 138) invalid("league bounds exceed domestic club table");
+    if (first < 0 || first + size > runtime_dimensions.league_teams) invalid("league bounds exceed domestic club table");
     if (game.club_ids.size() < size_t(first + size)) invalid("club ID table is truncated");
     if (game.club_names.empty()) invalid("club name pool is empty");
     for (int team = first; team < first + size; ++team) {
@@ -235,7 +236,7 @@ StrengthsProjection strengths_from_game(const GameState& game, int manager_slot,
     if (league < 5) {
         out.league_name = iso646de_to_utf8(league_name(game, league).c_str());
     } else {
-        const int title_team = 0x165 + league - 4;
+        const int title_team = kNoTeam + league - 4;
         if (size_t(title_team) >= game.club_ids.size() ||
             game.club_ids[size_t(title_team)] >= game.club_names.size())
             invalid("foreign league title is missing from the save name pool");

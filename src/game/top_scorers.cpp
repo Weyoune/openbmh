@@ -70,13 +70,13 @@ TopScorersProjection top_scorers_from_game(const GameState& g, int manager_slot,
         invalid("manager has no supported domestic league");
     // TeamLeague2 deliberately maps team IDs above 0x164 (including the
     // national team 0x165) to league zero; ordinary cup-only teams map to 9.
-    const int league = manager_team > 0x164 ? 0 : team_league(manager_team);
+    const int league = manager_team > (kNoTeam - 1) ? 0 : team_league(manager_team);
     if (league < 0 || league >= kLeagueCount)
         invalid("manager team is outside Source's nine domestic leagues");
 
     const int first_team = league_first_team(league);
     const int team_count = kLeagueSizes[league];
-    if (first_team < 0 || first_team + team_count > 138 ||
+    if (first_team < 0 || first_team + team_count > runtime_dimensions.league_teams ||
         g.club_ids.size() < size_t(first_team + team_count) || g.club_names.empty())
         invalid("incomplete domestic club table");
 
