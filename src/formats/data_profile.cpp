@@ -26,7 +26,9 @@ void DataProfile::validate() const {
 DataProfile load_data_profile(const std::filesystem::path& directory) {
     const auto file=directory/"OBMHPROF.INI";
     if(!resource_exists(file))return {};
-    const auto raw=read_file(file);
+    return decode_data_profile(read_file(file));
+}
+DataProfile decode_data_profile(const Bytes& raw) {
     std::istringstream input(std::string(raw.begin(),raw.end()));
     std::string line,id;bool section=false,seen=false;
     while(std::getline(input,line)) {

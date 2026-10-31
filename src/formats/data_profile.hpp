@@ -20,5 +20,6 @@ struct DataProfile {
     void validate() const;
     static DataProfile international_11();
 };
+DataProfile decode_data_profile(const Bytes&);
 DataProfile load_data_profile(const std::filesystem::path& directory);
 }

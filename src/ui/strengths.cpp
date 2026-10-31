@@ -60,12 +60,16 @@ void StrengthsScreen::selector(Image& out,int x,int y,int style) const {
     if(style<3)copy(out,arrows_,exe_.u8(::bmh::layout::LeaguePairings_Selector_RuntimeField3+uint32_t(style)),0,x+1,y+exe_.u8(::bmh::layout::Strengths_Selector_RuntimeField2),
         exe_.u8(::bmh::layout::LeaguePairings_Selector_RuntimeField4+uint32_t(style)),38);
 }
+int StrengthsScreen::row_step() const {
+    const int original=exe_.u8(layout::Strengths_PointerDown_RuntimeField+uint32_t(state_.identity.league));
+    return exe_.expanded_profile() ? std::min(original, 144/int(state_.projection.rows.size())) : original;
+}
 Image StrengthsScreen::render() const {
     Image out=state_.decorated?frame_:Image(320,240);
     if(!state_.decorated) {fill(out,0,4,320,13,0x44);fill(out,1,5,318,11,0x39);fill(out,0,228,320,10,0x44);fill(out,1,229,318,8,0x39);}
     const auto title=original_to_utf8(state_.title);sprite_.draw(out,SpriteFont::centered_title_x(sprite_.text_width(title)),13,title);
     sprite_.draw(out,5,235,original_to_utf8(state_.subtitle));
-    const int step=exe_.u8(::bmh::layout::Strengths_PointerDown_RuntimeField+uint32_t(state_.identity.league)),bottom=step*int(state_.projection.rows.size())+27;
+    const int step=row_step(),bottom=step*int(state_.projection.rows.size())+27;
     if(state_.original_panel)copy(out,panel_,0,7,1,27,318,bottom-27);
     else fill(out,0,26,320,bottom-25,0x42);
     fill(out,0,26,320,1,0x46);fill(out,0,26,1,bottom-25,0x46);
@@ -131,9 +135,10 @@ bool StrengthsScreen::pointer_down(int x,int y,bool right) {
     if(pending_)return false;
     if(right) {post(StrengthsAction::close);return true;}
     if(auto selector=selector_at(x,y)) {pending_=*selector;return true;}
-    const int step=exe_.u8(::bmh::layout::Strengths_PointerDown_RuntimeField+uint32_t(state_.identity.league));
-    if(y>23&&y<int(state_.projection.rows.size())*step+24) {
-        const int row=(y-24)/step;post(StrengthsAction::team_info,state_.projection.rows[size_t(row)].runtime_team);return true;
+    const int step=row_step();
+    const int top=exe_.expanded_profile()?27:24;
+    if(y>=top&&y<int(state_.projection.rows.size())*step+top) {
+        const int row=(y-top)/step;post(StrengthsAction::team_info,state_.projection.rows[size_t(row)].runtime_team);return true;
     }
     pressed_=button_at(x,y);return pressed_>=0;
 }

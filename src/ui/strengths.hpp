@@ -38,6 +38,7 @@ public:
     const std::optional<StrengthsRequest>& pending() const { return pending_; }
     std::string state_json() const;
 private:
+    int row_step() const;
     void text(Image&, int x, int baseline, std::string_view bytes, uint8_t color) const;
     void selector(Image&, int x, int y, int style) const;
     void button(Image&, int x, int y, int width, std::string_view label, bool selected) const;

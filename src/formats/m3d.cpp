@@ -40,7 +40,10 @@ Database load_database(const std::filesystem::path& path) {
 }
 
 Database load_database(const std::filesystem::path& path, const DbCounts& c) {
-    Bytes d = read_file(path);
+    return decode_database(read_file(path),c);
+}
+
+Database decode_database(const Bytes& d,const DbCounts& c) {
     Reader r{d};
     Bytes lens = r.take(8);
     size_t len_clubs = le16(lens, 0), len_players = le16(lens, 2), len_refs = le16(lens, 4), len_stadiums = le16(lens, 6);
@@ -72,6 +75,19 @@ Database load_database(const std::filesystem::path& path, const DbCounts& c) {
     for (uint32_t i = 0; i < c.players; i++)
         db.players.push_back({pool_string(player_pool, le16(player_ofs, i * 2)), le32(w35c, i * 4), le32(w368, i * 4), le32(w364, i * 4)});
     return db;
+}
+
+Bytes encode_database(const Database& db) {
+    Bytes out;
+    const auto put=[&](uint32_t value,int width){for(int i=0;i<width;++i)out.push_back(uint8_t(value>>(8*i)));};
+    const auto append=[&](const Bytes& bytes){out.insert(out.end(),bytes.begin(),bytes.end());};
+    for(const auto& pool:db.pools){if(pool.size()>65535)throw FormatError("M3D: string pool exceeds 16-bit offsets");put(uint32_t(pool.size()),2);}
+    append(db.raw_player_bonus_values);for(const auto& pool:db.pools)append(pool);
+    for(const auto* bytes:{&db.raw_club_name_offsets,&db.raw_player_name_offsets,&db.raw_database_metadata,&db.raw_club_auxiliary_words,
+        &db.raw_club_badge_selectors,&db.raw_foreign_club_strength,&db.raw_league_auxiliary_bytes,&db.raw_referee_properties,&db.raw_club_kit_selectors,&db.raw_club_short_name_offsets,&db.squad_list})append(*bytes);
+    for(int word=0;word<3;++word)for(const auto& player:db.players)put(word==0?player.w35c:word==1?player.w368:player.w364,4);
+    (void)decode_database(out,db.counts);
+    return out;
 }
 
 }  // namespace bmh

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Build products and every configured test program, without unused data fixtures."""
 import argparse
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -13,6 +14,8 @@ HOST = re.compile(r'(?:python(?:[0-9.]+)?|cmake|ctest)(?:\.exe)?$', re.I)
 def targets_for_tests(build):
     build = build.resolve(strict=True)
     targets = {'openbmh_play', 'openbmh_cli'}
+    if os.name == 'nt':
+        targets.add('obdeddi')
     tests = 0
     for file in sorted(build.rglob('CTestTestfile.cmake')):
         for line in file.read_text(encoding='utf-8').splitlines():

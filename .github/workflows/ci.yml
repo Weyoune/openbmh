@@ -84,6 +84,19 @@ jobs:
           subprocess.run([str(build / ('OpenBMH' + suffix)), '--version'], check=True)
       - name: Package products and licenses
         run: python3 tools/package/make_package.py --build build --out dist --platform ${{ matrix.platform }}
+      - name: Package native Windows editor
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $game = (Get-ChildItem dist/OpenBMH-*-windows-x64.zip | Select-Object -First 1).FullName
+          python3 tools/package/make_editor_package.py --build build --game $game --out editor-dist
+      - name: Upload native editor
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: obdeddi-windows-x64
+          path: editor-dist/*.zip
+          if-no-files-found: error
       - name: Package corresponding source and pinned dependencies
         if: runner.os == 'Linux'
         run: python3 tools/package/make_source_package.py --source . --build build --out source-dist
