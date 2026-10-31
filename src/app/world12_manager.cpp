@@ -21,6 +21,7 @@ bmh::world12::TacticalOutcome apply_manager_tactical_action(bmh::world12::World&
             auto candidate=world;
             const auto index=size_t(manager-world.managers.begin());candidate.managers[index].tactics=result.tactics;
             candidate.clubs.at(identity.club).roster=result.lineup->roster;
+            candidate.clubs.at(identity.club).match_flags=result.lineup->match_flags;candidate.clubs.at(identity.club).lineup_indoor=result.lineup->indoor;
             for(size_t row=0;row<24;++row)if(!result.lineup->roster[row].empty())
                 candidate.players.at(result.lineup->roster[row].player).cards=result.lineup->cards_by_row[row];
             candidate.validate();world=std::move(candidate);

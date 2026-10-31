@@ -19,7 +19,7 @@ struct ClubSeasonStats {
 struct ClubRecord {
     ClubId id;std::string name;Country country=Country::germany;ClubKind kind=ClubKind::club;
     LeagueId league;CrestId crest;uint8_t kit=0,rating=0,short_span=0;
-    uint16_t match_flags=0;uint8_t morale=25;
+    uint16_t match_flags=0;uint8_t morale=25;bool lineup_indoor=false;
     ClubSeasonStats season_stats;
     std::array<RosterSlot,24> roster;
     bool operator==(const ClubRecord&)const=default;
@@ -39,9 +39,21 @@ struct ManagerTacticalRow {
     uint8_t partner=255,depth=0,lane=0;
     bool operator==(const ManagerTacticalRow&)const=default;
 };
+// Tactical records contain numeric state and two explicit player references.
+// Reference words and the separately named row fields are zero in scalar_rows.
+struct ManagerTacticalBacking {
+    std::array<std::array<uint8_t,0x58>,24> scalar_rows{};
+    std::array<PlayerId,24> marks,marked_by;
+    std::array<uint8_t,0x160> formations{};
+    std::array<uint8_t,13> formation_tail{}; // Original bench-coordinate reads beyond the manager table.
+    std::array<uint8_t,2> enabled_formations{};
+    std::array<uint8_t,4> automation{};
+    bool operator==(const ManagerTacticalBacking&)const=default;
+};
 struct ManagerTactics {
     std::array<ManagerTacticalRow,24> rows;
     uint8_t automatic_weights=0,automatic_formation=0;
+    std::optional<ManagerTacticalBacking> backing={};
     bool operator==(const ManagerTactics&)const=default;
 };
 void validate_manager_tactics(const ManagerTactics&);

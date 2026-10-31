@@ -4,6 +4,9 @@
 #include <stdexcept>
 namespace bmh::world12 {
 void validate_manager_tactics(const ManagerTactics& tactics) {
+    if(tactics.backing)for(const auto& row:tactics.backing->scalar_rows)
+        for(size_t at:{2u,3u,4u,5u,0x3fu,0x41u,0x42u,0x44u,0x45u,0x46u,0x47u})
+            if(row[at])throw std::invalid_argument("world12: duplicate scalar/reference tactical encoding");
     if(tactics.automatic_formation>8)throw std::invalid_argument("world12: invalid automatic formation selector");
     for(size_t i=0;i<tactics.rows.size();++i) {
         const auto& row=tactics.rows[i];
@@ -22,7 +25,8 @@ void World::validate(bool complete)const {
     for(const auto&[id,crest]:crests){const auto& path=crest.path;if(!id.valid()||crest.cell>=8||path.empty()||path.find("..")!=std::string::npos||path.find(':')!=std::string::npos||path[0]=='/'||path.find('\\')!=std::string::npos)throw std::invalid_argument("world12: invalid crest resource");}
     std::set<PlayerId> loaned;for(const auto& loan:loans){if(!players.contains(loan.player)||!clubs.contains(loan.owner)||!clubs.contains(loan.borrower)||loan.owner==loan.borrower||!loan.months||!loaned.insert(loan.player).second)throw std::invalid_argument("world12: invalid loan");bool at_borrower=false;for(const auto& slot:clubs.at(loan.borrower).roster)at_borrower|=slot.player==loan.player;if(!at_borrower)throw std::invalid_argument("world12: loan player is not at borrower");}
     if(managers.size()>4)throw std::invalid_argument("world12: too many managers");std::set<uint8_t> seats,portraits;std::set<ClubId> owned;
-    for(const auto& manager:managers){if(manager.tactics)validate_manager_tactics(*manager.tactics);const auto it=clubs.find(manager.club);if(manager.seat>=4||manager.name.empty()||manager.name.size()>20||manager.portrait>=12||!seats.insert(manager.seat).second||!portraits.insert(manager.portrait).second||!owned.insert(manager.club).second||it==clubs.end()||!it->second.league.valid()||!catalogue.selectable(it->second.country)||catalogue.league(manager.start_league).country!=it->second.country)throw std::invalid_argument("world12: invalid manager selection");}
+    for(const auto& manager:managers){if(manager.tactics){validate_manager_tactics(*manager.tactics);if(manager.tactics->backing){
+for(const auto* refs:{&manager.tactics->backing->marks,&manager.tactics->backing->marked_by})for(auto id:*refs)if(id.valid()&&!players.contains(id))throw std::invalid_argument("world12: missing tactical player reference");}}const auto it=clubs.find(manager.club);if(manager.seat>=4||manager.name.empty()||manager.name.size()>20||manager.portrait>=12||!seats.insert(manager.seat).second||!portraits.insert(manager.portrait).second||!owned.insert(manager.club).second||it==clubs.end()||!it->second.league.valid()||!catalogue.selectable(it->second.country)||catalogue.league(manager.start_league).country!=it->second.country)throw std::invalid_argument("world12: invalid manager selection");}
 }
 std::vector<ClubId> World::selectable_clubs(Country country,LeagueId id)const {if(!catalogue.selectable(country)||catalogue.league(id).country!=country)throw std::invalid_argument("world12: unavailable manager country/league");return membership.at(id.value).clubs;}
 Country World::manager_country(uint8_t seat)const {for(const auto& manager:managers)if(manager.seat==seat)return clubs.at(manager.club).country;throw std::out_of_range("world12: manager seat is not occupied");}

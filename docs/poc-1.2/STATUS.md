@@ -109,3 +109,9 @@ Validation: 340 supported tactical cases match the direct Core helpers, plus twe
 The typed tactical owner now supports manual pre-match roster exchanges. A shared Original-derived Core kernel is used by both the existing legacy lineup dispatcher and the typed calculator. It preserves slot roles/coordinates, moves player/tactical entries, synchronizes card-row identities and selects manual mode. The typed application publishes validated global roster IDs, tactical fields and cards as one staged change. Injured players and foreign-rule cross-role exchanges remain blocked pending their confirmation flow; this is not live substitution or a completed human match adapter.
 
 Validation: 40 typed/native swap scenarios compare the shared kernel with independent byte-level expectations, including full native board-entry movement, exact role/auxiliary flags and all marked card rows. The typed result retains global IDs, finances and snapshot/replay ownership. Existing 340 tactical cases and all 18 targeted regression tests passed on Linux, along with the application build. No live substitution, GUI binding or native-platform human career is claimed.
+
+## Full tactical backing and formation ownership
+
+World schema 7 retains all numeric tactical row state, explicitly translated global man-marking references, supplied formations and masks, automation and stored indoor-lineup mode. Formation application, custom saving and preparation reuse the Original helpers, including their country-aware foreign-rule context and bounded bench-coordinate tail. Scalar-only older states reject operations requiring missing backing. All affected board, roster, cards and club mode/flags publish together.
+
+156 additional full-backing cases, Original-save extraction, all 18 targeted Linux regressions and the private 685-match source-calendar probe passed. The GUI career and human match pipeline remain pending; this is not a playable-release claim.

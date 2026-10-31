@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <array>
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -41,6 +42,7 @@ struct GameState {
     // Runtime-only context for bounded typed-world projections. Empty retains
     // the original positional lookup; never serialized into a legacy save.
     std::vector<ProjectedMatchClub> projected_match_clubs;
+    std::optional<bool> projected_foreign_rule; // Session rule for a bounded workspace; not saved.
     DbCounts counts{};
     std::vector<uint8_t> club_kits, club_short_offsets;
     uint8_t club_kit(int team) const;

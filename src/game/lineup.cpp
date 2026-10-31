@@ -582,7 +582,7 @@ static void auto_lineup_impl(GameState& g, int team, int mode, int manager) {
                 break;
             }
         }
-    if (original_foreign_limit_enabled) {
+    if (g.projected_foreign_rule.value_or(original_foreign_limit_enabled)) {
         const int country = match_team_region(g,team) & 0xff;
         const int allowed = match_foreign_player_limit(g,team);
         std::vector<int> foreign_rows, foreign_roles;

@@ -37,14 +37,15 @@ bmh::GameState native(const World& w,TacticalPolicy policy={}) {
     g.manager_records[manager*0xb0c+0x288]=t.automatic_weights;g.manager_options[manager*5]=t.automatic_formation;
     g.memory.add_block(bmh::layout::ActiveManager,1);g.memory.set8(bmh::layout::ActiveManager,3);
     g.memory.add_block(bmh::layout::GameMode,1);g.memory.set8(bmh::layout::GameMode,uint8_t(policy.mode));
-    g.indoor=policy.indoor;g.lineups_frozen=policy.frozen;g.squad_slots.assign(bmh::runtime_dimensions.total_slots,0xfff);
-    g.players.resize(24);g.player_cards.resize(24);
+    g.indoor=policy.indoor;g.lineups_frozen=policy.frozen;g.level=policy.difficulty;g.projected_foreign_rule=policy.foreign_rule_enabled;
+    g.projected_match_clubs.resize(445);g.projected_match_clubs[team]={0,int(club.country),3};g.squad_slots.assign(bmh::runtime_dimensions.total_slots,0xfff);
+    g.players.resize(24);g.player_cards.resize(24);g.player_bonus.resize(24);
     const auto range=bmh::squad_range(int(team));check(range.count==24,"native human squad must have 24 rows");
     for(size_t r=0;r<24;++r) {
         const auto at=manager*0x840+r*0x58;const auto& row=t.rows[r];
         std::copy(row.orders.begin(),row.orders.end(),g.tactics.begin()+at+2);g.tactics[at+0x3f]=row.partner;g.tactics[at+0x41]=row.depth;g.tactics[at+0x42]=row.lane;
         const auto& slot=club.roster[r];if(slot.empty())continue;
-        const auto local=23-r;g.players[local]=w.players.at(slot.player).attributes;g.player_cards[local]=w.players.at(slot.player).cards;
+        const auto local=23-r;g.players[local]=w.players.at(slot.player).attributes;g.player_cards[local]=w.players.at(slot.player).cards;g.player_bonus[local]=w.players.at(slot.player).bonus;
         g.squad_slots[range.first+r]=uint16_t(local|((slot.flags&1)?0x8000:0)|((slot.flags&2)?0x4000:0)|((slot.flags&4)?0x2000:0)|((slot.flags&8)?0x1000:0));
     }
     return g;
@@ -169,11 +170,68 @@ void swap_cases() {
     w.players.at(action.player).attributes.w364|=1u<<16;check(!calculate_manager_tactical_action(w,3,action,{}).allowed,"injured swap bypassed confirmation owner");
     std::cout<<cases<<" typed/native lineup swaps, independent byte-level kernel expectations, stale rows and snapshot/replay cases passed\n";
 }
+void complete_tactical_cases() {
+    size_t cases=0;
+    for(bool english:{false,true})for(bool indoor:{false,true})for(int difficulty:{0,6,9}) {
+        auto w=world(english);const auto club=w.managers[0].club;
+        for(size_t row=0;row<20;++row)w.players.at(w.clubs.at(club).roster[row].player).attributes.w364=uint32_t(row==0||row==11?0:row<5?1:row<9?2:3);
+        TacticalPolicy policy{3,indoor,false,true,difficulty};auto source=native(w,policy);
+        std::vector<PlayerId> mapping(24);
+        for(size_t row=0;row<20;++row)mapping[23-row]=w.clubs.at(club).roster[row].player;
+        const auto external=w.clubs.at(w.membership[10].clubs[0]).roster[0].player;
+        mapping.push_back(external);source.players.push_back(w.players.at(external).attributes);source.player_cards.push_back(w.players.at(external).cards);source.player_bonus.push_back(w.players.at(external).bonus);
+        for(size_t row=0;row<24;++row)for(size_t off:{0x44u,0x46u}){source.tactics[3*0x840+row*0x58+off]=0xff;source.tactics[3*0x840+row*0x58+off+1]=0x0f;}
+        source.tactics[3*0x840+0x44]=24;source.tactics[3*0x840+0x45]=0;
+        const uint8_t depth[]={0,5,5,5,5,10,10,10,10,17,17},lane[]={4,1,3,5,7,1,3,5,7,3,5};
+        for(size_t manager=0;manager<4;++manager)for(size_t mode=0;mode<2;++mode)for(size_t f=0;f<8;++f)for(size_t row=0;row<11;++row) {
+            const auto at=manager*0x160+mode*0xb0+f*22+row;source.formations[at]=depth[row];source.formations[at+11]=lane[row];
+        }
+        source.manager_records[3*0xb0c+0x218]=source.manager_records[3*0xb0c+0x219]=15;
+        w.managers[0].tactics=manager_full_tactics_from_legacy(source,3,mapping);w.validate();
+        check(w.managers[0].tactics->backing->marks[0]==external,"full board extraction truncated external global player reference");
+        check(decode_world(encode_world(w))==w,"full tactical payload/reference/formation roundtrip failed");
+        for(int action_kind=0;action_kind<4;++action_kind)for(int formation:{0,3,4,7}) {
+            if(action_kind==3&&formation!=0)continue;
+            auto reference=source;TacticalAction action;action.old_weights=w.managers[0].tactics->automatic_weights;action.formation=formation;
+            bool allowed=false;
+            if(action_kind==0){action.kind=TacticalActionKind::apply_formation;allowed=bmh::apply_pitch_formation_source(reference,3,72,formation,action.old_weights);}
+            else if(action_kind==1){action.kind=TacticalActionKind::save_formation;
+                for(size_t row=0;row<11;++row){action.formation_positions[row]=w.managers[0].tactics->rows[row].depth;action.formation_positions[11+row]=w.managers[0].tactics->rows[row].lane;}
+                allowed=bmh::save_pitch_formation_source(reference,3,72,formation,action.old_weights,action.formation_positions);}
+            else if(action_kind==2){action.kind=TacticalActionKind::prepare;bmh::auto_lineup(reference,72,0xe4);bmh::prepare_lineup_entry(reference,72);allowed=true;}
+            else {action.kind=TacticalActionKind::swap;action.row=0;action.second_row=2;const auto& roster=w.clubs.at(club).roster;
+                action.player=roster[0].player;action.first_slot=roster[0];action.second_slot=roster[2];const auto start=bmh::squad_range(72).first;
+                allowed=bmh::swap_pitch_roster_rows_source(reference,3,72,0,2,reference.squad_slots[start],reference.squad_slots[start+2],true);}
+            const auto before=w;auto actual=w;app::ManagerActionOwner owner{71,8};
+            const auto outcome=app::apply_manager_tactical_action(actual,owner,{3,club,71,8},action,policy);
+            check(outcome.allowed==allowed,"full formation action acceptance differs from direct Original helper");
+            const auto expected=manager_full_tactics_from_legacy(reference,3,mapping);
+            check(actual.managers[0].tactics==expected,"full tactical record/formation changes differ after local remapping");
+            const auto range=bmh::squad_range(72);
+            for(size_t row=0;row<24;++row){const auto raw=reference.squad_slots[range.first+row];const auto& got=actual.clubs.at(club).roster[row];
+                if((raw&0xfff)==0xfff){check(got.empty(),"formation filled empty row");continue;}
+                const auto id=mapping.at(raw&0xfff);check(got.player==id&&actual.players.at(id).cards==reference.player_cards[raw&0xfff],"formation global lineup/cards changed identity");}
+            check(actual.managers[0].finance==before.managers[0].finance,"formation changed financial state");
+            CareerSnapshot snap;snap.world=actual;snap.results=SeasonResults::empty(actual.catalogue);check(read_save(make_save(snap))==snap,"full formation snapshot lost state");
+            ++cases;
+        }
+        auto invalid=w;invalid.managers[0].tactics->backing->scalar_rows[0][0x44]=1;rejects([&]{invalid.validate();},"packed player reference smuggled into numeric payload");
+        invalid=w;invalid.managers[0].tactics->backing->marks[0]={4000000};rejects([&]{invalid.validate();},"dangling full tactical reference accepted");
+    }
+    auto missing=world();TacticalAction action;action.kind=TacticalActionKind::apply_formation;action.formation=0;
+    rejects([&]{calculate_manager_tactical_action(missing,3,action,{});},"incomplete tactical record guessed a formation");
+    std::cout<<cases<<" complete-board formation/save/entry cases, cross-club wide references and numeric-payload guards passed\n";
+}
 void original_save(const std::filesystem::path& data,const std::filesystem::path& save) {
     const auto exe=bmh::load_le(data/"BMH.exe");const bmh::DbCounts counts{exe.u32(bmh::layout::CareerSession_DataDirectory_RuntimeField),exe.u32(bmh::layout::CareerSession_DataDirectory_RuntimeField3),exe.u32(bmh::layout::CareerSession_DataDirectory_RuntimeField2),exe.u32(bmh::layout::CareerSession_DataDirectory_RuntimeField4)};
     const auto file=bmh::load_savegame(save);check(file.checksum_ok&&file.version=="V2.24","invalid reference save");
     const auto source=bmh::GameState::from_save(bmh::SaveState(file.stream,counts),counts);const auto extracted=manager_tactics_from_legacy(source,0);
     auto w=world();w.managers[0].tactics=extracted;w.validate();check(decode_world(encode_world(w))==w,"extracted Original tactical scalar fields lost on roundtrip");
+    std::vector<PlayerId> mapping;for(const auto& [id,p]:w.players)mapping.push_back(id);
+    check(mapping.size()>=source.players.size(),"synthetic global mapping too small for Original reference");mapping.resize(source.players.size());
+    w.managers[0].tactics=manager_full_tactics_from_legacy(source,0,mapping);w.validate();
+    check(decode_world(encode_world(w))==w,"full Original tactical data/reference extraction failed persistence");
+    w.managers[0].tactics=extracted;
     const auto before=source;
     for(int aspect=0;aspect<4;++aspect)for(int value:{-100,17,200}) {
         auto expected=source;const int team=expected.manager_teams[0];const auto range=bmh::squad_range(team);const auto player=expected.squad_slots[range.first]&0xfff;
@@ -182,10 +240,10 @@ void original_save(const std::filesystem::path& data,const std::filesystem::path
         const auto actual=calculate_manager_tactical_action(w,3,action,{});
         check(actual.allowed==allowed&&actual.tactics==manager_tactics_from_legacy(expected,0),"original-save order clamp/extraction differs");
     }
-    std::cout<<"Original-save tactical scalar extraction and 12 direct order cases passed; no career conversion or reference writes\n";
+    std::cout<<"Original-save scalar/full-board extraction and 12 direct order cases passed; no career conversion or reference writes\n";
 }
 }
 int main(int argc,char** argv)try {
-    core_cases();ownership_codec();swap_cases();if(argc==3)original_save(argv[1],argv[2]);else if(argc!=1)throw std::runtime_error("usage: world12_manager_tactics_tests [reference-directory original.FBM]");
+    core_cases();ownership_codec();swap_cases();complete_tactical_cases();if(argc==3)original_save(argv[1],argv[2]);else if(argc!=1)throw std::runtime_error("usage: world12_manager_tactics_tests [reference-directory original.FBM]");
     std::cout<<"Tactical persistence, ownership, wide player IDs, no-op/frozen handling and snapshot compatibility passed\n";return 0;
 }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}
