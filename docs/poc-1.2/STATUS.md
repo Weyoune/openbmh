@@ -69,3 +69,10 @@ Added AI post-match processing ([contract](AFTER_MATCH.md)):
 - Club records now preserve global opponent IDs independently of Original 16-bit name-pool offsets, including historical opponents outside the current group. Global development balance/rotation persist with schema version 4 and stale-stream checks. Earlier master schemas retain defaults; played records cannot be re-scoped as fresh source data.
 - Direct Core equivalence in five league contexts, four shared-clock round/repeat cases, record-offset validation, snapshot roundtrips, fifth-yellow/injury/appearance edges and explicit signed development wrap are covered. Seven real-data AI fixtures also complete the settlement path.
 - Full-day/week/month ownership, human tactics/finances, optional awards, forfeits and GUI career integration remain pending. The APIs return settled AI outcomes but do not silently advance a career date or claim a playable 1.2 release.
+
+Added mixed BMH/FLTD other-games UI ([contract](OTHER_GAMES_UI.md)):
+
+- Eight competition controls use the requested two-column layout. Super-Cup and Charity Shield share one UI page with separate country headings/results/panels and a non-clickable gap; their engine competitions and saved scores remain independent. A single enabled country retains one centered final.
+- Typed domestic cup views expose stored rounds/stages, Source detail windows and complete view. Existing assets/renderer, Core club averages, detail labels and extra-time/penalty/return-leg formatting are reused. Uninitialized European/national data is explicitly unavailable rather than manufactured.
+- Typed owner identities and local-token/global-club mappings keep navigation/team-info requests distinct from legacy engine IDs. Legacy dispatch refuses typed requests. Model and supplied-asset geometry/action checks cover the merged finals and eight selectors; private demo views are explicitly labeled synthetic examples.
+- The overview is ready for the pending typed GUI-career owner. Initial supercup selection and remaining competition backends are not claimed complete.

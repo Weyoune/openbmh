@@ -23,6 +23,7 @@ struct OtherGamesClubMetadata {
     // -1 for squad-backed clubs, otherwise the raw ForeignClubStrength byte for foreign-club rendering.
     int foreign_strength = -1;
 };
+std::array<int,5> other_games_club_averages(const GameState&,int team);
 
 // One Source row in the ordinary CupGroupOverviewEffects desk view. Names and text are kept in
 // Original encoding so the presentation layer can pass them through the existing FNT3 path.

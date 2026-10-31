@@ -164,9 +164,7 @@ OtherGamesClubMetadata source_metadata(const GameState& game, int team) {
     }
     if (team >= runtime_dimensions.record_teams && team != kNoTeam)
         invalid("manager-controlled foreign-club row needs live TeamRating W-generator context");
-    constexpr std::array<uint16_t, 5> kFlags{0x0f1, 0x0f2, 0x0f4, 0x0f8, 0x0ff};
-    for (size_t i = 0; i < kFlags.size(); ++i)
-        out.averages[i] = team_average(game, team, kFlags[i]).value;
+    out.averages=other_games_club_averages(game,team);
     out.has_squad_values = true;
     return out;
 }
@@ -205,6 +203,11 @@ void add_second_leg_and_winner(OtherGamesRow& row, uint16_t second, bool present
 }
 
 }  // namespace
+
+std::array<int,5> other_games_club_averages(const GameState& game,int team) {
+    constexpr std::array<uint16_t,5> flags={0x0f1,0x0f2,0x0f4,0x0f8,0x0ff};
+    std::array<int,5> out{};for(size_t i=0;i<flags.size();++i)out[i]=team_average(game,team,flags[i]).value;return out;
+}
 
 OtherGamesProjection other_games_from_game(const GameState& game, const TextDb& texts,
                                             int competition, int linked_page, int requested_round,

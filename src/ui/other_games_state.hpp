@@ -6,10 +6,12 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <optional>
 
 #include "formats/le.hpp"
 #include "formats/vga.hpp"
 #include "game/other_games.hpp"
+#include "game/world12/identity.hpp"
 
 namespace bmh::ui {
 
@@ -31,6 +33,12 @@ struct OtherGamesIdentity {
     uint8_t expected_view_byte = 0;
     bool operator==(const OtherGamesIdentity&) const = default;
 };
+struct World12OtherGamesIdentity {
+    uint8_t manager_slot=0;
+    bmh::world12::ClubId club;
+    uint64_t revision=0,scope=0,sequence=0;
+    bool operator==(const World12OtherGamesIdentity&)const=default;
+};
 
 // The value is a selector SLOT, linked-page ordinal, or visible team ID. Other
 // actions require -1. No fixture data or Source pointers are accepted from UI.
@@ -39,6 +47,8 @@ struct OtherGamesRequest {
     OtherGamesAction action = OtherGamesAction::close;
     int value = -1;
     bool operator==(const OtherGamesRequest&) const = default;
+    std::optional<World12OtherGamesIdentity> world12_identity={};
+    bmh::world12::ClubId world12_team={};
 };
 
 struct OtherGamesDisplayRow {
@@ -63,6 +73,12 @@ struct OtherGamesTableRow {
 };
 
 struct OtherGamesState {
+    std::optional<World12OtherGamesIdentity> world12_identity;
+    std::map<int,bmh::world12::ClubId> world12_teams;
+    struct Section {std::string title,message;size_t first_row=0,row_count=0;int heading_baseline=0,fixture_baseline=0;};
+    std::vector<Section> sections;
+    std::vector<int> fixture_baselines;
+    std::string unavailable_message;
     OtherGamesIdentity identity;
     OtherGamesProjection projection;
     // Source local14 survives compact-mode toggles; projection's row offset can
@@ -88,5 +104,7 @@ OtherGamesState other_games_state_from_game(
     int competition, int linked_page, int round, OtherGamesDisplayMode,
     int participant_offset, bool source_new_selection, const Image& underlay,
     const std::map<uint32_t, uint8_t>& runtime = {});
+std::string other_games_cup_score_text(uint16_t,const TextDb&,const LeImage&,bool second_leg=false);
+std::string other_games_club_detail_text(const OtherGamesClubMetadata&,const TextDb&,const LeImage&);
 
 } // namespace bmh::ui

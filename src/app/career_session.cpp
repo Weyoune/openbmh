@@ -2942,6 +2942,7 @@ std::optional<CareerSession::OtherGamesDispatch> CareerSession::dispatch_other_g
     const ui::OtherGamesRequest& request, uint64_t& revision, std::string& error,
     const TransferOfferTeamInfoPresenter& team_info) {
     error.clear();
+    if(request.world12_identity){error="other games: typed competition requests require the 1.2 owner";return {};}
     if (stadium_.block_expansion || other_games_dispatch_active_ || !other_games_owner_ || revision == UINT64_MAX ||
         request.identity != other_games_owner_->page.identity || request.identity.revision != revision ||
         request.identity.sequence == UINT64_MAX || save_stream(g_) != other_games_owner_->native ||

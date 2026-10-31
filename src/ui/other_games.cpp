@@ -68,6 +68,9 @@ int source_slot(const OtherGamesProjection& p, int slot) {
         if (selector.slot == slot) return selector.competition;
     return -1;
 }
+int fixture_baseline(const OtherGamesState& state,size_t row) {
+    return state.fixture_baselines.empty()?first_fixture_baseline(state.projection)+int(row)*row_step(state.projection):state.fixture_baselines.at(row);
+}
 
 int linked_stage_y(const OtherGamesProjection& p, int ordinal) {
     int stage_y = 178;
@@ -100,8 +103,10 @@ OtherGamesScreen::OtherGamesScreen(const std::filesystem::path& data, OtherGames
       font_(load_font(asset_path(data / "F", "BMH3.FNT"))), sprite_(data), state_(std::move(state)) {
     const auto& id = state_.identity;
     const auto& p = state_.projection;
-    if (id.manager_slot < 0 || id.manager_slot > 3 || id.runtime_team < 0 || id.club_identity < 0 ||
-        !id.scope || p.competition < 0 || p.entry_index < 0 || p.round < 0 || p.rounds <= 0 ||
+    const bool typed=state_.world12_identity.has_value();
+    if ((typed?(state_.world12_identity->manager_slot>3 || !state_.world12_identity->club.valid() || !state_.world12_identity->scope || p.entry_address!=0):
+         (id.manager_slot < 0 || id.manager_slot > 3 || id.runtime_team < 0 || id.club_identity < 0 || !id.scope)) ||
+        p.competition < 0 || p.entry_index < 0 || p.round < 0 || p.rounds <= 0 ||
         p.round >= p.rounds || p.selectors.size() != 8 || state_.rows.size() != p.rows.size() ||
         p.participant_offset < 0 || p.participant_offset % 16 != 0 ||
         state_.source_participant_offset < 0 || state_.source_participant_offset % 16 != 0 || p.title.empty() ||
@@ -111,9 +116,32 @@ OtherGamesScreen::OtherGamesScreen(const std::filesystem::path& data, OtherGames
         widgets_.width < 55 || widgets_.height < 104 || arrows_.width < 214 || arrows_.height < 43 ||
         flags_.width < 96 || flags_.height < 6 ||
         (state_.cached_backdrop && (state_.underlay.width != 320 || state_.underlay.height != 240)) ||
-        (id.expected_view_byte & 0x80) !=
-            (p.display_mode == OtherGamesDisplayMode::detail ? 0x80 : 0))
+        (!typed && (id.expected_view_byte & 0x80) !=
+            (p.display_mode == OtherGamesDisplayMode::detail ? 0x80 : 0)))
         throw FormatError("other games: incomplete or inconsistent Source projection");
+    if(!state_.fixture_baselines.empty() && state_.fixture_baselines.size()!=p.rows.size())throw FormatError("other games: incomplete fixture layout");
+    if(typed) {
+        if(state_.identity!=OtherGamesIdentity{})throw FormatError("other games: mixed legacy/typed identity");
+        for(size_t i=0;i<p.rows.size();++i) {
+            if(!state_.world12_teams.contains(p.rows[i].home_team)||!state_.world12_teams.contains(p.rows[i].away_team))throw FormatError("other games: missing typed club token");
+            state_.rows[i].primary_result=p.rows[i].played?other_games_cup_score_text(p.rows[i].source_result,texts_,exe_):"-";
+            if(p.rows[i].second_leg_visible)state_.rows[i].second_leg_result=other_games_cup_score_text(p.rows[i].source_second_leg,texts_,exe_,true);
+            state_.rows[i].details[0]=other_games_club_detail_text(p.rows[i].home_metadata,texts_,exe_);
+            state_.rows[i].details[1]=other_games_club_detail_text(p.rows[i].away_metadata,texts_,exe_);
+        }
+    }
+    else if(!state_.sections.empty()||!state_.fixture_baselines.empty())throw FormatError("other games: typed layout overrides on a legacy page");
+    for(size_t i=0;i<state_.fixture_baselines.size();++i)
+        if(state_.fixture_baselines[i]<30 || state_.fixture_baselines[i]>164 || (i && state_.fixture_baselines[i]-state_.fixture_baselines[i-1]<16))
+            throw FormatError("other games: overlapping or out-of-panel fixtures");
+    for(const auto& section:state_.sections)
+        if(section.heading_baseline<30 || section.heading_baseline>=section.fixture_baseline || section.fixture_baseline>164 || section.first_row+section.row_count>p.rows.size())
+            throw FormatError("other games: invalid independent competition section");
+    for(size_t i=0;i<state_.sections.size();++i) {
+        const auto& section=state_.sections[i];
+        if(section.row_count>1 || (section.row_count && state_.fixture_baselines.at(section.first_row)!=section.fixture_baseline) ||
+            (i && section.heading_baseline-state_.sections[i-1].fixture_baseline<32))throw FormatError("other games: independent finals are not sufficiently separated");
+    }
     for (int slot = 0; slot < 8; ++slot)
         if (p.selectors[size_t(slot)].slot != slot)
             throw FormatError("other games: selector slots are incomplete");
@@ -126,6 +154,11 @@ OtherGamesScreen::OtherGamesScreen(const std::filesystem::path& data, OtherGames
 }
 
 OtherGamesRequest OtherGamesScreen::request(OtherGamesAction action, int value) const {
+    if(state_.world12_identity) {
+        OtherGamesRequest result;result.action=action;result.value=value;result.world12_identity=state_.world12_identity;
+        if(action==OtherGamesAction::team_info){result.world12_team=state_.world12_teams.at(value);result.value=-1;}
+        return result;
+    }
     return OtherGamesRequest{state_.identity, action, value};
 }
 
@@ -224,9 +257,10 @@ Image OtherGamesScreen::render() const {
     const bool blocked = !p.fixtures_available || p.unfinished_predecessor;
     const int count = fixture_count(p, p.rows.size());
     const int first = first_fixture_baseline(p);
-    const int step = row_step(p);
     if (blocked) {
         draw_source_panel(out, 0, 112, 319, 122);
+    } else if (!state_.sections.empty()) {
+        for(const auto& section:state_.sections)draw_source_panel(out,0,section.fixture_baseline-8,319,section.fixture_baseline+9);
     } else if (!p.knockout) {
         const int raw_team_count = p.group_tables.empty() ? int(p.rows.size() * 2)
                                                           : p.group_tables.front().size;
@@ -252,9 +286,13 @@ Image OtherGamesScreen::render() const {
         !state_.date_heading.empty())
         draw_text(out, 319 - font_.text_width(state_.date_heading), 22, state_.date_heading, 0x5f);
     if (!state_.matchday_heading.empty()) draw_text(out, 2, 22, state_.matchday_heading, 0x5f);
+    for(const auto& section:state_.sections) {
+        draw_text(out,std::max(0,(320-font_.text_width(section.title))/2),section.heading_baseline,section.title,0x6a);
+        if(!section.message.empty())draw_text(out,std::max(0,(320-font_.text_width(section.message))/2),section.fixture_baseline,section.message,0x6a);
+    }
 
     if (blocked) {
-        const std::string_view warning = texts_.strings.at(1186);
+        const std::string_view warning = state_.unavailable_message.empty()?std::string_view(texts_.strings.at(1186)):std::string_view(state_.unavailable_message);
         draw_text(out, (320 - font_.text_width(warning)) / 2, 120, warning, 0x6a);
     } else {
         for (int visible = 0; visible < count; ++visible) {
@@ -262,7 +300,7 @@ Image OtherGamesScreen::render() const {
             if (index >= p.rows.size() || index >= state_.rows.size()) break;
             const auto& source = p.rows[index];
             const auto& display = state_.rows[index];
-            const int baseline = first + visible * step;
+            const int baseline = fixture_baseline(state_,index);
             const bool compact_knockout = p.knockout && p.display_mode == OtherGamesDisplayMode::compact;
             const bool group = !p.knockout;
             const int home_x = compact_knockout ? 2 : group ? 5 : 5;
@@ -424,9 +462,8 @@ bool OtherGamesScreen::fixture_hit(int x, int y, int& team) const {
     const auto& p = state_.projection;
     if (p.unfinished_predecessor || !p.fixtures_available) return false;
     const int count = fixture_count(p, p.rows.size());
-    const int baseline = first_fixture_baseline(p), step = row_step(p);
     for (int visible = 0; visible < count; ++visible) {
-        const int top = baseline + visible * step - 6;
+        const int top = fixture_baseline(state_,size_t(visible)) - 6;
         const int bottom = top + (p.display_mode == OtherGamesDisplayMode::detail ? 12 : 6);
         if (!(y > top && y < bottom)) continue;
         const auto& row = p.rows[size_t(visible)];
@@ -537,7 +574,13 @@ std::string OtherGamesScreen::state_json() const {
             << ",\"result\":" << p.rows[i].source_result << ",\"second_leg\":"
             << p.rows[i].source_second_leg << '}';
     }
-    out << "]}";
+    out << ']';
+    if(state_.world12_identity) {
+        const auto& owner=*state_.world12_identity;
+        out<<",\"world12\":true,\"world_manager\":"<<int(owner.manager_slot)<<",\"world_club\":"<<owner.club.value<<",\"world_revision\":"<<owner.revision<<",\"world_scope\":"<<owner.scope<<",\"world_sequence\":"<<owner.sequence<<",\"world_teams\":[";
+        bool first=true;for(const auto& [token,club]:state_.world12_teams){if(!first)out<<',';first=false;out<<"{\"token\":"<<token<<",\"club\":"<<club.value<<'}';}out<<']';
+    }
+    out << '}';
     return out.str();
 }
 

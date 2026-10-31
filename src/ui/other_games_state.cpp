@@ -258,6 +258,13 @@ std::string score_line(const GameState& game, const TextDb& texts, const LeImage
 
 } // namespace
 
+std::string other_games_cup_score_text(uint16_t score,const TextDb& texts,const LeImage& exe,bool second_leg) {
+    return score_line(GameState{},texts,exe,score,second_leg);
+}
+std::string other_games_club_detail_text(const OtherGamesClubMetadata& metadata,const TextDb& texts,const LeImage& exe) {
+    return metadata.has_squad_values?squad_detail(GameState{},texts,exe,metadata):foreign_detail(texts,exe,metadata.foreign_strength);
+}
+
 // Kept out of the public UI header; the focused adapter test exercises LeaguePairingsPlayedSource's
 // calendar traversal independently from fixture-table formatting.
 uint32_t other_games_source_round_day_for_test(const GameState& game, uint32_t entry_address,
