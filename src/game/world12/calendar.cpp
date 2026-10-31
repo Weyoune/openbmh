@@ -5,6 +5,24 @@
 #include <tuple>
 #include <stdexcept>
 namespace bmh::world12 {
+AlignedSourceCalendar align_source_calendar(const std::vector<uint16_t>& source,
+    int source_weekday,int target_weekday,uint16_t target_days) {
+    if ((source.size()!=365 && source.size()!=366) ||
+        (target_days!=365 && target_days!=366) ||
+        source_weekday<0 || source_weekday>6 || target_weekday<0 || target_weekday>6)
+        throw std::invalid_argument("world12: invalid source calendar epoch");
+    int shift=(source_weekday-target_weekday+7)%7;
+    if (shift>3) shift-=7;
+    AlignedSourceCalendar aligned{std::vector<uint16_t>(target_days),shift};
+    for (size_t day=0;day<source.size();++day) {
+        if (!source[day]) continue;
+        const int destination=int(day)+shift;
+        if (destination<0 || destination>=target_days)
+            throw std::invalid_argument("world12: weekday alignment moves an appointment outside the season");
+        aligned.entries[size_t(destination)]=source[day];
+    }
+    return aligned;
+}
 SeasonCalendar SeasonCalendar::from_sources(const Catalogue& catalogue,const std::vector<uint16_t>& de,const std::vector<uint16_t>& en){
     if(de.size()!=en.size()||(de.size()!=365&&de.size()!=366))throw std::invalid_argument("world12: source calendars must use the same full season epoch");
     SeasonCalendar result;result.days=uint16_t(de.size());std::array<std::vector<uint16_t>,14> dates;

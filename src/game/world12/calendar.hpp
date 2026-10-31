@@ -2,6 +2,14 @@
 #pragma once
 #include "game/world12/fixtures.hpp"
 namespace bmh::world12 {
+struct AlignedSourceCalendar {
+    std::vector<uint16_t> entries;
+    int day_shift=0;
+};
+// Preserve each appointment's weekday using the nearest whole-source shift
+// (-3..3 days). Never wrap, merge, or discard appointments at season edges.
+AlignedSourceCalendar align_source_calendar(const std::vector<uint16_t>& source,
+    int source_weekday,int target_weekday,uint16_t target_days);
 struct LeagueAppointment {
     uint16_t day=0;LeagueId league;uint8_t round=0;
     bool operator==(const LeagueAppointment&)const=default;

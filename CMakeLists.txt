@@ -1202,6 +1202,7 @@ add_library(bmhworld12 STATIC
     src/game/world12/world.cpp
     src/game/world12/codec.cpp
     src/game/world12/fixtures.cpp
+    src/game/world12/standings.cpp
     src/game/world12/calendar.cpp
     src/game/world12/progression.cpp
     src/game/world12/save.cpp
@@ -1212,6 +1213,12 @@ target_link_libraries(bmhworld12 PUBLIC bmhcore)
 add_executable(world12_tests tests/world12_tests.cpp)
 target_link_libraries(world12_tests PRIVATE bmhworld12)
 add_test(NAME world12_tests COMMAND world12_tests)
+add_executable(world12_calendar_tests tests/world12_calendar_tests.cpp)
+target_link_libraries(world12_calendar_tests PRIVATE bmhworld12)
+add_test(NAME world12_calendar_tests COMMAND world12_calendar_tests)
+add_executable(world12_standings_tests tests/world12_standings_tests.cpp)
+target_link_libraries(world12_standings_tests PRIVATE bmhworld12)
+add_test(NAME world12_standings_tests COMMAND world12_standings_tests)
 add_executable(world12_validate tools/world12/validate_world.cpp)
 target_link_libraries(world12_validate PRIVATE bmhworld12)
 add_executable(world12_calendar_validate tools/world12/validate_calendar.cpp)
