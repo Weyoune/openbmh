@@ -697,12 +697,13 @@ void StadiumScreen::rebuild_tip_dialog() {
     tip_dialog_.reset();
     periphery_dialog_.reset();
     if (state_.periphery_quote_dialog) {
-        GameEndRenderOptions options{state_.plain_background, state_.gradient_text};
+        GameEndRenderOptions options{state_.plain_background, state_.gradient_text, true};
         periphery_dialog_.emplace(data_, *state_.periphery_quote_dialog, options, render_scene());
     }
     if (state_.construction_tip_dialog) {
         GameEndRenderOptions options;
         options.gradient_text = state_.gradient_text;
+        options.preserve_restored_backdrop = true;
         if (state_.block_expansion) options.plain_background = state_.plain_background;
         tip_dialog_.emplace(data_, *state_.construction_tip_dialog,
             options, state_.block_expansion
@@ -2029,7 +2030,7 @@ void StadiumScreen::acknowledge(StadiumState updated) {
     // therefore leaves the old question retryable.
     std::optional<GameEndTaxDialog> staged_tip, staged_periphery;
     if (updated.periphery_quote_dialog) {
-        const GameEndRenderOptions options{updated.plain_background, updated.gradient_text};
+        const GameEndRenderOptions options{updated.plain_background, updated.gradient_text, true};
         staged_periphery.emplace(data_, *updated.periphery_quote_dialog, options, render_scene());
     }
     if (updated.construction_tip_dialog) {

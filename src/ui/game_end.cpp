@@ -277,14 +277,16 @@ GameEndTaxDialog::GameEndTaxDialog(const std::filesystem::path& data,TaxDialogPr
         badge_=load_vga(asset_path(data/"W",std::to_string(std::max(0,projection_.badge_sprite)>>3)+".VGA"));
 }
 Image GameEndTaxDialog::backdrop() const {
-    if(projection_.compact_dialog_frame)return Image(320,240,0);
-    if(restored_backdrop_&&restored_backdrop_->width==320&&restored_backdrop_->height==240)return *restored_backdrop_;
+    const bool restored=restored_backdrop_&&restored_backdrop_->width==320&&restored_backdrop_->height==240;
+    if(projection_.compact_dialog_frame&&!(options_.preserve_restored_backdrop&&restored))return Image(320,240,0);
+    if(restored)return *restored_backdrop_;
     return source_base(background_,options_.plain_background,false);
 }
 Image GameEndTaxDialog::render(std::optional<Button> pressed) const {
     Image out=backdrop();
     draw_source_dialog(out,{widgets_,faces_,&badge_,font_->small,font_->large,
-        font_->exe,font_->sprite,texts_},projection_,options_.gradient_text,pressed);
+        font_->exe,font_->sprite,texts_},projection_,options_.gradient_text,pressed,
+        options_.preserve_restored_backdrop&&restored_backdrop_&&restored_backdrop_->width==320&&restored_backdrop_->height==240);
     return out;
 }
 bool source_badge_fallback(int token) {
@@ -292,11 +294,11 @@ bool source_badge_fallback(int token) {
     return original_badge_fallback(club);
 }
 void draw_source_dialog(Image& out,const SourceDialogAssets& assets,const TaxDialogProjection& p,
-    bool gradient,std::optional<GameEndTaxDialog::Button> pressed) {
+    bool gradient,std::optional<GameEndTaxDialog::Button> pressed,bool preserve_backdrop) {
     using Button=GameEndTaxDialog::Button;
     if(out.width!=320||out.height!=240||(!p.badge_fallback&&!assets.badge))
         throw FormatError("Source dialog: invalid backdrop or badge assets");
-    if(p.compact_dialog_frame)out=Image(320,240,0);
+    if(p.compact_dialog_frame&&!preserve_backdrop)out=Image(320,240,0);
     frame(out,assets.widgets,assets.exe,48,84,217,99,!p.compact_dialog_frame);
     const std::string_view header = p.source_system_identity
         ? text_at(assets.texts,::bmh::layout::SystemManagerNameText) : p.manager_name;

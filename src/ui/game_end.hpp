@@ -29,6 +29,7 @@ std::vector<std::string> wrap_source_text(const Font&, const LeImage&,
 struct GameEndRenderOptions {
     bool plain_background = false;        // Original PlainBackground, not its inverse
     bool gradient_text = true;        // TextGradientDisabled==0 && BMH.exe[TextGradientMode]==2
+    bool preserve_restored_backdrop = false; // Nested construction notices retain their owning screen.
 };
 
 // Rendering-only projection. Names retain the Source ISO646-DE bytes; values and order have
@@ -129,6 +130,7 @@ struct SourceDialogAssets {
 };
 void draw_source_dialog(Image&, const SourceDialogAssets&, const TaxDialogProjection&,
                         bool gradient,
-                        std::optional<GameEndTaxDialog::Button> pressed = {});
+                        std::optional<GameEndTaxDialog::Button> pressed = {},
+                        bool preserve_backdrop = false);
 
 } // namespace bmh::ui
