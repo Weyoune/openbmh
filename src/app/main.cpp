@@ -2344,11 +2344,13 @@ int main(int argc, char** argv) {
                     // after the tip question has returned, before the outer ACK.
                     const Image backdrop = flow.stadium()->construction_notice_backdrop();
                     auto view = ui::construction_notice_dialog(staged, season_exe, notice);
-                    std::optional<ui::GameEndRenderOptions> effective_options;
+                    const auto& stadium_owner = flow.stadium()->state();
+                    std::optional<ui::GameEndRenderOptions> effective_options =
+                        ui::GameEndRenderOptions{stadium_owner.plain_background, stadium_owner.gradient_text, true};
                     if (flow.stadium()->state().block_expansion || flow.stadium()->state().quoted_object) {
                         const auto& owner = flow.stadium()->state();
                         view.compact_dialog_frame = owner.compact_dialog_frame;
-                        effective_options = ui::GameEndRenderOptions{owner.plain_background, owner.gradient_text};
+                        effective_options = ui::GameEndRenderOptions{owner.plain_background, owner.gradient_text, true};
                     }
                     const char* title = notice.kind == ConstructionNoticeKind::InsufficientFunds
                         ? "OpenBMH - stadium_funds_notice" : "OpenBMH - stadium_sponsor_notice";
@@ -2362,7 +2364,7 @@ int main(int argc, char** argv) {
                     view.compact_dialog_frame = owner.compact_dialog_frame;
                     if (present_pending_dialog(staged, view, backdrop,
                             "OpenBMH - stadium_ticket_compensation_notice",
-                            ui::GameEndRenderOptions{owner.plain_background, owner.gradient_text}) == PendingOfferAnswer::unsupported)
+                            ui::GameEndRenderOptions{owner.plain_background, owner.gradient_text, true}) == PendingOfferAnswer::unsupported)
                         throw std::runtime_error("compensation notice presenter stopped");
                 }, sportschau_presenter,
                 [&](const GameState& staged, const AdvertisingRenewal& renewal, const Image& backdrop)

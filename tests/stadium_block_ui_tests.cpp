@@ -4,6 +4,8 @@
 
 #include "game/messages.hpp"
 #include "ui/manager.hpp"
+#include "formats/palette.hpp"
+#include <fstream>
 
 #include <algorithm>
 #include <array>
@@ -1182,9 +1184,51 @@ void source_stadium_data_controls(const std::filesystem::path& data) {
 }
 }
 
+namespace {
+void construction_backdrop_tests(const std::filesystem::path& data,const std::filesystem::path& output) {
+    const auto save_image=[&](const Image& image,const std::string& name) {
+        if(output.empty())return;
+        std::filesystem::create_directories(output);const auto palette=load_palette(data/"M3PC.COL");
+        std::ofstream file(output/(name+".ppm"),std::ios::binary);file<<"P6\n320 240\n255\n";
+        for(auto pixel:image.pixels){const auto color=palette.argb[pixel];file.put(char(color>>16));file.put(char(color>>8));file.put(char(color));}
+    };
+    for(bool compact:{false,true})for(bool periphery:{false,true}) {
+        auto state=periphery?overview_state():detail_state(1,15333,1);
+        state.compact_dialog_frame=compact;
+        StadiumScreen screen(data,state);
+        if(periphery){screen.click(30,220);screen.click(160,220);}
+        const auto request=screen.click(periphery?266:50,periphery?125:140);
+        check(request.kind==(periphery?StadiumRequestKind::quote_periphery:StadiumRequestKind::expansion_confirm),"construction backdrop fixture did not enter its real request path");
+        const Image underlay=screen.render();
+        state=screen.state();next_identity(state);
+        auto question=question_for();question.compact_dialog_frame=compact;
+        if(periphery){state.quoted_object=request.object;state.quoted_price=1700000;question.source_flags=1;state.periphery_quote_dialog=question;}
+        else {state.block_expansion->offer=pending_offer(state.block_expansion->quote);state.construction_tip_dialog=question;}
+        screen.acknowledge(state);const auto actual=screen.render();
+        const auto check_outside=[&](const Image& image) {
+            for(int y=0;y<240;++y)if(y<80 || y>=190)for(int x=0;x<320;++x)
+                if(image.pixels[size_t(y*320+x)]!=underlay.pixels[size_t(y*320+x)])throw std::runtime_error(std::string(periphery?"periphery":"stands")+" compact="+std::to_string(compact)+" backdrop differs at "+std::to_string(x)+","+std::to_string(y));
+        };
+        check_outside(actual);
+        screen.pointer_down(100,171);check_outside(screen.render());
+        GameEndRenderOptions options{state.plain_background,state.gradient_text,true};
+        GameEndTaxDialog notice(data,question,options,screen.construction_notice_backdrop());
+        check(notice.backdrop().pixels==screen.construction_notice_backdrop().pixels,"construction notice completion restores a black frame");
+        check_outside(notice.render(GameEndTaxDialog::Button::yes));
+        if(compact) {
+            const auto name=periphery?"periphery":"stands";
+            GameEndTaxDialog previous(data,question,{state.plain_background,state.gradient_text},underlay);
+            check(previous.render().pixels[0]==0,"default compact dialog behavior changed outside construction menus");
+            save_image(previous.render(),std::string(name)+"-before");save_image(actual,std::string(name)+"-after");
+        }
+    }
+}
+}
+
 int main(int argc, char** argv) try {
     if (argc < 2 || !*argv[1]) throw std::runtime_error("expected Original BMH data directory");
     const std::filesystem::path data = argv[1];
+    construction_backdrop_tests(data,argc>2?std::filesystem::path(argv[2]):std::filesystem::path{});
     source_stadium_data_controls(data);
     source_periphery_hit_tests(data);
     row_hit_tests(data);
