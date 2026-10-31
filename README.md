@@ -1,5 +1,7 @@
 # OpenBMH
 
+**1.2 development branch:** the shared German/English world is under construction. Typed world data, identity and snapshot/fixture foundations are being verified; the graphical application is not yet integrated with that profile. Do not treat a successful build as a playable 1.2 release. See [implementation gates](docs/poc-1.2/IMPLEMENTATION.md).
+
 This is the **1.1 community development branch**. A prepared community package starts directly from `COMMUNITY.OBD`, without BMH.exe or a DOS installation. Original loose Classic installations remain supported. The stable 1.0 line stays on main. See [standalone community data](docs/poc-1.1/STANDALONE.md).
 
 A faithful, standalone community reconstruction of *Bundesliga Manager Hattrick*, using the player's original installation and SDL2 interface.

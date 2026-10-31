@@ -3,7 +3,7 @@ name: Build without game data
 
 on:
   push:
-    branches: [main, release/1.0, poc/1.1-international]
+    branches: [main, release/1.0, poc/1.1-international, "1.2"]
   pull_request:
   workflow_dispatch:
   workflow_call:

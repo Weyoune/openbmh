@@ -1194,3 +1194,21 @@ if(WIN32)
     target_link_libraries(obdeddi_logo_tests PRIVATE gdiplus)
     add_test(NAME obdeddi_logo_tests COMMAND obdeddi_logo_tests)
 endif()
+
+# Country-aware 1.2 world foundation. Kept separate from legacy packed state until
+# its application/progression adapters are completely verified.
+add_library(bmhworld12 STATIC
+    src/game/world12/catalogue.cpp
+    src/game/world12/world.cpp
+    src/game/world12/codec.cpp
+    src/game/world12/fixtures.cpp
+    src/game/world12/save.cpp
+    src/game/world12/match_projection.cpp
+    src/cli/json.cpp)
+target_include_directories(bmhworld12 PUBLIC src)
+target_link_libraries(bmhworld12 PUBLIC bmhcore)
+add_executable(world12_tests tests/world12_tests.cpp)
+target_link_libraries(world12_tests PRIVATE bmhworld12)
+add_test(NAME world12_tests COMMAND world12_tests)
+add_executable(world12_validate tools/world12/validate_world.cpp)
+target_link_libraries(world12_validate PRIVATE bmhworld12)
