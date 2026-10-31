@@ -583,8 +583,8 @@ static void auto_lineup_impl(GameState& g, int team, int mode, int manager) {
             }
         }
     if (original_foreign_limit_enabled) {
-        const int country = team_region(team) & 0xff;
-        const int allowed = 3 - int(country != 0);
+        const int country = match_team_region(g,team) & 0xff;
+        const int allowed = match_foreign_player_limit(g,team);
         std::vector<int> foreign_rows, foreign_roles;
         for (int row = 0; row < 11; ++row) {
             const int id = g.squad_slots.at(range.first + row) & 0x0fff;

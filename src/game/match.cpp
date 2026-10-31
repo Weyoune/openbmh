@@ -82,6 +82,24 @@ int team_region(int team) {
     if (t - kCupTeams >= 0) return (t - kCupTeams) / 7 - kFirstRegionalLeague + 10;
     return 0;
 }
+int match_team_region(const GameState& state,int team) {
+    if(state.projected_match_clubs.empty())return team_region(team);
+    const int region=state.projected_match_clubs.at(size_t(team)).climate_region;
+    if(region<0 || region>=48)throw std::invalid_argument("match: invalid projected climate region");
+    return region;
+}
+int match_team_league(const GameState& state,int team) {
+    if(state.projected_match_clubs.empty())return team>(kNoTeam-1)?0:team_league(team);
+    const int league=state.projected_match_clubs.at(size_t(team)).league_class;
+    if(league<0 || league>=10)throw std::invalid_argument("match: invalid projected league class");
+    return league;
+}
+int match_foreign_player_limit(const GameState& state,int team) {
+    if(state.projected_match_clubs.empty())return 3-int(team_region(team)!=0);
+    const int limit=state.projected_match_clubs.at(size_t(team)).foreign_player_limit;
+    if(limit<0 || limit>11)throw std::invalid_argument("match: invalid projected foreign-player limit");
+    return limit;
+}
 
 void rate_side(GameState& g, const MatchSetup& m, int side, int previous6, WatcomRandom& rand, uint8_t* r, GameRandom* game) {
     int team = side ? m.away : m.home, opponent = side ? m.home : m.away;
@@ -92,8 +110,8 @@ void rate_side(GameState& g, const MatchSetup& m, int side, int previous6, Watco
     // --- modifier for byte 2 ---------------------------------------------------------------
     int modifier = 0;
     if (side != 0 && m.climate_effect) {
-        int region = team_region(team);
-        if (region != team_region(opponent)) {
+        int region = match_team_region(g,team);
+        if (region != match_team_region(g,opponent)) {
             int expected = rand.range(0, 6) + month_temperature(m.month) + region_temperature(region) - 3;
             // Abs2 on the temperature byte read unsigned (frost counts as 200+)
             int deviation = std::abs(int(uint8_t(m.temperature)) - expected);
@@ -103,7 +121,7 @@ void rate_side(GameState& g, const MatchSetup& m, int side, int previous6, Watco
         }
     }
     if (side == 0) {
-        int league = team > (kNoTeam - 1) ? 0 : team_league(team);  // TeamLeague2
+        int league = match_team_league(g,team);
         int base = kLeagueCrowd[league < 10 ? league : 9] * 1000;
         if (unsigned(rand.range(base + 3000, base + 6000)) < unsigned(m.spectators)) {
             // a human manager's side with record +0x289 set suffers more from a full house

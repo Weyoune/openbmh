@@ -53,6 +53,7 @@ std::string date_text(uint32_t counter) {
 }  // namespace
 
 Bytes save_stream(const GameState& live) {
+    if(!live.projected_match_clubs.empty())throw FormatError("projected match workspace cannot be serialized as a legacy career");
     // NationalCoachAfterLoad writes a Bundestrainer's game with the slots swapped back (national.hpp)
     const bool coach = live.memory.has(::bmh::layout::CoachActive) && live.memory.u8(::bmh::layout::CoachActive) != 0;
     const GameState swapped = coach ? national_coach_save_form(live) : GameState{};

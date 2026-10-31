@@ -37,6 +37,10 @@ constexpr uint16_t kEmptySlot = 0x0FFF;
 constexpr uint16_t kSlotInLineup = 0x8000;
 
 struct GameState {
+    struct ProjectedMatchClub {int league_class=0,climate_region=0,foreign_player_limit=3;};
+    // Runtime-only context for bounded typed-world projections. Empty retains
+    // the original positional lookup; never serialized into a legacy save.
+    std::vector<ProjectedMatchClub> projected_match_clubs;
     DbCounts counts{};
     std::vector<uint8_t> club_kits, club_short_offsets;
     uint8_t club_kit(int team) const;

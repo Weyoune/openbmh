@@ -5,13 +5,14 @@
 #include <map>
 namespace bmh::world12 {
 struct PlayerRecord {
-    PlayerId id;Player attributes;uint8_t bonus=0;
-    bool operator==(const PlayerRecord& p)const{return id==p.id&&attributes.name==p.attributes.name&&attributes.w35c==p.attributes.w35c&&attributes.w368==p.attributes.w368&&attributes.w364==p.attributes.w364&&bonus==p.bonus;}
+    PlayerId id;Player attributes;uint8_t bonus=0;uint16_t cards=0;
+    bool operator==(const PlayerRecord& p)const{return id==p.id&&attributes.name==p.attributes.name&&attributes.w35c==p.attributes.w35c&&attributes.w368==p.attributes.w368&&attributes.w364==p.attributes.w364&&bonus==p.bonus&&cards==p.cards;}
 };
 enum class ClubKind:uint8_t { club,national_team };
 struct ClubRecord {
     ClubId id;std::string name;Country country=Country::germany;ClubKind kind=ClubKind::club;
     LeagueId league;CrestId crest;uint8_t kit=0,rating=0,short_span=0;
+    uint16_t match_flags=0;uint8_t morale=25;
     std::array<RosterSlot,24> roster;
     bool operator==(const ClubRecord&)const=default;
 };

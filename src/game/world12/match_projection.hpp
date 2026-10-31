@@ -15,9 +15,12 @@ public:
     uint32_t local_club(ClubId)const;
     uint32_t local_player(PlayerId)const;
     void commit_player_attributes(World&)const;
+    void commit_match_state(World&)const;
 private:
     std::vector<ClubId> clubs_;
     std::vector<PlayerId> players_;
     std::vector<PlayerRecord> originals_;
+    std::vector<ClubRecord> original_clubs_;
+    std::vector<Manager> original_managers_;
 };
 }

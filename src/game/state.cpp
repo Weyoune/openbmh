@@ -116,10 +116,10 @@ GameState GameState::from_save(const SaveState& save, const DbCounts& c) {
 }
 
 uint8_t GameState::club_kit(int team) const {
-    return counts.league_teams == 164 ? club_kits.at(size_t(team)) : memory.u8(layout::ClubKitSelectors + uint32_t(team));
+    return !projected_match_clubs.empty() || counts.league_teams == 164 ? club_kits.at(size_t(team)) : memory.u8(layout::ClubKitSelectors + uint32_t(team));
 }
 uint8_t GameState::club_short_offset(int team) const {
-    return counts.league_teams == 164 ? club_short_offsets.at(size_t(team)) : memory.u8(layout::ClubShortNameOffsets + uint32_t(team));
+    return !projected_match_clubs.empty() || counts.league_teams == 164 ? club_short_offsets.at(size_t(team)) : memory.u8(layout::ClubShortNameOffsets + uint32_t(team));
 }
 
 int GameState::manager_of(int team) const {

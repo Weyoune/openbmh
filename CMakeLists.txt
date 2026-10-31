@@ -1210,6 +1210,7 @@ add_library(bmhworld12 STATIC
     src/game/world12/progression.cpp
     src/game/world12/save.cpp
     src/game/world12/match_projection.cpp
+    src/game/world12/ai_match.cpp
     src/cli/json.cpp)
 target_include_directories(bmhworld12 PUBLIC src)
 target_link_libraries(bmhworld12 PUBLIC bmhcore)
@@ -1233,6 +1234,9 @@ add_test(NAME world12_cup_draw_tests COMMAND world12_cup_draw_tests)
 add_executable(world12_scope_tests tests/world12_scope_tests.cpp)
 target_link_libraries(world12_scope_tests PRIVATE bmhworld12_app)
 add_test(NAME world12_scope_tests COMMAND world12_scope_tests)
+add_executable(world12_match_tests tests/world12_match_tests.cpp)
+target_link_libraries(world12_match_tests PRIVATE bmhworld12)
+add_test(NAME world12_match_tests COMMAND world12_match_tests)
 add_executable(setup_country_symbol_tests tests/setup_country_symbol_tests.cpp)
 target_link_libraries(setup_country_symbol_tests PRIVATE bmhui)
 add_test(NAME setup_country_symbol_tests COMMAND setup_country_symbol_tests)
@@ -1242,6 +1246,8 @@ if(Python3_Interpreter_FOUND)
 endif()
 add_executable(world12_validate tools/world12/validate_world.cpp)
 target_link_libraries(world12_validate PRIVATE bmhworld12)
+add_executable(world12_ai_validate tools/world12/validate_ai_match.cpp)
+target_link_libraries(world12_ai_validate PRIVATE bmhworld12)
 add_executable(world12_calendar_validate tools/world12/validate_calendar.cpp)
 target_link_libraries(world12_calendar_validate PRIVATE bmhworld12 bmhlaunch)
 add_executable(world12_cups_validate tools/world12/validate_cups.cpp)

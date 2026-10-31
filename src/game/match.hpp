@@ -123,6 +123,9 @@ int injure_player(GameState& g, int slot, int type, bool match, int manager, Wat
 // Region of a team for the climate effect (TeamRegion): 0 for the top five leagues,
 // 1..4 for the four regional leagues, higher values for amateur teams (7 per region).
 int team_region(int team);
+int match_team_region(const GameState&,int team);
+int match_team_league(const GameState&,int team);
+int match_foreign_player_limit(const GameState&,int team);
 
 // Temperature offset of a region (MatchRuntimeField3[region]) and the average temperature of a
 // month (MatchRuntimeField4[CareerSession_PairingsRuntimeDraw_ExecutableField5]).
