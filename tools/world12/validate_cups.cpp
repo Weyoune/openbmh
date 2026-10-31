@@ -15,6 +15,7 @@ int main(int argc,char** argv)try {
     const auto english=bmh::launch::translate_fltd(argv[2]);
     int verified=0,unsupported=0;
     for(const auto country:{Country::germany,Country::england}) {
+        if(!world.catalogue.scope.domestic_enabled(country))continue;
         const auto& image=country==Country::germany?german:english;
         std::vector<ClubId> available;
         for(const auto& [id,club]:world.clubs)
@@ -43,7 +44,7 @@ int main(int argc,char** argv)try {
              <<"Metadata probes use synthetic club pairings, not the original entry draws or simulated matches.\n";
     if(!unsupported) {
         CareerSnapshot state;state.world=world;state.results=SeasonResults::empty(world.catalogue);state.game_seed=37;state.watcom_seed=91;
-        const auto ranking=[&](Country country){CountryCupRanking result;for(uint8_t i=0;i<5;++i)result[i]=world.membership.at(world.catalogue.starting_league(country,i).value).clubs;return result;};
+        const auto ranking=[&](Country country){CountryCupRanking result;if(!world.catalogue.scope.domestic_enabled(country))return result;for(uint8_t i=0;i<5;++i)result[i]=world.membership.at(world.catalogue.starting_league(country,i).value).clubs;return result;};
         bmh::app::world12::install_domestic_cup_fields(state,ranking(Country::germany),ranking(Country::england),{german,english});
         for(const auto& cup:state.cups)std::cout<<"Initial cup "<<int(cup.cup)<<": "<<cup.rounds.front().fixtures.size()*2<<" qualifying/main entrants, "<<cup.seeded.size()<<" seeded clubs\n";
         if(read_save(make_save(state))!=state)throw std::runtime_error("source-backed initial cup save roundtrip failed");

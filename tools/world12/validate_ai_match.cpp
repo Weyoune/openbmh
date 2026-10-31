@@ -10,10 +10,16 @@
 int main(int argc,char** argv)try {
     using namespace bmh;
     using namespace bmh::world12;
-    if(argc!=3&&argc!=4)throw std::runtime_error("usage: world12_ai_validate <WORLD12.JSON> <supplied reference rules directory> [--settle]");
-    const bool settle=argc==4;
-    if(settle&&std::string(argv[3])!="--settle")throw std::runtime_error("unknown AI probe option");
-    const auto source=decode_world(read_file(argv[1]));
+    if(argc<3||argc>5)throw std::runtime_error("usage: world12_ai_validate <WORLD12.JSON> <supplied reference rules directory> [--settle] [--germany-only]");
+    bool settle=false,germany_only=false;
+    for(int i=3;i<argc;++i) {
+        const std::string option=argv[i];
+        if(option=="--settle")settle=true;
+        else if(option=="--germany-only")germany_only=true;
+        else throw std::runtime_error("unknown AI probe option");
+    }
+    const auto master=decode_world(read_file(argv[1]));
+    const auto source=germany_only?select_world_scope(master,{true,false,true}):master;
     const std::filesystem::path data=argv[2];
     const auto profile=load_data_profile(data);install_runtime_profile(profile);
     const auto exe=load_le(data/"BMH.exe");install_career_rules(exe);
@@ -22,7 +28,7 @@ int main(int argc,char** argv)try {
     AiLeagueConditions conditions;conditions.month=8;conditions.temperature=19;conditions.rain=0;conditions.date=40;
     conditions.spectators=15000;conditions.referee_properties=database.raw_referee_properties;conditions.presentation_buttons.assign(0xb4,1);
     int completed=0,total_goals=0;
-    for(uint32_t league:{0u,5u,9u,10u,11u,12u,13u}) {
+    for(uint32_t league:{0u,5u,9u,10u,11u,12u}) {
         if(!source.catalogue.league({league}).active)continue;
         const auto& clubs=source.membership[league].clubs;
         const bmh::world12::Fixture fixture{clubs.at(0),clubs.at(1)};

@@ -25,7 +25,7 @@ AlignedSourceCalendar align_source_calendar(const std::vector<uint16_t>& source,
 }
 SeasonCalendar SeasonCalendar::from_sources(const Catalogue& catalogue,const std::vector<uint16_t>& de,const std::vector<uint16_t>& en){
     if(de.size()!=en.size()||(de.size()!=365&&de.size()!=366))throw std::invalid_argument("world12: source calendars must use the same full season epoch");
-    SeasonCalendar result;result.days=uint16_t(de.size());std::array<std::vector<uint16_t>,14> dates;
+    SeasonCalendar result;result.days=uint16_t(de.size());std::array<std::vector<uint16_t>,kLeagueSlots> dates;
     for(size_t day=0;day<de.size();++day){
         for(int country=0;country<2;++country){const auto raw=country==0?de[day]:en[day];
             const bool enabled=country==0?catalogue.scope.germany:catalogue.scope.england;
@@ -49,16 +49,16 @@ SeasonCalendar SeasonCalendar::from_sources(const Catalogue& catalogue,const std
     for(size_t r=0;r<18;++r)dates[9].push_back(dates[5].at(((2*r+1)*dates[5].size())/36));
     // The European AI leagues use the German league cadence. This avoids
     // copying the former 22/38-round foreign calendar onto 18-team leagues.
-    for(size_t l=10;l<14;++l)dates[l]=dates[0];
-    for(uint32_t l=0;l<14;++l){if(!catalogue.leagues[l].active)continue;if(dates[l].size()!=size_t(catalogue.leagues[l].rounds()))throw std::invalid_argument("world12: incomplete country league calendar");for(size_t r=0;r<dates[l].size();++r)result.leagues.push_back({dates[l][r],{l},uint8_t(r+1)});}
+    for(size_t l=10;l<kLeagueSlots;++l)dates[l]=dates[0];
+    for(uint32_t l=0;l<kLeagueSlots;++l){if(!catalogue.leagues[l].active)continue;if(dates[l].size()!=size_t(catalogue.leagues[l].rounds()))throw std::invalid_argument("world12: incomplete country league calendar");for(size_t r=0;r<dates[l].size();++r)result.leagues.push_back({dates[l][r],{l},uint8_t(r+1)});}
     std::sort(result.leagues.begin(),result.leagues.end(),[](const auto&a,const auto&b){return a.day!=b.day?a.day<b.day:a.league<b.league;});
     std::sort(result.others.begin(),result.others.end(),[](const auto&a,const auto&b){return a.day!=b.day?a.day<b.day:a.domain!=b.domain?a.domain<b.domain:a.source_entry<b.source_entry;});result.validate(catalogue);return result;
 }
 void SeasonCalendar::validate(const Catalogue& catalogue)const {
     if(days!=365&&days!=366)throw std::invalid_argument("world12: invalid season length");
-    std::array<uint8_t,14> rounds{};std::array<int,14> last;last.fill(-1);std::set<std::pair<uint16_t,LeagueId>> occupied;
+    std::array<uint8_t,kLeagueSlots> rounds{};std::array<int,kLeagueSlots> last;last.fill(-1);std::set<std::pair<uint16_t,LeagueId>> occupied;
     for(const auto& a:leagues){const auto& l=catalogue.league(a.league);if(a.day>=days||a.round!=rounds[a.league.value]+1||a.round>l.rounds()||int(a.day)<=last[a.league.value]||!occupied.emplace(a.day,a.league).second)throw std::invalid_argument("world12: duplicate/out-of-order league appointment");rounds[a.league.value]=a.round;last[a.league.value]=a.day;}
-    for(size_t l=0;l<14;++l)if(rounds[l]!=catalogue.leagues[l].rounds())throw std::invalid_argument("world12: missing season rounds");
+    for(size_t l=0;l<kLeagueSlots;++l)if(rounds[l]!=catalogue.leagues[l].rounds())throw std::invalid_argument("world12: missing season rounds");
     std::set<std::tuple<uint16_t,CalendarDomain,uint16_t>> extra;
     for(const auto&a:others)if(a.day>=days||uint8_t(a.domain)>2||!a.source_entry||!extra.emplace(a.day,a.domain,a.source_entry).second)throw std::invalid_argument("world12: invalid duplicate non-league appointment");
     for(const auto& a:others) {

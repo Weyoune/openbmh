@@ -85,7 +85,7 @@ int main() try {
     de[18]=en[15]=0x20;
     const auto aligned=align_source_calendar(en,5,2,366);
     const auto calendar=SeasonCalendar::from_sources(Catalogue::dual_classic(),de,aligned.entries);
-    check(aligned.day_shift==3 && calendar.leagues_on(24).size()==13,"mixed country Saturday rounds separated");
+    check(aligned.day_shift==3 && calendar.leagues_on(24).size()==12,"mixed country Saturday rounds separated");
     const auto cups=calendar.others_on(18);
     check(cups.size()==2 && cups[0].domain==CalendarDomain::germany && cups[1].domain==CalendarDomain::england,
         "aligned domestic cups lost country ownership");

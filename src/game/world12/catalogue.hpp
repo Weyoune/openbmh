@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 namespace bmh::world12 {
+inline constexpr size_t kLeagueSlots=13;
 struct League {
     LeagueId id;Country country=Country::germany;uint8_t local_index=0,clubs=0,relegation=0;
     std::string name;
@@ -22,7 +23,7 @@ struct CountryRules {
 };
 struct Catalogue {
     GameScope scope;
-    std::array<League,14> leagues;
+    std::array<League,kLeagueSlots> leagues;
     std::array<CountryRules,2> playable_countries;
     static Catalogue dual_classic(GameScope scope={});
     const League& league(LeagueId)const;

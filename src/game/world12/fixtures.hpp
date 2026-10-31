@@ -8,7 +8,7 @@ struct Fixture {ClubId home,away;bool operator==(const Fixture&)const=default;};
 std::vector<Fixture> league_fixtures(const World&,LeagueId,int round);
 struct LeagueResult {bool played=false;uint8_t home=0,away=0;bool operator==(const LeagueResult&)const=default;};
 struct SeasonResults {
-    std::array<std::vector<LeagueResult>,14> leagues;
+    std::array<std::vector<LeagueResult>,kLeagueSlots> leagues;
     static SeasonResults empty(const Catalogue&);
     LeagueResult& result(const Catalogue&,LeagueId,int round,int match);
     const LeagueResult& result(const Catalogue&,LeagueId,int round,int match)const;

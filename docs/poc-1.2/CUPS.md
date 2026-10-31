@@ -40,7 +40,7 @@ Initial semantic tie ordering runs independently of whether a human sees the dra
 
 `prepare_day` identifies each pending domestic cup leg alongside the day's league fixtures. `commit_day` validates the complete country/league/cup batch on a staged career, then publishes results, stage transitions and the shared date together. Missing results, missing successors, invalid draws and stale/replayed tickets preserve the previous career. Unsupported non-league events continue to block advancement explicitly.
 
-The development O1.2 snapshot schema `OBMH12S3` retains stage links, seeded participants, all completed stage/round results, pending return legs and revisions. Read validation checks the whole stage chain. This is an unpublished development schema; it is not a migration path for legacy/1.1 saves or a complete application save implementation.
+The development O1.2 snapshot schema `OBMH12S4` retains stage links, seeded participants, all completed stage/round results, pending return legs and revisions. Read validation checks the whole stage chain. This is an unpublished development schema; it is not a migration path for legacy/1.1 saves or a complete application save implementation.
 
 ## Evidence and remaining integration
 

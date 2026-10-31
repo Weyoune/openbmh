@@ -53,14 +53,22 @@ World source_world() {
     return world;
 }
 void projection_state(const World& world,const bmh::GameState& base) {
-    const auto en=world.membership[9].clubs[0],pt=world.membership[13].clubs[0];
+    const auto en=world.membership[9].clubs[0],pt=world.membership[12].clubs[0];
     auto projection=AiMatchProjection::create(world,{en,pt},base);
     check(projection.state.club_kit(0)==world.clubs.at(en).kit && projection.state.club_short_offset(1)==world.clubs.at(pt).short_span,"club presentation metadata retained another local club identity");
     bool legacy_blocked=false;
     try{bmh::save_stream(projection.state);}catch(const bmh::FormatError& error){legacy_blocked=std::string(error.what()).find("projected match workspace")!=std::string::npos;}
     check(legacy_blocked,"local projected IDs could be exported as a legacy career save");
     check(bmh::match_team_league(projection.state,0)==4 && bmh::match_team_region(projection.state,0)==2 && bmh::match_foreign_player_limit(projection.state,0)==3,"English league/country/domestic foreign limit lost in local mapping");
-    check(bmh::match_team_league(projection.state,1)==8 && bmh::match_team_region(projection.state,1)==5,"Portuguese climate/league classification lost in local mapping");
+    check(bmh::match_team_league(projection.state,1)==8 && bmh::match_team_region(projection.state,1)==4,"Italian climate/league classification lost in local mapping");
+    const auto fallback=select_world_scope(world,{true,false,true});
+    const auto premier=world.membership[5].clubs;
+    const auto ai_premier=AiMatchProjection::create(fallback,{premier[0],premier[1]},base);
+    const auto domestic_premier=AiMatchProjection::create(world,{premier[0],premier[1]},base);
+    check(bmh::match_team_league(ai_premier.state,0)==6 && bmh::match_team_region(ai_premier.state,0)==2 &&
+        bmh::match_foreign_player_limit(ai_premier.state,0)==2,"fallback Premier League lost Original foreign context");
+    check(bmh::match_team_league(domestic_premier.state,0)==0 && bmh::match_foreign_player_limit(domestic_premier.state,0)==3,
+        "full English Premier League inherited fallback context");
     auto malformed=projection.state;malformed.projected_match_clubs[0].league_class=-1;
     rejects([&]{bmh::match_team_league(malformed,0);},"invalid projected class used as a table index");
     auto persisted=world;
@@ -127,7 +135,7 @@ void english_foreign_limit(const World& source,const bmh::GameState& base) {
     check(locals==5,"English reserves were treated as foreigners under the German nationality origin");
 }
 void settlement_matches_core(const World& source,const bmh::GameState& base,const AiLeagueConditions& conditions) {
-    for(uint32_t league:{0u,1u,9u,10u,13u}) {
+    for(uint32_t league:{0u,1u,9u,10u,12u}) {
         auto world=source;const Fixture fixture{world.membership[league].clubs[0],world.membership[league].clubs[1]};
         const auto historical=world.membership[12].clubs.back();
         auto& record=world.clubs.at(fixture.home).season_stats;
@@ -154,7 +162,7 @@ void settlement_matches_core(const World& source,const bmh::GameState& base,cons
     }
     // Check the original lower-division totals quirk against the actual old
     // positional implementation, not a duplicated points formula.
-    for(const auto indices:{std::pair{1u,18},std::pair{4u,72},std::pair{10u,90},std::pair{13u,126}}) {
+    for(const auto indices:{std::pair{1u,18},std::pair{4u,72},std::pair{10u,90},std::pair{12u,126}}) {
         const auto a=source.membership[indices.first].clubs[0],b=source.membership[indices.first].clubs[1];
         auto projection=AiMatchProjection::create(source,{a,b},base);auto native=projection.state;
         native.projected_match_clubs.clear();const int first=indices.second;
@@ -172,7 +180,7 @@ void settlement_matches_core(const World& source,const bmh::GameState& base,cons
 }
 void settled_rounds(const World& world,const bmh::GameState& base,const AiLeagueConditions& conditions) {
     bmh::set_fixture_tables(bmh::test::authored_fixture_tables());
-    for(uint32_t league:{0u,5u,9u,13u}) {
+    for(uint32_t league:{0u,5u,9u,12u}) {
         const auto fixtures=league_fixtures(world,{league},1);
         std::vector<AiLeagueConditions> inputs(fixtures.size(),conditions);
         for(size_t i=0;i<inputs.size();++i)inputs[i].spectators+=uint32_t(i)*1000;
@@ -230,7 +238,7 @@ int main()try {
     const Fixture fixture{world.membership[0].clubs[0],world.membership[0].clubs[1]};
     int goals=0,changed=0;
     for(uint32_t seed=1;seed<=16;++seed) {
-        const uint32_t league=seed<=4?0:seed<=8?9:seed<=12?10:13;
+        const uint32_t league=seed<=4?0:seed<=8?9:seed<=12?10:12;
         const Fixture selected_fixture{world.membership[league].clubs[0],world.membership[league].clubs[1]};
         auto first=world,second=world;bmh::GameRandom ag(int32_t(seed*17)),bg(int32_t(seed*17));bmh::WatcomRandom aw(seed),bw(seed);
         const auto a=simulate_ai_league_match(first,base,selected_fixture,conditions,ag,aw);

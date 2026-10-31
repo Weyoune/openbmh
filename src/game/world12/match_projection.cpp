@@ -21,8 +21,9 @@ AiMatchProjection AiMatchProjection::create(const World& world,const std::vector
     append(state.club_names,"Unused local club");
     for(auto id:requested){const auto it=world.clubs.find(id);if(it==world.clubs.end()||!clubs.insert(id).second||!it->second.league.valid())throw std::invalid_argument("world12: missing, repeated or non-rostered match club");auto team=projection.clubs_.size();if(team>=state.club_ids.size())throw std::invalid_argument("world12: legacy club workspace too small");projection.clubs_.push_back(id);projection.original_clubs_.push_back(it->second);
         const auto& league=world.catalogue.league(it->second.league);
-        const int league_class=(league.country==Country::germany||league.country==Country::england)?league.local_index:5+int(league.id.value-10);
-        const bool domestic=league.country==Country::germany||league.country==Country::england;
+        const int foreign_class=league.country==Country::spain?5:league.country==Country::england?6:league.country==Country::france?7:8;
+        const int league_class=league.playable?league.local_index:foreign_class;
+        const bool domestic=league.playable;
         state.projected_match_clubs.push_back({league_class,int(league.country),domestic?3:2});
         state.club_kits.at(team)=it->second.kit;state.club_short_offsets.at(team)=it->second.short_span;
         state.team_flags.at(team)=it->second.match_flags;state.team_morale.at(team)=it->second.morale;

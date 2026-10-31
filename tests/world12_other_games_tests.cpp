@@ -22,7 +22,7 @@ CareerSnapshot snapshot(GameScope scope={}) {
     if(scope.england)er=bmh::test::world12::membership_ranking(world,Country::england);
     bmh::app::world12::install_domestic_cup_fields(state,dr,er,{de,en});
     for(const auto cup:{DomesticCup::german_supercup,DomesticCup::english_supercup}) {
-        if(!scope.clubs_enabled(cup_country(cup)))continue;
+        if(!scope.domestic_enabled(cup_country(cup)))continue;
         const auto league=state.world.catalogue.starting_league(cup_country(cup),0);const auto& clubs=state.world.membership[league.value].clubs;
         auto stage=KnockoutStage::from_source(cup,cup_country(cup)==Country::germany?de:en,23,{{clubs[0],clubs[1]}},state.world);
         commit_cup_leg(stage,{cup,23,0,{uint16_t(cup==DomesticCup::german_supercup?65:32)},{},{}},state.world);state.cups.push_back(stage);

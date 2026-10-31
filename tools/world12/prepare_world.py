@@ -19,8 +19,8 @@ import zipfile
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'poc'))
 from prepare_international import read_master, u16, legacy_name
 
-SIZES=(18,18,18,18,18,20,20,20,20,10,18,18,18,18)
-COUNTRIES=(0,0,0,0,0,2,2,2,2,2,1,3,4,5)
+SIZES=(18,18,18,18,18,20,20,20,20,10,18,18,18)
+COUNTRIES=(0,0,0,0,0,2,2,2,2,2,1,3,4)
 
 def sha(data):return hashlib.sha256(data).hexdigest()
 def rows(folder,name):return json.loads(gzip.decompress((folder/(name+'.json.gz')).read_bytes()))
@@ -43,7 +43,7 @@ def prepare(base,tables,output,english):
     club_names=[pool_string(db['pools'][0],n) for n in u16(db['clubs'])]
     player_names=[pool_string(db['pools'][1],n) for n in u16(db['names'])]
     w1=[x[0] for x in struct.iter_unpack('<I',db['form'])];w2=[x[0] for x in struct.iter_unpack('<I',db['skills'])];w3=[x[0] for x in struct.iter_unpack('<I',db['identity'])]
-    members=[{'league':i,'clubs':[]} for i in range(14)];crests=[];clubs=[];players=[];provenance={'base_sha256':sha(base.read_bytes()),'master_sha256':sha(raw),'new_clubs':[],'new_players':[],'limits':['Supplied EA database membership is source data, not an independently verified 2026/27 registration claim.','League membership is adapted to the reduced FLTD sizes; those adaptations are fictional.','Classic age/skills generation at career start remains unchanged.']}
+    members=[{'league':i,'clubs':[]} for i in range(13)];crests=[];clubs=[];players=[];provenance={'base_sha256':sha(base.read_bytes()),'master_sha256':sha(raw),'new_clubs':[],'new_players':[],'limits':['Supplied EA database membership is source data, not an independently verified 2026/27 registration claim.','League membership is adapted to the reduced FLTD sizes; those adaptations are fictional.','Classic age/skills generation at career start remains unchanged.']}
     badges=u16(db['badges']);slots=u16(db['squads']);next_club=445;next_player=3334
     for i in range(3334):players.append({'id':i,'name':player_names[i],'form_word':w1[i],'skill_word':w2[i],'identity_word':w3[i],'bonus':db['bonus'][i]})
     empty=lambda:[{'player':None,'flags':0} for _ in range(24)]
@@ -72,7 +72,7 @@ def prepare(base,tables,output,english):
         team=teams.get(int(link['teamid']))
         if team:ea_leagues[int(link['leagueid'])].append(team)
     def strength(team):return int(team.get('overallrating',team.get('matchdayoverallrating',60)))
-    male_ids={int(t['teamid']) for lid in (13,14,60,61,308) for t in ea_leagues[lid]}
+    male_ids={int(t['teamid']) for lid in (13,14,60,61) for t in ea_leagues[lid]}
     ea_by_name={normalize(t['teamname']):t for t in teams.values() if int(t['teamid']) in male_ids}
     mapped=set()
     # Explicit club identity aliases belong to the generated private receipt.
@@ -121,7 +121,7 @@ def prepare(base,tables,output,english):
     next_crest=max(x&511 for x in badges)+1
     def crest(club):
         nonlocal next_crest
-        cid=club['id'];crests[cid]={'id':cid,'resource':'W/'+str(next_crest//8)+'.VGA','cell':next_crest%8};next_crest+=1
+        cid=club['id'];index=next(i for i,c in enumerate(crests) if c['id']==cid);crests[index]={'id':cid,'resource':'W/'+str(next_crest//8)+'.VGA','cell':next_crest%8};next_crest+=1
     def new_club(team,league,country):
         nonlocal next_club
         club={'id':next_club,'name':legacy_name(team['teamname']).decode('ascii'),'country':country,'kind':0,'league':league,'crest':next_club,'kit':next_club%20,'rating':strength(team),'short_span':15,'roster':empty()};clubs.append(club);crests.append({'id':next_club,'resource':'','cell':0});crest(club);provenance['new_clubs'].append({'id':next_club,'source_team':int(team['teamid']),'fictional_fields':['league_membership','kit','crest']});next_club+=1;add_roster(club,team);return club
@@ -135,19 +135,11 @@ def prepare(base,tables,output,english):
     if len(remainder)<10:raise ValueError('Insufficient clubs for reduced fifth English group')
     for team in remainder[:10]:
         club=new_club(team,9,2);members[9]['clubs'].append(club['id']);selected_english.add(int(team['teamid']))
-    portuguese=sorted(ea_leagues[308],key=lambda t:(-strength(t),int(t['teamid'])))
-    existing_pt={normalize(clubs[i]['name']):i for i in range(194,201)}
-    claimed=set()
-    for team in portuguese[:18]:
-        match=None
-        for i in range(194,201):
-            t=existing_team(clubs[i])
-            if t and int(t['teamid'])==int(team['teamid']):match=i;break
-        if match is not None and match not in claimed:
-            club=clubs[match];club['league']=13;club['country']=5;add_roster(club,team);claimed.add(match)
-        else:club=new_club(team,13,5)
-        members[13]['clubs'].append(club['id'])
-    if len(members[13]['clubs'])!=18:raise ValueError('Portugal needs eighteen supplied clubs')
+    # Preserve previously assigned English cup-club identities. IDs 515..525
+    # belonged to the retired Portuguese league and must never be reused.
+    if next_club != 515:raise ValueError('Unexpected English league identity range')
+    next_club=526
+    next_crest+=11
     # Named English cup/amateur pool, separate from the 90 league clubs.
     extras=[t for t in unique if int(t['teamid']) not in selected_english]
     invented=['Northbridge FC','Eastford Town','Westhaven United','Southwick Athletic','Kingsmere Rovers','Oakchester City','Millborough FC','Riverford Wanderers','Hillmere Albion','Brookvale Town','Stonebridge Athletic','Lakeside Rovers']
@@ -171,10 +163,10 @@ def prepare(base,tables,output,english):
         for color in im.getdata():pixels.append(min(range(256),key=lambda i:sum((a-b)**2 for a,b in zip(rgb[i],color))))
         for y in range(38):pages[page][y*304+c['cell']*38:y*304+c['cell']*38+38]=pixels[y*38:(y+1)*38]
     for page,pixels in pages.items():asset_entries['W/'+str(page)+'.VGA']=encode_vga(304,38,pixels)
-    world={'format':'openbmh-world-12','version':1,'profile':'dual-classic-1','players':players,'clubs':clubs,'leagues':members,'crests':crests,'loans':[],'managers':[]}
-    asset_entries['WORLD12.JSON']=(json.dumps(world,separators=(',',':'))+'\n').encode();asset_entries['OBMHPROF.INI']=b'[OpenBMH]\nprofile=dual-classic-1\n'
+    world={'format':'openbmh-world-12','version':1,'profile':'dual-classic-2','players':players,'clubs':clubs,'leagues':members,'crests':crests,'loans':[],'managers':[]}
+    asset_entries['WORLD12.JSON']=(json.dumps(world,separators=(',',':'))+'\n').encode();asset_entries['OBMHPROF.INI']=b'[OpenBMH]\nprofile=dual-classic-2\n'
     asset_entries['KB/SETUP12.VGA']=setup_symbol;provenance['setup_symbol']=setup_report
-    asset_entries['PACKAGE.json']=(json.dumps({'format':'openbmh-community-12','profile':'dual-classic-1','playable':False,'requires':'runtime:dual-classic-1','files':{n:sha(v) for n,v in asset_entries.items()}},indent=2)+'\n').encode()
+    asset_entries['PACKAGE.json']=(json.dumps({'format':'openbmh-community-12','profile':'dual-classic-2','playable':False,'requires':'runtime:dual-classic-2','files':{n:sha(v) for n,v in asset_entries.items()}},indent=2)+'\n').encode()
     output.mkdir(parents=True)
     with zipfile.ZipFile(output/'COMMUNITY.OBD','w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
         for n,v in asset_entries.items():z.writestr(n,v)

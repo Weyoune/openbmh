@@ -195,7 +195,7 @@ void validate_cup_programmes(const World& world,const std::vector<KnockoutStage>
     std::map<DomesticCup,const KnockoutStage*> previous;
     std::set<std::pair<DomesticCup,uint8_t>> seen;
     for(const auto& stage:stages) {
-        if(!world.catalogue.scope.clubs_enabled(cup_country(stage.cup)))throw std::invalid_argument("world12: cup belongs to a disabled country");
+        if(!world.catalogue.scope.domestic_enabled(cup_country(stage.cup)))throw std::invalid_argument("world12: cup belongs to a disabled country");
         stage.validate(world);
         if(!seen.emplace(stage.cup,stage.source_entry).second)throw std::invalid_argument("world12: repeated/cyclic cup stage");
         if(const auto found=previous.find(stage.cup);found!=previous.end()) {

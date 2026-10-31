@@ -13,7 +13,7 @@ World select_world_scope(const World& source,GameScope scope) {
     std::set<PlayerId> removed_players,retained_players;
     for(auto it=selected.clubs.begin();it!=selected.clubs.end();) {
         const auto& club=it->second;
-        const bool keep=club.kind==ClubKind::national_team?scope.international:scope.clubs_enabled(club.country);
+        const bool keep=club.kind==ClubKind::national_team?scope.international:scope.club_enabled(club.country,club.league);
         for(const auto& slot:club.roster)if(!slot.empty())(keep?retained_players:removed_players).insert(slot.player);
         if(!keep)it=selected.clubs.erase(it);else ++it;
     }

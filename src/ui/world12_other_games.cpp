@@ -79,7 +79,7 @@ OtherGamesState world12_other_games_state(const bmh::world12::CareerSnapshot& sn
         int block=0;const int blocks=int(world.catalogue.scope.germany)+int(world.catalogue.scope.england);
         if(blocks==1){p.round_heading="FINALE";if(world.catalogue.scope.england)p.title="CHARITY SHIELD";}
         for(const auto cup:{DomesticCup::german_supercup,DomesticCup::english_supercup}) {
-            if(!world.catalogue.scope.clubs_enabled(cup_country(cup)))continue;
+            if(!world.catalogue.scope.domestic_enabled(cup_country(cup)))continue;
             const int baseline=blocks==1?104:70+60*block++;
             OtherGamesState::Section section;
             section.title=cup==DomesticCup::german_supercup?"Deutschland - Super-Cup":"England - Charity Shield";

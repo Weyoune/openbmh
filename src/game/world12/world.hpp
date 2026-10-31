@@ -46,7 +46,7 @@ struct World {
     Catalogue catalogue=Catalogue::dual_classic();
     std::map<PlayerId,PlayerRecord> players;
     std::map<ClubId,ClubRecord> clubs;
-    std::array<LeagueMembers,14> membership;
+    std::array<LeagueMembers,kLeagueSlots> membership;
     std::vector<Loan> loans;
     std::vector<Manager> managers;
     // A crest is a distinct atlas identity, never combined with team flags.

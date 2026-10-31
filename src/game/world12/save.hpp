@@ -12,7 +12,7 @@ struct CareerSnapshot {
     SeasonResults results;
     uint32_t date=0,season=0,watcom_seed=1;
     int32_t game_seed=0;
-    std::array<uint8_t,14> league_rounds{};
+    std::array<uint8_t,kLeagueSlots> league_rounds{};
     std::optional<CalendarCursor> calendar;
     std::vector<KnockoutStage> cups;
     // Typed active career snapshots will extend this record as their owning

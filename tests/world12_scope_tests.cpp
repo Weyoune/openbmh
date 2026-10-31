@@ -37,12 +37,22 @@ int main()try {
     for(int mask=1;mask<8;++mask) {
         const GameScope scope{bool(mask&1),bool(mask&2),bool(mask&4)};
         const auto world=select_world_scope(master,scope);
-        const size_t league_clubs=scope.club_play()?72+90*scope.germany+90*scope.england:0;
+        const size_t league_clubs=scope.club_play()?54+90*scope.germany+(scope.england?90:20):0;
         check(world.catalogue.league_clubs()==league_clubs,"scoped league club count wrong");
         check(world.catalogue.table_leagues(TableGroup::germany).size()==size_t(scope.germany?5:0) &&
             world.catalogue.table_leagues(TableGroup::england).size()==size_t(scope.england?5:0),"disabled country still has table pages");
+        const auto europe=world.catalogue.table_leagues(TableGroup::europe);
+        const std::vector<LeagueId> expected_europe=scope.club_play()?
+            (scope.england?std::vector<LeagueId>{{10},{11},{12}}:std::vector<LeagueId>{{10},{5},{11},{12}}):std::vector<LeagueId>{};
+        check(europe==expected_europe,"international table order or Premier League fallback wrong");
+        const auto& premier=world.catalogue.league({5});
+        check(premier.active==scope.club_play() && premier.playable==scope.england,"Premier League activity and manager selection confused");
+        if(scope.club_play()&&!scope.england) {
+            check(premier.relegation==0 && premier.rounds()==38,"AI-only Premier League must have no domestic relegation");
+            check(world.membership[5]==master.membership[5],"Premier League fallback changed club identities");
+        }
         for(const auto& [id,club]:world.clubs) {
-            if(club.kind==ClubKind::club)check(scope.clubs_enabled(club.country),"excluded country survived as a foreign/AI club");
+            if(club.kind==ClubKind::club)check(scope.club_enabled(club.country,club.league),"excluded country survived as a foreign/AI club");
             else check(scope.international,"national team survived disabled International scope");
             check(master.clubs.at(id)==club,"surviving club ID or data changed");
         }
@@ -65,7 +75,7 @@ int main()try {
             }
             commit_league_day(state,*ticket,completed);
         }
-        const size_t expected=scope.club_play()?1224+1530*scope.germany+1610*scope.england:0;
+        const size_t expected=scope.club_play()?918+1530*scope.germany+(scope.england?1610:380):0;
         check(matches==expected,"disabled-country league results were simulated or retained");
         check(read_save(make_save(state))==state,"scoped calendar/results/save ownership lost");
         auto cups=CareerSnapshot{};cups.world=world;cups.results=SeasonResults::empty(world.catalogue);
