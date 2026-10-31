@@ -165,7 +165,7 @@ void GameState::formation_position(int team, int slot, int& x, int& y) const {
 }
 
 SquadRange squad_range(int team) {
-    if (team == kNoTeam) return {kNoTeamSquadStart, 24};
+    if (team == kNoTeam) return {size_t(kNoTeamSquadStart), 24};
     if (team < kBigSquadTeams) return {size_t(team) * 24, 24};
     if (team < runtime_dimensions.league_teams) return {size_t(team) * 16 + kBigSquadTeams * 8, 16};
     return {0, 0};

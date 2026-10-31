@@ -172,7 +172,7 @@ def build(source, donor, output):
             kits.append(old_kits[old] if old is not None else index%20)
             if index<194:
                 aux.append(old_aux[old] if old is not None and old<168 else 0)
-                shorts.append(old_short[old] if old is not None and old<168 else 0)
+                shorts.append(old_short[old] if old is not None and old<168 else min(15, len(legacy_name(club['name']['default'])) - 1))
         db['pools'][0]=bytes(pool); db['clubs']=words(offsets); db['aux']=words(aux)
         db['kits']=bytes(kits); db['short']=bytes(shorts)
         names=u16(db['names']); pool=bytearray(db['pools'][1]); new_words={k:[] for k in ('form','skills','identity')}

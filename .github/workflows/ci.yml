@@ -43,6 +43,7 @@ jobs:
           python3 tools/public_release/check_public_tree.py --root .
           python3 tools/ci/test_build_runnable_tests.py
           python3 tools/package/test_verify_ci_release.py
+          python3 -m unittest discover -s tools/poc -p "test_*.py"
       - name: Set up MSVC x64
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@a102174a2b586eec2ea151a69e6fd14404a8ce7c # v1.13.0
