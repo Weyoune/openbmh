@@ -95,6 +95,33 @@ def encode_vga(width, height, pixels):
 def find_file(root, name):
     return next(p for p in root.iterdir() if p.name.upper() == name.upper())
 
+def original_crest_background(source):
+    """Recover the shared bright crest texture from the supplied domestic sheets."""
+    sheets = {}
+    samples = []
+    directory = find_file(source, 'W')
+    for cell in range(90):
+        page = cell // 8
+        if page not in sheets:
+            sheets[page] = decode_vga(find_file(directory, str(page) + '.VGA').read_bytes())
+        width, height, pixels = sheets[page]
+        if (width, height) != (304, 38):
+            raise ValueError('Unexpected Original crest-sheet dimensions')
+        samples.append(bytes(pixels[y*width+(cell%8)*38+x] for y in range(38) for x in range(38)))
+    return crest_background_from_samples(samples)
+
+
+def crest_background_from_samples(samples):
+    if not samples or any(len(s) != 38*38 for s in samples):
+        raise ValueError('Invalid crest background samples')
+    # The Original bright paper texture uses these four adjacent palette entries.
+    background = bytearray()
+    for pos in range(38*38):
+        counts = collections.Counter(s[pos] for s in samples if 92 <= s[pos] <= 95)
+        background.append(counts.most_common(1)[0][0] if counts else 94)
+    return bytes(background)
+
+
 def repeated_native_images(clubs, assets, read):
     """Detect shared Original fallback images without baking in game pixels/hashes."""
     counts = collections.Counter()
@@ -214,6 +241,10 @@ def build(source, donor, output):
         palette=find_file(source,'M3PC.COL').read_bytes()
         rgb=[tuple(((v&63)*255+31)//63 for v in palette[i:i+3]) for i in range(0,768,3)]
         sheets={}; crest_report=[]; cache={}
+        backdrop = original_crest_background(source)
+        backdrop_image = Image.frombytes('P',(38,38),backdrop)
+        backdrop_image.putpalette([value for color in rgb for value in color])
+        backdrop_image = backdrop_image.convert('RGBA')
         w_dir=find_file(source,'W')
         def sheet(n):
             if n not in sheets:
@@ -250,22 +281,18 @@ def build(source, donor, output):
                 color = '#%02x%02x%02x' % rgb[64 + index % 16]
                 svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38"><path d="M5 3H33L31 24L19 35L7 24Z" fill="{color}" stroke="#f0f5f3" stroke-width="2"/><path d="M8 9H30" stroke="#f0f5f3"/><text x="19" y="23" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="bold" fill="white">{html.escape(initials)}</text></svg>'
                 image=Image.open(io.BytesIO(cairosvg.svg2png(bytestring=svg.encode()))).convert('RGBA')
-            foreground = [(r,g,b) for r,g,b,a in image.getdata() if a >= 128]
-            contrast_adjusted = bool(foreground) and sum(max(pixel) for pixel in foreground)/len(foreground) < 60
-            if contrast_adjusted:
-                alpha=image.getchannel('A');image=Image.new('RGBA',image.size,(238,244,240,0));image.putalpha(alpha)
+            contrast_adjusted = False  # Black silhouettes remain readable on the Original bright background.
             image=ImageOps.contain(image,(36,36),method=Image.Resampling.LANCZOS)
-            canvas=Image.new('RGBA',(38,38));canvas.alpha_composite(image,((38-image.width)//2,(38-image.height)//2))
+            canvas=backdrop_image.copy();canvas.alpha_composite(image,((38-image.width)//2,(38-image.height)//2))
             pixels=bytearray()
             for r,g,b,a in canvas.getdata():
-                if a<128:pixels.append(0);continue
                 key=(r,g,b)
-                if key not in cache:cache[key]=min(range(1,256),key=lambda n:sum((x-y)**2 for x,y in zip(rgb[n],key)))
+                if key not in cache:cache[key]=min(range(256),key=lambda n:sum((x-y)**2 for x,y in zip(rgb[n],key)))
                 pixels.append(cache[key])
             dst=sheet(cell//8)
             for y in range(38):dst[y*304+(cell%8)*38:y*304+(cell%8)*38+38]=pixels[y*38:(y+1)*38]
             badges[index]=(badges[index]&~511)|cell
-            crest_report.append({'club':club['id'],'runtime_team':index,'cell':cell,'asset':club.get('crest'),'source':asset.get('source'),'license':asset.get('license'),'fictional':fictional,'contrast_adjusted':contrast_adjusted,'last_decode_error':error})
+            crest_report.append({'club':club['id'],'runtime_team':index,'cell':cell,'asset':club.get('crest'),'source':asset.get('source'),'license':asset.get('license'),'fictional':fictional,'contrast_adjusted':contrast_adjusted,'background':'original-crest-texture','last_decode_error':error})
         db['badges']=words(badges)
         # Every Original player word and all German starting rosters remain unchanged.
         original_db = read_master(master)

@@ -5,7 +5,7 @@ if(APPLE)
     # Enable native languages before dependencies/subdirectories inherit rules.
     enable_language(OBJC OBJCXX)
 endif()
-set(OPENBMH_PRERELEASE "poc.1" CACHE STRING "Prerelease identifier; empty for final release")
+set(OPENBMH_PRERELEASE "poc.2" CACHE STRING "Prerelease identifier; empty for final release")
 set(OPENBMH_PRODUCT_VERSION "${PROJECT_VERSION}")
 if(OPENBMH_PRERELEASE)
     string(APPEND OPENBMH_PRODUCT_VERSION "-${OPENBMH_PRERELEASE}")
@@ -207,6 +207,7 @@ bmh_add_data_test(NAME highscore_tests REQUIRED_OPTIONS BMH_TEST_HIGHSCORE_TESTS
 # Engine core: file formats and game logic, no platform dependencies
 add_library(bmhcore STATIC
     src/formats/binary.cpp
+    src/formats/resource_bundle.cpp
     src/formats/palette.cpp
     src/formats/vga.cpp
     src/formats/font.cpp
@@ -305,6 +306,7 @@ FetchContent_MakeAvailable(miniz lzma_sdk nfd)
 
 add_library(bmh_miniz STATIC ${miniz_SOURCE_DIR}/miniz.c)
 target_include_directories(bmh_miniz PUBLIC ${miniz_SOURCE_DIR})
+target_link_libraries(bmhcore PRIVATE bmh_miniz)
 set(BMH_LZMA_C ${lzma_sdk_SOURCE_DIR}/C)
 add_library(bmh_7z STATIC
     ${BMH_LZMA_C}/7zAlloc.c ${BMH_LZMA_C}/7zArcIn.c ${BMH_LZMA_C}/7zBuf.c ${BMH_LZMA_C}/7zCrc.c
@@ -1158,3 +1160,10 @@ bmh_add_data_test(NAME desktop_feedback_tests COMMAND desktop_feedback_tests "${
 add_executable(data_profile_tests tests/data_profile_tests.cpp)
 target_link_libraries(data_profile_tests PRIVATE bmhcore)
 add_test(NAME data_profile_tests COMMAND data_profile_tests)
+
+# Offline private package preparation; never installs Original data.
+add_executable(export_community_runtime tools/poc/export_runtime.cpp)
+target_link_libraries(export_community_runtime PRIVATE bmhcore)
+add_executable(resource_bundle_tests tests/resource_bundle_tests.cpp)
+target_link_libraries(resource_bundle_tests PRIVATE bmhcore bmh_miniz)
+add_test(NAME resource_bundle_tests COMMAND resource_bundle_tests)

@@ -11,11 +11,18 @@
 #include <cstdint>
 #include <filesystem>
 #include <string>
+#include <map>
+#include <optional>
 
 #include "formats/binary.hpp"
 
 namespace bmh {
 
+// Resolved edition policies, not copied machine instructions.
+struct RuntimePolicy {
+    uint32_t year=0, weekday=0, badge_end=0, environment_verified=0;
+    std::map<uint32_t,std::string> labels;
+};
 class LeImage {
 public:
     uint32_t base() const { return base_; }
@@ -44,10 +51,12 @@ public:
     }
     const Bytes& bytes() const { return bytes_; }
     bool expanded_profile() const { return expanded_profile_; }
+    const RuntimePolicy* runtime_policy() const { return runtime_policy_ ? &*runtime_policy_ : nullptr; }
 
     friend LeImage load_le(const std::filesystem::path& path);
 
 private:
+    std::optional<RuntimePolicy> runtime_policy_;
     bool expanded_profile_ = false;
     uint32_t base_ = 0;
     Bytes bytes_;
@@ -60,5 +69,7 @@ LeImage load_le(const std::filesystem::path& path);
 // The OpenBMH image format: "OPENBMH-IMAGE" NUL, u32 base, u32 size, the bytes. load_le()
 // reads it as well, so a translated image can stand in for BMH.exe in a data directory.
 void save_image(const LeImage& image, const std::filesystem::path& path);
+// Exports only the data segment and resolved policy values, never DOS/LE/code objects.
+void save_runtime_image(const LeImage&, const RuntimePolicy&, const std::filesystem::path&);
 
 }  // namespace bmh

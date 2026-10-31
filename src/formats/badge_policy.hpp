@@ -12,6 +12,7 @@ inline int original_foreign_badge_end = 138;
 inline bool expanded_badges = false;
 
 inline int original_badge_gate(const LeImage& exe) {
+    if(const auto* policy=exe.runtime_policy())return int(policy->badge_end);
     constexpr auto instruction = layout::ForeignBadgeGateInstruction;
     if (exe.contains(instruction) && exe.contains(instruction + 6) &&
         exe.u8(instruction) == 0x66 && exe.u8(instruction + 1) == 0x81 &&

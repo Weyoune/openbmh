@@ -38,6 +38,7 @@ void install_environment_rules(const LeImage& exe) {
         if (!exe.contains(at) || exe.u8(at)==0) { supported_environment=false; return; }
         kEnvironmentStep[i]=int32_t(exe.u8(at))*1000;
     }
+    if(const auto* policy=exe.runtime_policy()) { supported_environment=policy->environment_verified!=0;return; }
     uint64_t fingerprint = 14695981039346656037ull;
     for (const auto [first,last] : {std::pair{layout::EnvironmentVerifiedCodeBegin,layout::EnvironmentVerifiedCodeEnd},std::pair{layout::EnvironmentVerifiedHookBegin,layout::EnvironmentVerifiedHookEnd}}) {
         if (!exe.contains(first) || !exe.contains(last-1)) { supported_environment=false; return; }

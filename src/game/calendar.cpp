@@ -5,6 +5,7 @@
 namespace bmh {
 namespace { CalendarEpoch installed_epoch{2026, 2}; }
 CalendarEpoch calendar_epoch_from_executable(const LeImage& exe) {
+    if(const auto* policy=exe.runtime_policy())return {int(policy->year),int(policy->weekday)};
     constexpr auto setup = layout::CalendarDateSetup;
     constexpr uint8_t weekday_prefix[] = {0xc6,0x44,0x24,0x04};
     constexpr uint8_t month_and_year_prefix[] = {0xc6,0x44,0x24,0x0c,0x07,0xc7,0x04,0x24};

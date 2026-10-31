@@ -18,6 +18,10 @@ struct Object {
 }  // namespace
 
 std::string LeImage::cstring(uint32_t address) const {
+    if (runtime_policy_) {
+        const auto label=runtime_policy_->labels.find(address);
+        if(label!=runtime_policy_->labels.end())return label->second;
+    }
     std::string s;
     while (contains(address) && u8(address) != 0) s.push_back(char(u8(address++)));
     return s;
@@ -35,6 +39,25 @@ void save_image(const LeImage& image, const std::filesystem::path& path) {
     std::ofstream file(path, std::ios::binary | std::ios::trunc);
     file.write(reinterpret_cast<const char*>(out.data()), std::streamsize(out.size()));
     if (!file) throw FormatError("cannot write the OpenBMH image");
+}
+
+void save_runtime_image(const LeImage& image, const RuntimePolicy& policy, const std::filesystem::path& path) {
+    constexpr uint32_t start=layout::GermanDataSegmentBegin;
+    if(!image.contains(start) || policy.year<1600 || policy.year>9999 || policy.weekday>6 ||
+       (policy.badge_end!=90 && policy.badge_end!=138) || policy.environment_verified>1 || policy.labels.size()>16)
+        throw FormatError("runtime data: unsupported source policies");
+    const uint32_t size=image.base()+image.size()-start;
+    if(size>1024*1024)throw FormatError("runtime data: data segment too large");
+    Bytes out{'O','B','M','H','D','A','T','1'};
+    const auto put=[&](uint32_t value){for(int b=0;b<4;++b)out.push_back(uint8_t(value>>(8*b)));};
+    for(uint32_t value:{start,size,policy.year,policy.weekday,policy.badge_end,policy.environment_verified,uint32_t(policy.labels.size())})put(value);
+    out.insert(out.end(),image.data(start),image.data(start)+size);
+    for(const auto& [address,text]:policy.labels) {
+        if(text.size()>1024)throw FormatError("runtime data: label too long");
+        put(address);put(uint32_t(text.size()));out.insert(out.end(),text.begin(),text.end());
+    }
+    std::ofstream file(path,std::ios::binary|std::ios::trunc);file.write(reinterpret_cast<const char*>(out.data()),std::streamsize(out.size()));
+    if(!file)throw FormatError("cannot write runtime data");
 }
 
 LeImage load_le(const std::filesystem::path& path) {
@@ -89,6 +112,26 @@ LeImage load_le(const std::filesystem::path& path) {
         return img;
     };
     const Bytes raw = read_file(path);
+    if(raw.size()>=8 && std::string(raw.begin(),raw.begin()+8)=="OBMHDAT1") {
+        if(raw.size()<36)throw FormatError("runtime data: truncated header");
+        const uint32_t base=le32(raw,8),size=le32(raw,12),labels=le32(raw,32);
+        RuntimePolicy policy{le32(raw,16),le32(raw,20),le32(raw,24),le32(raw,28),{}};
+        if(base!=layout::GermanDataSegmentBegin || size>1024*1024 || size_t(size)+36>raw.size() || labels>16 ||
+           policy.year<1600 || policy.year>9999 || policy.weekday>6 || (policy.badge_end!=90 && policy.badge_end!=138) || policy.environment_verified>1)
+            throw FormatError("runtime data: invalid dimensions or policies");
+        auto image=LeImage::from_bytes(base,Bytes(raw.begin()+36,raw.begin()+36+size));
+        size_t at=36+size;
+        for(uint32_t i=0;i<labels;++i) {
+            if(at+8>raw.size())throw FormatError("runtime data: truncated label");
+            const auto address=le32(raw,at),length=le32(raw,at+4);at+=8;
+            if(length>1024 || at+length>raw.size() || !policy.labels.emplace(address,std::string(raw.begin()+at,raw.begin()+at+length)).second)
+                throw FormatError("runtime data: invalid label");
+            at+=length;
+        }
+        if(at!=raw.size())throw FormatError("runtime data: trailing bytes");
+        image.runtime_policy_=std::move(policy);
+        return apply_profile(std::move(image));
+    }
     if (raw.size() >= sizeof kImageMagic + 8 && std::equal(kImageMagic, kImageMagic + sizeof kImageMagic, raw.begin())) {
         const auto word = [&](size_t at) { return uint32_t(raw[at] | raw[at + 1] << 8 | raw[at + 2] << 16) | uint32_t(raw[at + 3]) << 24; };
         const uint32_t base = word(sizeof kImageMagic), size = word(sizeof kImageMagic + 4);

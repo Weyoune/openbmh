@@ -1,5 +1,7 @@
 # OpenBMH
 
+This is the **1.1 community development branch**. A prepared community package starts directly from `COMMUNITY.OBD`, without BMH.exe or a DOS installation. Original loose Classic installations remain supported. The stable 1.0 line stays on main. See [standalone community data](docs/poc-1.1/STANDALONE.md).
+
 A faithful, standalone community reconstruction of *Bundesliga Manager Hattrick*, using the player's original installation and SDL2 interface.
 
 OpenBMH 1.0 builds on v0.1.2 with reviewed bug fixes and starts directly with the original game data. Original game files, graphics, audio and manuals are not distributed. German CD-compatible BMH and verified Diamond editions are the primary release targets. Football Limited remains experimental; the older floppy executable is not supported.

@@ -11,6 +11,8 @@
 #include <system_error>
 
 #include "formats/binary.hpp"
+#include "formats/resource_bundle.hpp"
+#include "formats/data_profile.hpp"
 #include "formats/le.hpp"
 #include "formats/m3d.hpp"
 #include "formats/textd.hpp"
@@ -52,6 +54,7 @@ struct Family {
     const char* database;
 };
 constexpr Family kFamilies[] = {
+    {GameFamily::german, "COMMUNITY.OBD", 0, "TEXTD.BLK", "M3D.MAN"},
     {GameFamily::german, "BMH.EXE", 602527, "TEXTD.BLK", "M3D.MAN"},
     {GameFamily::english, "FLTD.EXE", 507925, "TEXTE.BLK", "M3E.MAN"},
     {GameFamily::disk1994, "M3.EXE", 0, "", "M3PC.MAN"},
@@ -82,7 +85,7 @@ void require(GameCheck& c, const fs::path& dir, const std::string& name, uint64_
         return;
     }
     std::error_code ec;
-    const uint64_t actual = fs::file_size(*p, ec);
+    const uint64_t actual = fs::exists(*p,ec) ? fs::file_size(*p, ec) : read_file(*p).size();
     if (ec || actual == 0) c.problems.push_back(shown + " is empty or unreadable");
     else if (size != 0 && actual != size)
         c.problems.push_back(shown + " has " + std::to_string(actual) + " bytes instead of " + std::to_string(size));
@@ -90,7 +93,9 @@ void require(GameCheck& c, const fs::path& dir, const std::string& name, uint64_
 
 // The shared picture/font/sound files of the sub directories KB, W, F and S.
 void require_media(GameCheck& c) {
+    const bool bundled=fs::is_regular_file(c.directory/kCommunityBundle);
     const auto sub = [&](const char* name) -> std::optional<fs::path> {
+        if(bundled)return c.directory/name;
         auto p = find_file(c.directory, name);
         if (!p || !fs::is_directory(*p)) {
             c.problems.push_back(std::string("the directory ") + name + " is missing");
@@ -142,14 +147,15 @@ std::string text_title(const std::string& raw) {
 
 void check_german(GameCheck& c) {
     // (a translated English game has BMH.exe in the OpenBMH image format, launch/fltd.hpp)
+    const bool bundled=fs::is_regular_file(c.directory/kCommunityBundle);
     bool image = false;
-    if (const auto exe = find_file(c.directory, "BMH.EXE")) {
+    if (const auto exe = find_file(c.directory, "BMH.EXE"); exe && !bundled) {
         std::ifstream in(*exe, std::ios::binary);
         char head[13] = {};
         in.read(head, sizeof head);
         image = std::string(head, sizeof head) == "OPENBMH-IMAGE";
     }
-    require(c, c.directory, "BMH.EXE", image ? 0 : 602527, "BMH.EXE");
+    require(c, c.directory, "BMH.EXE", (image || bundled) ? 0 : 602527, bundled ? "RUNTIME.DAT" : "BMH.EXE");
     require(c, c.directory, "TEXTD.BLK", 0, "TEXTD.BLK");
     require(c, c.directory, "M3D.MAN", 0, "M3D.MAN");
     for (const Required& r : kCommon) require(c, c.directory, r.name, r.size, r.name);
@@ -158,7 +164,8 @@ void check_german(GameCheck& c) {
     // the files must also load: the engine reads tables from the EXE, the texts and the
     // database of clubs and players
     try {
-        load_le(*find_file(c.directory, "BMH.EXE"));
+        const auto runtime=load_le(*find_file(c.directory, "BMH.EXE"));
+        if(bundled && (!runtime.runtime_policy() || !runtime.expanded_profile()))throw FormatError("unsupported standalone runtime/profile");
     } catch (const std::exception& e) {
         c.problems.push_back(std::string("BMH.EXE cannot be read: ") + e.what());
     }
@@ -212,7 +219,7 @@ bool is_game_file(const std::string& relative) {
     const size_t dot = base.find_last_of('.');
     if (dot == std::string::npos) return false;
     const std::string ext = base.substr(dot + 1);
-    for (const char* e : {"EXE", "BLK", "MAN", "DAT", "MEN", "COL", "VGA", "FNT", "LBM", "EIN", "CFG", "FBM", "WAP"})
+    for (const char* e : {"EXE", "BLK", "MAN", "DAT", "MEN", "COL", "VGA", "FNT", "LBM", "EIN", "CFG", "FBM", "WAP", "OBD"})
         if (ext == e) return true;
     return false;
 }
@@ -315,6 +322,7 @@ ResolvedGame resolve_game_unchecked(const fs::path& input, const fs::path& cache
 std::optional<fs::path> find_file(const fs::path& directory, const std::string& name) {
     std::error_code ec;
     const fs::path exact = directory / path_from_utf8(name);
+    if(resource_exists(exact))return exact;
     if (fs::exists(exact, ec)) return exact;
     const std::string wanted = upper(name);
     for (const auto& e : fs::directory_iterator(directory, ec))

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/data_profile.hpp"
+#include "formats/resource_bundle.hpp"
 #include <fstream>
 #include <numeric>
 #include <set>
@@ -24,8 +25,9 @@ void DataProfile::validate() const {
 }
 DataProfile load_data_profile(const std::filesystem::path& directory) {
     const auto file=directory/"OBMHPROF.INI";
-    if(!std::filesystem::exists(file))return {};
-    std::ifstream input(file);if(!input)throw FormatError("profile: cannot read metadata");
+    if(!resource_exists(file))return {};
+    const auto raw=read_file(file);
+    std::istringstream input(std::string(raw.begin(),raw.end()));
     std::string line,id;bool section=false,seen=false;
     while(std::getline(input,line)) {
         if(!line.empty()&&line.back()=='\r')line.pop_back();
