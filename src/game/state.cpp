@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "game/state.hpp"
+#include "game/bank_robbery.hpp"
 
 #include <stdexcept>
 
@@ -99,11 +100,15 @@ GameState GameState::from_save(const SaveState& save, const DbCounts& c) {
     g.foreign_strength = bytes(::bmh::layout::ForeignClubStrength);
     g.memory = StaticMemory(save);
     // memory OpenBMH saves behind the trailer (the English cup blocks, career.hpp)
-    bool long_career_seen = false;
-    for (const auto& b : save.extension()) {
-        if (b.address == kLongCareerExtension) {
-            if (long_career_seen) throw FormatError("long career: duplicate extension block");
-            decode_long_career(g, b.bytes); long_career_seen = true; continue;
+    bool long_career_seen=false,robbery_months_seen=false;
+    for(const auto& b:save.extension()){
+        if(b.address==kLongCareerExtension){
+            if(long_career_seen)throw FormatError("long career: duplicate extension block");
+            decode_long_career(g,b.bytes);long_career_seen=true;continue;
+        }
+        if(b.address==kBankRobberyMonthExtension){
+            if(robbery_months_seen||b.bytes.size()!=kBankRobberyMonthBytes)throw FormatError("savegame: invalid or duplicate bank robbery monthly guard");
+            robbery_months_seen=true;
         }
         if (!g.memory.has(b.address)) g.memory.add_block(b.address, uint32_t(b.bytes.size()));
         for (size_t i = 0; i < b.bytes.size(); ++i) g.memory.set8(b.address + uint32_t(i), b.bytes[i]);

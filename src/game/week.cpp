@@ -2,6 +2,7 @@
 #include "formats/executable_layout.hpp"
 #include "game/week.hpp"
 #include "game/calendar.hpp"
+#include "game/bank_robbery.hpp"
 
 #include "game/matchday.hpp"
 #include "game/lineup.hpp"
@@ -59,12 +60,20 @@ void daily_interest(GameState& g, WatcomRandom& rand) {
         const auto statistic = uint32_t(rd32(g.manager_records, rec + 0x870)) - uint32_t(interest.cash_and_deposit);
         wr32(g.manager_records, rec + 0x870, std::bit_cast<int32_t>(statistic));
         book_money(g, k, interest.cash_and_deposit, true);
-        if (rd32(g.manager_records, rec + 0x314) > 100000000) {  // read again after the bookings
-            int32_t extra = int32_t(rand.range(10000, 20000)) * 1000;
-            // BookMoney2 with the statistics flag set: counts as an expense (+0x8a0)
-            const auto expense = uint32_t(rd32(g.manager_records, rec + 0x8a0)) + uint32_t(extra);
-            wr32(g.manager_records, rec + 0x8a0, std::bit_cast<int32_t>(expense));
-            book_money(g, k, extra, true);
+        if (rd32(g.manager_records, rec + 0x314) > 100000000) {
+            const auto robbery_month = bank_robbery_month_key(g.date);
+            const auto guard = bank_robbery_guard_month(g, k);
+            // OpenBMH deviates from the original: an unknown history receives
+            // a grace month; later losses occur at most once per source month.
+            if (!guard) {
+                set_bank_robbery_guard_month(g, k, robbery_month);
+            } else if (*guard != robbery_month) {
+                const int32_t extra = int32_t(rand.range(10000, 20000)) * 1000;
+                const auto expense = uint32_t(rd32(g.manager_records, rec + 0x8a0)) + uint32_t(extra);
+                wr32(g.manager_records, rec + 0x8a0, std::bit_cast<int32_t>(expense));
+                book_money(g, k, extra, true);
+                set_bank_robbery_guard_month(g, k, robbery_month);
+            }
         }
     }
 }
@@ -381,6 +390,12 @@ void stock_market(GameState& g, GameRandom& game) {
 }  // namespace bmh
 
 namespace bmh {
+
+uint32_t bank_robbery_month_key(uint32_t date) {
+    const int month = month_code(date);
+    while (date > 0 && month_code(date - 1) == month) --date;
+    return date;
+}
 
 int month_code(uint32_t date) {
     // DeskState_DeskDate_RuntimeField: days per month (index 1-12; February 29 in leap years)

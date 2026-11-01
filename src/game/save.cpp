@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "game/save.hpp"
+#include "game/bank_robbery.hpp"
 #include "game/calendar.hpp"
 
 #include <cstdio>
@@ -128,6 +129,14 @@ Bytes save_stream(const GameState& live) {
         }
     auto history = encode_long_career(g);
     if (!history.empty()) extension.push_back({kLongCareerExtension, std::move(history)});
+    if (g.memory.has(kBankRobberyMonthExtension)) {
+        if (!g.memory.has(kBankRobberyMonthExtension + kBankRobberyMonthBytes - 1))
+            throw FormatError("savegame: truncated bank robbery monthly guard");
+        Bytes months(kBankRobberyMonthBytes);
+        for (uint32_t i = 0; i < months.size(); ++i)
+            months[i] = g.memory.u8(kBankRobberyMonthExtension + i);
+        extension.push_back({kBankRobberyMonthExtension, std::move(months)});
+    }
     append_save_extension(stream, extension);
     return stream;
 }

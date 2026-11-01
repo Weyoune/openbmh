@@ -1182,3 +1182,7 @@ add_test(NAME wide_number_unit_tests COMMAND wide_number_unit_tests)
 add_executable(long_career_tests tests/long_career_tests.cpp)
 target_link_libraries(long_career_tests PRIVATE bmhcore)
 add_test(NAME long_career_tests COMMAND long_career_tests)
+
+add_executable(bank_robbery_month_tests tests/bank_robbery_month_tests.cpp)
+target_link_libraries(bank_robbery_month_tests PRIVATE bmhcore)
+add_test(NAME bank_robbery_month_tests COMMAND bank_robbery_month_tests)

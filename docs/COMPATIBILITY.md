@@ -132,3 +132,16 @@ see [save format](formats/LONG_CAREER.md). Original programs and older OpenBMH
 writers do not preserve this archive. Keep an OpenBMH backup when exchanging
 careers with those writers. The native calendar still has its existing signed
 16-bit season limit; this patch does not claim an unlimited calendar.
+## Monthly high-cash loss limit
+
+OpenBMH deviates from the original: the high-cash bank robbery can occur at most
+once per manager and calendar month. The original threshold above 100 million
+and random loss of 10–20 million remain. A blocked repeat consumes no random
+draw. Month boundaries follow the same source calendar used by daily processing,
+and the guard is stored in the optional BRM1 section of OBMHEXT1 saves.
+
+An older save has no record of past robberies. Its first qualifying high-cash month
+receives a grace period without a loss or random draw; subsequent saves retain
+that guard. The next calendar month can trigger the ordinary loss. Import cannot
+infer whether an event already occurred before this feature. Fresh histories
+receive the same initial grace month.
