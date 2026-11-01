@@ -8105,12 +8105,7 @@ bool CareerSession::dispatch_stadium(const ui::StadiumRequest& supplied_request,
                 if (request.object != -1 || request.option != -1 || request.price != 0 ||
                     (request.kind != ui::StadiumRequestKind::expansion_answer_tip && request.accept_tip))
                     return invalid("invalid_block_expansion_envelope");
-                StadiumBlockExpansionConstants block_constants;
-                for (unsigned i = 0; i < 8; ++i) {
-                    block_constants.price_per_1000[i] = exe_.u32(::bmh::layout::CareerSession_DispatchStadium_RuntimeField + (i + 8) * 4);
-                    block_constants.weeks[i] = exe_.u8(::bmh::layout::CareerSession_DispatchStadium_RuntimeField2 + (i + 22) * 5);
-                    block_constants.max_places[i] = uint32_t(exe_.u8(::bmh::layout::CareerSession_Invalid_RuntimeField + i)) * 1000;
-                }
+                const auto block_constants=stadium_block_expansion_constants(exe_);
                 const auto quote_block = [&](StadiumBlockSlot slot, uint32_t total, uint8_t features) {
                     return quote_stadium_block_expansion(g_, active, slot, total, features,
                                                          stadium_.price_percent, block_constants);

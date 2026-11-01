@@ -230,8 +230,8 @@ void test_preview_cancel_zero_and_cross_family(const std::filesystem::path& data
           page.block_expansion->quote.current_capacity_thousands==10&&
           page.block_expansion->header_text_variant==expected_header_value,
           "accepted B editor binds the live capacity and draws its header variant once");
-    check(page.block_expansion->quote.price_per_1000==375000&&page.block_expansion->quote.base_weeks==37,
-          "B uses the literal Source A-H table entries 9 and 23");
+    check(page.block_expansion->quote.price_per_1000==375000&&page.block_expansion->quote.base_weeks==48,
+          "B retains the edition price and uses the expanded24k construction period");
     const auto& initial_block=*page.block_expansion;
     const auto amount_text=[&](uint32_t amount) {
         return format_number(session->state(),int32_t(amount),0x181)+source_exe.cstring(::bmh::layout::CareerSession_FormatNumber_ExecutableField);
@@ -385,8 +385,8 @@ void test_literal_eight_block_tables(const std::filesystem::path& data) {
         page=stadium_state(*session,revision);
         const auto& quote=page.block_expansion->quote;
         check(quote.price_per_1000==executable.u32(layout::CareerSession_DispatchStadium_RuntimeField + (size_t(slot)+8)*4)&&
-              quote.base_weeks==executable.u8(layout::CareerSession_DispatchStadium_RuntimeField2 + (size_t(slot)+22)*5),
-              "each A-H slot matches its externally supplied executable table");
+              quote.base_weeks==stadium_block_expansion_constants(executable).weeks[size_t(slot)],
+              "each A-H slot matches edition prices and expanded construction policy");
         auto cancel=request_from(page,ui::StadiumRequestKind::expansion_cancel,slot,
             quote.total_target_places,quote.desired_features);
         check(session->dispatch_stadium(cancel,revision,error)&&error.empty(),"each table quote cancels cleanly");

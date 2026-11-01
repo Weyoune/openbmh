@@ -181,12 +181,8 @@ bool same_block_quote_owner(const StadiumBlockExpansionQuote& a,
         a.max_places == b.max_places && a.base_weeks == b.base_weeks;
 }
 bool canonical_block_quote(const StadiumBlockExpansionQuote& q, uint32_t total,
-                           uint8_t features) {
-    static constexpr std::array<uint32_t, 8> prices{
-        300000, 375000, 300000, 350000, 300000, 375000, 300000, 350000};
-    static constexpr std::array<uint32_t, 8> maxima{
-        8000, 18000, 8000, 14000, 8000, 18000, 8000, 14000};
-    static constexpr std::array<uint8_t, 8> weeks{30, 37, 30, 25, 30, 37, 30, 25};
+                           uint8_t features,const StadiumBlockExpansionConstants& constants) {
+    const auto& prices=constants.price_per_1000;const auto& maxima=constants.max_places;const auto& weeks=constants.weeks;
     const size_t slot = static_cast<uint8_t>(q.slot);
     if (slot >= prices.size() || q.manager < 0 || q.manager_club < 0 ||
         q.current_build_weeks != 0 || (q.current_raw_flags & ~uint8_t(3)) != 0 ||
@@ -220,11 +216,11 @@ bool canonical_block_quote(const StadiumBlockExpansionQuote& q, uint32_t total,
         q.undiscounted_cost == sum &&
         q.base_price == uint32_t(sum * uint32_t(q.company_price_percent) / 100u);
 }
-bool valid_editor_projection(const StadiumBlockExpansionEditor& editor) {
+bool valid_editor_projection(const StadiumBlockExpansionEditor& editor,const StadiumBlockExpansionConstants& constants) {
     return editor.total_target_places == editor.quote.total_target_places &&
         editor.desired_features == editor.quote.desired_features &&
         editor.header_text_variant >= 3 && editor.header_text_variant <= 10 &&
-        canonical_block_quote(editor.quote, editor.total_target_places, editor.desired_features);
+        canonical_block_quote(editor.quote, editor.total_target_places, editor.desired_features,constants);
 }
 bool same_block_overviews(const std::array<StadiumBlockOverview, 8>& a,
                           const std::array<StadiumBlockOverview, 8>& b) {
@@ -946,7 +942,7 @@ Image StadiumScreen::render_scene() const {
                     const std::string current = format_number(GameState{}, int32_t(available * 1000), 0x85) +
                         texts_[text_id(::bmh::layout::Stadium_FormatError_ExecutableField3)];
                     text_at(out, 221, row_y + 15, current, 0x51);
-                    const auto max_places = uint32_t(exe_.u8(::bmh::layout::CareerSession_Invalid_RuntimeField + i)) * 1000;
+                    const auto max_places = stadium_block_expansion_constants(exe_).max_places[i];
                     const std::string maximum = texts_[text_id(::bmh::layout::Stadium_Out_TextPointer5)] +
                         format_number(GameState{}, int32_t(max_places), 5) +
                         exe_.cstring(::bmh::layout::Stadium_Out_ExecutableField);
@@ -1805,7 +1801,7 @@ void StadiumScreen::acknowledge(StadiumState updated) {
         if (!old_editor || req.block_slot != int(old_editor->quote.slot) ||
             old_editor->quote.manager != req.manager_slot || old_editor->quote.manager_club != req.runtime_club ||
             !req.expected_block_quote ||
-            *req.expected_block_quote != old_editor->quote || !valid_editor_projection(*old_editor) ||
+            *req.expected_block_quote != old_editor->quote || !valid_editor_projection(*old_editor,stadium_block_expansion_constants(exe_)) ||
             ((req.kind != StadiumRequestKind::expansion_set_total &&
               req.kind != StadiumRequestKind::expansion_toggle_feature) &&
              (req.block_total_places != old_editor->total_target_places ||
@@ -1894,7 +1890,7 @@ void StadiumScreen::acknowledge(StadiumState updated) {
             quote.new_places == 0 &&
             editor.total_target_places == quote.total_target_places &&
             editor.desired_features == quote.desired_features &&
-            valid_editor_projection(editor) &&
+            valid_editor_projection(editor,stadium_block_expansion_constants(exe_)) &&
             !editor.offer && !updated.construction_tip_dialog &&
             same_block_overviews(state_.blocks, updated.blocks) && updated.balance == state_.balance &&
             !updated.selected_investment && !updated.quoted_object;
@@ -1908,7 +1904,7 @@ void StadiumScreen::acknowledge(StadiumState updated) {
         valid = total >= minimum && total <= old_editor->quote.max_places &&
             req.block_features == old_editor->desired_features &&
             same_block_quote_owner(old_editor->quote, next.quote) &&
-            canonical_block_quote(next.quote, total, req.block_features) &&
+            canonical_block_quote(next.quote, total, req.block_features,stadium_block_expansion_constants(exe_)) &&
             next.quote.total_target_places == total && next.quote.desired_features == req.block_features &&
             next.total_target_places == total && next.desired_features == req.block_features &&
             !next.offer && !updated.construction_tip_dialog &&
@@ -1922,7 +1918,7 @@ void StadiumScreen::acknowledge(StadiumState updated) {
         valid = (req.block_features & ~uint8_t(3)) == 0 && (changed == 1 || changed == 2) &&
             !(old_editor->quote.current_raw_flags & changed) &&
             same_block_quote_owner(old_editor->quote, next.quote) &&
-            canonical_block_quote(next.quote, old_editor->total_target_places, req.block_features) &&
+            canonical_block_quote(next.quote, old_editor->total_target_places, req.block_features,stadium_block_expansion_constants(exe_)) &&
             next.quote.total_target_places == old_editor->total_target_places &&
             next.quote.desired_features == req.block_features &&
             next.total_target_places == old_editor->total_target_places &&
@@ -1951,7 +1947,7 @@ void StadiumScreen::acknowledge(StadiumState updated) {
             req.manager_slot >= 0 && req.manager_slot <= 3 &&
             updated.construction_tip_dialog->source_flags == 0x204 &&
             next.offer->decision == StandBlockOfferDecision::Pending &&
-            valid_editor_projection(next) && next.offer->percent >= 6 && next.offer->percent <= 14 &&
+            valid_editor_projection(next,stadium_block_expansion_constants(exe_)) && next.offer->percent >= 6 && next.offer->percent <= 14 &&
             next.offer->base_price == old_editor->quote.base_price &&
             next.offer->price == old_editor->quote.base_price &&
             next.offer->construction_days == old_editor->quote.base_weeks &&
@@ -1971,7 +1967,7 @@ void StadiumScreen::acknowledge(StadiumState updated) {
             state_.construction_tip_dialog->source_manager_flags == req.manager_slot &&
             req.manager_slot >= 0 && req.manager_slot <= 3 &&
             state_.construction_tip_dialog->source_flags == 0x204 &&
-            valid_editor_projection(*old_editor) && old_editor->offer->percent >= 6 && old_editor->offer->percent <= 14 &&
+            valid_editor_projection(*old_editor,stadium_block_expansion_constants(exe_)) && old_editor->offer->percent >= 6 && old_editor->offer->percent <= 14 &&
             old_editor->offer->base_price == old_editor->quote.base_price &&
             old_editor->offer->price == old_editor->quote.base_price &&
             old_editor->offer->construction_days == old_editor->quote.base_weeks &&

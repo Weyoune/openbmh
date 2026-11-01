@@ -340,6 +340,10 @@ bmh_add_data_test(NAME format_tests REQUIRED_OPTIONS BMH_TEST_INPUTS
     REQUIRED_FILES expected-text.tsv format-players.tsv format-start.fbm
     COMMAND format_tests "${BMH_DATA}" "${BMH_REFERENCE}")
 
+add_executable(stadium_extended_limits_tests tests/stadium_extended_limits_tests.cpp)
+target_link_libraries(stadium_extended_limits_tests PRIVATE bmhcore)
+add_test(NAME stadium_extended_limits_tests COMMAND stadium_extended_limits_tests)
+
 add_executable(stand_block_actions_tests tests/stand_block_actions_tests.cpp)
 target_link_libraries(stand_block_actions_tests PRIVATE bmhcore)
 add_test(NAME stand_block_actions_tests COMMAND stand_block_actions_tests)

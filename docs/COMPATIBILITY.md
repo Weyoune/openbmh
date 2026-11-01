@@ -53,3 +53,18 @@ Older drawing gates retain their own behaviour; no external crest pack is needed
 The automatic lineup installs the supplied foreign-player rule switch alongside the career tables. Where enabled, it restores the original three/two-player limit, reserve swaps with board-coordinate preservation and the short-lineup outcome when domestic reserves are unavailable. This does not consume additional random draws.
 
 New careers correct the original all-zero EM qualification placeholders to the original national-team placeholders. Supplied nonzero seeds and restored savegame state are not rewritten by this initialization.
+
+## Stadium extension in1.0.3
+
+The user-requested stadium extension raises standard A–H maxima to14/24/14/20/
+14/24/14/20thousand places (144,000total), keeping larger supplied custom limits
+where the saved byte fields can represent them. Original unit prices remain
+edition-owned. Each stand's base build period is at least two weeks per1,000
+places of its expanded maximum and never shorter than the edition's original
+period. Contractor shortening remains unchanged.
+
+The original Diamond3.6/3.7 table's14k stands really used25weeks versus30weeks
+for8k and37weeks for18k. That was original data, not a mistaken timer. Expanded
+limits/time policy is an intentional improvement. The UI now validates quotes
+against the actual edition and this shared policy rather than hardcoded Diamond
+prices and sizes. Existing eight capacity/construction bytes and saves are retained.

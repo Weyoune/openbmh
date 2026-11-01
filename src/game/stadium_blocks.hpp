@@ -20,6 +20,10 @@ struct StadiumBlockExpansionConstants {
     std::array<uint32_t, 8> max_places{};
 };
 
+// OpenBMH1.0.3 expands standard A-H limits to at least144k total. Prices
+// still come from the edition; larger blocks have at least2weeks per1000places.
+StadiumBlockExpansionConstants stadium_block_expansion_constants(const LeImage&);
+
 // An immutable quote binds the Source owner and every record/table value that
 // affects the quote. Commit recomputes this value before it touches money.
 struct StadiumBlockExpansionQuote {
