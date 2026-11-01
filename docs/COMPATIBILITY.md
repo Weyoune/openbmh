@@ -31,11 +31,11 @@ The six-budget monthly environment implementation has been checked against the p
 
 Release acceptance of individual editions is recorded separately from their recognition. Source compatibility and automated tests do not establish full original-game or platform validation.
 
-The graphical startup presents the supplied publisher, credits and title images
-before the game options. The first two original waits are three and one seconds.
-OpenBMH deviates from the original: the title remains visible for 1.5 seconds
-instead of depending on DOS database initialization time. A key or mouse release
-skips the opening sequence without also changing a setup option.
+OpenBMH deviates from the original: graphical startup shows the supplied static
+137.VGA title with its embedded palette, without the DOS loading animation.
+It waits for a complete left or right mouse click before the game options.
+The title does not advance on a timer; its confirming press and release are
+consumed so they cannot also change a setup option.
 
 Setup restores ordinary scene-backed manager dialogs before a career is created
 or loaded. The executable's boot-only black dialog mode is process state and is

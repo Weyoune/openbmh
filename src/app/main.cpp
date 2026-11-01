@@ -3599,28 +3599,30 @@ int main(int argc, char** argv) {
                 if (expired.request != ui::FlowRequest::none || expired.changed) handle(expired);
             }
         };
-        // Original boot order: publisher, credits, then the game's title. Keep
-        // these in the graphical frontend; creating a session starts at options.
-        // OpenBMH deviates from the original: keep the title visible for 1.5s
-        // instead of relying on the duration of DOS database initialization.
-        bool skip_opening = false;
-        for (const auto [picture, milliseconds] :
-             std::array<std::pair<int, Uint64>, 3>{{{138, 3000}, {139, 1000}, {137, 1500}}}) {
-            if (!running || skip_opening) break;
-            const auto picture_path = ui::asset_path(data / "KB", std::to_string(picture) + ".VGA");
-            const auto picture_palette = load_optional_embedded_palette(picture_path);
-            present_season(load_vga(picture_path), window_title.c_str(),
-                           picture_palette ? &*picture_palette : nullptr);
-            const auto until = SDL_GetTicks64() + milliseconds;
-            while (running && !skip_opening && SDL_GetTicks64() < until) {
-                SDL_Event opening_event;
-                while (quit_confirmation.poll(&opening_event)) {
-                    if (opening_event.type == SDL_QUIT) running = false;
-                    if (opening_event.type == SDL_KEYDOWN || opening_event.type == SDL_MOUSEBUTTONUP)
-                        skip_opening = true;
-                }
-                SDL_Delay(10);
+        // OpenBMH deviates from the original: show only the static title until
+        // a complete left or right click, without the DOS loading animation.
+        const auto title_path = ui::asset_path(data / "KB", "137.VGA");
+        const auto title_palette = load_optional_embedded_palette(title_path);
+        present_season(load_vga(title_path), window_title.c_str(),
+                       title_palette ? &*title_palette : nullptr);
+        bool opening_confirmed = false;
+        std::optional<Uint8> opening_press;
+        while (running && !opening_confirmed) {
+            SDL_Event opening_event;
+            while (quit_confirmation.poll(&opening_event)) {
+                if (opening_event.type == SDL_QUIT) running = false;
+                if (opening_event.type == SDL_WINDOWEVENT &&
+                    opening_event.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+                    opening_press.reset();
+                if (opening_event.type == SDL_MOUSEBUTTONDOWN &&
+                    (opening_event.button.button == SDL_BUTTON_LEFT ||
+                     opening_event.button.button == SDL_BUTTON_RIGHT))
+                    opening_press = opening_event.button.button;
+                if (opening_event.type == SDL_MOUSEBUTTONUP && opening_press &&
+                    opening_event.button.button == *opening_press)
+                    opening_confirmed = true;
             }
+            SDL_Delay(10);
         }
         // Opening input must not also change an option on the first setup frame.
         SDL_FlushEvents(SDL_KEYDOWN, SDL_KEYUP);
