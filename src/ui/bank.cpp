@@ -100,8 +100,8 @@ BankState bank_from_game(const GameState& g, const LeImage& exe, uint64_t revisi
     }
     state.credit_currency = {g.memory.has(::bmh::layout::CurrencyMultiplier) ? int32_t(g.memory.u32(::bmh::layout::CurrencyMultiplier)) : 1,
                              g.memory.has(::bmh::layout::CurrencyDivisor) ? int32_t(g.memory.u32(::bmh::layout::CurrencyDivisor)) : 1};
-    const auto currency = [&](int32_t amount, int flags) {
-        std::string value = format_number(g, amount, flags);
+    const auto currency = [&](int64_t amount, int flags) {
+        std::string value = format_number_wide(g, amount, flags);
         // FormatNumber appends currency (CurrencySuffixText) and the caller's Bank_FormatError_ExecutableField suffix.
         value += exe.cstring(::bmh::layout::Bank_FormatError_ExecutableField);
         return original_to_utf8(value);
@@ -141,8 +141,8 @@ BankState bank_from_game(const GameState& g, const LeImage& exe, uint64_t revisi
         fund.owned = g.memory.u16(at + 0x14 + uint32_t(manager) * 2);
         fund.max_to_buy = fund.price == 0 ? 0 : max_fund_units(g, manager, int(i));
         fund.name = original_to_utf8(message_text(g, ::bmh::layout::Bank_OriginalToUtf8_TextPointer3 + uint32_t(i) * 4));
-        fund.unit_price_text = currency(wrap_i32(fund.price), 0x108);
-        fund.average_paid_text = currency(fund.owned ? wrap_i32(fund.paid / fund.owned) : 0, 0x108);
+        fund.unit_price_text = currency(fund.price, 0x108);
+        fund.average_paid_text = currency(fund.owned ? fund.paid / fund.owned : 0, 0x108);
         fund.quantity_text = original_to_utf8(format_number(g, fund.owned, 0x82) + exe.cstring(::bmh::layout::Bank_OriginalToUtf8_ExecutableField2));
         fund.one_quantity_text = original_to_utf8(format_number(g, 1, 0x82) + exe.cstring(::bmh::layout::Bank_OriginalToUtf8_ExecutableField2));
         const uint32_t suffix = exe.u32(::bmh::layout::Bank_OriginalToUtf8_RuntimeField + uint32_t(i) * 8);
@@ -154,49 +154,46 @@ BankState bank_from_game(const GameState& g, const LeImage& exe, uint64_t revisi
     // and the separate overdraft limit. All inputs are copied/read-only.
     state.finance_values[0] = state.balance;
     state.finance_values[1] = state.deposit;
-    int32_t investment_value = 0, investment_gain = 0;
+    // OpenBMH deviates from the original: read-only totals use wide arithmetic;
+    // individual saved account, price, holding and paid fields are unchanged.
+    int64_t investment_value = 0, investment_gain = 0;
     for (size_t i = 0; i < state.funds.size(); ++i) {
         const uint32_t price = g.memory.u32(::bmh::layout::FundBlock + uint32_t(i) * 0x1c);
         const uint32_t held = g.memory.u16(::bmh::layout::Advertising_OriginalShareAdjustment_RuntimeField + uint32_t(manager) * 2 + uint32_t(i) * 0x1c);
-        const int32_t value = wrap_i32(price * held);
-        investment_value = wrap_sum(investment_value, value);
-        const int32_t paid = wrap_i32(g.memory.u32(::bmh::layout::Bank_OriginalToUtf8_RuntimeField5 + uint32_t(i) * 0x1c + uint32_t(manager) * 4));
-        if (held) investment_gain = wrap_sum(investment_gain, wrap_i32(uint32_t(value) - uint32_t(paid)));
+        const int64_t value = int64_t(price) * held;
+        investment_value += value;
+        const int64_t paid = g.memory.u32(::bmh::layout::Bank_OriginalToUtf8_RuntimeField5 + uint32_t(i) * 0x1c + uint32_t(manager) * 4);
+        if (held) investment_gain += value - paid;
     }
     state.finance_values[2] = investment_value;
     state.finance_gains[0] = investment_gain;
-    int32_t stock_value = 0, stock_gain = 0;
+    int64_t stock_value = 0, stock_gain = 0;
     for (size_t i = 0; i < state.stocks.size(); ++i) {
-        const int32_t value = wrap_i32(uint32_t(state.stocks[i].price) * state.stocks[i].owned);
-        stock_value = wrap_sum(stock_value, value);
-        if (state.stocks[i].owned) stock_gain = wrap_sum(stock_gain, wrap_i32(uint32_t(value) - uint32_t(state.stocks[i].paid)));
+        const int64_t value = int64_t(state.stocks[i].price) * state.stocks[i].owned;
+        stock_value += value;
+        if (state.stocks[i].owned) stock_gain += value - state.stocks[i].paid;
     }
     state.finance_values[3] = stock_value;
     state.finance_gains[1] = stock_gain;
-    int32_t debts = 0, debt_assets = 0;
+    int64_t debts = 0, debt_assets = 0;
     for (uint32_t loan = 0; loan < 5; ++loan) {
         const uint32_t at = ::bmh::layout::Analytics_SourceAssetMaskE_RuntimeField + uint32_t(manager) * 0x78 + loan * 0x18;
         const uint32_t borrowed = g.memory.u32(at);
         const uint32_t repaid = g.memory.u32(at + 0x10);
-        debts = wrap_sum(debts, wrap_i32(borrowed - repaid));
-        debt_assets = wrap_sum(debt_assets, wrap_i32(borrowed));
+        debts += int64_t(borrowed) - repaid;
+        debt_assets += borrowed;
     }
     state.finance_values[4] = debts;
-    int32_t net = state.balance;
-    net = wrap_sum(net, state.deposit);
-    net = wrap_sum(net, investment_value);
-    net = wrap_sum(net, stock_value);
-    net = wrap_sum(net, wrap_i32(0u - uint32_t(debt_assets)));
-    state.finance_values[5] = net;
+    state.finance_values[5] = int64_t(state.balance) + state.deposit + investment_value + stock_value - debt_assets;
     state.finance_values[6] = state.credit_line;
     for (size_t i = 0; i < state.finance_value_text.size(); ++i)
         state.finance_value_text[i] = currency(state.finance_values[i], 0x188);
     for (size_t i = 0; i < state.finance_gains.size(); ++i) {
-        const int32_t gain = state.finance_gains[i];
+        const int64_t gain = state.finance_gains[i];
         const uint32_t sign_address = gain < 0 ? ::bmh::layout::Bank_OriginalToUtf8_ExecutableField5 : gain > 0 ? ::bmh::layout::Bank_OriginalToUtf8_ExecutableField6 : ::bmh::layout::Bank_OriginalToUtf8_ExecutableField7;
-        const int32_t magnitude = gain < 0 ? wrap_i32(0u - uint32_t(gain)) : gain;
+        const int64_t magnitude = gain < 0 ? -gain : gain;
         state.finance_gain_text[i] = original_to_utf8(exe.cstring(sign_address) +
-            format_number(g, magnitude, 0x101) + exe.cstring(::bmh::layout::Bank_OriginalToUtf8_ExecutableField3));
+            format_number_wide(g, magnitude, 0x101) + exe.cstring(::bmh::layout::Bank_OriginalToUtf8_ExecutableField3));
         // 0x101 appends; Source preserves market value and adds signed gain in parentheses.
         if (state.finance_values[i + 2] != 0)
             state.finance_value_text[i + 2] += original_to_utf8(exe.cstring(::bmh::layout::Bank_OriginalToUtf8_ExecutableField4)) + state.finance_gain_text[i];
@@ -226,7 +223,7 @@ BankState bank_from_game(const GameState& g, const LeImage& exe, uint64_t revisi
         state.finance_fund_labels[i] = original_to_utf8(format_number(g, fund.owned, 0x82) + exe.cstring(::bmh::layout::Bank_OriginalToUtf8_ExecutableField2) +
             message_text(g, ::bmh::layout::Bank_OriginalToUtf8_TextPointer3 + uint32_t(i) * 4) +
             exe.cstring(exe.u32(::bmh::layout::Bank_OriginalToUtf8_RuntimeField + uint32_t(i) * 8 + (fund.owned > 1 ? 4 : 0))));
-        state.finance_fund_prices[i] = original_to_utf8("(" + format_number(g, wrap_i32(fund.price), 0x108) + exe.cstring(::bmh::layout::Bank_OriginalToUtf8_ExecutableField3));
+        state.finance_fund_prices[i] = original_to_utf8("(" + format_number_wide(g, fund.price, 0x108) + exe.cstring(::bmh::layout::Bank_OriginalToUtf8_ExecutableField3));
     }
     for (size_t i = 0; i < state.stocks.size(); ++i) {
         const auto& stock = state.stocks[i];

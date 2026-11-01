@@ -2,6 +2,7 @@
 #include "app/controller.hpp"
 #include "formats/executable_layout.hpp"
 #include "game/save.hpp"
+#include "game/messages.hpp"
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
@@ -45,6 +46,44 @@ int main(int argc,char** argv)try {
           session->game().seed()==game.seed()&&session->game().calls()==game.calls()&&
           session->rand().seed()==random.seed()&&session->rand().calls()==random.calls(),
           "opening calendars changed the career or random streams");
-    std::cout<<"Edition career startup, original calendar/rescheduling navigation and dialog mode passed\n";
+    auto finances=session->state();
+    const int manager=int(finances.memory.u8(layout::ActiveManager));
+    const size_t record=size_t(manager)*0xb0c;
+    const auto record_money=[&](size_t offset,int32_t value) {
+        for(int byte=0;byte<4;++byte)finances.manager_records.at(record+offset+byte)=uint8_t(uint32_t(value)>>(byte*8));
+    };
+    record_money(0x314,1500000000);record_money(0x318,1500000000);
+    for(uint32_t i=0;i<6;++i) {
+        finances.memory.set32(layout::FundBlock+i*0x1c,1000000);
+        finances.memory.set16(layout::Advertising_OriginalShareAdjustment_RuntimeField+uint32_t(manager)*2+i*0x1c,i<2?1500:0);
+        finances.memory.set32(layout::Bank_OriginalToUtf8_RuntimeField5+uint32_t(manager)*4+i*0x1c,0);
+    }
+    for(size_t i=0;i<12;++i) {
+        const size_t at=i*0x5c;
+        const uint16_t price=i==0?60000:1,held=i==0?50000:0;
+        finances.stocks.at(at+0x4e)=uint8_t(price);finances.stocks.at(at+0x4f)=uint8_t(price>>8);
+        finances.stocks.at(at+0x50+size_t(manager)*2)=uint8_t(held);
+        finances.stocks.at(at+0x51+size_t(manager)*2)=uint8_t(held>>8);
+        for(size_t byte=0;byte<4;++byte)finances.stocks.at(at+4+size_t(manager)*4+byte)=0;
+    }
+    for(uint32_t i=0;i<5;++i) {
+        const uint32_t at=layout::Analytics_SourceAssetMaskE_RuntimeField+uint32_t(manager)*0x78+i*0x18;
+        finances.memory.set32(at,i<2?1500000000:0);finances.memory.set32(at+0x10,0);
+    }
+    finances.memory.set32(layout::CurrencyMultiplier,1);finances.memory.set32(layout::CurrencyDivisor,1);
+    const auto finance_native=save_stream(finances);
+    const auto exe=load_le(asset_path(data,"BMH.exe"));
+    const auto bank=bank_from_game(finances,exe,revision);
+    check(bank.finance_values[2]==3000000000LL&&bank.finance_values[3]==3000000000LL&&
+          bank.finance_values[4]==3000000000LL&&bank.finance_values[5]==6000000000LL&&
+          bank.finance_gains[0]==3000000000LL&&bank.finance_gains[1]==3000000000LL,
+          "bank display totals wrapped although individual saved amounts fit their native words");
+    check(bank.finance_value_text[5].find("6.000.000.000")!=std::string::npos,
+          "bank net worth text truncated its wide projection");
+    check(save_stream(finances)==finance_native,"read-only bank totals changed the save representation");
+    finances.memory.set32(layout::CurrencyMultiplier,2);finances.memory.set32(layout::CurrencyDivisor,3);
+    check(bank_from_game(finances,exe,revision).finance_value_text[5].find("4.000.000.000")!=std::string::npos,
+          "bank aggregate display uses the wrong native currency units");
+    std::cout<<"Edition career startup, original calendar/rescheduling navigation, dialog mode and wide bank display passed\n";
     return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}

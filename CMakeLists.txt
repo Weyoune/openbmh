@@ -1174,3 +1174,7 @@ target_link_libraries(transfer_seller_app_tests PRIVATE bmhui openbmh_audio ${BM
 set(BMH_TEST_TRANSFER_SELLER_APP_SAVE "" CACHE FILEPATH "External career for seller-offer integration; not distributed")
 bmh_add_data_test(NAME transfer_seller_app_tests REQUIRED_OPTIONS BMH_TEST_TRANSFER_SELLER_APP_SAVE
     COMMAND transfer_seller_app_tests "${BMH_DATA}" "${BMH_TEST_TRANSFER_SELLER_APP_SAVE}")
+
+add_executable(wide_number_unit_tests tests/wide_number_unit_tests.cpp)
+target_link_libraries(wide_number_unit_tests PRIVATE bmhcore)
+add_test(NAME wide_number_unit_tests COMMAND wide_number_unit_tests)

@@ -28,8 +28,8 @@ struct BankState {
     std::string investment_limit_text;
     int manager_portrait = 0, badge_sprite = 0;
     // MaxSharesToBuy case 1: the seven read-only values shown in the finance view.
-    std::array<int32_t, 7> finance_values{};
-    std::array<int32_t, 2> finance_gains{};
+    std::array<int64_t, 7> finance_values{};
+    std::array<int64_t, 2> finance_gains{};
     std::array<std::string, 7> finance_value_text{};
     std::array<std::string, 2> finance_gain_text{};
     // Case 4 (bank credit) readonly values as seen before any local edits.

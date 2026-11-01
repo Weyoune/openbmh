@@ -98,3 +98,9 @@ retirement/refusal flags remain effective. The initial academy contract remains
 two years; a young arrival can immediately negotiate any supported renewal term.
 This corrects the reused-row mechanism; it does not establish a fixed 200–300
 season threshold or repair ambiguous refusal flags in existing saved careers.
+
+Bank finance-overview totals and gains use 64-bit read-only projections and
+currency formatting, including values beyond a signed native account word.
+Saved cash, deposits, loan fields and holdings retain their original widths.
+This prevents a positive combined portfolio from appearing negative; it does
+not recover amounts that have already overflowed inside a native saved field.

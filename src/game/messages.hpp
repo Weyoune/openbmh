@@ -72,5 +72,7 @@ std::string format_amount(const GameState& g, int32_t value);
 // FormatNumber(buf, value, flags, ""): bits 0-5 the field width, bit 0x40 no dot grouping,
 // bit 0x100 an amount of money (converted, " EU" appended).
 std::string format_number(const GameState& g, int32_t value, int flags);
+// Read-only aggregates can exceed a native save word; preserve currency and padding.
+std::string format_number_wide(const GameState& g, int64_t value, int flags);
 
 }  // namespace bmh

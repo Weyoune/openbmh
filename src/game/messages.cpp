@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <limits>
 
 namespace bmh {
 
@@ -113,13 +114,8 @@ std::string message_text_following(const GameState& g, uint32_t pointer_variable
     return text;
 }
 
-std::string format_number(const GameState& g, int32_t value, int flags) {
-    if (flags & 0x100) {
-        // ConvertCurrency: currency conversion (1/1 unless the savegame says otherwise)
-        const int32_t mul = g.memory.has(::bmh::layout::CurrencyMultiplier) ? int32_t(g.memory.u32(::bmh::layout::CurrencyMultiplier)) : 1;
-        const int32_t div = g.memory.has(::bmh::layout::CurrencyDivisor) ? int32_t(g.memory.u32(::bmh::layout::CurrencyDivisor)) : 1;
-        if (div != 0) value = value * mul / div;
-    }
+namespace {
+std::string format_number_digits(const GameState& g, int64_t value, int flags) {
     // FormatGroupedDigits: digits from the right; with grouping (bit 0x40 clear) a dot before the
     // 4th, 8th and 12th character; padded to the width (bits 0-5), leading blanks for the
     // dots a wide field reserves
@@ -127,12 +123,12 @@ std::string format_number(const GameState& g, int32_t value, int flags) {
     const int width = flags & 0x3F;
     int blanks = group && width > 3 ? (width - 4) / 3 + 1 : 0;
     const bool negative = value < 0;
-    uint32_t v = negative ? uint32_t(-int64_t(value)) : uint32_t(value);
+    uint64_t v = negative ? uint64_t(-(value + 1)) + 1 : uint64_t(value);
     std::string reversed;
     int dots = 0;
     while (v != 0) {
         const size_t n = reversed.size();
-        if (group && (n == 3 || n == 7 || n == 11)) reversed.push_back('.'), blanks--, dots++;
+        if (group && n % 4 == 3) reversed.push_back('.'), blanks--, dots++;
         reversed.push_back(char('0' + v % 10));
         v /= 10;
     }
@@ -147,6 +143,45 @@ std::string format_number(const GameState& g, int32_t value, int flags) {
         else s += g.currency_suffix;  // CurrencySuffixText
     }
     return s;
+}
+
+}  // namespace
+
+std::string format_number(const GameState& g, int32_t value, int flags) {
+    if (flags & 0x100) {
+        // ConvertCurrency: currency conversion (1/1 unless the savegame says otherwise)
+        const int32_t mul = g.memory.has(::bmh::layout::CurrencyMultiplier) ? int32_t(g.memory.u32(::bmh::layout::CurrencyMultiplier)) : 1;
+        const int32_t div = g.memory.has(::bmh::layout::CurrencyDivisor) ? int32_t(g.memory.u32(::bmh::layout::CurrencyDivisor)) : 1;
+        if (div != 0) value = value * mul / div;
+    }
+    return format_number_digits(g, value, flags);
+}
+
+std::string format_number_wide(const GameState& g, int64_t value, int flags) {
+    if (flags & 0x100) {
+        const int32_t mul = g.memory.has(layout::CurrencyMultiplier) ? int32_t(g.memory.u32(layout::CurrencyMultiplier)) : 1;
+        const int32_t div = g.memory.has(layout::CurrencyDivisor) ? int32_t(g.memory.u32(layout::CurrencyDivisor)) : 1;
+        if (div != 0) {
+            const bool negative = (value < 0) != ((mul < 0) != (div < 0));
+            const uint64_t magnitude = value < 0 ? uint64_t(-(value + 1)) + 1 : uint64_t(value);
+            const uint64_t multiplier = mul < 0 ? uint64_t(-int64_t(mul)) : uint64_t(mul);
+            const uint64_t divisor = div < 0 ? uint64_t(-int64_t(div)) : uint64_t(div);
+            const uint64_t limit = uint64_t(std::numeric_limits<int64_t>::max()) + uint64_t(negative);
+            // Split before multiplication, keeping exact truncation without
+            // requiring nonportable 128-bit integers for currency conversion.
+            const uint64_t whole = magnitude / divisor;
+            if (multiplier && whole > limit / multiplier)
+                throw FormatError("wide currency amount exceeds display range");
+            const uint64_t base = whole * multiplier;
+            const uint64_t fraction = (magnitude % divisor) * multiplier / divisor;
+            if (fraction > limit - base)
+                throw FormatError("wide currency amount exceeds display range");
+            const uint64_t converted = base + fraction;
+            value = negative ? (converted == uint64_t(std::numeric_limits<int64_t>::max()) + 1
+                ? std::numeric_limits<int64_t>::min() : -int64_t(converted)) : int64_t(converted);
+        }
+    }
+    return format_number_digits(g, value, flags);
 }
 
 std::string format_amount(const GameState& g, int32_t value) { return format_number(g, value, 0x101); }
