@@ -589,12 +589,7 @@ void test_yes_level_zero_and_funds_refusal(const std::filesystem::path& data) {
     resolve_stand_block_offer(accepted,true,expected_random);
     GameState expected=session->state();
     auto exe=load_le(ui::asset_path(data,"BMH.exe"));
-    StadiumBlockExpansionConstants constants;
-    for(unsigned i=0;i<8;++i) {
-        constants.price_per_1000[i]=exe.u32(::bmh::layout::CareerSession_DispatchStadium_RuntimeField+(i+8)*4);
-        constants.weeks[i]=exe.u8(::bmh::layout::CareerSession_DispatchStadium_RuntimeField2+(i+22)*5);
-        constants.max_places[i]=uint32_t(exe.u8(::bmh::layout::CareerSession_Invalid_RuntimeField+i))*1000;
-    }
+    const auto constants=stadium_block_expansion_constants(exe);
     check(build_stadium_block_expansion(expected,manager,StadiumBlockSlot::B,constants,
         quote,accepted,expected_random),"independent Source Engine simulation accepts YES at level 0");
     const auto game_before=session->game();

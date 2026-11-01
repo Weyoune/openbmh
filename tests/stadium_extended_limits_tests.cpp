@@ -9,7 +9,7 @@ void check(bool value,const char* message){if(!value)throw std::runtime_error(me
 }
 int main()try{
     using namespace bmh;
-    auto image=LeImage::from_bytes(0xa3600,Bytes(0x1000));
+    auto image=LeImage::from_bytes(layout::GermanDataSegmentBegin,Bytes(0x3000));
     const uint8_t original_max[]={8,18,8,14,8,18,8,14},original_weeks[]={30,37,30,25,30,37,30,25};
     for(uint32_t i=0;i<8;++i){image.patch(layout::CareerSession_Invalid_RuntimeField+i,original_max+i,1);image.patch(layout::CareerSession_DispatchStadium_RuntimeField2+(i+22)*5,original_weeks+i,1);const uint8_t price[]={0xe0,0x93,0x04,0};image.patch(layout::CareerSession_DispatchStadium_RuntimeField+(i+8)*4,price,4);}
     const auto constants=stadium_block_expansion_constants(image);
