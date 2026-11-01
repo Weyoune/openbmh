@@ -3,6 +3,7 @@
 
 #include "ui/lineup.hpp"
 #include "ui/sprite_font.hpp"
+#include "formats/palette.hpp"
 #include <memory>
 
 namespace bmh::ui {
@@ -81,6 +82,9 @@ public:
     PitchScreen(PitchScreen&&) noexcept = default;
     PitchScreen& operator=(PitchScreen&&) noexcept = default;
     Image render() const;
+    // Current/proposed native distance bands, available only over the pitch.
+    std::optional<std::pair<int,int>> position_feedback() const;
+    std::optional<std::array<uint32_t, 121>> pointer_cursor(const Palette&) const;
     // PitchScreen: outline only, before the pending save is dispatched/ACKed.
     static constexpr int formation_save_flash_ms = 5 * 20; // DecodeTaxAnimationScript2(5)
     std::optional<Image> formation_save_feedback(bool restored) const;
@@ -116,6 +120,7 @@ private:
     std::optional<PitchRequest> pending_;
     std::optional<int> selected_, hovered_;
     std::optional<std::pair<int,int>> ghost_;
+    std::optional<std::pair<int,int>> pointer_grid_;
     std::optional<std::pair<int,int>> order_hover_grid_;
     int scroll_ = 0;
     bool close_ = false, return_team_ = false;

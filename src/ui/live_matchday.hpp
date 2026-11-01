@@ -2,6 +2,7 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
 #include <array>
 #include <string>
 #include <string_view>
@@ -45,6 +46,29 @@ struct LiveMatchdayFrame {
 
 LiveMatchdayFrame live_matchday_frame(int minute, const std::vector<MatchGroup>& groups,
                                      const GameState& state);
+
+// The engine commits a chance before its ball/set-piece/shot presentation. Keep
+// the observed preview scores until the result hook, without delaying simulation.
+class LiveScoreReveal {
+public:
+    void observe(LiveChanceStage stage, const LiveMatchdayFrame& frame) {
+        if (stage == LiveChanceStage::preview) preview_ = frame;
+        else preview_.reset();
+    }
+    LiveMatchdayFrame project(LiveMatchdayFrame frame) const {
+        if (!preview_ || preview_->minute != frame.minute) return frame;
+        for (auto& row : frame.matches) for (const auto& before : preview_->matches)
+            if (row.home_team == before.home_team && row.away_team == before.away_team) {
+                row.home_goals = before.home_goals;
+                row.away_goals = before.away_goals;
+                row.score_known = before.score_known;
+                break;
+            }
+        return frame;
+    }
+private:
+    std::optional<LiveMatchdayFrame> preview_;
+};
 
 struct LiveChanceProjection {
     LiveChanceStage stage = LiveChanceStage::preview;

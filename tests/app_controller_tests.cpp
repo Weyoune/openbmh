@@ -4955,6 +4955,7 @@ void check_live_observer_determinism(const std::filesystem::path& data) {
         int events = 0; bool home_seen = false, away_seen = false;
         std::optional<LiveChanceEvent> preview;
         uint8_t preview_score = 0;
+        ui::LiveScoreReveal score_reveal;
         int previews = 0, outcomes = 0;
         const auto source_exe = load_le(asset_path(data, "BMH.exe"));
         int shot_count = 0;
@@ -4977,7 +4978,11 @@ void check_live_observer_determinism(const std::filesystem::path& data) {
                     if (step.sprites[i].figure != 24)
                         check(step.sprites[i-1].y <= step.sprites[i].y,"Source figures retain stable depth order");
             }
-            const auto frame = ui::live_matchday_frame(event.minute,groups,state);
+            const auto frame = score_reveal.project(ui::live_matchday_frame(event.minute,groups,state));
+            if (preview && !frame.matches.empty())
+                check(frame.matches[0].home_goals == (preview_score >> 4) &&
+                      frame.matches[0].away_goals == (preview_score & 15),
+                      "ball/set-piece/shot scoreboard retains preview until the visible result");
             const auto images = boundary_screen.render_set_piece(frame,event);
             check(images.size() == scene.size(),"each Source marker produces exactly one complete displayed frame");
             const auto backdrop = boundary_screen.render(frame);
@@ -5000,7 +5005,11 @@ void check_live_observer_determinism(const std::filesystem::path& data) {
             const auto before = save_stream(state);
             const auto g_seed = game.seed(); const auto w_seed = rng.seed();
             const auto g_calls = game.calls(); const auto w_calls = rng.calls();
-            const auto frame = ui::live_matchday_frame(event.minute, groups, state);
+            const auto frame = score_reveal.project(ui::live_matchday_frame(event.minute, groups, state));
+            if (preview && !frame.matches.empty())
+                check(frame.matches[0].home_goals == (preview_score >> 4) &&
+                      frame.matches[0].away_goals == (preview_score & 15),
+                      "ball/set-piece/shot scoreboard retains preview until the visible result");
             const auto rendered = boundary_screen.render_shot(frame, event);
             const auto repeat = boundary_screen.render_shot(frame, event);
             const auto palette = load_palette(asset_path(data, "M3PC.COL"));
@@ -5030,6 +5039,8 @@ void check_live_observer_determinism(const std::filesystem::path& data) {
             const auto g_calls = game.calls(); const auto w_calls = rng.calls();
             const auto projection = ui::live_chance_projection(event, groups, state, source_exe);
             const auto frame = ui::live_matchday_frame(event.minute, groups, state);
+            score_reveal.observe(event.stage,frame);
+            check(score_reveal.project(frame)==frame,"preview and visible result publish their own score");
             (void)boundary_screen.render_chance(frame, projection);
             (void)boundary_screen.render_chance(frame, projection);
             check(save_stream(state) == before && game.seed() == g_seed && rng.seed() == w_seed &&
@@ -5055,7 +5066,11 @@ void check_live_observer_determinism(const std::filesystem::path& data) {
             check((distance >= 40 && distance <= 50) || distance == 52,
                   "live ball uses the already drawn Watcom distance or the Source goal endpoint");
             home_seen |= event.displacement > 0; away_seen |= event.displacement < 0;
-            const auto frame = ui::live_matchday_frame(event.minute, groups, state);
+            const auto frame = score_reveal.project(ui::live_matchday_frame(event.minute, groups, state));
+            if (preview && !frame.matches.empty())
+                check(frame.matches[0].home_goals == (preview_score >> 4) &&
+                      frame.matches[0].away_goals == (preview_score & 15),
+                      "ball/set-piece/shot scoreboard retains preview until the visible result");
             for (int i = 0; i < ui::LiveMatchdayScreen::ball_frame_count(event.displacement); ++i)
                 (void)boundary_screen.render_ball(frame, event.displacement, i);
             ++events;

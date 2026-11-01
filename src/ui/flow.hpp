@@ -103,6 +103,9 @@ public:
     FlowResult expire_stadium_tip();
     bool in_stadium() const { return bool(stadium_); }
     bool in_pitch() const { return bool(pitch_); }
+    std::optional<std::array<uint32_t,121>> pitch_pointer_cursor(const Palette& palette) const {
+        return pitch_ && screen_name() == "pitch" ? pitch_->pointer_cursor(palette) : std::nullopt;
+    }
     std::optional<Image> pitch_formation_save_feedback(bool restored) const;
     FlowResult pitch_held_left(int x, int y, uint64_t source_ticks);
     void consume_orphaned_pitch_release(){pitch_release_barrier_=false;}

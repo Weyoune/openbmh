@@ -124,6 +124,10 @@ LeImage translate_fltd(const fs::path& fltd_exe) {
     // verifies that layout before reading its year and weekday.
     for (uint32_t i = 0; i < 14; ++i)
         put(layout::CalendarDateSetup + i, en(kEnglishCalendarDateSetup + i));
+    // The native 11x11 pointer is an edition-owned indexed bitmap.
+    for (uint32_t i = 0; i < 11 * 11; ++i)
+        put(::bmh::layout::OriginalPointerPixels + i,
+            en(::bmh::layout::EnglishOriginalPointerPixels + i));
     LeImage out = LeImage::from_bytes(kDeBase, std::move(image));
     return out;
 }

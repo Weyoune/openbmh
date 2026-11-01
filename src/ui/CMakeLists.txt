@@ -243,3 +243,7 @@ bmh_add_data_test(NAME transfer_history_tests COMMAND transfer_history_tests "${
 add_executable(sportschau_ui_tests ../../tests/sportschau_ui_tests.cpp)
 target_link_libraries(sportschau_ui_tests PRIVATE bmhui)
 bmh_add_data_test(NAME sportschau_ui_tests COMMAND sportschau_ui_tests "${BMH_DATA}")
+
+add_executable(live_score_reveal_tests live_score_reveal_tests.cpp)
+target_link_libraries(live_score_reveal_tests PRIVATE bmhui)
+add_test(NAME live_score_reveal_tests COMMAND live_score_reveal_tests)

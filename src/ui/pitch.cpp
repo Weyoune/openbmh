@@ -3,6 +3,7 @@
 #include "ui/pitch.hpp"
 
 #include <algorithm>
+#include <cstdlib>
 #include <sstream>
 
 #include "formats/savestate.hpp"
@@ -195,7 +196,7 @@ PitchScreen::PitchScreen(const std::filesystem::path& data,LineupState state,Pit
 PitchScreen::PitchScreen(const PitchScreen& other)
     :PitchScreen(other.data_,other.state_,other.extras_){
     pending_=other.pending_;selected_=other.selected_;hovered_=other.hovered_;ghost_=other.ghost_;
-    order_hover_grid_=other.order_hover_grid_;
+    order_hover_grid_=other.order_hover_grid_;pointer_grid_=other.pointer_grid_;
     scroll_=other.scroll_;close_=other.close_;return_team_=other.return_team_;rejection_=other.rejection_;
     weights_dirty_=other.weights_dirty_;
     shooter_editor_open_=other.shooter_editor_open_;shooter_selection_=other.shooter_selection_;
@@ -290,6 +291,35 @@ bool PitchScreen::automatic_page()const{
     // on native page bit 0x10. The full team sheet and supported rule profile editor own
     // their respective areas even when that bit is retained underneath.
     return !shooter_editor_open_&&(extras_.native_display_word&0x18)==0x18;
+}
+std::optional<std::pair<int,int>> PitchScreen::position_feedback() const {
+    if (!pointer_grid_ || close_ || !(extras_.native_display_word & 8)) return {};
+    const auto row = selected_ ? selected_ : hovered_;
+    if (!row || size_t(*row) >= state_.players.size()) return {};
+    const auto& p = state_.players.at(size_t(*row));
+    if (p.player_id < 0 || !(p.slot & 0xc000) || ((p.attributes.w364 >> 16) & 31)) return {};
+    const int depth = int(exe_.u8(::bmh::layout::PitchPreferenceDepthBases + p.attributes.position())) - 2 +
+        int((p.attributes.w35c >> 21 & 7) >> 1);
+    const int lane = int((p.attributes.w35c >> 24 & 7) * 800 / 7);
+    const auto band = [&](int x, int y) {
+        return std::min(9, (std::abs(depth - x) * 100 + std::abs(lane - y * 100)) / 200);
+    };
+    return std::pair{band(int8_t(p.board[0x41]), int8_t(p.board[0x42])),
+                     band(pointer_grid_->first, pointer_grid_->second)};
+}
+std::optional<std::array<uint32_t, 121>> PitchScreen::pointer_cursor(const Palette& palette) const {
+    const auto feedback = position_feedback();
+    if (!feedback) return {};
+    const auto band = uint32_t(feedback->second);
+    const uint32_t fill = 0xff000000u |
+        (uint32_t(vga_dac_rgb8(uint8_t(exe_.u8(::bmh::layout::PitchPreferenceRed + band) << 4))) << 16) |
+        (uint32_t(vga_dac_rgb8(uint8_t(exe_.u8(::bmh::layout::PitchPreferenceGreen + band) << 4))) << 8);
+    std::array<uint32_t, 121> pixels{};
+    for (uint32_t i = 0; i < pixels.size(); ++i) {
+        const auto index = exe_.u8(::bmh::layout::OriginalPointerPixels + i);
+        pixels[i] = index == 0 ? 0 : index == 0x11 ? fill : palette.argb[index];
+    }
+    return pixels;
 }
 Image PitchScreen::render()const{
     // PitchScreen's page redraw copies the owned offscreen sheet from y=20: all
@@ -472,6 +502,10 @@ Image PitchScreen::render()const{
                 rect(out,0x105,y+9,value,1,0);rect(out,0x103+value,y+2,1,8,0);}
         }
     }
+    // Native lower-right swatches compare the current position with the pointer.
+    const auto feedback = position_feedback();
+    copy(out,atlas_,feedback ? 259 + feedback->first * 5 : 309,68,305,233,5,4,0xc0);
+    copy(out,atlas_,feedback ? 259 + feedback->second * 5 : 309,68,312,230,5,4,0xc0);
     return out;
 }
 std::optional<std::pair<int,int>> PitchScreen::grid(int x,int y){
@@ -570,10 +604,12 @@ PitchRequest PitchScreen::order_request(int aspect,int value){
 }
 PitchRequest PitchScreen::click(int x,int y,bool right){
     if(pending_||close_)return {};
+    pointer_grid_=grid(x,y);
     const uint16_t display_word=shooter_editor_open_
         ? uint16_t(extras_.native_display_word&0xff0f)
         : extras_.native_display_word;
     if(right){
+        pointer_grid_.reset();
         if((display_word&0x08)==0){sheet_->click(x,y,true);close_=sheet_->close_requested();}
         else if(selected_){selected_.reset();ghost_.reset();}
         else {close_=true;zone_cover_open_=false;}
@@ -740,11 +776,13 @@ PitchRequest PitchScreen::save_formation(int x,int y){
     pending_=r;return r;
 }
 bool PitchScreen::move(int x,int y){if(pending_||close_)return false;
+    const auto old_pointer_grid=pointer_grid_;
     if((extras_.native_display_word&0x08)==0)return sheet_->move(x,y);
+    pointer_grid_=grid(x,y);
     const auto old=hovered_;const auto oldghost=ghost_;hovered_=hit_row(x,y);ghost_=selected_?grid(x,y):std::nullopt;
     const auto old_grid=order_hover_grid_;
     order_hover_grid_=order_panel_open_?grid(x,y):std::nullopt;
-    return old!=hovered_||oldghost!=ghost_||old_grid!=order_hover_grid_;
+    return old!=hovered_||oldghost!=ghost_||old_grid!=order_hover_grid_||old_pointer_grid!=pointer_grid_;
 }
 PitchRequest PitchScreen::key(std::string_view key){
     // PitchScreen's desktop pages cancel selection/return on mouse event 8.
@@ -916,13 +954,13 @@ void PitchScreen::acknowledge(LineupState s,PitchExtras e){
 }
 void PitchScreen::reject_action(std::string reason){if(!pending_||reason.empty())throw FormatError("pitch: rejection requires pending action and reason");
     if(sheet_->pending())sheet_=std::make_unique<LineupScreen>(data_,state_);
-    pending_.reset();selected_.reset();hovered_.reset();ghost_.reset();order_hover_grid_.reset();marking_target_row_.reset();rejection_=std::move(reason);
+    pending_.reset();selected_.reset();hovered_.reset();ghost_.reset();pointer_grid_.reset();order_hover_grid_.reset();marking_target_row_.reset();rejection_=std::move(reason);
 }
 void PitchScreen::resolve_local_navigation(){
     if(!pending_||pending_->kind!=PitchRequestKind::open_player_info)
         throw FormatError("pitch: only player info can resolve locally");
     if(sheet_->pending())sheet_->resolve_local_navigation(LineupRequestKind::open_player_info);
-    pending_.reset();selected_.reset();hovered_.reset();ghost_.reset();rejection_.clear();
+    pending_.reset();selected_.reset();hovered_.reset();ghost_.reset();pointer_grid_.reset();rejection_.clear();
 }
 std::string PitchScreen::state_json()const{std::ostringstream out;
     out<<"{\"screen\":\"pitch\",\"manager_slot\":"<<state_.manager_slot<<",\"runtime_club\":"<<state_.runtime_club

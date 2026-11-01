@@ -38,6 +38,35 @@ int main(int argc,char**argv){try{
     PitchScreen pitch(data,s,e);const auto pixels=pitch.render().pixels;
     check(pixels.size()==320*240&&pitch.render().pixels==pixels,"pitch render is deterministic");
     check(pitch.state().players[3].board[0x41]==3&&!pitch.pending(),"render does not mutate authoritative positions");
+    auto affinity_state=s;
+    affinity_state.players[3].attributes.w364=1; // defender
+    affinity_state.players[3].attributes.w35c=(6u<<21)|(4u<<24);
+    PitchScreen affinity(data,affinity_state,e);
+    const auto affinity_initial=affinity.render();
+    const auto colors=load_palette(asset_path(data,"M3PC.COL"));
+    check(!affinity.position_feedback()&&!affinity.pointer_cursor(colors),
+          "idle pitch leaves host cursor and position colors unmodified");
+    affinity.click(30,164);affinity.move(40,164);
+    check(affinity.position_feedback()==std::pair{0,0},
+          "near preferred defender depth/lane uses the best native distance band");
+    const auto near_cursor=affinity.pointer_cursor(colors);
+    const auto near_image=affinity.render();
+    affinity.move(160,208);
+    check(affinity.position_feedback()==std::pair{0,9}&&
+          affinity.pointer_cursor(colors)&&affinity.pointer_cursor(colors)!=near_cursor,
+          "far placement reaches the worst native band and changes cursor fill");
+    const auto far_image=affinity.render();
+    bool swatch_changed=false;
+    for(int y=230;y<234;++y)for(int x=312;x<317;++x)
+        swatch_changed|=near_image.pixels[size_t(y)*320+size_t(x)]!=far_image.pixels[size_t(y)*320+size_t(x)];
+    check(swatch_changed&&affinity.state().players[3].board==s.players[3].board&&!affinity.pending(),
+          "original proposed-position swatch changes without moving a player or dispatching");
+    affinity.move(300,220);
+    check(!affinity.position_feedback()&&!affinity.pointer_cursor(colors),
+          "leaving pitch restores ordinary cursor and clears affinity colors");
+    affinity.click(0,0,true);
+    check(affinity.render().pixels==affinity_initial.pixels&&!affinity.pointer_cursor(colors),
+          "cancelled placement restores original footer and cursor");
     const auto idle_pitch=pitch.state_json();
     check(pitch.key("ESC").kind==PitchRequestKind::none&&
           pitch.key("ESCAPE").kind==PitchRequestKind::none&&

@@ -1490,6 +1490,14 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `Pitch_FormatError_TextPointer2` | `0xaf178` | German-compatible image / runtime field |
 | `Pitch_FormatError_TextPointer3` | `0xaf17c` | German-compatible image / runtime field |
 | `Pitch_Render_RuntimeField` | `0xa3cbc` | German-compatible image / runtime field |
+| `PitchPreferenceDepthBases` | `0xa3cc3` | Four position-depth bases for native pitch feedback |
+| `PitchPreferenceRed` | `0xa3cc7` | Ten native pointer red components |
+| `PitchPreferenceGreen` | `0xa3cd1` | Ten native pointer green components |
+| `OriginalPointerPixels` | `0xa45b4` | Native 11 by 11 indexed pointer bitmap |
+| `EnglishPitchPreferenceDepthBases` | `0x6e230` | English position-depth bases |
+| `EnglishPitchPreferenceRed` | `0x6e234` | English pointer red components |
+| `EnglishPitchPreferenceGreen` | `0x6e240` | English pointer green components |
+| `EnglishOriginalPointerPixels` | `0x70554` | English 11 by 11 indexed pointer bitmap |
 | `Pitch_Render_TextPointer` | `0xae0e4` | German-compatible image / runtime field |
 | `Pitch_Render_TextPointer2` | `0xae0ec` | German-compatible image / runtime field |
 | `Pitch_Render_TextPointer3` | `0xae0f0` | German-compatible image / runtime field |

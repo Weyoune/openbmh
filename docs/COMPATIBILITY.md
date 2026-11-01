@@ -104,3 +104,11 @@ currency formatting, including values beyond a signed native account word.
 Saved cash, deposits, loan fields and holdings retain their original widths.
 This prevents a positive combined portfolio from appearing negative; it does
 not recover amounts that have already overflowed inside a native saved field.
+
+Live ball, set-piece and shot animations retain
+visible scoreboard digits at the chance-preview value until the result view.
+The simulation still commits goals, statistics and random draws at their existing
+boundaries. Post-match overview dismissal owns its full mouse gesture, including
+release after pointer movement, before the following calendar decision can open.
+The pitch uses each edition's original position-distance tables, atlas swatches
+and pointer bitmap for placement feedback; this display state is not serialized.
