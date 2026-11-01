@@ -3612,7 +3612,7 @@ int main(int argc, char** argv) {
             const auto until = SDL_GetTicks64() + milliseconds;
             while (running && !skip_opening && SDL_GetTicks64() < until) {
                 SDL_Event opening_event;
-                while (SDL_PollEvent(&opening_event)) {
+                while (quit_confirmation.poll(&opening_event)) {
                     if (opening_event.type == SDL_QUIT) running = false;
                     if (opening_event.type == SDL_KEYDOWN || opening_event.type == SDL_MOUSEBUTTONUP)
                         skip_opening = true;
