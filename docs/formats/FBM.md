@@ -9,7 +9,7 @@
 | Plain header | Variable | Manager/date information for the load list |
 | Signature area | 10 bytes | Eight-byte `KRON_FBM` signature and two following bytes |
 | First ID | u32 | Container identifier |
-| Version | 6 bytes | NUL-terminated version field, normally `V2.24` for the supported state layout |
+| Version | 6 bytes | NUL-terminated version field, `V2.24` or the verified Diamond `V3.7` marker for this state layout |
 | Second ID | u32 | Save identifier |
 | Random byte | u8 | Header value |
 | Initial key | u8 | Rolling-cipher seed |
@@ -54,6 +54,15 @@ persistence API. Original programs and older OpenBMH writers may reject or
 discard optional information: keep a backup before opening a new save with them.
 
 ## Edition compatibility
+
+Diamond 3.7 uses the `V3.7` container label with the verified German V2.24 state
+layout. Career loading, saved-desktop/preparation import and browser information
+accept that exact label as well as `V2.24`. The checksum, full block/pool structure
+and installed edition's database dimensions are still required. An accepted
+version label cannot make a malformed or mismatched state valid. Ordinary
+OpenBMH native saves continue to use the canonical `V2.24` output marker.
+Unknown labels are rejected separately from checksum failures.
+
 
 Original Football Limited V2.20 saves use a different state block list despite sharing the signature and rolling cipher. They are not interchangeable with the V2.24 layout. Reading an English installation and importing its original saves are separate features; do not edit a version string to bypass the distinction. OpenBMH's own English careers use the session's supported save representation.
 

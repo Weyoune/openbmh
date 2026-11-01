@@ -9,6 +9,9 @@ supported game installation. Extended development lives separately in
 
 - Football Limited startup reads its own calendar epoch and prepared-image
   tables. Original CD assets are located without assuming filename case.
+- Original Diamond 3.7 saves with the verified `V3.7` container marker load in
+  the career, browser information and preparation paths. Unknown versions and
+  checksum failures are reported separately; layout checks remain strict.
 - The original title remains visible until a complete left or right mouse click,
   without loading balls or automatic advancement.
 - Career dialogs retain their scene background instead of inheriting the
@@ -53,10 +56,8 @@ constitute manual gameplay validation on Windows or macOS, or a full
   multi-billion single-account storage; that issue remains open.
 - Calendar and rescheduling opened in the checked Classic datasets; the reported
   failure remains open because it could not be reproduced.
-- Some supplied saves, including a supplied Diamond 3.7 autosave, are rejected as
-  damaged/unsupported before gameplay. This release does not claim to repair
-  those files. Football Limited remains experimental, including original V2.20
-  save import.
+- Football Limited remains experimental. Its original V2.20 save layout is
+  different and is not enabled by the Diamond 3.7 import correction.
 - Already lost counters and earlier title winners cannot be reconstructed. The
   separate manager-achievements graph retains its original fifty-season window.
   Original programs and older OpenBMH writers can discard optional archive and
