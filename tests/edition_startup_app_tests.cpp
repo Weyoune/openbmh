@@ -70,6 +70,7 @@ int main(int argc,char** argv)try {
         const uint32_t at=layout::Analytics_SourceAssetMaskE_RuntimeField+uint32_t(manager)*0x78+i*0x18;
         finances.memory.set32(at,i<2?1500000000:0);finances.memory.set32(at+0x10,0);
     }
+    finances.memory.add_block(layout::CurrencyMultiplier,8);
     finances.memory.set32(layout::CurrencyMultiplier,1);finances.memory.set32(layout::CurrencyDivisor,1);
     const auto finance_native=save_stream(finances);
     const auto exe=load_le(asset_path(data,"BMH.exe"));
