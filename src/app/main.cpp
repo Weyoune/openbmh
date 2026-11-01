@@ -3603,7 +3603,8 @@ int main(int argc, char** argv) {
         // a complete left or right click, without the DOS loading animation.
         const auto title_path = ui::asset_path(data / "KB", "137.VGA");
         const auto title_palette = load_optional_embedded_palette(title_path);
-        present_season(load_vga(title_path), window_title.c_str(),
+        const auto title_image = load_vga(title_path);
+        present_season(title_image, window_title.c_str(),
                        title_palette ? &*title_palette : nullptr);
         bool opening_confirmed = false;
         std::optional<Uint8> opening_press;
@@ -3611,6 +3612,13 @@ int main(int argc, char** argv) {
             SDL_Event opening_event;
             while (quit_confirmation.poll(&opening_event)) {
                 if (opening_event.type == SDL_QUIT) running = false;
+                if (opening_event.type == SDL_KEYDOWN && opening_event.key.keysym.sym == SDLK_ESCAPE &&
+                    quit_confirmation.confirm()) running = false;
+                if (opening_event.type == SDL_WINDOWEVENT &&
+                    (opening_event.window.event == SDL_WINDOWEVENT_EXPOSED ||
+                     opening_event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED))
+                    present_season(title_image, window_title.c_str(),
+                                   title_palette ? &*title_palette : nullptr);
                 if (opening_event.type == SDL_WINDOWEVENT &&
                     opening_event.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
                     opening_press.reset();
