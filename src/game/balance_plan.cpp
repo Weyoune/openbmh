@@ -68,7 +68,7 @@ int32_t shares_and_loans(const GameState& g, int m, int flags, int months) {
     int32_t sum = 0;
     if (flags & 1) {
         for (int k = 0; k < 6; k++) {
-            const uint32_t unit = g.memory.u32(::bmh::layout::FundBlock + uint32_t(k) * 0x1c) * uint32_t(kShareUnits[k]) / 10000;
+            const uint32_t unit = uint32_t((uint64_t(g.memory.u32(::bmh::layout::FundBlock + uint32_t(k) * 0x1c)) * uint32_t(kShareUnits[k])) / 10000);
             sum = wrap(int64_t(sum) + int64_t(unit * g.memory.u16(::bmh::layout::Advertising_OriginalShareAdjustment_RuntimeField + uint32_t(m) * 2 + uint32_t(k) * 0x1c)));
         }
         if (flags & 4) sum = wrap(int64_t(sum) * months);

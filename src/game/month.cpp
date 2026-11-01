@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cstdio>
 #include <cstdlib>
 #include <optional>
@@ -654,7 +655,7 @@ void board_month(GameState& g, int m, WatcomRandom& rand, MinuteReport& report, 
     for (int s = 0; s < 24; s++) g.tactics.at(board(s) + 0xb) &= 0x7F;
 }
 
-// MonthChange2: share prices grow by 2.5 %, dividends, loans between the managers.
+// MonthChange2: share prices grow by 0.25 %, dividends, loans between the managers.
 void shares_and_loans(GameState& g) {
     StaticMemory& mem = g.memory;
     std::vector<uint8_t>& r = g.manager_records;
@@ -665,12 +666,16 @@ void shares_and_loans(GameState& g) {
         uint32_t price = mem.u32(at);
         price += ((price / 10000) * 0x19 / 10) * 10;
         mem.set32(at, price);
+        // OpenBMH deviates from the original: keep the price product in 64 bits
+        // until division, retaining per-unit truncation and recipient policy.
+        const uint64_t unit_dividend = (uint64_t(price) * uint32_t(kShareFactor[k])) / 10000;
         // (a bug of the original: only the last manager's dividend is kept and it is booked
         //  for the manager after the last one)
         int32_t dividend = 0;
         for (int m = 0; m < managers; m++)
-            dividend = int32_t(mem.u16(::bmh::layout::Advertising_OriginalShareAdjustment_RuntimeField + uint32_t(m) * 2 + uint32_t(k) * 0x1c) *
-                               ((price * uint32_t(kShareFactor[k])) / 10000));
+            dividend = std::bit_cast<int32_t>(uint32_t(
+                mem.u16(::bmh::layout::Advertising_OriginalShareAdjustment_RuntimeField + uint32_t(m) * 2 + uint32_t(k) * 0x1c) *
+                unit_dividend));
         book_money(g, managers, -dividend, true);
         add32(r, size_t(managers) * kRecord + 0x870, dividend);
     }
@@ -693,6 +698,8 @@ void shares_and_loans(GameState& g) {
 }
 
 }  // namespace
+
+void monthly_shares_and_loans(GameState& g) { shares_and_loans(g); }
 
 bool list_transfer_player(GameState& g, int slot, WatcomRandom& rand, MinuteReport& report) {
     return list_player(g, slot, rand, report);
@@ -989,7 +996,7 @@ void month_change(GameState& g, WatcomRandom& rand, MinuteReport& report, GameRa
     if (report.unsupported) return;
     // 5. shares and loans
     turn_step = "month_change: shares";
-    shares_and_loans(g);
+    monthly_shares_and_loans(g);
 }
 
 }  // namespace bmh

@@ -145,3 +145,12 @@ receives a grace period without a loss or random draw; subsequent saves retain
 that guard. The next calendar month can trigger the ordinary loss. Import cannot
 infer whether an event already occurred before this feature. Fresh histories
 receive the same initial grace month.
+
+
+OpenBMH deviates from the original: monthly fund/property dividends multiply
+unit price by the dividend factor in 64 bits before the existing integer division.
+The monthly and annual previews and weekly offers use the same widened product.
+Per-unit rounding and the selected legacy/typed recipient policy are unchanged.
+This corrects intermediate overflow for representable dividends; account,
+deposit, property book value and monthly totals still use their native 32-bit
+storage and can overflow. It is not a complete large-balance finance fix.

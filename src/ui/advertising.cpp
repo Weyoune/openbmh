@@ -88,7 +88,7 @@ int32_t original_share_adjustment(const GameState& game, int manager, bool incom
     if (income) {
         for (int k = 0; k < 6; ++k) {
             const uint32_t shares = game.memory.u32(::bmh::layout::FundBlock + uint32_t(k) * 0x1c);
-            const uint32_t unit = uint32_t(shares) * uint32_t(kShareUnits[size_t(k)]) / 10000;
+            const uint32_t unit = uint32_t((uint64_t(shares) * uint32_t(kShareUnits[size_t(k)])) / 10000);
             const uint32_t owned = game.memory.u16(::bmh::layout::Advertising_OriginalShareAdjustment_RuntimeField + uint32_t(manager) * 2 + uint32_t(k) * 0x1c);
             amount = wrap_add(amount, signed32(unit * owned));
         }

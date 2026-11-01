@@ -216,7 +216,7 @@ void manager_offers(GameState& g, int manager, WatcomRandom& rand, MinuteReport&
         if (kind == 14) {
             for (int k = 0; k < 6; k++) {
                 const uint32_t held = g.memory.u16(::bmh::layout::Advertising_OriginalShareAdjustment_RuntimeField + uint32_t(manager) * 2 + uint32_t(k) * 0x1c);
-                const uint32_t value = uint32_t(g.memory.u32(::bmh::layout::FundBlock + uint32_t(k) * 0x1c) * uint32_t(kShareFactor[k])) / 10000;
+                const uint32_t value = uint32_t((uint64_t(g.memory.u32(::bmh::layout::FundBlock + uint32_t(k) * 0x1c)) * uint32_t(kShareFactor[k])) / 10000);
                 sum += int(uint32_t(rand.range(10, 20)) * (held * value));
             }
             if (sum == 0) continue;

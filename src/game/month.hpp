@@ -28,6 +28,9 @@ namespace bmh {
 // `game` is needed when a player leaves at the end of his contract (MonthChange).
 void month_change(GameState& g, WatcomRandom& rand, MinuteReport& report, GameRandom* game = nullptr);
 
+// The investment/loan phase, retaining the original dividend recipient policy.
+void monthly_shares_and_loans(GameState& g);
+
 // CareerFirstSteps: new players on the transfer list (part of the month change; also at the
 // start of a season).
 void new_transfer_list_entries(GameState& g, WatcomRandom& rand, MinuteReport& report);
