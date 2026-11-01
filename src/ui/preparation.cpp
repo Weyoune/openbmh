@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/native_save_version.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/preparation.hpp"
 
@@ -93,7 +94,7 @@ PreparationState preparation_from_game(const GameState& game, const LeImage& exe
 
 PreparationState load_preparation_reference(const std::filesystem::path& path, const LeImage& exe) {
     const auto fbm = load_savegame(path);
-    if (!fbm.checksum_ok || fbm.version != "V2.24") throw FormatError("preparation: unsupported/damaged FBM");
+    require_native_savegame(fbm);
     const DbCounts counts{exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField), exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField3), exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField2), exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField4)};
     const SaveState save(fbm.stream, counts);
     PreparationState result;

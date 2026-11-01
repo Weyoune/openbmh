@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include "formats/native_save_version.hpp"
 #include "formats/badge_policy.hpp"
 #include "game/calendar.hpp"
 #include "formats/executable_layout.hpp"
@@ -586,7 +587,7 @@ CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_
     session_id_ = next_session_id.fetch_add(1, std::memory_order_relaxed);
     initialize_club_modal_runtime();
     const Savegame file = load_savegame(save_path);
-    if (!file.checksum_ok || file.version != "V2.24") throw std::runtime_error("savegame: unsupported or damaged FBM");
+    require_native_savegame(file);
     const DbCounts counts{exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField), exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField3), exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField2), exe_.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField4)};
     const SaveState save(file.stream, counts);
     g_ = GameState::from_save(save, counts);

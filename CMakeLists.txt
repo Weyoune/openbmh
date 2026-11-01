@@ -1189,3 +1189,12 @@ add_test(NAME bank_robbery_month_tests COMMAND bank_robbery_month_tests)
 add_executable(monthly_dividend_tests tests/monthly_dividend_tests.cpp)
 target_link_libraries(monthly_dividend_tests PRIVATE bmhui)
 add_test(NAME monthly_dividend_tests COMMAND monthly_dividend_tests)
+
+add_executable(native_save_version_tests tests/native_save_version_tests.cpp)
+target_link_libraries(native_save_version_tests PRIVATE bmhcore)
+add_test(NAME native_save_version_tests COMMAND native_save_version_tests)
+add_executable(native_save_import_tests tests/native_save_import_tests.cpp ${BMH_APP_CONTROLLER_SOURCE} ${BMH_APP_SESSION_SDL_SOURCE})
+target_link_libraries(native_save_import_tests PRIVATE bmhui openbmh_audio ${BMH_SDL_TARGET})
+set(BMH_TEST_NATIVE_SAVE_IMPORT_INPUT "" CACHE FILEPATH "External native save for import compatibility; not distributed")
+bmh_add_data_test(NAME native_save_import_tests REQUIRED_OPTIONS BMH_TEST_NATIVE_SAVE_IMPORT_INPUT
+    COMMAND native_save_import_tests "${BMH_DATA}" "${BMH_TEST_NATIVE_SAVE_IMPORT_INPUT}")
