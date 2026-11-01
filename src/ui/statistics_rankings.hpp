@@ -27,9 +27,12 @@ struct StatisticsRankingCategory {
 
 struct StatisticsRankingState {
     std::array<StatisticsRankingCategory, 9> categories{};
-    std::array<std::array<uint16_t, 50>, 9> title_holders{};
-    std::array<std::array<std::string, 50>, 9> club_names{};
-    std::array<std::array<uint8_t, 50>, 9> club_name_colors{};
+    std::array<std::vector<uint16_t>, 9> title_holders{};
+    std::array<std::vector<std::string>, 9> club_names{};
+    std::array<std::vector<uint8_t>, 9> club_name_colors{};
+    std::array<std::vector<bool>, 9> title_present{};
+    std::vector<bool> season_known;
+    int history_first_season = 0;
     int current_season = 0; // SeasonIndex: latest history index; current empty slot is retained.
     int manager_slot = -1;
     int season_number_base = 0; // AchievementsRuntimeField[manager] + Achievements_FormatError_RuntimeField2; StatisticsRankingsFromGame adds one.

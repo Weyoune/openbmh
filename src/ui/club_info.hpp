@@ -36,6 +36,7 @@ struct ClubInfoPlayer {
     bool offer_name_color = false;
     // Present only when this runtime club belongs to a human manager.
     std::optional<std::array<uint8_t, 0x58>> manager_board;
+    std::optional<PlayerClubStatistics> statistics;
 };
 
 // Owned inputs for one render of ClubInfoFromGame / LineupScreen. Build this from the actual

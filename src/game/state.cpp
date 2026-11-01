@@ -99,7 +99,12 @@ GameState GameState::from_save(const SaveState& save, const DbCounts& c) {
     g.foreign_strength = bytes(::bmh::layout::ForeignClubStrength);
     g.memory = StaticMemory(save);
     // memory OpenBMH saves behind the trailer (the English cup blocks, career.hpp)
+    bool long_career_seen = false;
     for (const auto& b : save.extension()) {
+        if (b.address == kLongCareerExtension) {
+            if (long_career_seen) throw FormatError("long career: duplicate extension block");
+            decode_long_career(g, b.bytes); long_career_seen = true; continue;
+        }
         if (!g.memory.has(b.address)) g.memory.add_block(b.address, uint32_t(b.bytes.size()));
         for (size_t i = 0; i < b.bytes.size(); ++i) g.memory.set8(b.address + uint32_t(i), b.bytes[i]);
     }
@@ -110,6 +115,8 @@ GameState GameState::from_save(const SaveState& save, const DbCounts& c) {
     g.stadium_names = save.pool(3);
     g.player_name_offsets = words16(::bmh::layout::PlayerNameOffsets);
     g.season = int16_t(save.data(::bmh::layout::SeasonIndex)[0] | save.data(::bmh::layout::SeasonIndex)[1] << 8);
+    if (!g.title_history.empty() && (g.season < 0 || g.title_history.rbegin()->first > uint32_t(g.season)))
+        throw FormatError("long career: archived season is beyond the saved calendar");
     return g;
 }
 

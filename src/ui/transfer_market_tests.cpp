@@ -100,6 +100,18 @@ int main(int argc,char** argv){
         check(!transfer_market_from_game(expired,5).squad[0].already_listed,
               "cleared rejected/expired pool entry immediately makes the player listable again");
 
+        auto wide_game=fixture();
+        wide_game.player_statistics.emplace(uint32_t(1)<<12, PlayerClubStatistics{{256,0,256},65536,0,0});
+        const auto wide_state=transfer_market_from_game(wide_game,4);
+        check(wide_state.roster.players[0].statistics&&wide_state.roster.players[0].statistics->appearances[0]==256&&
+              wide_state.roster.players[0].statistics->total==65536,
+              "roster projection owns widened counts instead of showing wrapped Native bytes");
+        TransferMarketScreen wide_screen(argv[1],wide_state),native_screen(argv[1],s);
+        wide_screen.click(65,219);native_screen.click(65,219);
+        wide_screen.click(10,219);native_screen.click(10,219);
+        check(wide_screen.render().pixels!=native_screen.render().pixels,
+              "actual transfer roster renderer visibly retains the 256th appearance");
+
         auto all=s;all.items.clear();for(int n=0;n<40;++n){auto item=s.items[0];item.list_entry=n;item.source_slot=2928+n;item.player=100+n;item.name="P"+std::to_string(n);item.position=n%4;item.strength=60+n%7;all.items.push_back(item);}
         TransferMarketScreen pages(argv[1],all);const auto first=visible(pages);std::set<int> reached;
         for(int page=0;page<7;++page){const auto rows=visible(pages);check(rows.size()==size_t(page==6?4:6),"six original rows per page with final four");reached.insert(rows.begin(),rows.end());pages.click(210,45,true);}

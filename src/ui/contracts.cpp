@@ -148,6 +148,7 @@ ContractsState contracts_from_game(const GameState& game, int manager_slot, uint
         view.source.name = game.player_name(player); view.source.attributes = source;
         view.source.cards = game.player_cards.at(size_t(player)); view.source.bonus = game.player_bonus.at(size_t(player));
         std::copy_n(game.tactics.begin() + std::ptrdiff_t(at), 0x58, view.source.board.begin());
+        view.source.statistics = player_club_statistics(game, team, player, view.source.board);
         state.players.push_back(std::move(view));
     }
     if (!state.players.empty()) {
@@ -314,6 +315,7 @@ Image ContractsScreen::render_roster() const {
         text(out, x, y, original_to_utf8(raw), color, -1);
     };
     const auto fixed = [](uint32_t value, int width, bool grouped = false) { return original_number(value, width, grouped); };
+    const auto count = [](uint64_t value) { auto s = std::to_string(value); if(s.size()<3)s.insert(0,3-s.size(),'%'); return s; };
     const auto title = original_to_utf8(texts_[(::bmh::layout::Contracts_RenderRoster_TextPointer2 - ::bmh::layout::TextPointerTable) / 4]);
     sprite_font_.draw(out, SpriteFont::centered_title_x(sprite_font_.text_width(title)), 13, title, 5);
     sprite_font_.draw(out, 5, 235, state_.club_name, 5);
@@ -374,9 +376,9 @@ Image ContractsScreen::render_roster() const {
             original_text(65, baseline, fixed(a.age(), 2) + texts_[(::bmh::layout::ClubInfo_Render_TextPointer5 - ::bmh::layout::TextPointerTable) / 4], 0x6c);
             for (int skill = 0; skill < 7; ++skill) copy_region(out, atlas_, 256 + a.skill(Player::Skill(skill)) * 16, 32, 87 + skill * 10, baseline - 5, 16, 5, true);
             auto word = [&](int at) { return uint16_t(s.board[at] | uint16_t(s.board[at + 1]) << 8); };
-            original_text(165, baseline, fixed(s.bonus & 127, 3) + exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5) + fixed(s.board[7], 3) + exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5) +
-                fixed(s.board[9], 3) + exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5) + fixed(word(0x48), 3) + exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2) +
-                fixed(word(0x4a), 3) + exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2) + fixed(word(0x4c), 3) + exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField), 0x6c);
+            original_text(165, baseline, fixed(s.bonus & 127, 3) + exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5) + count(s.statistics ? s.statistics->appearances[0] : s.board[7]) + exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5) +
+                count(s.statistics ? s.statistics->appearances[2] : s.board[9]) + exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5) + count(s.statistics ? s.statistics->total : word(0x48)) + exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2) +
+                count(s.statistics ? s.statistics->goals : word(0x4a)) + exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2) + count(s.statistics ? s.statistics->assists : word(0x4c)) + exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField), 0x6c);
         }
         baseline += 7;
     }

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "formats/font.hpp"
+#include "game/long_career.hpp"
 #include "formats/m3d.hpp"
 #include "formats/textd.hpp"
 #include "ui/setup.hpp"
@@ -22,6 +23,7 @@ struct LineupPlayer {
     uint16_t cards = 0;
     uint8_t bonus = 0;
     std::array<uint8_t, 0x58> board{};
+    std::optional<PlayerClubStatistics> statistics;
 };
 struct LineupState {
     int manager_slot = -1, runtime_club = -1;

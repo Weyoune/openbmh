@@ -28,7 +28,7 @@ void rect(Image& out, int x, int y, int w, int h, uint8_t color) {
     for (int yy = std::max(0, y); yy < std::min(out.height, y + h); ++yy)
         for (int xx = std::max(0, x); xx < std::min(out.width, x + w); ++xx) out.at(xx, yy) = color;
 }
-std::string padded(int value, int width = 2) {
+std::string padded(uint64_t value, int width = 2) {
     std::string s = std::to_string(value);
     if (int(s.size()) < width) s.insert(0, size_t(width - int(s.size())), '%');
     return s;
@@ -110,7 +110,10 @@ ClubInfoProjection club_info_from_game(const GameState& g, int team,
             player.cards = g.player_cards[id];
             player.bonus = g.player_bonus[id];
         }
-        if (board) player.manager_board = std::move(board);
+        if (board) {
+            player.manager_board = std::move(board);
+            if (player.player_id >= 0) player.statistics = player_club_statistics(g, team, player.player_id, *player.manager_board);
+        }
         if (!player.borrowed && player.player_id >= 0) {
             for (int loan = 0; loan < 200; ++loan) {
                 const uint32_t address = ::bmh::layout::Career_RemoveJoinLoans_RuntimeField + uint32_t(loan) * 4;
@@ -296,9 +299,9 @@ Image ClubInfoScreen::render() const {
                 std::string attrs = padded(p.bonus & 127, 3) + exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5);
                 if (p.manager_board) {
                     const auto& b = *p.manager_board;
-                    attrs += padded(b[7], 3) + exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5) + padded(b[9], 3) + exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5);
-                    Bytes raw(b.begin(), b.end()); attrs += padded(le16(raw, 0x48), 3) + exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2) +
-                        padded(le16(raw, 0x4a), 3) + exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2) + padded(le16(raw, 0x4c), 3) + exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField);
+                    attrs += padded(p.statistics ? p.statistics->appearances[0] : b[7], 3) + exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5) + padded(p.statistics ? p.statistics->appearances[2] : b[9], 3) + exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5);
+                    Bytes raw(b.begin(), b.end()); attrs += padded((p.statistics ? p.statistics->total : le16(raw, 0x48)), 3) + exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2) +
+                        padded((p.statistics ? p.statistics->goals : le16(raw, 0x4a)), 3) + exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2) + padded((p.statistics ? p.statistics->assists : le16(raw, 0x4c)), 3) + exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField);
                 }
                 text(out, 165, baseline, attrs, 0x6c);
             }

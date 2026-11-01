@@ -32,7 +32,7 @@ void copy(Image& out,const Image& source,int sx,int sy,int x,int y,int w,int h,i
         if(pixel!=key&&x+xx>=0&&x+xx<out.width&&y+yy>=0&&y+yy<out.height)out.at(x+xx,y+yy)=pixel;
     }
 }
-std::string padded(int n,int width=2) {
+std::string padded(uint64_t n,int width=2) {
     auto text=std::to_string(n);if(int(text.size())<width)text.insert(0,size_t(width-int(text.size())),'%');return text;
 }
 std::string money(int64_t value) {
@@ -191,6 +191,7 @@ TransferMarketState transfer_market_from_game(const GameState& g, uint64_t revis
                 if(int(word&31)==manager&&int(word>>10&0xfff)==id)p.offer_name_color=true;
             }
         }
+        if (p.manager_board && p.player_id >= 0) p.statistics = player_club_statistics(g, state.runtime_club, p.player_id, *p.manager_board);
         state.roster.players.push_back(std::move(p));
     }
     for(size_t index=0;index<borrowed.size();++index) {
@@ -204,6 +205,7 @@ TransferMarketState transfer_market_from_game(const GameState& g, uint64_t revis
         const uint32_t board=::bmh::layout::ClubInfo_FormatError_RuntimeField+uint32_t(loan)*0x58;
         if(!g.memory.has(board+0x57))throw FormatError("transfer market: borrowed board outside Native storage");
         p.manager_board.emplace();for(uint32_t n=0;n<0x58;++n)(*p.manager_board)[n]=g.memory.u8(board+n);
+        p.statistics = player_club_statistics(g, state.runtime_club, p.player_id, *p.manager_board);
         state.roster.players.push_back(std::move(p));
     }
     for (size_t row = 0; row < ordinary_count; ++row) {
@@ -448,8 +450,8 @@ void TransferMarketScreen::draw_roster(Image& out,bool full) const {
             for(int skill=0;skill<7;++skill)copy(out,atlas_,256+a.skill(Player::Skill(skill))*16,32,87+skill*10,baseline-5,16,5,0);
             std::string stats=padded(p.bonus&127,3)+exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5);
             if(p.manager_board) {
-                const auto& b=*p.manager_board;stats+=padded(b[7],3)+exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5)+padded(b[9],3)+exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5);
-                if(full){Bytes raw(b.begin(),b.end());stats+=padded(le16(raw,0x48),3)+exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2)+padded(le16(raw,0x4a),3)+exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2)+padded(le16(raw,0x4c),3)+exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField);}
+                const auto& b=*p.manager_board;stats+=padded(p.statistics ? p.statistics->appearances[0] : b[7],3)+exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5)+padded(p.statistics ? p.statistics->appearances[2] : b[9],3)+exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5);
+                if(full){Bytes raw(b.begin(),b.end());stats+=padded((p.statistics ? p.statistics->total : le16(raw,0x48)),3)+exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2)+padded((p.statistics ? p.statistics->goals : le16(raw,0x4a)),3)+exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2)+padded((p.statistics ? p.statistics->assists : le16(raw,0x4c)),3)+exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField);}
             }
             original_text(out,165,baseline,stats,0x6c);
         }

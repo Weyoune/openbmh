@@ -83,7 +83,7 @@ void copy(Image& out, const Image& src, int sx, int sy, int x, int y, int w, int
         if (c != transparent && x+xx>=0 && x+xx<out.width && y+yy>=0 && y+yy<out.height) out.at(x+xx,y+yy)=c;
     }
 }
-std::string number(int value, int width = 2) {
+std::string number(uint64_t value, int width = 2) {
     auto s=std::to_string(value);
     if (int(s.size())<width) s.insert(0,size_t(width-int(s.size())),'%');
     return s;
@@ -110,11 +110,16 @@ LineupState lineup_from_save(const SaveState& s,const LeImage& exe,uint64_t revi
     for(size_t at=0;at<w1.size();at+=4) players.push_back({{},le32(w1,at),le32(w2,at),le32(w3,at)});
     auto out=project(memory,exe,teams,words(block(s,::bmh::layout::SquadSlots)),players,block(s,::bmh::layout::TacticsBoards),block(s,::bmh::layout::ManagerAutomation),
         words(block(s,::bmh::layout::PlayerCards)),block(s,::bmh::layout::PlayerBonuses),words(block(s,::bmh::layout::PlayerNameOffsets)),s.pool(1),words(block(s,::bmh::layout::ClubIdentities)),s.pool(0),revision);
+    const auto g = GameState::from_save(s);
+    for (auto& p : out.players) if (p.player_id >= 0)
+        p.statistics = player_club_statistics(g, out.runtime_club, p.player_id, p.board);
     out.source="original_save_read_only"; return out;
 }
 LineupState lineup_from_game(const GameState& g,const LeImage& exe,uint64_t revision) {
     auto out=project(g.memory,exe,g.manager_teams,g.squad_slots,g.players,g.tactics,g.manager_options,
         g.player_cards,g.player_bonus,g.player_name_offsets,g.player_names,g.club_ids,g.club_names,revision);
+    for (auto& p : out.players) if (p.player_id >= 0)
+        p.statistics = player_club_statistics(g, out.runtime_club, p.player_id, p.board);
     out.source="engine_projection"; return out;
 }
 
@@ -224,9 +229,9 @@ Image LineupScreen::render() const {
         } else {
             text(out,65,baseline,number(a.age())+texts_[(::bmh::layout::ClubInfo_Render_TextPointer5-::bmh::layout::TextPointerTable)/4],0x6c);
             for(int skill=0;skill<7;++skill)copy(out,atlas_,256+a.skill(Player::Skill(skill))*16,32,87+skill*10,baseline-5,16,5,0);
-            text(out,165,baseline,number(p.bonus&127,3)+exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5)+number(p.board[7],3)+exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5)+
-                number(p.board[9],3)+exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5)+number(le16(Bytes(p.board.begin(),p.board.end()),0x48),3)+exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2)+
-                number(le16(Bytes(p.board.begin(),p.board.end()),0x4a),3)+exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2)+number(le16(Bytes(p.board.begin(),p.board.end()),0x4c),3)+exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField),0x6c);
+            text(out,165,baseline,number(p.bonus&127,3)+exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5)+number(p.statistics ? p.statistics->appearances[0] : p.board[7],3)+exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5)+
+                number(p.statistics ? p.statistics->appearances[2] : p.board[9],3)+exe_.cstring(::bmh::layout::ClubInfo_Render_ExecutableField5)+number((p.statistics ? p.statistics->total : le16(Bytes(p.board.begin(),p.board.end()),0x48)),3)+exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2)+
+                number((p.statistics ? p.statistics->goals : le16(Bytes(p.board.begin(),p.board.end()),0x4a)),3)+exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2)+number((p.statistics ? p.statistics->assists : le16(Bytes(p.board.begin(),p.board.end()),0x4c)),3)+exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField),0x6c);
         }
     }
     button(out,1,215,texts_[(::bmh::layout::Lineup_Render_TextPointer-::bmh::layout::TextPointerTable)/4+(state_.view==LineupView::data_a?1:0)]);
@@ -310,6 +315,8 @@ std::string LineupScreen::state_json() const {
         if(p.player_id>=0)s<<",\"starting\":"<<((p.slot&0x8000)?"true":"false")<<",\"bench\":"<<((p.slot&0x4000)?"true":"false")
             <<",\"position_type\":"<<p.attributes.position()<<",\"condition\":"<<p.attributes.condition()<<",\"technique\":"<<p.attributes.technique()
             <<",\"form\":"<<p.attributes.form()<<",\"strength\":"<<p.attributes.strength()<<",\"age\":"<<p.attributes.age()<<",\"exhaustion\":"<<int(p.board[0xf]);
+        if (p.statistics) s << ",\"club_appearances\":[" << p.statistics->appearances[0] << ',' << p.statistics->appearances[1] << ',' << p.statistics->appearances[2]
+            << "],\"total_appearances\":" << p.statistics->total << ",\"club_goals\":" << p.statistics->goals << ",\"club_assists\":" << p.statistics->assists;
         s<<'}';}
     s<<"]}";return s.str();
 }

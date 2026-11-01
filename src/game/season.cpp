@@ -787,6 +787,7 @@ void change_places(GameState& g, int a, int b) {
             mem.set32(::bmh::layout::Career_RemoveJoinLoans_RuntimeField + k * 4, (e & 0xfff) | uint32_t(seller) << 12 | uint32_t(buyer) << 22);
         }
     if (!g.club_table.empty() && a < 0xa8 && b < 0xa8) swap_bytes(g.club_table, size_t(a) * 0x4a, size_t(b) * 0x4a, 0x4a);
+    swap_statistics_clubs(g, a, b);
     std::swap(g.club_ids.at(size_t(a)), g.club_ids.at(size_t(b)));
     swap_bytes(g.club_heap_bc, size_t(a) * 2, size_t(b) * 2, 2);
     std::swap(g.team_morale.at(size_t(a)), g.team_morale.at(size_t(b)));
@@ -1284,10 +1285,7 @@ SeasonTransitionOutcome season_end_steps(GameState& g, GameRandom& game, WatcomR
                                          TransferAllocatorContext allocator) {
     StaticMemory& mem = g.memory;
     if (g.season > 0x31) {  // SeasonEndSteps
-        for (uint32_t k = 0; k < 9; k++) {
-            for (uint32_t i = 0; i < 0x62; i++) mem.set8(::bmh::layout::Titles + k * 100 + i, mem.u8(::bmh::layout::Season_SeasonEndSteps_RuntimeField + k * 100 + i));
-            mem.set16(::bmh::layout::Season_SeasonEndSteps_RuntimeField2 + k * 100, 0xffff);
-        }
+        shift_legacy_title_history(g);
         for (size_t m = 0; m < g.manager_teams.size(); m++) {
             for (size_t i = 0; i < 0x93; i++) rec8(g, int(m), 0xda + i) = rec8(g, int(m), 0xdd + i);
             const size_t at = m * 0xB0C + 0x2aa;
@@ -1610,6 +1608,7 @@ SeasonTransitionOutcome season_transition(GameState& g, GameRandom& game, Watcom
     }
     g.memory.set8(::bmh::layout::CareerSession_RuntimeError_RuntimeField4, 0);
     if (g.memory.has(::bmh::layout::Season_SeasonTransition_RuntimeField)) g.memory.set8(::bmh::layout::Season_SeasonTransition_RuntimeField, 0);
+    capture_title_history(g); // Preserve the current window before it advances/shifts.
     g.season = int16_t(g.season + 1);  // SeasonIndex
     reset_club_moods(g, game, rand);
     european_setup(g, game, rand, cup_draw);

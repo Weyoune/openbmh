@@ -126,6 +126,8 @@ Bytes save_stream(const GameState& live) {
             for (uint32_t i = 0; i < size; ++i) bytes[i] = g.memory.u8(at + i);
             extension.push_back({at, std::move(bytes)});
         }
+    auto history = encode_long_career(g);
+    if (!history.empty()) extension.push_back({kLongCareerExtension, std::move(history)});
     append_save_extension(stream, extension);
     return stream;
 }

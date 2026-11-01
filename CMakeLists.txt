@@ -232,6 +232,7 @@ add_library(bmhcore STATIC
     src/game/reality_ball.cpp
     src/game/reality_duel.cpp
     src/game/reality_reporter.cpp
+    src/game/long_career.cpp
     src/game/matchday.cpp
     src/game/sportschau_replay.cpp
     src/game/sportschau_rating.cpp
@@ -1178,3 +1179,6 @@ bmh_add_data_test(NAME transfer_seller_app_tests REQUIRED_OPTIONS BMH_TEST_TRANS
 add_executable(wide_number_unit_tests tests/wide_number_unit_tests.cpp)
 target_link_libraries(wide_number_unit_tests PRIVATE bmhcore)
 add_test(NAME wide_number_unit_tests COMMAND wide_number_unit_tests)
+add_executable(long_career_tests tests/long_career_tests.cpp)
+target_link_libraries(long_career_tests PRIVATE bmhcore)
+add_test(NAME long_career_tests COMMAND long_career_tests)

@@ -77,6 +77,8 @@ void new_board_entry(GameState& g, int manager, int index, int slot, WatcomRando
     // OpenBMH deviates from the original: a new arrival must not inherit the
     // previous occupant's retirement/refusal/month-processing flags.
     e[0xb] = 0;
+    std::memset(e + 0x48, 0, 6); // Fresh arrivals do not inherit the previous player's totals.
+    reset_player_statistics(g, manager, g.squad_slots.at(size_t(slot)) & 0xfff);
     e[10] = 2;
     for (int k = 0; k < 4; k++) e[2 + k] = index < 2 ? 1 : uint8_t(rand.range(2, 0x27));
     e[0x3f] = 0xff;

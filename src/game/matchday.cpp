@@ -242,6 +242,7 @@ void player_statistic(GameState& g, int type, int player, int manager, int slot,
         if (cls == 3 && (g.player_bonus.at(player) & 0x7F) < 0x7F) g.player_bonus.at(player)++;
         if (manager >= 0) {
             pay_bonus(g, manager, slot, 2, true);
+            record_player_statistics(g, manager, slot, player, cls, kind);
             if (cls < 3) g.tactics.at(board + 7 + cls)++;
             wr16(g.tactics, board + 0x48, uint16_t(rd16(g.tactics, board + 0x48) + 1));
         }
@@ -249,13 +250,17 @@ void player_statistic(GameState& g, int type, int player, int manager, int slot,
     } else if (kind == 1) {  // goal
         if (manager >= 0) {
             pay_bonus(g, manager, slot, 0, true);
+            record_player_statistics(g, manager, slot, player, cls, kind);
             wr16(g.tactics, board + 0x4a, uint16_t(rd16(g.tactics, board + 0x4a) + 1));
             if (cls == 0) g.manager_records.at(size_t(manager) * kManagerRecord + 0x1ae + std::min(minute, 89) / 5)++;
         }
         // league goals in bits 2-7 (a 64th goal carries into bit 8, as in the original)
         if (cls == 0) p.w364 = (w364 & 0xFFFFFF03u) | ((((w364 >> 2) & 0x3F) << 2) + 4);
     } else if (kind == 2) {  // assist
-        if (manager >= 0) wr16(g.tactics, board + 0x4c, uint16_t(rd16(g.tactics, board + 0x4c) + 1));
+        if (manager >= 0) {
+            record_player_statistics(g, manager, slot, player, cls, kind);
+            wr16(g.tactics, board + 0x4c, uint16_t(rd16(g.tactics, board + 0x4c) + 1));
+        }
         if (cls == 0) p.w368 = (p.w368 & 0xFF03FFFFu) | ((((p.w368 >> 18) & 0x3F) + 1) << 18);
     }
 }
@@ -776,7 +781,7 @@ void advance_league_rounds(GameState& g, uint32_t competitions, WatcomRandom& ra
                     if (g.memory.u8(::bmh::layout::Cup_AdvanceCup_RuntimeField) == 0 && winner)
                         winner(g, {0, uint16_t(champion)});
                     if (g.memory.u8(::bmh::layout::Cup_AdvanceCup_RuntimeField) == 0 && g.memory.has(::bmh::layout::CareerSession_BeginFriendlyOpponentTable_ExecutableField2)) g.memory.set8(::bmh::layout::CareerSession_BeginFriendlyOpponentTable_ExecutableField2, 0);
-                    g.memory.set16(::bmh::layout::Titles + uint32_t(std::min<int>(g.season, 0x31)) * 2, uint16_t(champion));
+                    record_title_holder(g, 0, uint16_t(champion));
                     const int manager = g.manager_of(champion);
                     if (manager >= 0) {
                         const size_t at = size_t(manager) * kManagerRecord + 0x8a4;

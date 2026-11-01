@@ -59,7 +59,7 @@ StatisticsRankingState statistics_rankings_from_game(const GameState& game, cons
                                                        int manager_slot, int category, int first_season,
                                                        const Image& underlay) {
     if (category < 0 || category >= int(kTitleCount)) throw FormatError("statistics rankings: category outside 0..8");
-    if (first_season < 0 || first_season >= int(kSeasonCount) || (first_season % 4) != 0)
+    if (first_season < 0 || (first_season % 4) != 0)
         throw FormatError("statistics rankings: Source page must start at a four-season boundary");
     if (!game.memory.has(kTitles + kTitleCount * kSeasonCount * 2 - 1))
         throw FormatError("statistics rankings: save lacks the Original Titles title-holder block");
@@ -76,7 +76,14 @@ StatisticsRankingState statistics_rankings_from_game(const GameState& game, cons
     const uint32_t manager_year_at = uint32_t(manager_slot) * 0xb0c + 0x2aa;
     out.season_number_base = int(exe.u16(::bmh::layout::Achievements_FormatError_RuntimeField2)) +
         int(game.manager_records[manager_year_at] | (uint16_t(game.manager_records[manager_year_at + 1]) << 8));
-    out.current_season = std::clamp(game.season, 0, int(kSeasonCount) - 1);
+    const auto history = title_history_rows(game);
+    if (history.empty()) throw FormatError("statistics rankings: missing title history");
+    out.history_first_season = int(history.begin()->first);
+    out.current_season = game.season - out.history_first_season;
+    if (out.current_season < 0 || first_season > out.current_season)
+        throw FormatError("statistics rankings: history page outside known career");
+    out.season_number_base += out.history_first_season - std::max(0, game.season - 49);
+    out.season_known.assign(size_t(out.current_season) + 1, false);
     out.underlay = underlay;
     for (uint32_t index = 0; index < kTitleCount; ++index) {
         const uint8_t title_id = exe.u8(::bmh::layout::StatisticsRankings_FormatError_RuntimeField + index);
@@ -84,18 +91,23 @@ StatisticsRankingState statistics_rankings_from_game(const GameState& game, cons
         if (title_id >= kTitleCount) throw FormatError("statistics rankings: Source title id outside nine stored lists");
         out.categories[index] = StatisticsRankingCategory{title_id, alternate};
     }
-    for (uint32_t category_index = 0; category_index < kTitleCount; ++category_index) {
-        for (uint32_t season = 0; season < kSeasonCount; ++season) {
-            // StatisticsRankingsFromGame reads Titles by selected control index (local_14).
-            // title_id only chooses the Original label pointer above.
-            const uint32_t at = kTitles + category_index * 100 + season * 2;
-            out.title_holders[category_index][season] = game.memory.u16(at);
-            const uint16_t team = out.title_holders[category_index][season];
-            if (team != 0xffff) {
-                if (team >= game.club_ids.size())
-                    throw FormatError("statistics rankings: Source title holder has no club identity/name");
-                out.club_names[category_index][season] = game.club_name(team);
-                out.club_name_colors[category_index][season] = original_name_color(game, team);
+    for (size_t category = 0; category < 9; ++category) {
+        const auto count = size_t(out.current_season) + 1;
+        out.title_holders[category].assign(count, 0xffff);
+        out.club_names[category].resize(count);
+        out.club_name_colors[category].assign(count, 0x5f);
+        out.title_present[category].assign(count, false);
+        for (const auto& [season, names] : history) {
+            if (int(season) > game.season) throw FormatError("statistics rankings: future archived season");
+            const auto index = size_t(int(season) - out.history_first_season);
+            out.season_known[index] = true;
+            out.club_names[category][index] = names[category];
+            out.title_present[category][index] = !names[category].empty();
+            const int native_index = int(season) - std::max(0, game.season - 49);
+            if (native_index >= 0 && native_index < 50) {
+                const auto team = game.memory.u16(kTitles + uint32_t(category) * 100 + uint32_t(native_index) * 2);
+                out.title_holders[category][index] = team;
+                if (team != 0xffff) out.club_name_colors[category][index] = original_name_color(game, team);
             }
         }
     }
@@ -109,11 +121,16 @@ StatisticsRankingsScreen::StatisticsRankingsScreen(const std::filesystem::path& 
       button_art_(load_vga(asset_path(data / "KB", "0.VGA"))),
       texts_(load_textd(asset_path(data, "TEXTD.BLK"))) {
     if (state_.category < 0 || state_.category >= int(kTitleCount) || state_.current_season < 0 ||
-        state_.current_season >= int(kSeasonCount) || state_.first_season < 0 ||
-        state_.first_season >= int(kSeasonCount) || state_.first_season % 4 != 0 ||
+        state_.first_season < 0 || state_.first_season > state_.current_season || state_.first_season % 4 != 0 ||
         state_.underlay.width != 320 || state_.underlay.height != 240 ||
         button_art_.width < 76 || button_art_.height < 84)
         throw FormatError("statistics rankings: incomplete Source projection");
+    for (size_t i = 0; i < 9; ++i)
+        if (state_.club_names[i].size() != size_t(state_.current_season) + 1 ||
+            state_.club_name_colors[i].size() != state_.club_names[i].size() ||
+            state_.title_present[i].size() != state_.club_names[i].size() ||
+            state_.season_known.size() != state_.club_names[i].size())
+            throw FormatError("statistics rankings: incomplete archived rows");
     for (size_t i = 0; i < state_.categories.size(); ++i) {
         const auto& category = state_.categories[i];
         if (category.title_id >= kTitleCount)
@@ -169,21 +186,22 @@ Image StatisticsRankingsScreen::render() const {
     for (int season = state_.first_season; season <= end; ++season) {
         const int visible = season - state_.first_season;
         const int y = 0x31 + visible * 6;
-        const uint16_t team = state_.title_holders[size_t(state_.category)][size_t(season)];
-        if (season < state_.current_season || team != 0xffff) {
+        const bool has_title = state_.title_present[size_t(state_.category)][size_t(season)];
+        if (season < state_.current_season || has_title) {
             const int source_season_number = state_.season_number_base + season + 1;
             std::string n = std::to_string(source_season_number);
             while (n.size() < 4) n.insert(n.begin(), '%');
             n += "%%"; // FormatNumber(...,0xc4,&StatisticsRankingsRuntimeField): width-four Source number and suffix.
-            const uint8_t year_color = team == 0xffff &&
+            const uint8_t year_color = !has_title &&
                 (state_.category == 5 || state_.category == 6) ? 0x67 : 0x6b;
             font_.draw(out, 100, y - font_.baseline, n, year_color);
-            if (team != 0xffff) {
+            if (has_title) {
                 font_.draw(out, 130, y - font_.baseline,
                            state_.club_names[size_t(state_.category)][size_t(season)],
                            state_.club_name_colors[size_t(state_.category)][size_t(season)]);
             } else {
-                font_.draw(out, 130, y - font_.baseline, empty_label_, 0x67);
+                font_.draw(out, 130, y - font_.baseline,
+                    state_.season_known[size_t(season)] ? empty_label_ : "Unbekannt", 0x67);
             }
         }
     }

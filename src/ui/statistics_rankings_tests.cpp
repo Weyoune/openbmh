@@ -97,6 +97,28 @@ int main(int argc, char** argv) {
               screen.pending()->kind == StatisticsRankingsRequestKind::close,
               "right-click is the Source parent-return request");
 
+        auto career = sample(); career.season = 300;
+        career.manager_records[0x2aa] = uint8_t(258); career.manager_records[0x2ab] = uint8_t(258 >> 8);
+        for (uint32_t season = 0; season <= 300; ++season) {
+            std::array<std::string,9> titles; titles[0] = "Bayer"; career.title_history.emplace(season, titles);
+        }
+        auto wide = statistics_rankings_from_game(career, exe, 0, 0, 0, underlay);
+        check(wide.current_season == 300 && wide.history_first_season == 0 && wide.club_names[0].size() == 301 &&
+              wide.club_names[0][0] == "Bayer" && wide.club_names[0][300] == "Bayer",
+              "archived title lists retain all 301 known seasons and original winner snapshots");
+        check(wide.season_number_base == int(exe.u16(::bmh::layout::Achievements_FormatError_RuntimeField2)) + 7,
+              "absolute archive year labels compensate for the native 50-row window shift");
+        StatisticsRankingsScreen long_screen(data, wide);
+        for (int n = 0; n < 100; ++n) long_screen.scroll(1);
+        check(long_screen.state().first_season == 288 && long_screen.render().width == 320,
+              "history paging reaches season 300 instead of stopping at the fiftieth row");
+        for (int n = 0; n < 100; ++n) long_screen.scroll(-1);
+        check(long_screen.state().first_season == 0, "oldest archived title rows remain reachable");
+        auto legacy = sample(); legacy.season = 300;
+        const auto imported = statistics_rankings_from_game(legacy, exe, 0, 0, 0, underlay);
+        check(imported.history_first_season == 251 && imported.current_season == 49,
+              "a legacy late-career save exposes only its surviving 50 seasons, without invented earlier winners");
+
         GameState missing;
         bool rejected = false;
         try { (void)statistics_rankings_from_game(missing, exe, 0, 0, 0, underlay); }

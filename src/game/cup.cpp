@@ -622,7 +622,7 @@ void advance_cup(GameState& g, int id, WatcomRandom& rand, MinuteReport& report,
                     g.manager_records.at(at) = uint8_t(n + 1), g.manager_records.at(at + 1) = uint8_t((n + 1) >> 8);
                 }
                 // ListTitleHoldersAf(winner, title): the list of title holders (Titles)
-                mem.set16(::bmh::layout::Titles + uint32_t(title) * 100 + uint32_t(std::min<int>(g.season, 0x31)) * 2, winners[0]);
+                record_title_holder(g, title, winners[0]);
             }
             if (type == 0 && !winners.empty()) {
                 // the national cup: winner (Cup_AdvanceCup_RuntimeField5) and the previous holder
@@ -654,7 +654,7 @@ void advance_cup(GameState& g, int id, WatcomRandom& rand, MinuteReport& report,
                 if (mem.u8(::bmh::layout::Cup_AdvanceCup_RuntimeField) == 0 && winner_display)
                     winner_display(g, {7, winner});
                 if (mem.u8(::bmh::layout::Cup_AdvanceCup_RuntimeField) == 0 && mem.has(::bmh::layout::CareerSession_BeginFriendlyOpponentTable_ExecutableField2)) mem.set8(::bmh::layout::CareerSession_BeginFriendlyOpponentTable_ExecutableField2, 0);
-                mem.set16(::bmh::layout::Titles + 7 * 100 + uint32_t(std::min<int>(g.season, 0x31)) * 2, winner);
+                record_title_holder(g, 7, winner);
                 if (mem.has(::bmh::layout::Cup_AdvanceCup_RuntimeField7)) mem.set16(::bmh::layout::Cup_AdvanceCup_RuntimeField7, winner);
                 const int manager = g.manager_of(winner);
                 if (manager >= 0) {

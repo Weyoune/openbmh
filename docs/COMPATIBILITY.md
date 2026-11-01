@@ -112,3 +112,23 @@ boundaries. Post-match overview dismissal owns its full mouse gesture, including
 release after pointer movement, before the following calendar decision can open.
 The pitch uses each edition's original position-distance tables, atlas swatches
 and pointer bitmap for placement feedback; this display state is not serialized.
+OpenBMH deviates from the original: cumulative human-club appearances, goals and
+assists have optional 64-bit counters. Original byte/word fields keep their
+modulo representation for gameplay/layout compatibility; roster projections use
+the wider values. Tracking begins with the surviving legacy values, so high bits
+already lost in an imported save cannot be recovered. A new arrival clears the
+previous squad occupant's totals. Club promotion remaps counter ownership.
+
+Title-holder and cup-winner lists retain all observed seasons in the same optional
+OpenBMH save extension. The Original nine-by-fifty table remains a rolling window.
+The archive captures that window before it shifts, and the title list can page
+through the archived rows. Late legacy imports start with their surviving fifty
+seasons; earlier winners are unknown and are not fabricated. Stored winner names
+are historical snapshots, so later renaming and promotion cannot change them.
+The separate manager-achievements graph retains its Original fifty-season view.
+
+These records use a versioned `OBMHEXT1` extension after the Original name pools;
+see [save format](formats/LONG_CAREER.md). Original programs and older OpenBMH
+writers do not preserve this archive. Keep an OpenBMH backup when exchanging
+careers with those writers. The native calendar still has its existing signed
+16-bit season limit; this patch does not claim an unlimited calendar.
