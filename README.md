@@ -1,6 +1,6 @@
 # OpenBMH
 
-**Classic-Version: 1.0.2.** Die originalgetreue Linie bleibt in diesem Repository.
+**Classic-Version: 1.0.3 (Release-Vorbereitung).** Die originalgetreue Linie bleibt in diesem Repository.
 Erweiterte Ligen, die gemeinsame deutsche/englische Karriere und der Dateneditor
 werden separat als **[OpenBMH-Extended 1.0 Beta](https://github.com/Weyoune/OpenBMH-extended)** entwickelt.
 
