@@ -370,9 +370,11 @@ std::string transfer_status_message(TransferActionStatus status, ui::TransferMar
     case TransferActionStatus::accepted:
         return kind == ui::TransferMarketRequestKind::list_player
             ? "Der Spieler steht jetzt auf der Transferliste." : "Der Spieler hat das Angebot angenommen.";
-    case TransferActionStatus::pending: return "Der Spieler entscheidet sich nächste Woche.";
+    case TransferActionStatus::pending: return kind == ui::TransferMarketRequestKind::list_player
+        ? "Der Spieler steht bereits auf der Transferliste." : "Der Spieler entscheidet sich nächste Woche.";
     case TransferActionStatus::offer_too_low: return "Das Angebot ist zu niedrig.";
-    case TransferActionStatus::blocked_by_board: return "Der Vorstand genehmigt diesen Transfer nicht.";
+    case TransferActionStatus::blocked_by_board: return kind == ui::TransferMarketRequestKind::list_player
+        ? "Transferliste voll oder Spieler nicht verfügbar." : "Der Vorstand genehmigt diesen Transfer nicht.";
     case TransferActionStatus::insufficient_funds: return "Das Geld reicht für diesen Transfer nicht aus.";
     case TransferActionStatus::no_squad_room: return "Im Kader ist kein Platz für diesen Spieler.";
     case TransferActionStatus::rejected: return "Der Spieler hat das Angebot abgelehnt.";
@@ -384,7 +386,8 @@ void serve_transfer_action(ui::StartupFlow& flow, CareerSession& session,
                            const ui::TransferMarketRequest& request, uint64_t& revision,
                            const HumanBuyerSaleHooks& presenters,
                            HumanBuyerMarketEntryPolicy entry_policy,
-                           const CareerSession::PoachPlayerSelector& poach_selector, const PoachNoticePresenter& poach_notice) {
+                           const CareerSession::PoachPlayerSelector& poach_selector, const PoachNoticePresenter& poach_notice,
+    const TransferOfferPresenter& review) {
     const auto* pending = flow.pending_transfer_market();
     // JSON covers every offer field except its redundant nested manager identity.
     // Check that identity too, before an engine helper can consume a random draw.
@@ -473,13 +476,22 @@ void serve_transfer_action(ui::StartupFlow& flow, CareerSession& session,
         const auto outcome = TransferActions(session).market(request, hooks, revision, error, entry_policy,
             [&](const TransferActions::MarketDispatch& applied) {
                 // Preserve the Source caller's existing notice/ACK sequence.
-                const bool source_finished = entry_policy == HumanBuyerMarketEntryPolicy::normal_interactive &&
-                    (source_notice_presented || applied.action.status == TransferActionStatus::pending);
+                const bool source_finished = request.kind != ui::TransferMarketRequestKind::review_offers &&
+                    entry_policy == HumanBuyerMarketEntryPolicy::normal_interactive &&
+                    (source_notice_presented || (request.kind == ui::TransferMarketRequestKind::submit_bid &&
+                        applied.action.status == TransferActionStatus::pending));
                 auto notice = source_finished ? std::string{} : transfer_status_message(applied.action.status, request.kind);
+                if (request.kind == ui::TransferMarketRequestKind::review_offers) {
+                    notice = applied.action.status == TransferActionStatus::accepted
+                        ? "Das Angebot wurde angenommen."
+                        : applied.action.status == TransferActionStatus::pending
+                            ? "Spieler bleibt auf der Transferliste."
+                            : "Angebot abgelehnt; Transferliste unverändert.";
+                }
                 if (!applied.changed && source_finished) flow.acknowledge_unchanged_transfer_market();
                 else if (!applied.changed) flow.reject_preparation_action(std::move(notice));
                 else flow.acknowledge_preparation(session.preparation_projection(revision), std::move(notice));
-            });
+            }, review);
         if (!outcome) throw FormatError(error);
     } catch (const std::exception&) {
         flow.reject_preparation_action("Diese Transferaktion konnte nicht übernommen werden.");
@@ -1533,7 +1545,7 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
     } else if (result.request == ui::FlowRequest::submenu_action && session &&
                std::holds_alternative<ui::TransferMarketRequest>(result.submenu_action)) {
         serve_transfer_action(flow, *session, std::get<ui::TransferMarketRequest>(result.submenu_action), revision,
-                              market_sale_presenter, market_entry_policy, poach_player_selector, poach_notice_presenter);
+                              market_sale_presenter, market_entry_policy, poach_player_selector, poach_notice_presenter, transfer_presenter);
     } else if (result.request == ui::FlowRequest::submenu_action && session &&
                std::holds_alternative<ui::OutgoingTransferRequest>(result.submenu_action)) {
         serve_transfer_offer(flow, *session, std::get<ui::OutgoingTransferRequest>(result.submenu_action), revision,

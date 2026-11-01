@@ -38,7 +38,8 @@ public:
     std::optional<MarketDispatch> market(const ui::TransferMarketRequest&, const HumanBuyerSaleHooks&,
         uint64_t& revision, std::string& error,
         HumanBuyerMarketEntryPolicy = HumanBuyerMarketEntryPolicy::normal_interactive,
-        const MarketAccept& = {});
+        const MarketAccept& = {},
+        const std::function<int(const GameState&, const TransferOfferListView&)>& review = {});
     std::optional<CareerSession::TransferOfferEditorDispatch> open_offer(const ui::TransferMarketRequest&,
         uint64_t& revision, std::string& error, const OfferAccept& = {});
     std::optional<CareerSession::TransferMarketPreviewDispatch> preview(const ui::TransferMarketRequest&,

@@ -65,7 +65,7 @@ TransferMarketState transfer_market_from_game(const GameState&, uint64_t revisio
 std::string transfer_market_state_json(const TransferMarketState&);
 TaxDialogProjection poach_notice_from_game(const GameState&,const PoachStart&,std::string original_message);
 
-enum class TransferMarketRequestKind { none, submit_bid, list_player, open_offer, preview_quote, open_poach };
+enum class TransferMarketRequestKind { none, submit_bid, list_player, open_offer, preview_quote, open_poach, review_offers };
 struct TransferMarketSelection {
     int list_entry=-1,source_slot=-1,player=-1,seller=-1,squad_row=-1;
 };
@@ -147,6 +147,7 @@ private:
     bool close_requested_ = false;
     void draw_text(Image&, int x, int y, std::string_view, uint8_t color) const;
     void commit_numeric_field();
+    TransferMarketRequest make_review(const TransferMarketItem&);
     TransferMarketRequest make_bid();
     TransferMarketRequest make_listing(bool loan=false);
     TransferMarketRequest make_open_offer(bool loan=false);

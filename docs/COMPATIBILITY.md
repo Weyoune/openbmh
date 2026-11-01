@@ -76,3 +76,25 @@ preview uses the same calculation. Original rates, division order and random
 consumption remain unchanged. Account balances and accumulated statistics retain
 the native 32-bit save representation; this change does not add unlimited account
 balances or change the original high-cash deduction policy.
+OpenBMH deviates from the original: the legacy transfer market allows an owned
+listing to open incoming offers before its weekly expiry. Select the player and
+use the sale action (or Enter). Cancel keeps the listing and offers unchanged;
+acceptance uses the existing buyer eligibility, player salary qualification and
+transaction rules. Human-buyer loans still require their separate consent and
+allocator context and are unavailable in this early review. Viewing/canceling
+consumes no RNG. The weekly auction remains unchanged.
+
+The transfer overview processes one selected player per action and renders action
+feedback in its footer. A cleared unsuccessful listing can be listed again
+immediately; there is no additional cooldown. The manager listing action refuses a full ordinary market
+without allocating a reserved special-offer row. These are explicit
+application outcomes instead of the Original's destructive overflow/dialog paths.
+
+OpenBMH deviates from the original: a newly initialized squad board entry clears
+retirement, refused-negotiation and month-processing flags left by its previous
+occupant. The Original leaves that byte intact when reusing the row, so purchases
+and academy arrivals can inherit a refusal to renew. Existing players' genuine
+retirement/refusal flags remain effective. The initial academy contract remains
+two years; a young arrival can immediately negotiate any supported renewal term.
+This corrects the reused-row mechanism; it does not establish a fixed 200–300
+season threshold or repair ambiguous refusal flags in existing saved careers.

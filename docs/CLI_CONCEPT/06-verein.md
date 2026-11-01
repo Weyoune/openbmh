@@ -139,6 +139,8 @@ This index includes registered and reserved names. `ListOptions` and `Help` from
 | `SetSquadSheet` | sheet:enum(A,B) | Set Squad Sheet. See current Help for behaviour and bounds. |
 | `SetMarketVisible` | on:bool | Set Market Visible. See current Help for behaviour and bounds. |
 | `ShowPlayer` | player:Player | Show Player. See current Help for behaviour and bounds. |
+| `ShowOffers` | player:Player | existing bids for an owned listing; raw bid slots 0..3 |
+| `AcceptOffer` | player:Player, bid:int(0..3) | accept an existing bid before weekly expiry |
 | `SellPlayer` | player:Player | VER-KAUFEN: put an own player on the list |
 | `LoanOutPlayer` | player:Player, months:int(12\|24) | VER-LEIHEN: offer an own player for loan |
 | `BuyPlayer` | player:Player | VER-KAUFEN on a market player: the offer editor |

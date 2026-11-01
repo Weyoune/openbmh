@@ -3985,7 +3985,8 @@ std::optional<CareerSession::TransferMarketPreviewDispatch> CareerSession::previ
 
 std::optional<TransferActionResult> CareerSession::dispatch_transfer_market(
     const ui::TransferMarketRequest& request, const HumanBuyerSaleHooks& presenters,
-    uint64_t& revision, std::string& error) {
+    uint64_t& revision, std::string& error,
+    const std::function<int(const GameState&, const TransferOfferListView&)>& review) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
         top_scorers_owner_ || top_scorers_dispatch_active_ || stadium_.block_expansion || other_games_owner_ || other_games_dispatch_active_) { error = "strengths_active"; return std::nullopt; }
     error.clear();
@@ -3998,7 +3999,18 @@ std::optional<TransferActionResult> CareerSession::dispatch_transfer_market(
         error = "transfer market: stale or nested request";
         return std::nullopt;
     }
-    if (request.kind == ui::TransferMarketRequestKind::submit_bid) {
+    if (request.kind == ui::TransferMarketRequestKind::review_offers) {
+        if (!review || request.bid.manager != request.manager_slot || request.bid.list_entry < 0 ||
+            request.bid.list_entry >= 40 || request.bid.source_slot != 0xb70 + request.bid.list_entry ||
+            request.squad_row != -1 || !request.selected_players.empty()) {
+            error = "transfer market: invalid offer review"; return std::nullopt;
+        }
+        const auto view = project_transfer_offer_list(g_, request.bid.list_entry);
+        if (!view.valid || view.player != request.bid.player || view.seller != request.runtime_club ||
+            view.seller_manager != request.manager_slot) {
+            error = "transfer market: stale seller listing"; return std::nullopt;
+        }
+    } else if (request.kind == ui::TransferMarketRequestKind::submit_bid) {
         if (request.bid.manager != request.manager_slot || request.squad_row != -1 ||
             request.expected_player != -1 ||
             std::any_of(request.bid.bonuses.begin(), request.bid.bonuses.end(),
@@ -4064,7 +4076,21 @@ std::optional<TransferActionResult> CareerSession::dispatch_transfer_market(
     try {
         const auto before = save_stream(g_);
         TransferActionResult result;
-        if (request.kind == ui::TransferMarketRequestKind::list_player)
+        if (request.kind == ui::TransferMarketRequestKind::review_offers) {
+            const auto view = project_transfer_offer_list(next_state, request.bid.list_entry);
+            const int selected = view.offer_count ? review(next_state, view) : -1;
+            result.player = view.player; result.list_entry = view.list_entry;
+            result.status = TransferActionStatus::pending;
+            if (selected != -1) {
+                auto allocator = TransferAllocatorContext::unsupported;
+                if (turn_driver_.transfer_allocator_context == PendingOfferAllocatorGate::zero)
+                    allocator = TransferAllocatorContext::zero;
+                else if (turn_driver_.transfer_allocator_context == PendingOfferAllocatorGate::blocked)
+                    allocator = TransferAllocatorContext::blocked;
+                result = accept_manager_transfer_offer(next_state, request.manager_slot,
+                    view.list_entry, view.player, selected, next_rand, report, allocator);
+            }
+        } else if (request.kind == ui::TransferMarketRequestKind::list_player)
             result = list_manager_player(next_state, request.manager_slot, request.squad_row, next_rand, report);
         else
             result = submit_transfer_bid_source_human_buyer(next_state, request.bid, next_rand, hooks, report);

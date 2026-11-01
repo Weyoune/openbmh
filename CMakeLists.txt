@@ -1165,3 +1165,12 @@ bmh_add_data_test(NAME desktop_feedback_tests COMMAND desktop_feedback_tests "${
 add_executable(daily_interest_unit_tests tests/daily_interest_unit_tests.cpp)
 target_link_libraries(daily_interest_unit_tests PRIVATE bmhcore)
 add_test(NAME daily_interest_unit_tests COMMAND daily_interest_unit_tests)
+add_executable(transfer_seller_actions_tests tests/transfer_seller_actions_tests.cpp)
+target_link_libraries(transfer_seller_actions_tests PRIVATE bmhcore)
+add_test(NAME transfer_seller_actions_tests COMMAND transfer_seller_actions_tests)
+
+add_executable(transfer_seller_app_tests tests/transfer_seller_app_tests.cpp ${BMH_APP_SESSION_SDL_SOURCE})
+target_link_libraries(transfer_seller_app_tests PRIVATE bmhui openbmh_audio ${BMH_SDL_TARGET})
+set(BMH_TEST_TRANSFER_SELLER_APP_SAVE "" CACHE FILEPATH "External career for seller-offer integration; not distributed")
+bmh_add_data_test(NAME transfer_seller_app_tests REQUIRED_OPTIONS BMH_TEST_TRANSFER_SELLER_APP_SAVE
+    COMMAND transfer_seller_app_tests "${BMH_DATA}" "${BMH_TEST_TRANSFER_SELLER_APP_SAVE}")

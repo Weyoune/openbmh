@@ -175,7 +175,8 @@ public:
     // result with valid dependent projections becomes the live state.
     std::optional<TransferActionResult> dispatch_transfer_market(
         const ui::TransferMarketRequest&, const HumanBuyerSaleHooks&,
-        uint64_t& revision, std::string& error);
+        uint64_t& revision, std::string& error,
+        const std::function<int(const GameState&, const TransferOfferListView&)>& review = {});
 
     struct TransferMarketPreviewDispatch {
         ui::PreparationState preparation;

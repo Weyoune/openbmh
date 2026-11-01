@@ -160,6 +160,8 @@ void Console::register_transfer_commands() {
             require_engine(false, "transfer", error);
         }
         flush_notices();
+        if (outcome->action.status != TransferActionStatus::accepted)
+            fail("E_RULE", "Der Spieler konnte nicht auf die Transferliste gesetzt werden.");
         emit('+', utf8(item.name) + (loan
             ? " steht auf der Transferliste; der Entleiher wählt 12 oder 24 Monate im Angebot"
             : " is on the transfer list"));
@@ -173,6 +175,42 @@ void Console::register_transfer_commands() {
             if (v.integer("months", 24) != 12 && v.integer("months", 24) != 24)
                 fail("E_BAD_ARGUMENT", "Leihangebote verwenden 12 oder 24 Monate");
             list_player(v.text("player"), true);
+        });
+
+    add({"Transfer", "ShowOffers", {player}, "incoming offers for an own listed player", false},
+        [this, market_item](const Values& v) {
+            const auto item = market_item(v.text("player"));
+            if (!item.own_listing) fail("E_RULE", "the listing belongs to another club");
+            const auto offers = project_transfer_offer_list(session_->state(), item.list_entry);
+            std::vector<std::vector<std::string>> rows;
+            for (const auto& offer : offers.offers) {
+                if (!offer.present) continue;
+                rows.push_back({std::to_string(offer.bid_index), utf8(session_->state().club_name(offer.buyer)),
+                    money(offer.fee), money(offer.monthly_salary), std::to_string(offer.contract_months),
+                    offer.loan ? "loan" : "sale",
+                    offer.eligible && offer.loan_permitted && offer.transaction_supported ? "yes" : "no"});
+            }
+            emit_table({"Bid", "Club", "Fee", "Monthly salary", "Months", "Type", "Available"}, rows);
+            if (rows.empty()) emit('i', "Noch keine Angebote für diesen Spieler.");
+        });
+    add({"Transfer", "AcceptOffer", {player, integer("bid", 0, 3)}, "accept an existing bid before weekly expiry", true},
+        [this, market, market_item, hooks, flush_notices](const Values& v) {
+            const auto observed = market();
+            const auto item = market_item(v.text("player"));
+            if (!item.own_listing) fail("E_RULE", "the listing belongs to another club");
+            auto request = app::TransferActions::opening(observed, item, false);
+            request.kind = ui::TransferMarketRequestKind::review_offers;
+            request.selected_players.clear();
+            const int bid = int(v.integer("bid"));
+            std::string error;
+            const auto outcome = app::TransferActions(*session_).market(request, hooks(), revision_, error,
+                app::HumanBuyerMarketEntryPolicy::normal_interactive, {},
+                [bid](const GameState&, const TransferOfferListView&) { return bid; });
+            if (!outcome) require_engine(false, "transfer", error);
+            flush_notices();
+            if (outcome->action.status != TransferActionStatus::accepted)
+                fail("E_RULE", "Dieses Angebot kann nicht angenommen werden; die Transferliste bleibt unverändert.");
+            emit('+', "Das Angebot wurde angenommen.");
         });
 
     // --- Transfer.Negotiate: the offer editor (06-verein 5.2) -----------------------------

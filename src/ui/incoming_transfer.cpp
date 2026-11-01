@@ -461,7 +461,10 @@ Image IncomingTransferScreen::render_at_elapsed(uint64_t elapsed_ms) const {
         std::string(text_at(texts_, ::bmh::layout::IncomingTransfer_RenderAtElapsed_TextPointer14)) + source_number(state_.quoted_years, 1, false) +
         std::string(text_at(texts_, ::bmh::layout::Contracts_Out_ExecutableField15)) + (state_.quoted_years == 1 ? "" : exe_.cstring(::bmh::layout::Fltd_Layout_TextPointer3)) +
         exe_.cstring(::bmh::layout::IncomingTransfer_RenderAtElapsed_TextPointer);
-    centered(0, 319, 32, quote, 0x6a);
+    // Early listing review has no newly rolled quote. Explain its input instead
+    // of presenting a fabricated zero-year, zero-price valuation.
+    centered(0, 319, 32, state_.quoted_years ? quote :
+        "Angebot anklicken. Rechtsklick: zurueck.", 0x6a);
     shadow_text(7, 123, std::string(text_at(texts_, ::bmh::layout::IncomingTransfer_RenderAtElapsed_TextPointer10)) +
         source_money(state_.asking_fee, 7, state_.currency_numerator, state_.currency_denominator), 0x6a);
     shadow_text(170, 123, std::string(text_at(texts_, ::bmh::layout::IncomingTransfer_RenderAtElapsed_TextPointer11)) +

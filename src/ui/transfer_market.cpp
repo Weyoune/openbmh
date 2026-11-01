@@ -282,7 +282,8 @@ std::string transfer_market_request_json(const TransferMarketRequest& r) {
         r.kind == TransferMarketRequestKind::list_player ? "list_player" :
         r.kind == TransferMarketRequestKind::open_offer ? "open_offer" :
         r.kind == TransferMarketRequestKind::preview_quote ? "preview_quote" :
-        r.kind == TransferMarketRequestKind::open_poach ? "open_poach" : "none";
+        r.kind == TransferMarketRequestKind::open_poach ? "open_poach" :
+        r.kind == TransferMarketRequestKind::review_offers ? "review_offers" : "none";
     std::ostringstream out;
     out << "{\"kind\":\"" << kind << "\",\"manager_slot\":" << r.manager_slot
         << ",\"runtime_club\":" << r.runtime_club << ",\"revision\":" << r.revision
@@ -520,6 +521,16 @@ Image TransferMarketScreen::render() const {
     sprite_font_.draw(out,SpriteFont::centered_title_x(sprite_font_.text_width(title)),13,title);
     sprite_font_.draw(out,5,235,original_to_utf8(state_.club_name));
     draw_market_overview(out);
+    if (!feedback_.empty()) {
+        rect(out, 1, 227, 318, 12, 0x39);
+        auto line = feedback_;
+        while (!line.empty() && sprite_font_.text_width(line) > 310) {
+            size_t at = line.size() - 1;
+            while (at > 0 && (uint8_t(line[at]) & 0xc0) == 0x80) --at;
+            line.resize(at);
+        }
+        sprite_font_.draw(out, 5, 235, line);
+    }
     return out;
 }
 
@@ -553,13 +564,17 @@ TransferMarketRequest TransferMarketScreen::make_bid() {
 TransferMarketRequest TransferMarketScreen::make_listing(bool loan) {
     if (pending_ || !selected_squad_) return {};
     const auto& item = state_.squad.at(size_t(*selected_squad_));
-    if (item.already_listed) { feedback_ = "Spieler steht bereits auf der Liste"; return {}; }
+    if (item.already_listed) {
+        const auto listing = std::find_if(state_.items.begin(), state_.items.end(),
+            [&](const auto& row) { return row.player == item.player && row.own_listing; });
+        if (listing != state_.items.end()) return make_review(*listing);
+        feedback_ = "Spieler steht bereits auf der Liste"; return {};
+    }
     TransferMarketRequest request;
     request.kind = TransferMarketRequestKind::list_player;request.offer_is_loan=loan;
     request.manager_slot = state_.manager_slot; request.runtime_club = state_.runtime_club; request.revision = state_.revision;
     request.squad_row = item.row; request.expected_player = item.player;
-    for(size_t n=0;n<state_.squad.size();++n) {if(std::find(marked_squad_.begin(),marked_squad_.end(),int(n))==marked_squad_.end())continue;const auto& marked=state_.squad[n];request.selected_players.push_back({-1,state_.roster.squad_start_offset+marked.row,marked.player,state_.runtime_club,marked.row});}
-    if(request.selected_players.empty())request.selected_players.push_back({-1,state_.roster.squad_start_offset+item.row,item.player,state_.runtime_club,item.row});
+    request.selected_players.push_back({-1,state_.roster.squad_start_offset+item.row,item.player,state_.runtime_club,item.row});
     pending_ = request; feedback_.clear();
     return request;
 }
@@ -589,18 +604,27 @@ TransferMarketRequest TransferMarketScreen::make_preview(bool purchase) {
     }
     pending_=request;preview_.reset();return request;
 }
+TransferMarketRequest TransferMarketScreen::make_review(const TransferMarketItem& item) {
+    if (pending_) return {};
+    if (item.offers == 0) { feedback_ = "Noch keine Angebote für diesen Spieler."; return {}; }
+    TransferMarketRequest request;
+    request.kind = TransferMarketRequestKind::review_offers;
+    request.manager_slot = state_.manager_slot; request.runtime_club = state_.runtime_club;
+    request.revision = state_.revision; request.bid.manager = state_.manager_slot;
+    request.bid.list_entry = item.list_entry; request.bid.player = item.player;
+    request.bid.source_slot = item.source_slot;
+    pending_ = request; feedback_.clear(); return request;
+}
 TransferMarketRequest TransferMarketScreen::make_open_offer(bool loan) {
     if(pending_||!selected_item_)return {};
     const auto& item=state_.items.at(size_t(*selected_item_));
-    if(item.own_listing)return {};
+    if(item.own_listing)return make_review(item);
     TransferMarketRequest request;request.kind=TransferMarketRequestKind::open_offer;request.offer_is_loan=loan;
     request.manager_slot=state_.manager_slot;request.runtime_club=state_.runtime_club;request.revision=state_.revision;
     if(item.own_bid)request.bid=*item.own_bid;
     request.bid.manager=state_.manager_slot;request.bid.list_entry=item.list_entry;request.bid.player=item.player;
     request.bid.source_slot=item.source_slot;
-    for(size_t n=0;n<state_.squad.size();++n){if(std::find(marked_squad_.begin(),marked_squad_.end(),int(n))==marked_squad_.end())continue;const auto& marked=state_.squad[n];request.selected_players.push_back({-1,state_.roster.squad_start_offset+marked.row,marked.player,state_.runtime_club,marked.row});}
-    for(int n:market_order()) {if(std::find(marked_items_.begin(),marked_items_.end(),n)==marked_items_.end())continue;const auto& marked=state_.items.at(size_t(n));request.selected_players.push_back({marked.list_entry,marked.source_slot,marked.player,marked.seller,-1});}
-    if(request.selected_players.empty())request.selected_players.push_back({item.list_entry,item.source_slot,item.player,item.seller,-1});
+    request.selected_players.push_back({item.list_entry,item.source_slot,item.player,item.seller,-1});
     pending_=request;return request;
 }
 TransferMarketRequest TransferMarketScreen::move(int x,int y) {
@@ -669,14 +693,17 @@ TransferMarketRequest TransferMarketScreen::click(int x,int y,bool right) {
         if(x>=201&&x<=297&&y>=25&&y<115) {
             const size_t row=size_t((y-25)/15),index=first+row;
             if(index<order.size()&&row<6) {
-                const int item=order[index];auto marked=std::find(marked_items_.begin(),marked_items_.end(),item);
+                marked_squad_.clear();
+                const int item=order[index];
+                marked_items_.erase(std::remove_if(marked_items_.begin(),marked_items_.end(),[&](int n){return n!=item;}),marked_items_.end());
+                auto marked=std::find(marked_items_.begin(),marked_items_.end(),item);
                 if(marked==marked_items_.end())marked_items_.push_back(item);else marked_items_.erase(marked);
                 return move(x,y);
             }
         }
         if(y>=202&&y<=212&&x>=185&&x<=318) {
-            if(!marked_items_.empty()){selected_item_=marked_items_.front();selected_squad_.reset();selected_snapshot_.reset();return make_open_offer(x>=254);}
-            if(!marked_squad_.empty()){selected_squad_=marked_squad_.front();selected_item_.reset();return make_listing(x>=254);}
+            if(!marked_items_.empty()){selected_item_=marked_items_.back();selected_squad_.reset();selected_snapshot_.reset();return make_open_offer(x>=254);}
+            if(!marked_squad_.empty()){selected_squad_=marked_squad_.back();selected_item_.reset();return make_listing(x>=254);}
             view_flags_^=0x1800;preview_.reset();return {};
         }
     }
@@ -686,6 +713,8 @@ TransferMarketRequest TransferMarketScreen::click(int x,int y,bool right) {
         const auto found=std::find_if(state_.squad.begin(),state_.squad.end(),[&](const auto& item){return item.row==player.physical_row;});
         if(found==state_.squad.end())return {};
         const int index=int(found-state_.squad.begin());
+        marked_items_.clear();
+        marked_squad_.erase(std::remove_if(marked_squad_.begin(),marked_squad_.end(),[&](int n){return n!=index;}),marked_squad_.end());
         auto marked=std::find(marked_squad_.begin(),marked_squad_.end(),index);
         if(marked==marked_squad_.end())marked_squad_.push_back(index);else marked_squad_.erase(marked);
         return move(x,y);

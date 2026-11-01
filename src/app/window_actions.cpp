@@ -108,12 +108,13 @@ bool TransferActions::apply(uint64_t& revision, const std::function<bool()>& act
 std::optional<TransferActions::MarketDispatch> TransferActions::market(
     const ui::TransferMarketRequest& request, const HumanBuyerSaleHooks& hooks,
     uint64_t& revision, std::string& error, HumanBuyerMarketEntryPolicy policy,
-    const MarketAccept& acknowledge) {
+    const MarketAccept& acknowledge,
+    const std::function<int(const GameState&, const TransferOfferListView&)>& review) {
     std::optional<MarketDispatch> result;
     apply(revision, [&] {
         const auto old_revision = revision;
         if (policy == HumanBuyerMarketEntryPolicy::normal_interactive) {
-            const auto action = session_.dispatch_transfer_market(request, hooks, revision, error);
+            const auto action = session_.dispatch_transfer_market(request, hooks, revision, error, review);
             if (!action) return false;
             result = MarketDispatch{*action, revision != old_revision};
         } else {
@@ -174,7 +175,8 @@ std::string TransferActions::rejection(const ui::TransferMarketRequest& request,
             return "Dieser Spieler gehört nicht mehr zur gewählten Kaderposition.";
     } else if (request.kind != ui::TransferMarketRequestKind::open_offer &&
                request.kind != ui::TransferMarketRequestKind::preview_quote &&
-               request.kind != ui::TransferMarketRequestKind::open_poach)
+               request.kind != ui::TransferMarketRequestKind::open_poach &&
+               request.kind != ui::TransferMarketRequestKind::review_offers)
         return "Diese Transferaktion ist nicht verfügbar.";
     return {};
 }

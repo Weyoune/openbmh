@@ -538,6 +538,13 @@ TransferActionResult list_manager_player(GameState& g, int manager, int squad_ro
         out.status = TransferActionStatus::invalid_player;
         return out;
     }
+    bool free_entry = false;
+    for (size_t entry = 0; entry < 40; ++entry) {
+        const int listed = g.squad_slots.at(0xb70 + entry) & 0xfff;
+        if (listed == player) { out.status = TransferActionStatus::pending; out.player = player; out.list_entry = int(entry); return out; }
+        free_entry = free_entry || listed == 0xfff;
+    }
+    if (!free_entry) { out.status = TransferActionStatus::blocked_by_board; return out; }
     if (!list_transfer_player(g, slot, rand, report)) {
         out.status = report.unsupported ? TransferActionStatus::invalid_request : TransferActionStatus::blocked_by_board;
         return out;

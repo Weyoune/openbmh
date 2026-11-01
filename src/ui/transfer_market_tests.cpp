@@ -70,6 +70,36 @@ int main(int argc,char** argv){
         check(request.kind==TransferMarketRequestKind::list_player&&request.squad_row==0&&request.expected_player==0,"existing listing request retains physical row stale-validation boundary");
         screen.reject_action("Für Müller: Aktion offen");check(screen.state_json().find("Für Müller")!=std::string::npos,"host feedback remains UTF8");
 
+        const auto rejected_frame = screen.render();
+        screen.key("V");
+        screen.reject_action("Anderer sichtbarer Hinweis");
+        check(screen.render().pixels != rejected_frame.pixels, "host rejection is actually rendered in the footer");
+
+        TransferMarketScreen selected(argv[1],s);
+        auto marked_market=selected.click(210,28);selected.acknowledge_preview(s,quote(marked_market));
+        auto marked_squad=selected.click(20,32);selected.acknowledge_preview(s,quote(marked_squad));
+        auto sale=selected.click(200,206);
+        check(sale.kind==TransferMarketRequestKind::list_player&&sale.selected_players.size()==1&&sale.expected_player==0,
+              "latest clicked squad selection replaces an old marked market row");
+
+        auto listed=s;listed.items[0].own_listing=true;listed.items[0].seller=listed.runtime_club;
+        listed.items[0].player=0;listed.squad[0].already_listed=true;listed.items[0].offers=1;
+        TransferMarketScreen review(argv[1],listed);
+        auto hover_listing=review.click(20,32);review.acknowledge_preview(listed,quote(hover_listing));
+        auto inspect=review.click(200,206);
+        check(inspect.kind==TransferMarketRequestKind::review_offers&&inspect.bid.player==0&&inspect.bid.list_entry==4&&
+              transfer_market_request_json(inspect).find("review_offers")!=std::string::npos,
+              "selling an already listed own squad player requests guarded incoming offer review");
+        review.acknowledge_unchanged();
+        listed.items[0].offers=0;TransferMarketScreen waiting(argv[1],listed);
+        auto hover_waiting=waiting.click(20,32);waiting.acknowledge_preview(listed,quote(hover_waiting));
+        check(waiting.key("V").kind==TransferMarketRequestKind::none&&
+              waiting.state_json().find("Noch keine Angebote")!=std::string::npos,
+              "an own listing without incoming offers gives visible feedback");
+        auto expired=fixture();expired.squad_slots[2932]=0x0fff;
+        check(!transfer_market_from_game(expired,5).squad[0].already_listed,
+              "cleared rejected/expired pool entry immediately makes the player listable again");
+
         auto all=s;all.items.clear();for(int n=0;n<40;++n){auto item=s.items[0];item.list_entry=n;item.source_slot=2928+n;item.player=100+n;item.name="P"+std::to_string(n);item.position=n%4;item.strength=60+n%7;all.items.push_back(item);}
         TransferMarketScreen pages(argv[1],all);const auto first=visible(pages);std::set<int> reached;
         for(int page=0;page<7;++page){const auto rows=visible(pages);check(rows.size()==size_t(page==6?4:6),"six original rows per page with final four");reached.insert(rows.begin(),rows.end());pages.click(210,45,true);}

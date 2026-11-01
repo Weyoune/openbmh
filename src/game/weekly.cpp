@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "game/weekly.hpp"
+#include "game/desk_actions.hpp"
 #include "game/pending_offer.hpp"
 #include "game/human_buyer_sale.hpp"
 #include "game/transfer_bid.hpp"
@@ -1637,6 +1638,7 @@ static TransferOfferListView project_transfer_offer_list_impl(const GameState& g
     view.player = player;
     view.seller = g.memory.u16(list + 8) & 0x7fff;
     view.seller_manager = g.manager_of(view.seller);
+    offer_bases(g.memory, list, -1, view.asking_fee, view.asking_monthly_salary);
     for (int bid = 0; bid < 4; ++bid) view.offers[size_t(bid)].bid_index = bid;
     if (view.seller_manager >= 0 && g.memory.has(::bmh::layout::DeskActions_Unsupported_RuntimeField + uint32_t(view.seller_manager)))
         view.seller_loan_count = g.memory.u8(::bmh::layout::DeskActions_Unsupported_RuntimeField + uint32_t(view.seller_manager));
@@ -2619,6 +2621,47 @@ PendingOfferResult process_national_nomination_pending_after_desk(GameState& g,
     // calendar/competition identity is checked above before the shared scan can
     // claim ActiveManager, invoke a presenter or consume either generator.
     return process_natural_pending_offers_after_desk(g,request,game,rand,hooks,report);
+}
+
+TransferActionResult accept_manager_transfer_offer(GameState& g, int manager, int entry,
+    int expected_player, int bid, WatcomRandom& rand, MinuteReport& report, TransferAllocatorContext allocator) {
+    TransferActionResult result;
+    const auto view = project_transfer_offer_list(g, entry);
+    if (!view.valid || manager < 0 || view.seller_manager != manager ||
+        view.player != expected_player || bid < 0 || bid >= 4) return result;
+    const auto& offer = view.offers[size_t(bid)];
+    if (!offer.present) return result;
+    if (!offer.affordable) { result.status = TransferActionStatus::insufficient_funds; return result; }
+    if (!offer.has_squad_room) { result.status = TransferActionStatus::no_squad_room; return result; }
+    if (!offer.passes_foreign_limit || !offer.loan_permitted) {
+        result.status = TransferActionStatus::blocked_by_board; return result;
+    }
+    if (!offer.transaction_supported) { result.status = TransferActionStatus::unsupported; return result; }
+    const uint32_t list = kTransferList + uint32_t(entry) * kListEntry;
+    auto staged = g;
+    auto staged_rand = rand;
+    const uint32_t salary_at = list + 0x0c + uint32_t(bid) * 4;
+    const auto salary = staged.memory.u32(salary_at);
+    staged.memory.set32(salary_at, (salary * 10u) >> 3);
+    uint32_t fee_pct = 0, salary_pct = 0;
+    const bool rated = evaluate_bid(staged, list, bid, fee_pct, salary_pct, staged_rand, report);
+    staged.memory.set32(salary_at, salary);
+    if (!rated || report.unsupported) { result.status = TransferActionStatus::unsupported; return result; }
+    if (!salary_pct) { result.status = TransferActionStatus::rejected; return result; }
+    if (!accept_transfer_bid_immediately(staged, entry, bid, staged_rand, report,
+            allocator) || report.unsupported) {
+        result.status = TransferActionStatus::unsupported; return result;
+    }
+    const auto buyer_range = squad_range(offer.buyer);
+    const bool moved = std::any_of(staged.squad_slots.begin() + buyer_range.first,
+        staged.squad_slots.begin() + buyer_range.first + buyer_range.count,
+        [&](uint16_t slot) { return (slot & 0xfff) == expected_player; });
+    if (!moved) { result.status = TransferActionStatus::unsupported; return result; }
+    g = std::move(staged); rand = staged_rand;
+    result.status = TransferActionStatus::accepted;
+    result.player = expected_player; result.list_entry = entry;
+    result.fee = int32_t(offer.fee); result.annual_salary = int32_t(offer.monthly_salary);
+    return result;
 }
 
 bool accept_transfer_bid_immediately(GameState& g, int entry, int bid, WatcomRandom& rand,

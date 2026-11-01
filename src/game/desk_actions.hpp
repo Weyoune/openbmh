@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #pragma once
+#include "game/transfer_allocator.hpp"
 // OpenBMH deviates from the original: supports designated set-piece records and the supported transfer-editor rules.
 // Actions a human manager can take at his desk that change the game state and draw random
 // numbers (BMH.exe V2.24 + supported rule profile patch). The screens themselves belong to the UI; these
@@ -271,6 +272,12 @@ struct TransferOfferEditorSubmitResult {
 };
 TransferOfferEditorSubmitResult submit_transfer_offer_editor_source(GameState&,
     const TransferOfferEditorState&,WatcomRandom&,const HumanBuyerSaleHooks&,MinuteReport&);
+
+// OpenBMH deviates from the original: a seller may accept an existing bid before expiry.
+// The caller stages state/RNG; cancellation is handled before invoking this action.
+TransferActionResult accept_manager_transfer_offer(GameState&, int manager, int list_entry,
+    int expected_player, int bid_index, WatcomRandom&, MinuteReport&,
+    TransferAllocatorContext = TransferAllocatorContext::unsupported);
 
 // Submit a manager bid on an existing list entry. A full-value fee and salary meeting
 // the demand complete an immediate agreement; lower viable offers persist for weekly review.

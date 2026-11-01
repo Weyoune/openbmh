@@ -74,6 +74,9 @@ void new_board_entry(GameState& g, int manager, int index, int slot, WatcomRando
     uint8_t* e = &g.tactics.at(size_t(manager) * kBoard + size_t(index) * kBoardSlot);
     std::memset(e + 7, 0, 3);
     std::memset(e + 0x19, 0, 0x24);
+    // OpenBMH deviates from the original: a new arrival must not inherit the
+    // previous occupant's retirement/refusal/month-processing flags.
+    e[0xb] = 0;
     e[10] = 2;
     for (int k = 0; k < 4; k++) e[2 + k] = index < 2 ? 1 : uint8_t(rand.range(2, 0x27));
     e[0x3f] = 0xff;
