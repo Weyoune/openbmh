@@ -16,6 +16,24 @@ Palette load_palette(const std::filesystem::path& path) {
     return p;
 }
 
+std::optional<Palette> load_optional_embedded_palette(const std::filesystem::path& path) {
+    const Bytes bytes = read_file(path);
+    if (bytes.size() < 8) throw FormatError("VGA palette source is truncated");
+    const size_t rle_end = 8 + size_t(le32(bytes, 4));
+    if (rle_end > bytes.size()) throw FormatError("VGA RLE length exceeds palette source");
+    const size_t trailing = bytes.size() - rle_end;
+    if (trailing == 0) return std::nullopt;
+    if (trailing < 768) throw FormatError("truncated embedded VGA palette");
+    Palette palette;
+    for (size_t i = 0; i < palette.argb.size(); ++i) {
+        const auto channel = [&](size_t component) {
+            return uint32_t(vga_dac_rgb8(bytes[rle_end + i * 3 + component]));
+        };
+        palette.argb[i] = 0xff000000u | channel(0) << 16 | channel(1) << 8 | channel(2);
+    }
+    return palette;
+}
+
 uint8_t Palette::nearest(uint8_t r, uint8_t g, uint8_t b) const {
     int best = 0, best_dist = INT32_MAX;
     for (int i = 0; i < 256; i++) {

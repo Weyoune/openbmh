@@ -89,28 +89,6 @@ Image load_kb(const std::filesystem::path& data_directory, const char* file) {
     return load_vga(data_directory / "KB" / file);
 }
 
-std::optional<Palette> load_optional_embedded_palette(const std::filesystem::path& path) {
-    const Bytes bytes = read_file(path);
-    if (bytes.size() < 8) throw FormatError("sportschau: VGA palette source is truncated");
-    const size_t rle_end = 8 + size_t(le32(bytes, 4));
-    if (rle_end > bytes.size()) throw FormatError("sportschau: VGA RLE length exceeds palette source");
-    const size_t trailing = bytes.size() - rle_end;
-    if (trailing == 0) return std::nullopt;
-    if (trailing < 768) throw FormatError("sportschau: truncated embedded VGA palette");
-
-    // PaletteOverride reads 0x300 bytes after the RLE stream and installs them
-    // through KeepSameSixBitDACExpansion/Size5. Keep the same six-bit DAC expansion
-    // used for M3PC.COL; only the palette source differs for embedded VGA art.
-    Palette palette;
-    for (size_t i = 0; i < palette.argb.size(); ++i) {
-        const auto channel = [&](size_t component) {
-            return uint32_t(vga_dac_rgb8(bytes[rle_end + i * 3 + component]));
-        };
-        palette.argb[i] = 0xff000000u | channel(0) << 16 | channel(1) << 8 | channel(2);
-    }
-    return palette;
-}
-
 std::string short_bytes(const std::vector<uint8_t>& bytes) {
     return std::string(bytes.begin(), bytes.end());
 }

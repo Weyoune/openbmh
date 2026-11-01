@@ -3607,8 +3607,10 @@ int main(int argc, char** argv) {
         for (const auto [picture, milliseconds] :
              std::array<std::pair<int, Uint64>, 3>{{{138, 3000}, {139, 1000}, {137, 1500}}}) {
             if (!running || skip_opening) break;
-            present_season(load_vga(ui::asset_path(data / "KB", std::to_string(picture) + ".VGA")),
-                           window_title.c_str());
+            const auto picture_path = ui::asset_path(data / "KB", std::to_string(picture) + ".VGA");
+            const auto picture_palette = load_optional_embedded_palette(picture_path);
+            present_season(load_vga(picture_path), window_title.c_str(),
+                           picture_palette ? &*picture_palette : nullptr);
             const auto until = SDL_GetTicks64() + milliseconds;
             while (running && !skip_opening && SDL_GetTicks64() < until) {
                 SDL_Event opening_event;

@@ -4,6 +4,7 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 
 namespace bmh {
 
@@ -21,5 +22,7 @@ constexpr uint8_t vga_dac_rgb8(uint8_t channel) {
 }
 
 Palette load_palette(const std::filesystem::path& path);
+// Some full-screen VGA pictures carry their own DAC palette after the RLE data.
+std::optional<Palette> load_optional_embedded_palette(const std::filesystem::path& path);
 
 }  // namespace bmh
