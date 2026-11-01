@@ -2225,10 +2225,13 @@ int main(int argc, char** argv) {
                         while (quit_confirmation.poll(&event)) {
                             if (event.type == SDL_QUIT) { running = false; return -1; }
                             std::optional<int> answer;
-                            if (event.type == SDL_MOUSEBUTTONUP &&
+                            if (event.type == SDL_MOUSEBUTTONDOWN &&
                                 (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT)) {
-                                answer = offer_screen.click(event.button.x, event.button.y,
-                                                            event.button.button == SDL_BUTTON_RIGHT);
+                                offer_screen.pointer_down(event.button.button == SDL_BUTTON_RIGHT);
+                            } else if (event.type == SDL_MOUSEBUTTONUP &&
+                                (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT)) {
+                                answer = offer_screen.pointer_up(event.button.x, event.button.y,
+                                                                 event.button.button == SDL_BUTTON_RIGHT);
                                 offer_dirty = true;
                             } else if (event.type == SDL_KEYDOWN) {
                                 if (offer_screen.notice_active()) {
@@ -2293,9 +2296,12 @@ int main(int argc, char** argv) {
                         SDL_Event event;
                         while (quit_confirmation.poll(&event)) {
                             if (event.type == SDL_QUIT) { running = false; return; }
-                            if (event.type == SDL_MOUSEBUTTONUP &&
+                            if (event.type == SDL_MOUSEBUTTONDOWN &&
                                 (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT))
-                                (void)decision_screen.click(event.button.x, event.button.y,
+                                decision_screen.pointer_down(event.button.button == SDL_BUTTON_RIGHT);
+                            else if (event.type == SDL_MOUSEBUTTONUP &&
+                                (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT))
+                                (void)decision_screen.pointer_up(event.button.x, event.button.y,
                                     event.button.button == SDL_BUTTON_RIGHT, elapsed);
                         }
                         if (confirmation ? decision_screen.confirmation_dismissed() : decision_screen.outcome_dismissed()) return;

@@ -530,6 +530,17 @@ bool IncomingTransferScreen::dismiss_notice() {
     return true;
 }
 
+void IncomingTransferScreen::pointer_down(bool right) {
+    pointer_buttons_ |= right ? 2 : 1;
+}
+
+std::optional<int> IncomingTransferScreen::pointer_up(int x, int y, bool right, uint64_t elapsed_ms) {
+    const uint8_t button = right ? 2 : 1;
+    if (!(pointer_buttons_ & button)) return std::nullopt;
+    pointer_buttons_ &= uint8_t(~button);
+    return click(x, y, right, elapsed_ms);
+}
+
 std::optional<int> IncomingTransferScreen::click(int x, int y, bool right, uint64_t elapsed_ms) {
     if (confirmation_mode_) {
         if (!right && x >= 95 && x <= 220 && y >= 166 && y <= 176)

@@ -154,3 +154,9 @@ Per-unit rounding and the selected legacy/typed recipient policy are unchanged.
 This corrects intermediate overflow for representable dividends; account,
 deposit, property book value and monthly totals still use their native 32-bit
 storage and can overflow. It is not a complete large-balance finance fix.
+
+
+Release-driven incoming-transfer presenters require a matching press observed
+inside that modal. An orphan or repeated release from the preceding result table
+cannot decline an offer or dismiss its confirmation. Repeated presses while a
+button is held still form one gesture; fresh left/right clicks keep their actions.

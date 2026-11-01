@@ -93,6 +93,24 @@ int main(int argc, char** argv) {
               "raw Source 0xfff pool seller resolves without indexing a club or national-team token");
 
         auto state = fixture();
+        IncomingTransferScreen release_owner(argv[1], state);
+        const auto undecided_pixels = release_owner.render().pixels;
+        check(!release_owner.pointer_up(310,230,true) &&
+              !release_owner.pointer_up(309,229,true) && !release_owner.answer() &&
+              release_owner.render().pixels == undecided_pixels,
+              "late/repeated table releases cannot decline the following transfer");
+        release_owner.pointer_down();
+        release_owner.pointer_down(); // Repeated DOWN still owns a single left gesture.
+        check(!release_owner.pointer_up(310,230,true) && !release_owner.answer(),
+              "an orphan right release does not consume an owned left press");
+        check(release_owner.pointer_up(10,150) == 0 &&
+              !release_owner.pointer_up(10,150) && release_owner.answer() == 0,
+              "fresh left gesture selects its raw offer once despite repeated DOWN/UP");
+        IncomingTransferScreen right_owner(argv[1], state);
+        right_owner.pointer_down(true);right_owner.pointer_down(true);
+        check(right_owner.pointer_up(309,229,true) == -1 &&
+              !right_owner.pointer_up(309,229,true) && right_owner.answer() == -1,
+              "fresh moved right gesture still declines exactly once");
         IncomingTransferScreen screen(argv[1], state);
         const auto frame = screen.render();
         check(frame.width == 320 && frame.height == 240 && frame.pixels.size() == 320u * 240u,
@@ -247,6 +265,13 @@ int main(int argc, char** argv) {
               "only a left click inside KLICK can acknowledge the confirmation");
         check(!confirm.click(95,166) && confirm.confirmation_dismissed() && !confirm.answer(),
               "KLICK acknowledges without submitting a new transfer decision");
+        IncomingTransferScreen confirmation_owner(argv[1],confirm_state);
+        confirmation_owner.show_confirmation(::bmh::layout::PendingOffer_FormatError_ExecutableField2,settled_image);
+        check(!confirmation_owner.pointer_up(150,170) && !confirmation_owner.confirmation_dismissed(),
+              "an inherited left release cannot acknowledge the next confirmation");
+        confirmation_owner.pointer_down();
+        check(!confirmation_owner.pointer_up(150,170) && confirmation_owner.confirmation_dismissed(),
+              "a fresh complete left gesture acknowledges its owned confirmation");
         IncomingTransferScreen confirm_edge(argv[1],confirm_state);
         confirm_edge.show_confirmation(::bmh::layout::PendingOffer_FormatError_ExecutableField2,settled_image);
         check(!confirm_edge.click(221,176) && !confirm_edge.confirmation_dismissed(),

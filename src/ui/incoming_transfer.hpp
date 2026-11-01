@@ -142,6 +142,10 @@ public:
     void show_confirmation(uint32_t original_text_address, const Image& backdrop);
     bool confirmation_dismissed() const { return confirmation_dismissed_; }
     bool outcome_dismissed() const { return outcome_dismissed_; }
+    // Raw release-driven presenters must own a press in this visible modal.
+    // Semantic Source DOWN actions can continue to use click directly.
+    void pointer_down(bool right = false);
+    std::optional<int> pointer_up(int x, int y, bool right = false, uint64_t elapsed_ms = 0);
     std::optional<int> click(int x, int y, bool right = false, uint64_t elapsed_ms = 0);
     std::optional<int> key(std::string_view name);
     bool dismiss_notice();
@@ -159,6 +163,7 @@ private:
     Image background_, negotiation_;
     bool gradient_text_ = true;
     std::optional<int> answer_;
+    uint8_t pointer_buttons_ = 0;
     bool notice_active_ = false;
     int outcome_row_count_ = -1;
     int outcome_accepted_bid_index_ = -1;
