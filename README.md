@@ -1,5 +1,10 @@
 # OpenBMH
 
+**Classic-Version: 1.0.2.** Die originalgetreue Linie bleibt in diesem Repository.
+Erweiterte Ligen, die gemeinsame deutsche/englische Karriere und der Dateneditor
+werden separat als **[OpenBMH-Extended 1.0 Beta](https://github.com/Weyoune/OpenBMH-extended)** entwickelt.
+
+
 A faithful, standalone community reconstruction of *Bundesliga Manager Hattrick*, using the player's original installation and SDL2 interface.
 
 OpenBMH 1.0 builds on v0.1.2 with reviewed bug fixes and starts directly with the original game data. Original game files, graphics, audio and manuals are not distributed. German CD-compatible BMH and verified Diamond editions are the primary release targets. Football Limited remains experimental; the older floppy executable is not supported.
