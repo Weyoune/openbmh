@@ -2,6 +2,7 @@
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/sportschau.hpp"
+#include "ui/setup.hpp"
 
 #include <algorithm>
 #include <array>
@@ -150,7 +151,7 @@ void restore_source_rect(const Image& source, int source_x, int source_y,
 } // namespace
 
 CompetitionWinnerScreen::CompetitionWinnerScreen(const std::filesystem::path& data)
-    : exe_(load_le(data / "BMH.exe")), font_(load_font(data / "F" / "BMH2.FNT")) {
+    : exe_(load_le(asset_path(data, "BMH.exe"))), font_(load_font(data / "F" / "BMH2.FNT")) {
     for (size_t i = 0; i < 2; ++i) {
         const std::string background = i ? "131.VGA" : "128.VGA";
         backdrop_[i] = load_kb(data, background.c_str());
@@ -220,7 +221,7 @@ Image MatchdayIntro::render(const MatchdayIntroView& view) const {
 }
 
 SportschauEleven::SportschauEleven(const std::filesystem::path& data_directory)
-    : exe_(load_le(data_directory / "BMH.exe")),
+    : exe_(load_le(asset_path(data_directory, "BMH.exe"))),
       font_(load_font(data_directory / "F" / "BMH3.FNT")),
       room_(load_kb(data_directory, "57.VGA")), figures_(load_kb(data_directory, "16.VGA")) {
     if (room_.width != 320 || room_.height != 240 || figures_.width < 132 || figures_.height < 31)
@@ -268,7 +269,7 @@ Image SportschauEleven::render(const SportschauAwardsView& view, bool gradient) 
 }
 
 SportschauTeamInfo::SportschauTeamInfo(const std::filesystem::path& data_directory)
-    : exe_(load_le(data_directory / "BMH.exe")),
+    : exe_(load_le(asset_path(data_directory, "BMH.exe"))),
       font_(load_font(data_directory / "F" / "BMH3.FNT")),
       room_(load_kb(data_directory, "57.VGA")), atlas_(load_kb(data_directory, "59.VGA")) {
     if (room_.width != 320 || room_.height != 240 || atlas_.width < 152 || atlas_.height < 56)
@@ -334,7 +335,7 @@ Image SportschauIntro::render_frame(uint32_t index) const {
 SportschauMatchReport::SportschauMatchReport(const std::filesystem::path& data_directory,
         SportschauFixtureView fixture, SportschauReportContext context)
     : fixture_(std::move(fixture)), context_(std::move(context)),
-      exe_(load_le(data_directory / "BMH.exe")),
+      exe_(load_le(asset_path(data_directory, "BMH.exe"))),
       small_(load_font(data_directory / "F" / "BMH3.FNT")),
       heading_(load_font(data_directory / "F" / "BMH2.FNT")),
       texts_(load_textd(data_directory / "TEXTD.BLK")),
