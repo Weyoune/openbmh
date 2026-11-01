@@ -171,6 +171,10 @@ GameState startup_state(const LeImage& exe, const Database& db, const Bytes& m3_
     }
     const SaveState save(stream, counts);
     GameState g = GameState::from_save(save, counts);
+    // The original options entry restores ordinary dialogs before any manager
+    // confirmation. The executable's initial value belongs to its boot screens.
+    g.memory.add_block(layout::CompactDialogFrame, 1);
+    g.memory.set8(layout::CompactDialogFrame, 0);
     competition_pointers(g.memory, exe);  // CompetitionPointers
     return g;
 }

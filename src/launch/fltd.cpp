@@ -25,6 +25,7 @@ namespace {
 constexpr uint32_t kEnFileOffset = 0x496d;
 constexpr uint32_t kEnDataStart = ::bmh::layout::EnDataStart, kEnDataEnd = ::bmh::layout::Career_CompetitionPointersEnglish_RuntimeField;
 constexpr uint32_t kFltdSize = 507925;
+constexpr uint32_t kEnglishCalendarDateSetup = 0x684;
 // The German image the engine expects: LE objects from layout field, data object GermanDataSegmentBegin-layout field.
 constexpr uint32_t kDeBase = 0x10000, kDeEnd = ::bmh::layout::GermanImageEnd;
 // A zero byte in the German BSS: the empty string of empty_pointers entries.
@@ -118,6 +119,11 @@ LeImage translate_fltd(const fs::path& fltd_exe) {
             }
         }
     }
+    // Preserve the English date-setup operands in the shared epoch slot. The
+    // English routine uses a different stack layout; the calendar reader
+    // verifies that layout before reading its year and weekday.
+    for (uint32_t i = 0; i < 14; ++i)
+        put(layout::CalendarDateSetup + i, en(kEnglishCalendarDateSetup + i));
     LeImage out = LeImage::from_bytes(kDeBase, std::move(image));
     return out;
 }

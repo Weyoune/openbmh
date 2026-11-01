@@ -41,5 +41,14 @@ int main()try {
     auto different=image(1995,5);const uint8_t unknown=0;different.patch(bmh::layout::CalendarDateSetup,&unknown,1);
     rejected=false;try{bmh::calendar_epoch_from_executable(different);}catch(const bmh::FormatError&){rejected=true;}
     check(rejected,"unknown date routine was guessed");
+    auto english=image(1995,5);
+    const uint8_t english_setup[]={0xc6,0x45,0xf6,5,0xc6,0x45,0xf7,7,0x66,0xc7,0x45,0xf8,0xcb,7};
+    english.patch(bmh::layout::CalendarDateSetup,english_setup,sizeof english_setup);
+    const auto english_epoch=bmh::calendar_epoch_from_executable(english);
+    check(english_epoch.year==1995&&english_epoch.weekday==5,"translated English date operands rejected");
+    const uint8_t invalid_weekday=7;
+    english.patch(bmh::layout::CalendarDateSetup+3,&invalid_weekday,1);
+    rejected=false;try{bmh::calendar_epoch_from_executable(english);}catch(const bmh::FormatError&){rejected=true;}
+    check(rejected,"invalid translated English weekday accepted");
     std::cout<<"Edition calendar epoch, save header and year rollover passed\n";return 0;
 }catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}

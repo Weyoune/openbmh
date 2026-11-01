@@ -15,6 +15,8 @@ int main(int argc,char**argv){try{
     auto db=load_database(data/"M3D.MAN");auto texts=load_textd(data/"TEXTD.BLK");
     auto before=startup_state(exe,db,read_file(data/"M3.MEN"),read_file(data/"M3.DAT"));
     before.texts=&texts;
+    check(before.memory.has(layout::CompactDialogFrame)&&before.memory.u8(layout::CompactDialogFrame)==0,
+        "options entry disables the boot-only black dialog frame");
     for(unsigned i=0;i<4;++i)check(exe.u32(::bmh::layout::OfferSlots+i*4)==0&&before.memory.u32(::bmh::layout::OfferSlots+i*4)==0,
         "raw EXE BSS and startup_state carry zero, not empty pending offer sentinel");
     // Use the existing exact6ba3e split helpers as unchanged baseline, with

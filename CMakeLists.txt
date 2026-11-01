@@ -512,6 +512,10 @@ add_executable(national_friendly_actions_tests tests/national_friendly_actions_t
 target_link_libraries(national_friendly_actions_tests PRIVATE bmhcore)
 add_test(NAME national_friendly_actions_tests COMMAND national_friendly_actions_tests)
 
+add_executable(edition_startup_app_tests tests/edition_startup_app_tests.cpp ${BMH_APP_CONTROLLER_SOURCE} ${BMH_APP_SESSION_SDL_SOURCE})
+target_link_libraries(edition_startup_app_tests PRIVATE bmhui openbmh_audio ${BMH_SDL_TARGET})
+bmh_add_data_test(NAME edition_startup_app_tests COMMAND edition_startup_app_tests "${BMH_DATA}")
+
 add_executable(manager_join_app_tests tests/manager_join_app_tests.cpp ${BMH_APP_CONTROLLER_SOURCE} ${BMH_APP_SESSION_SDL_SOURCE})
 target_link_libraries(manager_join_app_tests PRIVATE bmhui openbmh_audio ${BMH_SDL_TARGET})
 if(MSVC)
@@ -936,6 +940,7 @@ bmh_add_data_test(NAME league_views_data_tests COMMAND league_views_data_tests "
 # FLTD is translated by launch_check/the launcher first. Do not point these
 # tests at the raw DOS directory: the shared UI consumes the prepared image.
 set(BMH_ENGLISH_DATA "" CACHE PATH "Prepared Football Limited game-data directory")
+bmh_add_data_test(NAME english_edition_startup_app_tests DATA_DIR "${BMH_ENGLISH_DATA}" COMMAND edition_startup_app_tests "${BMH_ENGLISH_DATA}")
     bmh_add_data_test(NAME english_pairings_data_tests DATA_DIR "${BMH_ENGLISH_DATA}" COMMAND league_pairings_data_tests "${BMH_ENGLISH_DATA}")
     bmh_add_data_test(NAME english_desktop_data_tests DATA_DIR "${BMH_ENGLISH_DATA}" COMMAND desktop_data_tests "${BMH_ENGLISH_DATA}" --english)
     bmh_add_data_test(NAME english_league_views_data_tests DATA_DIR "${BMH_ENGLISH_DATA}" COMMAND league_views_data_tests "${BMH_ENGLISH_DATA}")

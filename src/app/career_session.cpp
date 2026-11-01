@@ -549,9 +549,9 @@ static void install_league_sizes(const LeImage& exe) {
 }
 
 CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_seed)
-    : data_directory_(data), exe_(load_le(data / "BMH.exe")),
-      db_(load_database(data / "M3D.MAN")),
-      texts_(load_textd(data / "TEXTD.BLK")),
+    : data_directory_(data), exe_(load_le(ui::asset_path(data, "BMH.exe"))),
+      db_(load_database(ui::asset_path(data, "M3D.MAN"))),
+      texts_(load_textd(ui::asset_path(data, "TEXTD.BLK"))),
       rand_(watcom_seed) {
     install_league_sizes(exe_);
     turn_driver_.alternate_match_event_roll = exe_.u8(::bmh::layout::AlternateEventRoll) != 0;
@@ -560,7 +560,7 @@ CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_
         ? TransferAllocatorContext::zero : TransferAllocatorContext::blocked;
     session_id_ = next_session_id.fetch_add(1, std::memory_order_relaxed);
     initialize_club_modal_runtime();
-    g_ = startup_state(exe_, db_, read_file(data / "M3.MEN"), read_file(data / "M3.DAT"));
+    g_ = startup_state(exe_, db_, read_file(ui::asset_path(data, "M3.MEN")), read_file(ui::asset_path(data, "M3.DAT")));
     g_.texts = &texts_;
     g_.currency_suffix = exe_.cstring(::bmh::layout::CurrencySuffixText);  // CurrencySuffixText
     configure_training_camp_data(g_, exe_);
@@ -576,8 +576,8 @@ CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_
 
 CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_seed,
                              const std::filesystem::path& save_path)
-    : data_directory_(data), exe_(load_le(data / "BMH.exe")), db_(load_database(data / "M3D.MAN")),
-      texts_(load_textd(data / "TEXTD.BLK")), rand_(watcom_seed) {
+    : data_directory_(data), exe_(load_le(ui::asset_path(data, "BMH.exe"))), db_(load_database(ui::asset_path(data, "M3D.MAN"))),
+      texts_(load_textd(ui::asset_path(data, "TEXTD.BLK"))), rand_(watcom_seed) {
     install_league_sizes(exe_);
     turn_driver_.alternate_match_event_roll = exe_.u8(::bmh::layout::AlternateEventRoll) != 0;
     turn_driver_.disable_match_events = exe_.u8(::bmh::layout::MatchEventsDisabled) != 0;
@@ -926,6 +926,9 @@ std::optional<PendingOfferResult> CareerSession::dispatch_club_player_pending_of
 }
 
 void CareerSession::initialize_club_modal_runtime() {
+    // Setup clears the boot-only dialog mode before either creating or loading
+    // a career. This process flag is deliberately absent from native saves.
+    club_modal_runtime_.emplace(layout::CompactDialogFrame, 0);
     // LE object4 has bb cdd/de/e1 in its zero-initialized virtual tail;
     // CareerSession_InitializeClubModalRuntime_ExecutableField is file-backed zero. These are explicit process-start values,
     // carried by this runtime owner across modal entry/return, not FBM bytes.

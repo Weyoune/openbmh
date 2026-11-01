@@ -3599,6 +3599,32 @@ int main(int argc, char** argv) {
                 if (expired.request != ui::FlowRequest::none || expired.changed) handle(expired);
             }
         };
+        // Original boot order: publisher, credits, then the game's title. Keep
+        // these in the graphical frontend; creating a session starts at options.
+        // OpenBMH deviates from the original: keep the title visible for 1.5s
+        // instead of relying on the duration of DOS database initialization.
+        bool skip_opening = false;
+        for (const auto [picture, milliseconds] :
+             std::array<std::pair<int, Uint64>, 3>{{{138, 3000}, {139, 1000}, {137, 1500}}}) {
+            if (!running || skip_opening) break;
+            present_season(load_vga(ui::asset_path(data / "KB", std::to_string(picture) + ".VGA")),
+                           window_title.c_str());
+            const auto until = SDL_GetTicks64() + milliseconds;
+            while (running && !skip_opening && SDL_GetTicks64() < until) {
+                SDL_Event opening_event;
+                while (SDL_PollEvent(&opening_event)) {
+                    if (opening_event.type == SDL_QUIT) running = false;
+                    if (opening_event.type == SDL_KEYDOWN || opening_event.type == SDL_MOUSEBUTTONUP)
+                        skip_opening = true;
+                }
+                SDL_Delay(10);
+            }
+        }
+        // Opening input must not also change an option on the first setup frame.
+        SDL_FlushEvents(SDL_KEYDOWN, SDL_KEYUP);
+        SDL_FlushEvents(SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP);
+        season_backdrop.reset();
+        dirty = true;
         SDL_StartTextInput();
         bool filename_input_active = false;
         std::array<bool, 2> setup_button_down{};
