@@ -1161,3 +1161,7 @@ endif()
 add_executable(desktop_feedback_tests tests/desktop_feedback_tests.cpp)
 target_link_libraries(desktop_feedback_tests PRIVATE bmhui)
 bmh_add_data_test(NAME desktop_feedback_tests COMMAND desktop_feedback_tests "${BMH_DATA}")
+
+add_executable(daily_interest_unit_tests tests/daily_interest_unit_tests.cpp)
+target_link_libraries(daily_interest_unit_tests PRIVATE bmhcore)
+add_test(NAME daily_interest_unit_tests COMMAND daily_interest_unit_tests)

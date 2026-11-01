@@ -8,6 +8,7 @@
 #include "game/schedule.hpp"
 
 #include <algorithm>
+#include <bit>
 
 namespace bmh {
 
@@ -24,6 +25,23 @@ void wr32(std::vector<uint8_t>& v, size_t o, int32_t x) {
 
 }  // namespace
 
+DailyInterestAmounts daily_interest_amounts(int32_t cash, int32_t deposit, int32_t credit) {
+    // OpenBMH deviates from the original: widen products before annual-rate
+    // division so valid native account amounts do not overflow intermediate sums.
+    // Preserve truncation at each original division, including deposit / 10000.
+    DailyInterestAmounts result;
+    if (cash < 0) {
+        const int64_t with_credit = int64_t(cash) + credit;
+        int64_t borrowing = with_credit < 0 ? with_credit * 18 / -36500 : 0;
+        borrowing += std::max(int64_t(cash), -int64_t(credit)) * 12 / -36500;
+        result.borrowing = int32_t(borrowing);
+    } else {
+        result.cash_and_deposit = cash / -36500;
+    }
+    result.cash_and_deposit += int32_t(int64_t(deposit / 10000) * 20000 / -36500);
+    return result;
+}
+
 void daily_interest(GameState& g, WatcomRandom& rand) {
     // (DailyInterest before the day step: the training camp visits of today are over)
     for (size_t m = 0; m < g.manager_teams.size(); m++) g.manager_records.at(m * kManagerRecord + 0x21f) &= 0x7f;
@@ -32,24 +50,20 @@ void daily_interest(GameState& g, WatcomRandom& rand) {
         const int32_t balance = rd32(g.manager_records, rec + 0x314);
         const int32_t deposit = rd32(g.manager_records, rec + 0x318);
         const int32_t credit = rd32(g.manager_records, rec + 0x31c);
-        int32_t amount = 0;  // positive = cost
+        const auto interest = daily_interest_amounts(balance, deposit, credit);
         if (balance < 0) {
-            if (balance + credit < 0) amount = ((balance + credit) * 18) / -36500;
-            int32_t used = -credit < balance ? balance : -credit;
-            amount += (used * 12) / -36500;
-            wr32(g.manager_records, rec + 0x89c, rd32(g.manager_records, rec + 0x89c) + amount);
-            book_money(g, k, amount, true);
-            amount = 0;
-        } else {
-            amount = balance / -36500;
+            const auto statistic = uint32_t(rd32(g.manager_records, rec + 0x89c)) + uint32_t(interest.borrowing);
+            wr32(g.manager_records, rec + 0x89c, std::bit_cast<int32_t>(statistic));
+            book_money(g, k, interest.borrowing, true);
         }
-        amount += ((deposit / 10000) * 20000) / -36500;
-        wr32(g.manager_records, rec + 0x870, rd32(g.manager_records, rec + 0x870) - amount);
-        book_money(g, k, amount, true);
+        const auto statistic = uint32_t(rd32(g.manager_records, rec + 0x870)) - uint32_t(interest.cash_and_deposit);
+        wr32(g.manager_records, rec + 0x870, std::bit_cast<int32_t>(statistic));
+        book_money(g, k, interest.cash_and_deposit, true);
         if (rd32(g.manager_records, rec + 0x314) > 100000000) {  // read again after the bookings
             int32_t extra = int32_t(rand.range(10000, 20000)) * 1000;
             // BookMoney2 with the statistics flag set: counts as an expense (+0x8a0)
-            wr32(g.manager_records, rec + 0x8a0, rd32(g.manager_records, rec + 0x8a0) + extra);
+            const auto expense = uint32_t(rd32(g.manager_records, rec + 0x8a0)) + uint32_t(extra);
+            wr32(g.manager_records, rec + 0x8a0, std::bit_cast<int32_t>(expense));
             book_money(g, k, extra, true);
         }
     }

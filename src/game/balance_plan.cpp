@@ -56,19 +56,9 @@ uint32_t facility_level(const GameState& g, int m, int k) {
 // (balance 1 %, fixed deposit 2 % a year), positive an expense (overdraft 12 %, beyond the
 // credit line 18 %). The divisor is -36500.
 int32_t daily_interest_preview(const GameState& g, int m) {
-    constexpr int32_t kAnnual = -0x8e94;
     const int32_t balance = rec32(g, m, 0x314), deposit = rec32(g, m, 0x318), credit = rec32(g, m, 0x31c);
-    int32_t result = 0;
-    if (balance < 0) {
-        const int32_t with_credit = wrap(int64_t(balance) + credit);
-        if (with_credit < 0) result = wrap(int64_t(with_credit) * 0x12) / kAnnual;
-        int32_t below = wrap(-int64_t(credit));
-        if (below < balance) below = balance;
-        result = wrap(int64_t(result) + wrap(int64_t(below) * 0xc) / kAnnual);
-    } else {
-        result = balance / kAnnual;
-    }
-    return wrap(int64_t(result) + wrap(int64_t(deposit / 10000) * 20000) / kAnnual);
+    const auto interest = daily_interest_amounts(balance, deposit, credit);
+    return interest.borrowing + interest.cash_and_deposit;
 }
 
 // SharesAndLoans(manager, flags, months): flags 1 the dividends of the manager's funds and

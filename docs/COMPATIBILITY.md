@@ -68,3 +68,11 @@ for8k and37weeks for18k. That was original data, not a mistaken timer. Expanded
 limits/time policy is an intentional improvement. The UI now validates quotes
 against the actual edition and this shared policy rather than hardcoded Diamond
 prices and sizes. Existing eight capacity/construction bytes and saves are retained.
+## Daily interest at large native balances
+
+OpenBMH deviates from the original: daily debt and deposit interest uses 64-bit
+intermediate arithmetic before the original integer divisions. The balance-plan
+preview uses the same calculation. Original rates, division order and random
+consumption remain unchanged. Account balances and accumulated statistics retain
+the native 32-bit save representation; this change does not add unlimited account
+balances or change the original high-cash deduction policy.
