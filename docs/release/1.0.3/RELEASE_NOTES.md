@@ -1,38 +1,70 @@
-# OpenBMH Classic 1.0.3
+# OpenBMH 1.0.3
 
-Release candidate. Platform package and integrated QA results will be recorded
-before publication. Extended development lives separately in
+This Classic maintenance release fixes startup, dialog and match presentation,
+transfer handling and several long-career limits. It uses the player's own
+supported game installation. Extended development lives separately in
 [OpenBMH-Extended](https://github.com/Weyoune/OpenBMH-extended).
 
-Changes under verification:
+## Changes
 
-- Football Limited date setup and prepared-image cache; case-insensitive paths
-  for Original CD data.
-- A static Original title with its own palette, no loading balls, and a complete
-  left/right click to enter setup.
-- Ordinary dialogs preserve the scene behind them.
-- Scores remain at the previous result during goal scenes and update at reveal.
-- A complete right-button release belongs to the dismissed table/overview.
-- Original preferred-position swatches and colored pitch cursor are restored.
-- Own transfer listings expose existing offers early. Viewing/canceling does not
-  alter the listing. Failed or refused listings can be listed again.
-- Fresh arrivals do not inherit a previous occupant's contract-refusal flags.
-- Saved wide player counters and title archives outlive native counter/window
-  boundaries; old lost history cannot be reconstructed.
-- Interest/dividend intermediate arithmetic and Bank aggregate display use wide
-  values. Individual native account fields still have their documented limits.
-- Bank robbery remains at the original threshold/amount but occurs at most once
-  per manager and calendar month, with a saved latch. An unknown older history
-  receives a grace month to avoid another deduction just after upgrading.
-- Standard stadium blocks can reach144,000 places with edition-owned unit prices
-  and size-aware build periods. Existing saves retain their native capacity bytes.
+- Football Limited startup reads its own calendar epoch and prepared-image
+  tables. Original CD assets are located without assuming filename case.
+- The original title remains visible until a complete left or right mouse click,
+  without loading balls or automatic advancement.
+- Career dialogs retain their scene background instead of inheriting the
+  executable's black boot-dialog mode.
+- Goal scenes retain the previous visible score until the result is revealed.
+- Closing a table or pairings overview owns the complete right-button gesture.
+- Pitch placement again uses the edition's preferred-position colors and
+  original colored cursor.
+- Select an owned transfer listing and use the sale action or Enter to inspect
+  existing offers before expiry. Cancel preserves the listing. Cleared listings
+  can be offered again; refusals receive visible feedback.
+- A fresh squad arrival clears negotiation flags left by the previous occupant
+  of its row. This prevents inherited refusal of contract renewal.
+- Optional saved archives preserve cumulative player counters and observed
+  title winners beyond the original byte/word and fifty-season windows.
+- Daily interest and property/fund dividend products use wider intermediate
+  arithmetic; Bank portfolio totals use wide display values.
+- The high-cash bank robbery remains, at most once per manager and calendar
+  month. Saving and loading preserves the limit. An older save with unknown
+  history receives a first qualifying month of grace.
+- Standard stadium blocks now allow 144,000 places in total. Unit prices come
+  from the loaded edition; build periods increase with expanded block size.
 
-Known limits:
+## Validation
 
-Calendar and rescheduling opened in the verified Classic datasets; the reported
-failure remains an open Human-QA item. Some supplied saves (including a supplied
-Diamond3.7 autosave) are rejected as damaged/unsupported before gameplay and are
-not claimed repaired by unrelated transfer fixes. Histories are preserved only
-from information available when this version starts. Older programs can discard
-OpenBMH's optional save extensions. True multi-billion single-account storage
-and every corresponding financial writer remain a separate unresolved issue.
+The release workflow requires successful builds, configured synthetic tests and
+package checks for Windows x64, macOS ARM64 and Linux x64 at the tagged revision.
+Reports and checksums accompany the downloads. Missing external-data tests are
+reported as skipped, rather than counted as successful game tests.
+
+Additional private Linux checks use Original CD, Diamond and Football Limited
+assets for startup and setup, scene-backed dialogs, calendar/rescheduling,
+transfer decisions, preferred-position feedback and score reveal. A 144,000-place
+stadium was rendered after encrypted native save/load. These checks do not
+constitute manual gameplay validation on Windows or macOS, or a full
+200–300-season simulation.
+
+## Known limits
+
+- Individual native cash, deposit and financial-history fields remain 32-bit and
+  can still overflow. Wider calculations and aggregate display do not solve
+  multi-billion single-account storage; that issue remains open.
+- Calendar and rescheduling opened in the checked Classic datasets; the reported
+  failure remains open because it could not be reproduced.
+- Some supplied saves, including a supplied Diamond 3.7 autosave, are rejected as
+  damaged/unsupported before gameplay. This release does not claim to repair
+  those files. Football Limited remains experimental, including original V2.20
+  save import.
+- Already lost counters and earlier title winners cannot be reconstructed. The
+  separate manager-achievements graph retains its original fifty-season window.
+  Original programs and older OpenBMH writers can discard optional archive and
+  monthly-robbery extensions; keep backups before exchanging saves.
+- The row-initialization correction does not clear genuine retirement/refusal
+  flags in an existing career or establish a fixed 200–300-season threshold.
+- Early acceptance of a human-buyer loan still needs its separate consent flow
+  and is unavailable from the early offer preview.
+
+The public downloads contain implementation, corresponding source and notices;
+original game content is not included.

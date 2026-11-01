@@ -64,17 +64,30 @@ bool valid_resolved_offer(const StandBlockOffer& offer, const StadiumBlockExpans
 }
 } // namespace
 
-StadiumBlockExpansionConstants stadium_block_expansion_constants(const LeImage& image){
-    static constexpr std::array<uint32_t,8> minima{14000,24000,14000,20000,14000,24000,14000,20000};
-    StadiumBlockExpansionConstants out;uint32_t total=0;
-    for(size_t i=0;i<8;++i){out.price_per_1000[i]=image.u32(layout::CareerSession_DispatchStadium_RuntimeField+uint32_t((i+8)*4));
-        const auto original=uint32_t(image.u8(layout::CareerSession_Invalid_RuntimeField+uint32_t(i)))*1000;
-        out.max_places[i]=std::max(original,minima[i]);total+=out.max_places[i];
-        const auto source_weeks=image.u8(layout::CareerSession_DispatchStadium_RuntimeField2+uint32_t((i+22)*5));
-        const auto weeks=std::max<uint32_t>(source_weeks,2*(out.max_places[i]/1000));
-        if(weeks>255)throw FormatError("stadium: expanded construction period exceeds saved byte");out.weeks[i]=uint8_t(weeks);
+StadiumBlockExpansionConstants stadium_block_expansion_constants(const LeImage& image) {
+    // OpenBMH deviates from the original: allow 144,000 standard places and
+    // size-aware construction times while retaining edition-owned unit prices.
+    static constexpr std::array<uint32_t, 8> minima{
+        14000, 24000, 14000, 20000, 14000, 24000, 14000, 20000};
+    StadiumBlockExpansionConstants out;
+    uint32_t total = 0;
+    for (size_t i = 0; i < minima.size(); ++i) {
+        out.price_per_1000[i] = image.u32(
+            layout::CareerSession_DispatchStadium_RuntimeField + uint32_t((i + 8) * 4));
+        const auto original = uint32_t(image.u8(
+            layout::CareerSession_Invalid_RuntimeField + uint32_t(i))) * 1000;
+        out.max_places[i] = std::max(original, minima[i]);
+        total += out.max_places[i];
+        const auto source_weeks = image.u8(
+            layout::CareerSession_DispatchStadium_RuntimeField2 + uint32_t((i + 22) * 5));
+        const auto weeks = std::max<uint32_t>(source_weeks, 2 * (out.max_places[i] / 1000));
+        if (weeks > 255)
+            throw FormatError("stadium: expanded construction period exceeds saved byte");
+        out.weeks[i] = uint8_t(weeks);
     }
-    if(total>255000)throw FormatError("stadium: combined stand limits exceed saved capacity byte");return out;
+    if (total > 255000)
+        throw FormatError("stadium: combined stand limits exceed saved capacity byte");
+    return out;
 }
 
 std::optional<StadiumBlockExpansionQuote> quote_stadium_block_expansion(

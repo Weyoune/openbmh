@@ -24,6 +24,7 @@ describe deliberate changes; they are not a list of every known compatibility li
 - [src/game/season.cpp](../src/game/season.cpp): includes transfer-market players in retirement so the five-bit age cannot wrap to 16.
 - [src/game/season.cpp](../src/game/season.cpp): initializes the empty EM qualifier seeds with national teams, preventing club zero from entering the EM.
 - [src/game/season.hpp](../src/game/season.hpp): retains the enhanced academy player-generation strength bands with monthly youth budgets.
+- [src/game/stadium_blocks.cpp](../src/game/stadium_blocks.cpp): allow 144,000 standard places and size-aware construction times while retaining edition-owned unit prices.
 - [src/game/state.hpp](../src/game/state.hpp): retains designated set-piece selections in the supported manager-record extension.
 - [src/game/week.cpp](../src/game/week.cpp): widen products before annual-rate division so valid native account amounts do not overflow intermediate sums.
 - [src/game/week.cpp](../src/game/week.cpp): an unknown history receives a grace month; later losses occur at most once per source month.

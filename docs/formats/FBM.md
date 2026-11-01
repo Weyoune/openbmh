@@ -26,6 +26,33 @@ The supported layout contains a fixed ordered block table, followed by four name
 
 Each name pool has a u16 byte length followed by that many bytes, in club, player, referee and stadium order. These pools preserve renamed entities. The splitter rejects missing/truncated blocks or pools and requires exact stream consumption. See [STATE](STATE.md) for interpreted records and [M3D](M3D.md) for pool references.
 
+## Optional OpenBMH state
+
+After the four name pools, OpenBMH can append `OBMHEXT1`, a u16 block count,
+then each block as a u32 identifier, u32 byte length and payload. There is at
+most one such container and the decoder requires exact consumption of it.
+Original saves have no container. The entire extension is included in the outer
+rolling cipher and checksum.
+
+Known OpenBMH-owned sections include:
+
+| Identifier | Payload | Purpose |
+|---|---|---|
+| `OBLC` (`0x4f424c43`) | Versioned variable-length archive | [Long-career player counters and title winners](LONG_CAREER.md) |
+| `BRM1` (`0x314d5242`) | Four little-endian u32 month-start keys (16 bytes) | Per-manager monthly high-cash robbery guard |
+
+A robbery key is the absolute first day of the last blocked source-calendar
+month. `UINT32_MAX` means unknown. An unknown high-cash history receives a
+first qualifying grace month; later deductions can occur at most once per
+calendar month. Managers have independent keys. A truncated or duplicate BRM1
+section is rejected before game state is published.
+
+These identifiers describe OpenBMH-owned payloads, not original executable
+addresses. The container can also hold explicitly supported compatibility blocks,
+such as edition-specific cup state. Unrecognized payloads are not a general
+persistence API. Original programs and older OpenBMH writers may reject or
+discard optional information: keep a backup before opening a new save with them.
+
 ## Edition compatibility
 
 Original Football Limited V2.20 saves use a different state block list despite sharing the signature and rolling cipher. They are not interchangeable with the V2.24 layout. Reading an English installation and importing its original saves are separate features; do not edit a version string to bypass the distinction. OpenBMH's own English careers use the session's supported save representation.
