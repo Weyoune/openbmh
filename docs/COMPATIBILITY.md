@@ -27,7 +27,7 @@ normal completed-career handling remains separate.
 
 Loaded executable images retain their own rule tables. Career strength ranges are read from all nine pairs of the supplied original table.
 
-The six-budget monthly environment implementation has been checked against the provided CD and Diamond 3.6/3.7 program code. Its budget increments are read from that program's own table. Capability recognition uses verified code fingerprints, never directory names. Unrecognized environment implementations cannot be edited or simulated through a guessed model; they require separate compatibility verification. Older Diamond academy patches are not silently treated as the monthly model. The old floppy executable remains unsupported, and Football Limited remains experimental.
+The common engine uses the Diamond 3.7 six-budget monthly environment model for every supported source-data edition, including Diamond 3.6 and Football Limited. Original programme instruction fingerprints do not select another engine or block compatible data. The six numeric budget increments are read from the supplied table and installed together only when all are present and nonzero; malformed layouts remain rejected. Existing saved lump-sum academy contracts retain their established accounting until edited. English translation supplies the actual English geometry, steps and suffixes for this common model. The old floppy executable remains unsupported, and Football Limited remains experimental.
 
 Release acceptance of individual editions is recorded separately from their recognition. Source compatibility and automated tests do not establish full original-game or platform validation.
 

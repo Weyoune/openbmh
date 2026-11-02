@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "ui/contracts.hpp"
 #include "ui/source_notice_test_helpers.hpp"
+#include "ui/manager.hpp"
+#include "formats/executable_layout.hpp"
+#include "formats/textd.hpp"
 
 #include <stdexcept>
 
@@ -23,6 +26,20 @@ int main(int argc, char** argv) {
         state.club_name = "UNIT FOOTBALL CLUB";
         state.players.push_back({0, 150, "TORWART", 25, 0, 8, 180000});
         state.players.push_back({1, 151, "STÜRMER", 21, 3, 14, 90000});
+        {
+            auto language_state=state;language_state.mode_three=true;
+            ContractsScreen language(argv[1],language_state);const auto frame=language.render();
+            const auto data=std::filesystem::path(argv[1]);const auto exe=bmh::load_le(asset_path(data,"BMH.exe"));
+            const auto texts=bmh::load_textd(asset_path(data,"TEXTD.BLK"));SpriteFont source_font(data);
+            for(int tab=0;tab<4;++tab) {
+                const auto caption=original_to_utf8(texts[size_t(117+tab)]);const int width=tab==3?71:51;
+                const int x=tab*60+2+(tab==2?2:0),y=215+(tab==2?2:0);
+                bmh::Image expected(320,240,0xfd);
+                source_font.draw(expected,x+width/2-source_font.text_width(caption)/2,y+7,caption,exe.u8(bmh::layout::Advertising_Button_RuntimeField+(tab==2)));
+                size_t ink=0;for(size_t pixel=0;pixel<expected.pixels.size();++pixel)if(expected.pixels[pixel]!=0xfd){check(frame.pixels[pixel]==expected.pixels[pixel],"contract tab does not render its authoritative source-language caption");++ink;}
+                check(ink>10,"source-language contract tab oracle contains no glyphs");
+            }
+        }
         auto blocked_state = state;
         blocked_state.players[0].offer_blocked = true;
         ContractsScreen blocked(argv[1], blocked_state);

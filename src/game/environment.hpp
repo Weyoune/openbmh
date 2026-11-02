@@ -8,13 +8,13 @@
 #include "game/state.hpp"
 
 namespace bmh {
-// Verified original-program capability; unknown environment variants are not guessed.
+// Install validated numeric steps for the common Diamond 3.7 monthly model.
 void install_environment_rules(const LeImage&);
 bool environment_rules_supported();
 constexpr int kEnvironmentItems = 6;
 enum EnvironmentItem : int { kYouthYoungest = 0, kYouthAcademy = 1, kYouthOldest = 2,
                             kCoTrainer = 3, kDoctor = 4, kPhysio = 5 };
-// Monthly environment model verified in the supported CD and Diamond 3.6/3.7 programs.
+// Canonical monthly environment model; source editions supply compatible data.
 inline std::array<int32_t, kEnvironmentItems> kEnvironmentStep = {2000, 4000, 5000, 5000, 5000, 5000};
 struct EnvironmentState {
     std::array<int32_t, kEnvironmentItems> monthly{};

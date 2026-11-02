@@ -964,6 +964,7 @@ bmh_add_data_test(NAME league_views_data_tests COMMAND league_views_data_tests "
 # FLTD is translated by launch_check/the launcher first. Do not point these
 # tests at the raw DOS directory: the shared UI consumes the prepared image.
 set(BMH_ENGLISH_DATA "" CACHE PATH "Prepared Football Limited game-data directory")
+bmh_add_data_test(NAME english_environment_controller_tests DATA_DIR "${BMH_ENGLISH_DATA}" COMMAND app_controller_tests "${BMH_ENGLISH_DATA}" --environment-only)
 bmh_add_data_test(NAME english_edition_startup_app_tests DATA_DIR "${BMH_ENGLISH_DATA}" COMMAND edition_startup_app_tests "${BMH_ENGLISH_DATA}")
     bmh_add_data_test(NAME english_pairings_data_tests DATA_DIR "${BMH_ENGLISH_DATA}" COMMAND league_pairings_data_tests "${BMH_ENGLISH_DATA}")
     bmh_add_data_test(NAME english_desktop_data_tests DATA_DIR "${BMH_ENGLISH_DATA}" COMMAND desktop_data_tests "${BMH_ENGLISH_DATA}" --english)
@@ -1149,6 +1150,9 @@ foreach(dependency IN ITEMS SDL2 miniz lzma_sdk nfd)
 endforeach()
 file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/package-dependencies.json" CONTENT "${package_dependencies}\n")
 
+add_executable(environment_profile_tests tests/environment_profile_tests.cpp)
+target_link_libraries(environment_profile_tests PRIVATE bmhcore)
+add_test(NAME environment_profile_tests COMMAND environment_profile_tests)
 add_executable(classic_rules_unit_tests tests/classic_rules_unit_tests.cpp)
 target_link_libraries(classic_rules_unit_tests PRIVATE bmhcore)
 add_test(NAME classic_rules_unit_tests COMMAND classic_rules_unit_tests)

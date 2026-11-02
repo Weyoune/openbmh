@@ -33,18 +33,16 @@ uint32_t academy_paid(const GameState& g, int manager) {
 }
 }
 void install_environment_rules(const LeImage& exe) {
-    for (size_t i=0;i<kEnvironmentStep.size();++i) {
-        const uint32_t at=layout::EnvironmentBudgetSteps+uint32_t(i);
-        if (!exe.contains(at) || exe.u8(at)==0) { supported_environment=false; return; }
-        kEnvironmentStep[i]=int32_t(exe.u8(at))*1000;
+    // OpenBMH deviates from the original: the common Diamond 3.7 monthly
+    // environment model applies to every supported source-data edition.
+    // Numeric steps are data; an edition's original instructions are not run.
+    auto steps=kEnvironmentStep;
+    for(size_t i=0;i<steps.size();++i) {
+        const auto at=layout::EnvironmentBudgetSteps+uint32_t(i);
+        if(!exe.contains(at)||exe.u8(at)==0){supported_environment=false;return;}
+        steps[i]=int32_t(exe.u8(at))*1000;
     }
-    uint64_t fingerprint = 14695981039346656037ull;
-    for (const auto [first,last] : {std::pair{layout::EnvironmentVerifiedCodeBegin,layout::EnvironmentVerifiedCodeEnd},std::pair{layout::EnvironmentVerifiedHookBegin,layout::EnvironmentVerifiedHookEnd}}) {
-        if (!exe.contains(first) || !exe.contains(last-1)) { supported_environment=false; return; }
-        for (uint32_t at=first;at<last;++at) fingerprint=(fingerprint ^ exe.u8(at))*1099511628211ull;
-    }
-    // Fingerprints identify verified behaviour, not filenames, dates or artwork.
-    supported_environment = fingerprint==0xc2488a656f340e99ull || fingerprint==0x19adba7ef3eda507ull;
+    kEnvironmentStep=steps;supported_environment=true;
 }
 bool environment_rules_supported() { return supported_environment; }
 int32_t environment_monthly_cost(const GameState& g, int manager, int item) {
@@ -57,7 +55,7 @@ bool environment_academy_active(const GameState& g, int manager) {
     return value != 0 && (!legacy_academy(g, manager) || academy_paid(g, manager) >= value);
 }
 EnvironmentState environment_state(const GameState& g, int manager) {
-    if (!supported_environment) throw FormatError("environment: this original program variant is not verified");
+    if (!supported_environment) throw FormatError("environment: monthly budget steps are missing or invalid");
     validate_manager(g, manager);
     EnvironmentState result;
     for (int i = 0; i < kEnvironmentItems; ++i) {

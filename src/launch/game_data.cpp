@@ -379,7 +379,7 @@ ResolvedGame resolve_game(const fs::path& input, const fs::path& cache) {
             const fs::path marker = prepared / ".openbmh-english";
             // the version of the translation (launch/fltd.cpp, fltd_map.inc): a cache built
             // by another version is built again
-            constexpr const char* kTranslation = "english translation 16";  // 16: overwrite question pointer (15: original pitch affinity tables and pointer bitmap)
+            constexpr const char* kTranslation = "english translation 17";  // 17: English monthly environment tables (16: overwrite question)
             std::string built;
             {
                 std::ifstream in(marker);

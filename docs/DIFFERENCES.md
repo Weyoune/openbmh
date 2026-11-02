@@ -13,6 +13,7 @@ describe deliberate changes; they are not a list of every known compatibility li
 - [src/game/desk_actions.cpp](../src/game/desk_actions.cpp): uses the supported transfer-fee arithmetic and designated set-piece fields.
 - [src/game/desk_actions.hpp](../src/game/desk_actions.hpp): supports designated set-piece records and the supported transfer-editor rules.
 - [src/game/desk_actions.hpp](../src/game/desk_actions.hpp): a seller may accept an existing bid before expiry.
+- [src/game/environment.cpp](../src/game/environment.cpp): the common Diamond 3.7 monthly environment model applies to every supported source-data edition.
 - [src/game/highscore.cpp](../src/game/highscore.cpp): reads the supported edition-specific high-score format from the loaded image.
 - [src/game/lineup.hpp](../src/game/lineup.hpp): supports owner-bound designated set-piece selection.
 - [src/game/match.hpp](../src/game/match.hpp): uses the enhanced injury selection and suspension rules.

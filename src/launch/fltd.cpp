@@ -3,6 +3,7 @@
 #include "launch/fltd.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstring>
 #include <fstream>
 #include <stdexcept>
@@ -129,6 +130,12 @@ LeImage translate_fltd(const fs::path& fltd_exe) {
     for (uint32_t i = 0; i < 11 * 11; ++i)
         put(::bmh::layout::OriginalPointerPixels + i,
             en(::bmh::layout::EnglishOriginalPointerPixels + i));
+    // Copy the actual English six-budget geometry, numeric steps and suffixes
+    // for the common monthly environment model.
+    for(const auto [to,from,count]:{std::array<uint32_t,3>{layout::Environment_FormatError_RuntimeField,0x6d230,6},
+        {layout::Environment_FormatError_RuntimeField2,0x6d238,6},{layout::EnvironmentYouthColors,0x6d240,3},
+        {layout::EnvironmentBudgetSteps,0x6d244,6},{layout::EnvironmentYouthPositionSuffix,0x6d24a,5},
+        {layout::EnvironmentCostSuffix,0x6d24f,2}})for(uint32_t i=0;i<count;++i)put(to+i,en(from+i));
     LeImage out = LeImage::from_bytes(kDeBase, std::move(image));
     return out;
 }

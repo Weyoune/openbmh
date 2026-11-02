@@ -157,6 +157,8 @@ EnvironmentScreen::EnvironmentScreen(const std::filesystem::path& data, Environm
         background_.height != 240 || tiles_.width != 306 || tiles_.height != 111 ||
         panel_.width <= 0 || texts_.strings.size() != TEXT_COUNT)
         throw FormatError("environment: unsupported owner or Original assets");
+    for(int item=0;item<kEnvironmentItems;++item){const int x=exe_.u8(layout::Environment_FormatError_RuntimeField+item),y=exe_.u8(layout::Environment_FormatError_RuntimeField2+item);
+        if(x<9||x+0x36>=320||y<10||y+0x31+(item<3?6:0)>=240)throw FormatError("environment: tile geometry outside Original screen");}
 }
 
 void EnvironmentScreen::text(Image& out, int x, int baseline, std::string_view value,

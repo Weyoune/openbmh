@@ -396,7 +396,7 @@ Image ContractsScreen::render() const {
     }
     const auto selected = std::find_if(state_.players.begin(), state_.players.end(),
         [&](const auto& p) { return p.row == state_.selected_row; });
-    static constexpr std::array<std::string_view, 4> tabs{"DATEN-A", "DATEN-B", "GEHALT", "TEAM-PRÄMIEN"};
+    const std::array<std::string,4> tabs{original_to_utf8(texts_[117]),original_to_utf8(texts_[118]),original_to_utf8(texts_[119]),original_to_utf8(texts_[120])};
     for (int i = 0; i < (state_.mode_three?4:3); ++i) {
         const int x = i * 60 + 2, w = i == 3 ? 71 : 51;
         if(i!=tab_) {fill(out,x+2,225,w,2,0x40);fill(out,x+w,217,2,10,0x40);}
