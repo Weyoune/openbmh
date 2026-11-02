@@ -2670,9 +2670,14 @@ void check_desk_widgets_for_frame(const std::filesystem::path& data, bool framed
         const auto before_records = game.manager_records;
         const auto before_options = game.manager_options;
         const auto before_revision = revision;
+        const auto before_native = save_stream(game);
+        const auto before_game = session->game(); const auto before_rand = session->rand();
         check(!session->dispatch_desk_widget(request, revision, error) &&
               game.manager_records == before_records && game.manager_options == before_options &&
-              revision == before_revision, "invalid desk widget rejects before all state mutation");
+              save_stream(game) == before_native && revision == before_revision &&
+              session->game().seed() == before_game.seed() && session->game().calls() == before_game.calls() &&
+              session->rand().seed() == before_rand.seed() && session->rand().calls() == before_rand.calls(),
+              "invalid desk widget rejects before native, revision or RNG mutation");
     };
     DeskRequest request{DeskRequestKind::change_option, 0, 2, 64, 1, revision};
     for (int variant = 0; variant < 7; ++variant) {
@@ -2690,8 +2695,17 @@ void check_desk_widgets_for_frame(const std::filesystem::path& data, bool framed
     game.memory.set16(::bmh::layout::Desktops + 2 * 16, 20 | 0x1000);
     unchanged(request);
     game.memory.set16(::bmh::layout::Desktops + 2 * 16, 20);
-    game.manager_options[0] = 9;
-    request.value = 0; unchanged(request);
+    for(uint8_t invalid_formation : {uint8_t(9),uint8_t(255)}) {
+        game.manager_options[0] = invalid_formation;
+        for(int index : {0,1}) {
+            request.value = index; unchanged(request);
+            check(error == "invalid_saved_formation_automation",
+                  "malformed formation returns an explicit refusal before desktop projection");
+        }
+        unchanged(DeskRequest{DeskRequestKind::change_ticket_price,0,1,55,10,revision});
+        check(error == "invalid_saved_formation_automation",
+              "admission dispatch also refuses an unprojectable saved formation atomically");
+    }
     game.manager_options[0] = 0;
     // National coaches keep lineup/attitude/marking automation, while admission
     // and training controls are unavailable in legacy routine/legacy routine.

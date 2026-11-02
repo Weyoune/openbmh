@@ -5626,6 +5626,11 @@ bool CareerSession::dispatch_desk_widget(const ui::DeskRequest& request, uint64_
             identity.stable_club_identity = int(g_.club_ids[size_t(identity.runtime_club)]);
     }
     if (!validate_desk_setting_owner(identity, revision, error, false)) return false;
+    // Refuse malformed saved formation state before projecting widget ownership.
+    // The desktop renderer cannot project indices outside the stored 0..8 range.
+    if (g_.manager_options[size_t(active) * 5] > 8) {
+        error = "invalid_saved_formation_automation"; return false;
+    }
     const bool price = request.kind == ui::DeskRequestKind::change_ticket_price;
     if (!price && request.kind != ui::DeskRequestKind::change_option) {
         error = "unsupported_desk_widget"; return false;
