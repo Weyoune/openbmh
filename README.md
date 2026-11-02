@@ -1,6 +1,6 @@
 # OpenBMH
 
-**Classic-Version: 1.0.4.** Die originalgetreue Linie bleibt in diesem Repository.
+**Classic-Version: 1.0.5.** Die originalgetreue Linie bleibt in diesem Repository.
 Erweiterte Ligen, die gemeinsame deutsche/englische Karriere und der Dateneditor
 werden separat als **[OpenBMH-Extended 1.0 Beta](https://github.com/Weyoune/OpenBMH-extended)** entwickelt.
 
@@ -28,7 +28,7 @@ From a terminal in the extracted package on Linux or macOS:
 
 In Windows PowerShell, use `.\OpenBMH.exe` and `.\openbmh_cli.exe` instead.
 
-Use a writable save directory and keep backups of existing games. German editions are the primary compatibility target. **Football Limited / English data support is experimental**; original V2.20 save import and some edition-specific behaviour remain limited. See the [release notes](docs/release/1.0.4/RELEASE_NOTES.md).
+Use a writable save directory and keep backups of existing games. German editions are the primary compatibility target. **Football Limited / English data support is experimental**; original V2.20 save import and some edition-specific behaviour remain limited. See the [release notes](docs/release/1.0.5/RELEASE_NOTES.md).
 
 ## Features and direction
 
