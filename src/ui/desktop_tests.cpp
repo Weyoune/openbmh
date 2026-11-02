@@ -780,6 +780,31 @@ int main(int argc, char** argv) {
               child_return.layout_after[3*16+6]==49,
               "RMB drag from the rendered 32×25 folder tile returns it to the visible chain");
         check(folder_drag.take_sound_ids().empty(),"folder-child release cannot replay its down-event append");
+        // Unframed folders render the same tiles four pixels nearer the origin.
+        auto unframed_child_desk=child_desk;
+        unframed_child_desk.layout_snap=true;
+        unframed_child_desk.items.back().open=false;
+        unframed_child_desk.items.back().width=50;
+        unframed_child_desk.items.back().height=41;
+        unframed_child_desk.layout_records[49][13]=0;
+        unframed_child_desk.layout_records[13]=unframed_child_desk.layout_records[3];
+        unframed_child_desk.layout_records[13][12]=12;
+        unframed_child_desk.folder_icon_slots[0]={13};
+        DesktopScreen unframed_child(data,unframed_child_desk);
+        check(unframed_child.pointer_down(46,45).kind==DeskRequestKind::none &&
+              unframed_child.pointer_up(46,45).kind==DeskRequestKind::advance_turn,
+              "LMB on an unframed folder tile activates its native kickoff action");
+        DesktopScreen unframed_drag(data,unframed_child_desk);
+        unframed_drag.pointer_down(46,45,true);
+        check(unframed_drag.take_sound_ids()==std::vector<uint8_t>({15,12,15}),
+              "unframed child starts extraction rather than dragging the folder body");
+        unframed_drag.pointer_move(176,100);
+        const auto unframed_return=unframed_drag.pointer_up(176,100,true);
+        check(unframed_return.item_id==13 && unframed_return.menu_kind==12 &&
+              unframed_return.layout_operation==DeskLayoutOperation::return_folder_child &&
+              unframed_return.layout_after[13*16]==175 && unframed_return.layout_after[13*16+2]==95 &&
+              unframed_return.layout_after[49*16+5]==13,
+              "RMB extraction uses the rendered unframed tile origin and returns the kickoff icon");
         DesktopScreen folder_drop(data,child_desk);
         folder_drop.pointer_down(50,49,true); folder_drop.take_sound_ids();
         folder_drop.pointer_move(55,52);
@@ -1119,6 +1144,21 @@ int main(int argc, char** argv) {
         check(desk.click(20,40).kind == DeskRequestKind::none,"no duplicate advance request");
         ++d.revision; desk.acknowledge(d);
         check(desk.click(165,125).kind == DeskRequestKind::advance_turn,"kickoff icon advances");
+        auto unframed_date=d;
+        unframed_date.items.front().open=false;
+        unframed_date.layout_records[1][13]&=0x7f;
+        DesktopScreen date_click(data,unframed_date);
+        check(date_click.pointer_down(20,40).kind==DeskRequestKind::none,
+              "date press waits for its release without entering layout drag");
+        const auto date_turn=date_click.pointer_up(20,40);
+        check(date_turn.kind==DeskRequestKind::advance_turn && date_turn.menu_kind==58 &&
+              date_turn.manager_slot==d.manager_slot && date_turn.revision==d.revision &&
+              date_click.pointer_up(20,40).kind==DeskRequestKind::none,
+              "unframed date body emits exactly one authenticated advance action");
+        DesktopScreen date_drag(data,unframed_date);
+        date_drag.pointer_down(20,40,true); date_drag.pointer_move(40,60);
+        check(date_drag.pointer_up(40,60,true).layout_operation==DeskLayoutOperation::move_item,
+              "unframed date retains right-button movement");
         check(desk.render().pixels == pixels,"commands cannot mutate the saved game view");
         desk.reject_action("unsupported_menu");
         check(!desk.pending() && desk.render().pixels == pixels,"rejected command preserves state");

@@ -309,8 +309,12 @@ std::optional<DeskItem> DesktopScreen::folder_child_at(int x,int y) const {
         const int inset = folder.kind >= 50 && !folder.open ? 8 : 0;
         if (x < folder.x || y < folder.y || x >= folder.x + folder.width - inset ||
             y >= folder.y + folder.height - inset) continue;
-        if(folder.disabled||folder.kind<50||folder.kind>52||!folder.open) return std::nullopt;
-        const int folder_id=folder.kind-50,left=folder.x+9,top=folder.y+8,right=folder.x+folder.width-4,bottom=folder.y+folder.height-4;
+        if(folder.disabled||folder.kind<50||folder.kind>52) return std::nullopt;
+        // The open bit adds a frame; unframed folders still draw usable tiles.
+        // Match DeskDrawerRenderer's content origin and wrapping bounds.
+        const int frame = folder.open ? 4 : 0;
+        const int folder_id=folder.kind-50,left=folder.x+frame+5,top=folder.y+frame+4;
+        const int right=folder.x+frame+folder.width-4,bottom=folder.y+frame+folder.height-4;
         int child_x=left,child_y=top;
         for(uint8_t id:state_.folder_icon_slots[size_t(folder_id)]) {
             if(child_x+32>right) child_x=left,child_y+=27;
@@ -653,7 +657,8 @@ DeskRequest DesktopScreen::click(int x, int y, bool right) {
         // The corner closes through the same transaction as the quickbar.
         if (item.open && state_.drawer_handles && x <= item.x + 3 && y <= item.y + 3)
             return close_drawer(item);
-        if (item.kind == 58 && item.open) return request(DeskRequestKind::advance_turn, item);
+        // The date remains an advance control with or without its optional frame.
+        if (item.kind == 58) return request(DeskRequestKind::advance_turn, item);
         if (item.kind == 55 && item.open && !state_.national_team && x - item.x - 4 > 34 && x - item.x - 4 < 87)
             return request(DeskRequestKind::change_ticket_price, item, (x - item.x - 4 - 35) / 3 + 8);
         if (item.kind == 64 && item.open) return request(DeskRequestKind::change_option, item, std::clamp((x - item.x - 4) / 33, 0, 4));

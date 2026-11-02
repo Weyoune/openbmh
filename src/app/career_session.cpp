@@ -5744,19 +5744,20 @@ bool CareerSession::dispatch_desktop_layout(const ui::DeskRequest& request, uint
            (expected[at+13]&0x7f)!=folder||expected[at+12]>=50) {
             error="invalid_desk_folder_child_return"; return false;
         }
-        bool owner_open=false;
+        bool owner_visible=false;
         for(size_t item=1;item<kItems;++item) {
-            if(expected[item*kStride+12]!=50+folder||(expected[item*kStride+13]&0x80)==0) continue;
+            // The frame bit does not hide folder contents; require a visible linked owner.
+            if(expected[item*kStride+12]!=50+folder||(expected[item*kStride+1]&0x10)!=0) continue;
             int cursor=0;size_t visited=0;
             while(++visited<kItems) {
                 const int next=expected[size_t(cursor)*kStride+5];
-                if(next==int(item)) { owner_open=true;break; }
+                if(next==int(item)) { owner_visible=true;break; }
                 if(next<=0||next>=int(kItems)) break;
                 cursor=next;
             }
-            if(owner_open) break;
+            if(owner_visible) break;
         }
-        if(!owner_open) { error="desk_folder_child_owner_closed"; return false; }
+        if(!owner_visible) { error="desk_folder_child_owner_hidden"; return false; }
         const int max_x=std::max(1,319-int(expected[at+3])),max_y=std::max(1,239-int(expected[at+4]));
         const int source_x=int(moved_x&0xefff);
         const bool snap=g_.memory.has(::bmh::layout::CareerSession_DispatchDesktopLayout_RuntimeField2)&&g_.memory.u8(::bmh::layout::CareerSession_DispatchDesktopLayout_RuntimeField2)==0;
@@ -5797,19 +5798,20 @@ bool CareerSession::dispatch_desktop_layout(const ui::DeskRequest& request, uint
            (expected[at+13]&0x7f)!=folder||expected[at+12]>=50) {
             error="invalid_desk_bin_restore";return false;
         }
-        bool owner_open=false;
+        bool owner_visible=false;
         for(size_t item=1;item<kItems;++item) {
-            if(expected[item*kStride+12]!=50+folder||(expected[item*kStride+13]&0x80)==0) continue;
+            // The frame bit does not hide folder contents; require a visible linked owner.
+            if(expected[item*kStride+12]!=50+folder||(expected[item*kStride+1]&0x10)!=0) continue;
             int cursor=0;size_t visited=0;
             while(++visited<kItems) {
                 const int next=expected[size_t(cursor)*kStride+5];
-                if(next==int(item)) { owner_open=true;break; }
+                if(next==int(item)) { owner_visible=true;break; }
                 if(next<=0||next>=int(kItems)) break;
                 cursor=next;
             }
-            if(owner_open)break;
+            if(owner_visible)break;
         }
-        if(!owner_open) { error="desk_bin_restore_folder_closed";return false; }
+        if(!owner_visible) { error="desk_bin_restore_folder_hidden";return false; }
         int tail=0;size_t guard=0;
         while(expected[size_t(tail)*kStride+5]!=0) {
             if(++guard>=kItems) { error="invalid_desk_layout_chain";return false; }

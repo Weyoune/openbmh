@@ -6816,6 +6816,64 @@ void check_stadium_investment_controller(const std::filesystem::path& data) {
     std::filesystem::remove_all(saves);
 }
 
+void check_date_widget_controller(const std::filesystem::path& data) {
+    for(bool framed : {true,false}) {
+        StartupFlow flow(data);
+        flow.click(150,215); flow.click(5,225,true); flow.click(5,225,true);
+        flow.click(90,169);
+        check(flow.pending_career()!=nullptr,"date fixture requests a new career");
+        std::unique_ptr<app::CareerSession> session=std::make_unique<app::CareerSession>(data,0x44415445);
+        std::string error;
+        const auto request=*flow.pending_career();
+        for(const auto& manager : request.managers)
+            check(session->confirm_manager(request.options,manager,error),"date fixture confirms its manager");
+        CareerInitializationResult initialized;
+        check(session->finish(initialized,error),"date fixture reaches an actual turn-driver desk");
+        uint64_t revision=initialized.desktop.revision;
+        const auto date=std::find_if(initialized.desktop.items.begin(),initialized.desktop.items.end(),
+            [](const DeskItem& item){return item.kind==58;});
+        check(date!=initialized.desktop.items.end(),"date fixture exposes the desktop date widget");
+        const auto at=layout::DesktopsUnsigned+uint32_t(initialized.desktop.manager_slot)*0x360u+uint32_t(date->id)*16u+13u;
+        auto& memory=session->state().memory;
+        memory.set8(at,uint8_t((memory.u8(at)&0x7f)|(framed?0x80:0)));
+        const int x=date->x+20,y=date->y+20;
+        initialized.desktop=session->desktop_projection(revision);
+        initialized.preparation=session->preparation_projection(revision);
+        auto preparation=initialized.preparation;
+        flow.attach_initialized_career(std::move(initialized));
+        flow.attach_preparation_context(std::move(preparation));
+        check(flow.pointer_down(x,y).request==FlowRequest::none,"date press waits for its release");
+        const auto advance=flow.click(x,y);
+        check(advance.request==FlowRequest::kickoff && advance.desk_action.menu_kind==58,
+              "framed and unframed date releases route through the shared kickoff action");
+        openbmh::audio::Playback playback;
+        std::optional<uint64_t> audio_session;
+        const auto serve=[&](const FlowResult& action) {
+            const auto failure=app::serve_flow_request(flow,action,session,data,data,0x44415445,
+                revision,playback,audio_session,false);
+            if(!failure.empty()) throw std::runtime_error("date widget dispatch failed: "+failure);
+        };
+        const auto before=save_stream(session->state());
+        const auto before_revision=revision;
+        const auto before_game=session->game(); const auto before_rand=session->rand();
+        auto stale=advance; ++stale.desk_action.revision;
+        serve(stale);
+        check(save_stream(session->state())==before && revision==before_revision &&
+              session->game().seed()==before_game.seed() && session->game().calls()==before_game.calls() &&
+              session->rand().seed()==before_rand.seed() && session->rand().calls()==before_rand.calls(),
+              "stale date request leaves the pending owner, native state and both RNG streams unchanged");
+        const auto before_date=session->state().date;
+        serve(advance);
+        check(session->state().date>before_date && revision>before_revision &&
+              flow.screen_name()=="desktop" && !flow.desktop()->pending(),
+              "date widget completes a real calendar event and acknowledges the next desk");
+        const auto after=save_stream(session->state()); const auto after_revision=revision;
+        serve(advance);
+        check(save_stream(session->state())==after && revision==after_revision,
+              "consumed date action cannot advance the calendar twice");
+    }
+}
+
 void check_menu_layout_session_io(const std::filesystem::path& data) {
     StartupFlow flow(data);
     flow.click(150, 215); flow.click(5, 225, true); flow.click(5, 225, true);
@@ -6942,64 +7000,82 @@ void check_menu_layout_session_io(const std::filesystem::path& data) {
           session->rand().seed()==move_rand.seed()&&session->rand().calls()==move_rand.calls(),
           "desktop layout movement preserves both RNG streams");
 
-    // Exercise the newly source-backed folder-child return and bin-mode
+    // Exercise framed and unframed folder-child return and bin-mode
     // transfer through the authenticated CareerSession boundary, not only the
     // DesktopScreen request projection.
     constexpr uint32_t native_layout=::bmh::layout::Desktops;
     const uint32_t native_base=native_layout+uint32_t(manager)*0x360u;
-    for(size_t i=0;i<bytes_count;++i)game.memory.set8(native_base+uint32_t(i),0xff);
-    auto put=[&](size_t item,size_t offset,uint8_t value){game.memory.set8(native_base+uint32_t(item*16+offset),value);};
-    put(0,5,49);put(0,6,0);
-    put(49,0,40);put(49,1,0);put(49,2,40);put(49,3,100);put(49,4,65);
-    put(49,5,0);put(49,6,0);put(49,12,50);put(49,13,0x80);
-    put(3,0,0);put(3,1,0);put(3,2,0);put(3,3,32);put(3,4,25);
-    put(3,5,0xff);put(3,6,0xff);put(3,12,2);put(3,13,0);
-    auto folder_desk=session->desktop_projection(revision);
-    DesktopScreen child_return_screen(data,folder_desk);
-    child_return_screen.pointer_down(50,49,true);
-    child_return_screen.pointer_move(175,100);
-    const auto return_request=child_return_screen.pointer_up(175,100,true);
-    const auto before_return_rng=session->game();const auto before_return_rand=session->rand();
-    check(return_request.layout_operation==ui::DeskLayoutOperation::return_folder_child&&
-          session->dispatch_desktop_layout(return_request,revision,error)&&error.empty()&&
-          game.memory.u8(native_base+3*16+5)==0&&game.memory.u8(native_base+3*16+6)==49&&
-          game.memory.u8(native_base+49*16+5)==3,
-          "authenticated folder child return appends to the visible chain");
-    check(session->game().seed()==before_return_rng.seed()&&session->game().calls()==before_return_rng.calls()&&
-          session->rand().seed()==before_return_rand.seed()&&session->rand().calls()==before_return_rand.calls(),
-          "folder child return consumes no RNG");
-    const auto returned_desk=session->desktop_projection(revision);
-    const auto returned_child=std::find_if(returned_desk.items.begin(),returned_desk.items.end(),
-        [](const ui::DeskItem& item){return item.id==3;});
-    check(returned_child!=returned_desk.items.end(),"returned child is projected as a desk item");
-    const auto saved_child_x=game.memory.u16(native_base+3*16);
-    const auto saved_child_y=game.memory.u8(native_base+3*16+2);
-    auto bin_desk=returned_desk;bin_desk.shortcut_bar_always=true;
-    DesktopScreen bin_screen(data,bin_desk);
-    bin_screen.click(2,215); // Source local_50 bin mode toggle.
-    const auto bin_request=bin_screen.click(returned_child->x+1,returned_child->y+1,true);
-    const auto before_bin_rng=session->game();const auto before_bin_rand=session->rand();
-    check(bin_request.layout_operation==ui::DeskLayoutOperation::send_to_folder&&
-          session->dispatch_desktop_layout(bin_request,revision,error)&&error.empty()&&
-          game.memory.u8(native_base+3*16+5)==0xff&&game.memory.u8(native_base+3*16+6)==0xff&&
-          game.memory.u8(native_base+3*16+13)==0,
-          "bin mode moves the item into its original associated folder without clearing its coordinates");
-    check(session->game().seed()==before_bin_rng.seed()&&session->game().calls()==before_bin_rng.calls()&&
-          session->rand().seed()==before_bin_rand.seed()&&session->rand().calls()==before_bin_rand.calls(),
-          "folder bin transfer consumes no RNG");
-    auto binned_desk=session->desktop_projection(revision);binned_desk.shortcut_bar_always=true;
-    DesktopScreen restore_screen(data,binned_desk);
-    restore_screen.click(2,215);
-    const int folder_x=std::find_if(binned_desk.items.begin(),binned_desk.items.end(),
-        [](const ui::DeskItem& item){return item.id==49;})->x;
-    const int folder_y=std::find_if(binned_desk.items.begin(),binned_desk.items.end(),
-        [](const ui::DeskItem& item){return item.id==49;})->y;
-    const auto restore_request=restore_screen.click(folder_x+10,folder_y+9,true);
-    check(restore_request.layout_operation==ui::DeskLayoutOperation::restore_folder_child&&
-          session->dispatch_desktop_layout(restore_request,revision,error)&&error.empty()&&
-          game.memory.u8(native_base+3*16+5)==0&&game.memory.u8(native_base+49*16+5)==3&&
-          game.memory.u16(native_base+3*16)==saved_child_x&&game.memory.u8(native_base+3*16+2)==saved_child_y,
-          "right-clicking a folder child in bin mode restores its saved original position");
+    for(int child_id : {3,13}) for(bool framed : {true,false}) {
+        for(size_t i=0;i<bytes_count;++i)game.memory.set8(native_base+uint32_t(i),0xff);
+        auto put=[&](size_t item,size_t offset,uint8_t value){game.memory.set8(native_base+uint32_t(item*16+offset),value);};
+        put(0,5,49);put(0,6,0);
+        put(49,0,40);put(49,1,0);put(49,2,40);put(49,3,100);put(49,4,65);
+        put(49,5,0);put(49,6,0);put(49,12,50);put(49,13,framed?0x80:0);
+        put(size_t(child_id),0,0);put(size_t(child_id),1,0);put(size_t(child_id),2,0);put(size_t(child_id),3,32);put(size_t(child_id),4,25);
+        put(size_t(child_id),5,0xff);put(size_t(child_id),6,0xff);put(size_t(child_id),12,uint8_t(child_id-1));put(size_t(child_id),13,0);
+        auto folder_desk=session->desktop_projection(revision);
+        DesktopScreen child_return_screen(data,folder_desk);
+        child_return_screen.pointer_down(50,49,true);
+        child_return_screen.pointer_move(175,100);
+        const auto return_request=child_return_screen.pointer_up(175,100,true);
+        const auto before_return_rng=session->game();const auto before_return_rand=session->rand();
+        const auto return_revision=revision;
+        const auto before_return=capture_slot();
+        auto stale_return=return_request; ++stale_return.revision;
+        check(!session->dispatch_desktop_layout(stale_return,revision,error) &&
+              revision==return_revision && capture_slot()==before_return,
+              "folder extraction rejects a stale revision atomically");
+        // A linked folder with the native hidden flag owns no visible child input.
+        put(49,1,0x10);
+        auto hidden_return=return_request;
+        hidden_return.layout_before[49*16+1]=hidden_return.layout_after[49*16+1]=0x10;
+        const auto hidden_before=capture_slot();
+        check(!session->dispatch_desktop_layout(hidden_return,revision,error) &&
+              revision==return_revision && capture_slot()==hidden_before,
+              "folder extraction rejects a hidden owner without modifying its chain");
+        put(49,1,0);
+        check(return_request.layout_operation==ui::DeskLayoutOperation::return_folder_child&&
+              session->dispatch_desktop_layout(return_request,revision,error)&&error.empty()&&
+              game.memory.u8(native_base+uint32_t(child_id)*16+5)==0&&game.memory.u8(native_base+uint32_t(child_id)*16+6)==49&&
+              game.memory.u8(native_base+49*16+5)==child_id,
+              "authenticated folder child return appends to the visible chain");
+        check(session->game().seed()==before_return_rng.seed()&&session->game().calls()==before_return_rng.calls()&&
+              session->rand().seed()==before_return_rand.seed()&&session->rand().calls()==before_return_rand.calls(),
+              "folder child return consumes no RNG");
+        const auto returned_desk=session->desktop_projection(revision);
+        const auto returned_child=std::find_if(returned_desk.items.begin(),returned_desk.items.end(),
+            [&](const ui::DeskItem& item){return item.id==child_id;});
+        check(returned_child!=returned_desk.items.end(),"returned child is projected as a desk item");
+        if(child_id==13) continue; // Source excludes the kickoff icon from bin-mode removal.
+        const auto saved_child_x=game.memory.u16(native_base+uint32_t(child_id)*16);
+        const auto saved_child_y=game.memory.u8(native_base+uint32_t(child_id)*16+2);
+        auto bin_desk=returned_desk;bin_desk.shortcut_bar_always=true;
+        DesktopScreen bin_screen(data,bin_desk);
+        bin_screen.click(2,215); // Source local_50 bin mode toggle.
+        const auto bin_request=bin_screen.click(returned_child->x+1,returned_child->y+1,true);
+        const auto before_bin_rng=session->game();const auto before_bin_rand=session->rand();
+        check(bin_request.layout_operation==ui::DeskLayoutOperation::send_to_folder&&
+              session->dispatch_desktop_layout(bin_request,revision,error)&&error.empty()&&
+              game.memory.u8(native_base+uint32_t(child_id)*16+5)==0xff&&game.memory.u8(native_base+uint32_t(child_id)*16+6)==0xff&&
+              game.memory.u8(native_base+uint32_t(child_id)*16+13)==0,
+              "bin mode moves the item into its original associated folder without clearing its coordinates");
+        check(session->game().seed()==before_bin_rng.seed()&&session->game().calls()==before_bin_rng.calls()&&
+              session->rand().seed()==before_bin_rand.seed()&&session->rand().calls()==before_bin_rand.calls(),
+              "folder bin transfer consumes no RNG");
+        auto binned_desk=session->desktop_projection(revision);binned_desk.shortcut_bar_always=true;
+        DesktopScreen restore_screen(data,binned_desk);
+        restore_screen.click(2,215);
+        const int folder_x=std::find_if(binned_desk.items.begin(),binned_desk.items.end(),
+            [](const ui::DeskItem& item){return item.id==49;})->x;
+        const int folder_y=std::find_if(binned_desk.items.begin(),binned_desk.items.end(),
+            [](const ui::DeskItem& item){return item.id==49;})->y;
+        const auto restore_request=restore_screen.click(folder_x+10,folder_y+9,true);
+        check(restore_request.layout_operation==ui::DeskLayoutOperation::restore_folder_child&&
+              session->dispatch_desktop_layout(restore_request,revision,error)&&error.empty()&&
+              game.memory.u8(native_base+uint32_t(child_id)*16+5)==0&&game.memory.u8(native_base+49*16+5)==3&&
+              game.memory.u16(native_base+uint32_t(child_id)*16)==saved_child_x&&game.memory.u8(native_base+uint32_t(child_id)*16+2)==saved_child_y,
+              "right-clicking a folder child in bin mode restores its saved original position");
+    }
 }
 
 int main(int argc, char** argv) {
@@ -7035,6 +7111,7 @@ int main(int argc, char** argv) {
         check_readonly_views(data);
         check_desk_records_controller(data);
         check_menu_layout_session_io(data);
+        check_date_widget_controller(data);
         check_calendar_readonly_controller(data);
         check_indoor_standings_controller(data);
         check_strengths_semantic_and_controller(data);
