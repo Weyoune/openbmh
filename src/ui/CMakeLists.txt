@@ -94,6 +94,7 @@ set(BMH_UI_REFERENCE_SAVE "" CACHE FILEPATH "Optional original LABA0012 desktop 
 add_executable(ui_desktop_tests desktop_tests.cpp)
 target_link_libraries(ui_desktop_tests PRIVATE bmhui)
 set(BMH_TEST_UI_DESKTOP_TESTS_INPUT_1 "" CACHE PATH "External input 1 for ui_desktop_tests; not distributed")
+bmh_add_data_test(NAME ui_desktop_input_tests COMMAND ui_desktop_tests "${BMH_DATA}" --input-only)
 bmh_add_data_test(NAME ui_desktop_tests REQUIRED_OPTIONS BMH_TEST_UI_DESKTOP_TESTS_INPUT_1 COMMAND ui_desktop_tests "${BMH_DATA}" "${BMH_UI_REFERENCE_SAVE}"
     "${BMH_TEST_UI_DESKTOP_TESTS_INPUT_1}")
 set(BMH_UI_PREPARATION_SAVE "" CACHE FILEPATH "Optional original LABA0020 reference after observed menu entry effects; never bundled")

@@ -514,6 +514,8 @@ if(MSVC)
 endif()
 bmh_add_data_test(NAME app_controller_tests COMMAND app_controller_tests "${BMH_DATA}")
 set(BMH_TEST_APP_DELAY_SETTINGS_TESTS_INPUT_1 "" CACHE PATH "External input 1 for app_delay_settings_tests; not distributed")
+bmh_add_data_test(NAME app_desktop_input_tests COMMAND app_controller_tests "${BMH_DATA}" --desktop-input-only)
+bmh_add_data_test(NAME app_advertising_input_tests COMMAND app_controller_tests "${BMH_DATA}" --advertising-input-only)
 bmh_add_data_test(NAME app_environment_tests COMMAND app_controller_tests "${BMH_DATA}" --environment-only)
 bmh_add_data_test(NAME app_delay_settings_tests REQUIRED_OPTIONS BMH_TEST_APP_DELAY_SETTINGS_TESTS_INPUT_1 COMMAND app_controller_tests "${BMH_DATA}"
     --delay-settings-only "${BMH_TEST_APP_DELAY_SETTINGS_TESTS_INPUT_1}")
