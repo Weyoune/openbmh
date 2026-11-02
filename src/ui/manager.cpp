@@ -2,6 +2,7 @@
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/manager.hpp"
+#include "formats/league_visibility.hpp"
 
 #include <algorithm>
 #include <iomanip>
@@ -151,6 +152,7 @@ ManagerScreen::ManagerScreen(const std::filesystem::path& data, int slot, const 
         if (exe_.u8(::bmh::layout::Manager_FormatError_RuntimeField + i * 2) < 'B') ++text_id;
         if (last_[i] - first_[i] >= 20) throw FormatError("manager: league exceeds picker grid");
     }
+    for(int i=player_league_count(exe_);i<5;++i){last_[i]=first_[i]-1;leagues_[i].clear();}
     first_[5] = exe_.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField); last_[5] = first_[5] + 19;
     first_[6] = first_[5] + 20; last_[6] = first_[5] + exe_.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6) - 1;
     leagues_[5] = texts_[(::bmh::layout::Manager_FormatError_TextPointer - ::bmh::layout::TextPointerTable) / 4]; leagues_[6] = leagues_[5];
@@ -159,6 +161,8 @@ ManagerScreen::ManagerScreen(const std::filesystem::path& data, int slot, const 
     if (last_[6] >= int(context_.club_order.size()) || last_[6] - first_[6] >= 20)
         throw FormatError("manager: unsupported extra-team table");
 }
+
+int ManagerScreen::visible_league_count() const {return player_league_count(exe_);}
 
 int ManagerScreen::master_id(int selection_id) const {
     return context_.club_order.at(size_t(selection_id));
@@ -206,6 +210,7 @@ bool ManagerScreen::click(int x, int y, bool right) {
         for (int i = 0; i < 7; ++i) {
             int bx = i < 4 ? 64 : 161, by = 175 + (i < 4 ? i : i - 4) * 11;
             if (x >= bx && x <= bx + 94 && y >= by && y <= by + 10) {
+                if(i<5&&i>=visible_league_count())return false;
                 bool changed = group_ != i; group_ = i; hover_ = hovered_club(x, y); return changed;
             }
         }
@@ -227,7 +232,7 @@ bool ManagerScreen::click(int x, int y, bool right) {
     for (int i = 0; i < 4; ++i) {
         if (x < field_x_[i] || x > field_x_[i] + field_width_[i] || y < baseline_[i] - 26 || y > baseline_[i] + 3) continue;
         if (i == 0) { choice_.name.clear(); view_ = ManagerView::name_edit; return true; }
-        if (i == 1) { choice_.start_league = (choice_.start_league + 1) % 5; return true; }
+        if (i == 1) { choice_.start_league = (choice_.start_league + 1) % visible_league_count(); return true; }
         if (i == 2) open_clubs = true;
         if (i == 3) { choice_.strength = (choice_.strength + 1) % 3; return true; }
     }
@@ -369,7 +374,7 @@ Image ManagerScreen::render() const {
                 if (choice_.selection_club == id) copy(out, faces_, 228, 0, x + 24, y + 23, 11, 13, true);
             }
         }
-        for (int i = 0; i < 7; ++i)
+        for (int i = 0; i < 7; ++i)if(i>=5||i<visible_league_count())
             button(out, i < 4 ? 64 : 161, 175 + (i < 4 ? i : i - 4) * 11, 94, leagues_[i], group_ == i);
         // Hover clear uses a new local pattern origin, even when no club is hovered.
         pattern(out, 81, 222, 151, 8);

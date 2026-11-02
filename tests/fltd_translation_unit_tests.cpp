@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "launch/fltd.hpp"
+#include "game/environment.hpp"
+#include "formats/league_visibility.hpp"
 
 #include <chrono>
+#include <array>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
@@ -40,6 +43,7 @@ int main() {
             analytics_labels[i] = uint8_t(0x31 + i * 3);
             put(layout::EnglishLayoutTranslation50 + i, analytics_labels[i]);
         }
+        put(layout::EnglishLayoutTranslation259,5);put(layout::EnglishLayoutTranslation259+1,4);put(layout::EnglishLayoutTranslation259+2,9);
         const uint8_t toggle_rows[] = {3, 7, 11, 13, 17, 19};
         put(layout::EnglishLayoutTranslation16 - 1, 99); // alignment padding is not a toggle row
         for (uint32_t i = 0; i < 6; ++i) put(layout::EnglishLayoutTranslation16 + i, toggle_rows[i]);
@@ -50,6 +54,12 @@ int main() {
             put(layout::EnglishDesktopBinSourceY + i, uint8_t(20 + i));
             put(layout::EnglishDesktopSocketSourceX + i, uint8_t(30 + i));
         }
+        const std::array<uint8_t,6> environment_x{20,80,140,200,250,20},environment_y{40,40,40,80,80,140},environment_steps{2,4,5,5,5,5};
+        for(uint32_t i=0;i<6;++i){put(0x6d230+i,environment_x[i]);put(0x6d238+i,environment_y[i]);put(0x6d244+i,environment_steps[i]);}
+        const std::array<uint8_t,3> youth_colors{0x41,0x42,0x43};for(uint32_t i=0;i<3;++i)put(0x6d240+i,youth_colors[i]);
+        const std::string position_suffix=". / ",cost_suffix=".";
+        for(uint32_t i=0;i<=position_suffix.size();++i)put(0x6d24a+i,i<position_suffix.size()?uint8_t(position_suffix[i]):0);
+        for(uint32_t i=0;i<=cost_suffix.size();++i)put(0x6d24f+i,i<cost_suffix.size()?uint8_t(cost_suffix[i]):0);
         const auto path = root / "FLTD.EXE";
         { std::ofstream out(path, std::ios::binary); out.write(reinterpret_cast<const char*>(source.data()), std::streamsize(source.size())); }
         const auto image = launch::translate_fltd(path);
@@ -75,6 +85,11 @@ int main() {
             check(image.u8(layout::Desktop_Render_RuntimeField2 + i) == 20 + i, "bin source y");
             check(image.u8(layout::Desktop_Render_RuntimeField3 + i) == 30 + i, "socket source x");
         }
+        for(uint32_t i=0;i<6;++i)check(image.u8(layout::Environment_FormatError_RuntimeField+i)==environment_x[i]&&image.u8(layout::Environment_FormatError_RuntimeField2+i)==environment_y[i]&&image.u8(layout::EnvironmentBudgetSteps+i)==environment_steps[i],"English environment geometry/steps lost source table alignment");
+        for(uint32_t i=0;i<3;++i)check(image.u8(layout::EnvironmentYouthColors+i)==youth_colors[i],"English youth colours lost source alignment");
+        check(image.cstring(layout::EnvironmentYouthPositionSuffix)==position_suffix&&image.cstring(layout::EnvironmentCostSuffix)==cost_suffix,"English environment suffix mapping is incomplete");
+        install_environment_rules(image);check(environment_rules_supported(),"authored English numeric profile depends on source instructions");
+        check(player_league_count(image)==4&&image.u8(layout::LeaguePairings_LeaguePairingsConstants_RuntimeField)==5,"English visible league count overwrote internal leagues");
         std::filesystem::remove_all(root);
         std::cout << "FLTD setup, colour, desktop-control and overwrite-question mappings passed\n";
         return 0;

@@ -1,6 +1,7 @@
 #include "test_inputs.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "formats/league_visibility.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -1644,6 +1645,20 @@ void check_advertising_controller(const std::filesystem::path& data) {
     check(!session->dispatch_advertising(action.advertising_action, revision, error) &&
           save_stream(game) == committed_bytes && revision == committed_revision,
           "replayed accepted advertisement cannot consume a second revision or another offer");
+}
+
+void check_player_league_visibility_controller(const std::filesystem::path& data) {
+    const auto exe=load_le(asset_path(data,"BMH.exe"));const auto visible=player_league_count(exe);
+    if(visible==5)return;
+    app::CareerSession session(data,0x1789abcd);const auto before=save_stream(session.state());
+    const auto game=session.game();const auto random=session.rand();SetupOptions options;options.world=false;options.league=true;options.managers=1;
+    const auto context=session.selection_context(0);ManagerChoice choice;choice.master_club=context.club_order[0];choice.name="Visibility";choice.start_league=visible;
+    std::string error;
+    check(!session.confirm_manager(options,choice,error)&&!error.empty()&&save_stream(session.state())==before&&session.game().calls()==game.calls()&&session.rand().calls()==random.calls(),"hidden target league changed initial options/state/RNG");
+    int first=0;for(int league=0;league<visible;++league)first+=exe.u8(::bmh::layout::LeagueSizes+uint32_t(league));
+    choice.start_league=0;choice.master_club=context.club_order.at(size_t(first));error.clear();
+    check(!session.confirm_manager(options,choice,error)&&!error.empty()&&save_stream(session.state())==before&&session.game().seed()==game.seed()&&session.rand().seed()==random.seed(),"hidden club entered fresh human management");
+    choice.master_club=context.club_order[0];error.clear();check(session.confirm_manager(options,choice,error),"valid visible league failed after rejected hidden choices");
 }
 
 void check_environment_controller(const std::filesystem::path& data) {
@@ -7119,6 +7134,9 @@ int main(int argc, char** argv) {
         const std::filesystem::path data = argv[1];
         if(argc==3 && std::string_view(argv[2])=="--desktop-input-only") {
             check_date_widget_controller(data); check_menu_layout_session_io(data); check_desk_widgets(data); return 0;
+        }
+        if(argc==3 && std::string_view(argv[2])=="--selection-visibility-only") {
+            check_player_league_visibility_controller(data);return 0;
         }
         if(argc==3 && std::string_view(argv[2])=="--environment-only") {
             check_environment_controller(data);return 0;

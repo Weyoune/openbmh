@@ -56,6 +56,7 @@ public:
     // builds them from the executable's tables: label (original encoding) and the inclusive
     // range of selection indices. Used by the console (openbmh_cli) for ListTeams.
     static constexpr int group_count = 7;
+    int visible_league_count() const;
     const std::string& group_label(int group) const { return leagues_.at(size_t(group)); }
     int group_first(int group) const { return first_.at(size_t(group)); }
     int group_last(int group) const { return last_.at(size_t(group)); }

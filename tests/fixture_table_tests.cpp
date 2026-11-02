@@ -2,6 +2,7 @@
 #include "fixture_tables.hpp"
 #include "formats/executable_layout.hpp"
 #include "formats/le.hpp"
+#include "formats/league_visibility.hpp"
 #include <iostream>
 #include <set>
 #include <stdexcept>
@@ -19,6 +20,11 @@ void same(const std::vector<Fixture>& a, const std::vector<Fixture>& b) {
         check(a[i].home == b[i].home && a[i].away == b[i].away, "fixture ownership changed");
 }
 void unit() {
+    const auto address=layout::LeaguePairings_LeaguePairingsConstants_RuntimeField;
+    check(player_league_count(LeImage::from_bytes(address,Bytes{5,4,9}))==4&&player_league_count(LeImage::from_bytes(address,Bytes{5,5,9}))==5,"player-visible leagues replaced internal catalogue counts");
+    invalid([&]{player_league_count(LeImage::from_bytes(address,Bytes{5,0,9}));});
+    invalid([&]{player_league_count(LeImage::from_bytes(address,Bytes{5,6,9}));});
+    invalid([&]{player_league_count(LeImage::from_bytes(address,Bytes{5}));});
     const auto authored = bmh::test::authored_fixture_tables();
     set_fixture_tables(authored);
     for (const auto& [teams, rows] : authored) {

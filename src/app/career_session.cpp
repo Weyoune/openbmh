@@ -4,6 +4,7 @@
 #include "game/calendar.hpp"
 #include "formats/executable_layout.hpp"
 #include "app/career_session.hpp"
+#include "formats/league_visibility.hpp"
 
 #include <stdexcept>
 #include <system_error>
@@ -728,6 +729,9 @@ bool CareerSession::confirm_manager_join(const ui::ManagerChoice& choice, std::s
         selected.name = choice.name; selected.team = runtime_club(draft.state, choice.master_club);
         selected.league = choice.start_league; selected.strength = choice.strength; selected.portrait = choice.portrait;
         if (selected.team < 0) throw FormatError("join: club not found");
+        const auto visible=player_league_count(exe_);
+        const auto club_league=team_league(selected.team);
+        if(selected.league>=visible||(club_league>=visible&&club_league<5))throw FormatError("join: league is not available for human management");
         MinuteReport report;
         if (!career_add_manager(draft.state, exe_, choice.slot, selected, true, draft.game, draft.rand, report))
             throw FormatError(report.reason);
@@ -807,6 +811,12 @@ void CareerSession::apply_options(const ui::SetupOptions& o) {
 bool CareerSession::confirm_manager(const ui::SetupOptions& options, const ui::ManagerChoice& choice, std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
         top_scorers_owner_ || top_scorers_dispatch_active_ || stadium_.block_expansion || other_games_owner_ || other_games_dispatch_active_) { error = "strengths_active"; return false; }
+    const auto visible=player_league_count(exe_);
+    const auto selected_team=runtime_club(choice.master_club);
+    const auto selected_league=selected_team>=0?team_league(selected_team):-1;
+    if(choice.start_league<0||choice.start_league>=visible||(selected_league>=visible&&selected_league<5)) {
+        error="league is not available for human management";return false;
+    }
     if (!options_applied_) apply_options(options);
     const int m = int(managers_.size());
     if (m >= options.managers) {

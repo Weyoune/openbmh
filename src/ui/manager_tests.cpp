@@ -18,7 +18,12 @@ int main(int argc, char** argv) {
         check(s.choice().master_club == 0 && s.choice().portrait == 0, "default available identity");
         check(s.render().pixels.size() == 320 * 240, "original manager framebuffer");
         check(!s.click(320, 10, true) && !s.text("ignored"), "invalid point and inactive text input");
-        for (int i = 0; i < 5; ++i) s.click(30, 140);
+        for (int i = 0; i < s.visible_league_count(); ++i) s.click(30, 140);
+        if(s.visible_league_count()==4) {
+            check(s.group_label(4).empty()&&s.group_last(4)<s.group_first(4),"hidden English domestic group remains selectable");
+            check(s.click(200,95),"English club picker opens");const auto unchanged=s.choice();
+            check(!s.click(180,180)&&s.choice()==unchanged,"hidden English group accepted a click");s.click(5,225,true);
+        }
         for (int i = 0; i < 3; ++i) s.click(220, 140);
         check(s.choice().start_league == 0 && s.choice().strength == 1, "league and strength wrap");
         check(s.click(30, 65) && s.choice().name.empty(), "starting edit clears name like original");

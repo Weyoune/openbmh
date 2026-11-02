@@ -2,7 +2,7 @@
 
 OpenBMH aims to preserve the familiar game while handling malformed input and unsafe edge cases explicitly. A reconstruction can remain faithful without reproducing a crash or pretending to implement an unknown path.
 
-- Content such as names, text, graphics and edition-specific tables is loaded from the user's installation. The loaded program retains its own rule-table values; loading no longer applies the former shared replacement profile.
+- Names, text, graphics and compatible data tables come from the user's installation. The common gameplay implementation follows the documented Diamond 3.7 engine policy; original programme instructions are not executed or selected as separate engines.
 - Safety checks reject transactions that would exhaust required return capacity, use stale identities or lose a valid state. Unsupported operations report their limitation rather than inventing an outcome.
 - Calendar progression handles boundary days and seasonal transitions without relying on unsafe fixed-day assumptions.
 - Saves are written from the committed session state. Saving does not deliberately replay unrelated game actions.
@@ -23,11 +23,18 @@ An unavailable native message box also cancels the request. This applies to
 voluntary application exits, including quit events received during animations;
 normal completed-career handling remains separate.
 
-## Original edition rules in 1.0
+## Common engine and source data
 
 Loaded executable images retain their own rule tables. Career strength ranges are read from all nine pairs of the supplied original table.
 
 The common engine uses the Diamond 3.7 six-budget monthly environment model for every supported source-data edition, including Diamond 3.6 and Football Limited. Original programme instruction fingerprints do not select another engine or block compatible data. The six numeric budget increments are read from the supplied table and installed together only when all are present and nonzero; malformed layouts remain rejected. Existing saved lump-sum academy contracts retain their established accounting until edited. English translation supplies the actual English geometry, steps and suffixes for this common model. The old floppy executable remains unsupported, and Football Limited remains experimental.
+
+Football Limited's data distinguishes five internal domestic slots from four
+player-visible levels. Fresh manager selection cycles those four levels and
+hides the internal fifth picker group; confirmation rejects hidden targets and
+clubs before changing options or consuming RNG. Additional club pages remain
+separate. Internal sizes, squads, rankings and fixtures are retained, and saved
+internal league values do not cause a general load rejection.
 
 Release acceptance of individual editions is recorded separately from their recognition. Source compatibility and automated tests do not establish full original-game or platform validation.
 
