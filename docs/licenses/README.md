@@ -12,3 +12,5 @@ These files preserve upstream license and attribution wording. They are not a gr
 - [LGPL version 2.1](LGPL-2.1.txt): full license supplied with Nuked OPL3. Its source notices permit version 2.1 or any later version.
 
 [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md) identifies the upstream versions and distribution requirements. Include this directory, that notice file and the root LICENSE with release packages. Preserve upstream attribution within these verbatim texts.
+
+- [stb_image](stb_image.txt): complete upstream dual-license text from the vendored 2.30 header. JPEG-only decoding is used for the supplied project start screen.

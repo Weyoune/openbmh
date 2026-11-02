@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
+#include "app/start_screen.hpp"
 #include "ui/live_timing.hpp"
 // openbmh_play - the UI of src/ui connected to the engine: options, manager dialogs, a new
 // career initialised by the engine (app/career_session.hpp) and its desk.
@@ -208,7 +209,7 @@ int main(int argc, char** argv) {
         SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
         const std::string window_title = std::string("OpenBMH ") + bmh::kOpenBmhVersion +
                                   (english_game ? " - Football Limited (experimental)" : "");
-        SDL_Window* window = SDL_CreateWindow(window_title.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 960, 720, SDL_WINDOW_RESIZABLE);
+        SDL_Window* window = SDL_CreateWindow(window_title.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 960, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
         if (!window) throw FormatError(SDL_GetError());
         SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
         if (!renderer) renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
@@ -3619,42 +3620,40 @@ int main(int argc, char** argv) {
                 if (expired.request != ui::FlowRequest::none || expired.changed) handle(expired);
             }
         };
-        // OpenBMH deviates from the original: show only the static title until
-        // a complete left or right click, without the DOS loading animation.
-        const auto title_path = ui::asset_path(data / "KB", "137.VGA");
-        const auto title_palette = load_optional_embedded_palette(title_path);
-        const auto title_image = load_vga(title_path);
-        present_season(title_image, window_title.c_str(),
-                       title_palette ? &*title_palette : nullptr);
-        bool opening_confirmed = false;
-        std::optional<Uint8> opening_press;
-        while (running && !opening_confirmed) {
-            SDL_Event opening_event;
-            while (quit_confirmation.poll(&opening_event)) {
-                if (opening_event.type == SDL_QUIT) running = false;
-                if (opening_event.type == SDL_KEYDOWN && opening_event.key.keysym.sym == SDLK_ESCAPE &&
-                    quit_confirmation.confirm()) running = false;
-                if (opening_event.type == SDL_WINDOWEVENT &&
-                    (opening_event.window.event == SDL_WINDOWEVENT_EXPOSED ||
-                     opening_event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED))
-                    present_season(title_image, window_title.c_str(),
-                                   title_palette ? &*title_palette : nullptr);
-                if (opening_event.type == SDL_WINDOWEVENT &&
-                    opening_event.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
-                    opening_press.reset();
-                if (opening_event.type == SDL_MOUSEBUTTONDOWN &&
-                    (opening_event.button.button == SDL_BUTTON_LEFT ||
-                     opening_event.button.button == SDL_BUTTON_RIGHT))
-                    opening_press = opening_event.button.button;
-                if (opening_event.type == SDL_MOUSEBUTTONUP && opening_press &&
-                    opening_event.button.button == *opening_press)
-                    opening_confirmed = true;
+        // OpenBMH deviates from the original: display the repository-owned title
+        // at its native resolution until a complete left/right click, without loading balls.
+        {
+            app::StartScreen title_screen(renderer);
+            title_screen.present();
+            bool opening_confirmed = false;
+            std::optional<Uint8> opening_press;
+            while (running && !opening_confirmed) {
+                SDL_Event opening_event;
+                while (quit_confirmation.poll(&opening_event)) {
+                    if (opening_event.type == SDL_QUIT) running = false;
+                    if (opening_event.type == SDL_KEYDOWN && opening_event.key.keysym.sym == SDLK_ESCAPE &&
+                        quit_confirmation.confirm()) running = false;
+                    if (opening_event.type == SDL_WINDOWEVENT &&
+                        (opening_event.window.event == SDL_WINDOWEVENT_EXPOSED ||
+                         opening_event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED))
+                        title_screen.present();
+                    if (opening_event.type == SDL_WINDOWEVENT &&
+                        opening_event.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+                        opening_press.reset();
+                    if (opening_event.type == SDL_MOUSEBUTTONDOWN &&
+                        (opening_event.button.button == SDL_BUTTON_LEFT ||
+                         opening_event.button.button == SDL_BUTTON_RIGHT))
+                        opening_press = opening_event.button.button;
+                    if (opening_event.type == SDL_MOUSEBUTTONUP && opening_press &&
+                        opening_event.button.button == *opening_press)
+                        opening_confirmed = true;
+                }
+                SDL_Delay(10);
             }
-            SDL_Delay(10);
-        }
+        } // Restore the indexed game canvas and its logical input mapping.
         // Opening input must not also change an option on the first setup frame.
         SDL_FlushEvents(SDL_KEYDOWN, SDL_KEYUP);
-        SDL_FlushEvents(SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP);
+        SDL_FlushEvents(SDL_MOUSEMOTION, SDL_MOUSEBUTTONUP);
         season_backdrop.reset();
         dirty = true;
         SDL_StartTextInput();

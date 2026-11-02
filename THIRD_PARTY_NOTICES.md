@@ -4,6 +4,7 @@ OpenBMH's own code and documentation use GPL-3.0-only. This does not replace the
 
 | Component | Version used by the build | License | Included notice |
 |---|---|---|---|
+| [stb_image](https://github.com/nothings/stb/blob/013ac3beddff3dbffafd5177e7972067cd2b5083/stb_image.h) | 2.30, vendored header; JPEG decoder only | MIT or public-domain alternative | [stb_image.txt](docs/licenses/stb_image.txt) |
 | [SDL2](https://github.com/libsdl-org/SDL/tree/release-2.32.10) | 2.32.10, or an explicitly selected system SDL2 | zlib license | [SDL2.txt](docs/licenses/SDL2.txt) |
 | SDL2 HIDAPI code | Included with SDL2 | BSD-3-Clause option; upstream also offers GPL-3.0 and its original license | [license options](docs/licenses/SDL2-HIDAPI-options.txt), [BSD text](docs/licenses/SDL2-HIDAPI-BSD.txt), [original text](docs/licenses/SDL2-HIDAPI-original.txt) |
 | SDL2 yuv2rgb code | Included with SDL2 | BSD-3-Clause | [SDL2-yuv2rgb.txt](docs/licenses/SDL2-yuv2rgb.txt) |

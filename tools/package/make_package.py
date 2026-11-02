@@ -14,7 +14,7 @@ def validate(directory, windows):
     documents = {'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'ACKNOWLEDGEMENTS.md', 'CONTRIBUTING.md'}
     licenses = {'README.md', 'LGPL-2.1.txt', 'Nuked-OPL3-notices.txt', 'LZMA-SDK.txt', 'SDL2-HIDAPI-BSD.txt',
                 'SDL2-HIDAPI-options.txt', 'SDL2-HIDAPI-original.txt', 'SDL2-yuv2rgb.txt',
-                'SDL2.txt', 'miniz-source-notices.txt', 'miniz.txt', 'nativefiledialog-extended.txt'}
+                'SDL2.txt', 'miniz-source-notices.txt', 'miniz.txt', 'nativefiledialog-extended.txt', 'stb_image.txt'}
     present = set()
     for file in directory.rglob('*'):
         if not file.is_file():

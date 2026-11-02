@@ -111,3 +111,5 @@ OpenBMH's own code and documentation are licensed under **GNU GPL version 3 only
 Every published binary release identifies its matching source tag and provides a corresponding source archive. Binary releases must accompany or offer the corresponding source and build/relinking materials required by the applicable licenses. The tag identifies application source; it does not replace required materials for linked third-party components.
 
 Bundled components retain their own licenses, including Nuked OPL3 under LGPL-2.1-or-later. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [ACKNOWLEDGEMENTS.md](ACKNOWLEDGEMENTS.md).
+
+The supplied project start artwork is embedded at native resolution; see [start-screen artwork](docs/START_SCREEN.md). It replaces the original title image while the game continues to use your own original data and assets.

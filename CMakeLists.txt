@@ -449,12 +449,29 @@ target_link_libraries(desk_check PRIVATE bmhcore)
 add_executable(init_check tests/init_check.cpp)
 target_link_libraries(init_check PRIVATE bmhcore)
 
+# The approved compressed title is embedded: no install-time sidecar dependency.
+set(BMH_START_SCREEN_DATA "${CMAKE_BINARY_DIR}/generated/start_screen_data.cpp")
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated")
+add_custom_command(OUTPUT "${BMH_START_SCREEN_DATA}"
+    COMMAND "${CMAKE_COMMAND}" "-DINPUT=${CMAKE_SOURCE_DIR}/assets/start-screen.jpg"
+        "-DOUTPUT=${BMH_START_SCREEN_DATA}" -P "${CMAKE_SOURCE_DIR}/cmake/EmbedStartScreen.cmake"
+    DEPENDS assets/start-screen.jpg cmake/EmbedStartScreen.cmake
+    VERBATIM)
+add_library(openbmh_start_screen STATIC src/app/start_screen.cpp "${BMH_START_SCREEN_DATA}")
+target_include_directories(openbmh_start_screen PRIVATE "${CMAKE_SOURCE_DIR}/src")
+target_link_libraries(openbmh_start_screen PUBLIC ${BMH_SDL_TARGET})
+add_executable(start_screen_tests tests/start_screen_tests.cpp)
+target_include_directories(start_screen_tests PRIVATE "${CMAKE_SOURCE_DIR}/src")
+target_link_libraries(start_screen_tests PRIVATE openbmh_start_screen)
+add_test(NAME start_screen_tests COMMAND start_screen_tests)
+
 # The playable program: the shared UI library connected to the engine by src/app.
 add_executable(openbmh_play
     src/app/main.cpp
     ${BMH_APP_CONTROLLER_SOURCE}
     ${BMH_APP_SESSION_SDL_SOURCE})
 target_link_libraries(openbmh_play PRIVATE bmhui bmhlaunch_dialog openbmh_audio ${BMH_SDL_TARGET})
+target_link_libraries(openbmh_play PRIVATE openbmh_start_screen)
 # a game without a console window on double-click (SDL2main provides WinMain); started from a
 # console it attaches to that one for --version, --help and start errors (src/app/main.cpp)
 set_target_properties(openbmh_play PROPERTIES WIN32_EXECUTABLE TRUE OUTPUT_NAME OpenBMH)

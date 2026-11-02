@@ -5,6 +5,7 @@
 
 import contextlib
 import io
+import hashlib
 import json
 from pathlib import Path
 import shutil
@@ -17,6 +18,16 @@ import check_public_tree as guard
 
 
 class BlobChecks(unittest.TestCase):
+    def test_only_exact_reviewed_artwork_and_decoder_are_admitted(self):
+        for name, table in (("assets/start-screen.jpg",guard.REVIEWED_BINARY_FILES),
+                            ("src/app/third_party/stb_image.h",guard.REVIEWED_UPSTREAM_FILES)):
+            content=b"synthetic reviewed input\0"
+            with mock.patch.dict(table,{name:hashlib.sha256(content).hexdigest()}):
+                self.assertEqual(guard.scan_blob(name,content),[])
+                self.assertEqual({finding.rule for finding in guard.scan_blob(name,content+b"changed")},
+                                 {"modified-reviewed-project-file"})
+        self.assertIn("binary-or-game-asset",{finding.rule for finding in guard.scan_blob("assets/other.jpg",b"synthetic\0")})
+
     def rules(self, name, text):
         return {finding.rule for finding in guard.scan_blob(name, text.encode())}
 
