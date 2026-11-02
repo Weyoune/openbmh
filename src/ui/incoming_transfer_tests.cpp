@@ -2,6 +2,7 @@
 #include "formats/executable_layout.hpp"
 #include "ui/incoming_transfer.hpp"
 #include "ui/source_notice_test_helpers.hpp"
+#include "ui/setup.hpp"
 
 #include <cstdio>
 #include <vector>
@@ -173,20 +174,42 @@ int main(int argc, char** argv) {
         check(monitor_ink, "KB0 monitor crop has visible pixels");
         check(pool_tile_exact, "pool TV crop matches KB0 with Source transparency");
         check(frame_exact, "pool TV fallback has Source legacy routine border colors and bounds");
-        auto neutral_badge_state = state;
-        neutral_badge_state.seller = 100;
-        neutral_badge_state.seller_team_token = 100;
-        neutral_badge_state.seller_badge_sprite = 0; // The raw Source fallback precedes selector lookup.
-        IncomingTransferScreen neutral_badge(argv[1], neutral_badge_state);
-        const auto neutral_frame = neutral_badge.render();
-        check(neutral_frame.pixels[size_t(50) * 320 + 101] == 0x46 &&
-              neutral_frame.pixels[size_t(89) * 320 + 140] == 0x40,
-              "Source seller tokens 90..137 use legacy routine's framed neutral fallback before badge lookup");
-        auto unused_selector_state = neutral_badge_state;
-        unused_selector_state.seller_badge_sprite = 511;
-        IncomingTransferScreen unused_selector(argv[1], unused_selector_state);
-        check(unused_selector.render().pixels == neutral_frame.pixels,
-              "neutral raw seller fallback does not consult or load its unused ba378 selector");
+        // The supplied executable decides whether tokens 90..137 use individual
+        // crests. Read its verified instruction rather than the UI's policy.
+        const auto source_exe = bmh::load_le(asset_path(argv[1], "BMH.exe"));
+        constexpr auto gate = ::bmh::layout::ForeignBadgeGateInstruction;
+        check(source_exe.u8(gate) == 0x66 && source_exe.u8(gate + 1) == 0x81 &&
+              source_exe.u8(gate + 2) == 0xfb && source_exe.u8(gate + 5) == 0x7c &&
+              source_exe.u8(gate + 6) == 7 &&
+              (source_exe.u16(gate + 3) == 90 || source_exe.u16(gate + 3) == 138),
+              "foreign crest fixture uses a verified Original executable drawing gate");
+        auto profile_badge_state = state;
+        profile_badge_state.seller = 100;
+        profile_badge_state.seller_team_token = 100;
+        profile_badge_state.seller_badge_sprite = 0;
+        IncomingTransferScreen profile_badge(argv[1], profile_badge_state);
+        const auto profile_frame = profile_badge.render();
+        if (source_exe.u16(gate + 3) == 138) {
+            check(profile_frame.pixels[size_t(50) * 320 + 101] == 0x46 &&
+                  profile_frame.pixels[size_t(89) * 320 + 140] == 0x40,
+                  "CD foreign seller uses the framed neutral fallback before badge lookup");
+            auto unused_selector_state = profile_badge_state;
+            unused_selector_state.seller_badge_sprite = 511;
+            IncomingTransferScreen unused_selector(argv[1], unused_selector_state);
+            check(unused_selector.render().pixels == profile_frame.pixels,
+                  "neutral raw seller fallback does not consult or load its unused ba378 selector");
+        } else {
+            const auto foreign_atlas = bmh::load_vga(asset_path(std::filesystem::path(argv[1]) / "W", "0.VGA"));
+            bool foreign_pixels_match = true;
+            size_t foreign_ink = 0;
+            for (int y = 0; y < 38; ++y) for (int x = 0; x < 38; ++x) {
+                const auto pixel = foreign_atlas.pixels.at(size_t(y) * foreign_atlas.width + size_t(x));
+                foreign_ink += pixel != 0;
+                foreign_pixels_match &= profile_frame.pixels[size_t(y + 51) * 320 + size_t(x + 102)] == pixel;
+            }
+            check(foreign_ink > 0 && foreign_pixels_match,
+                  "individual foreign crest profile draws seller100's valid W0 selector instead of a neutral tile");
+        }
         auto selector_state = state;
         selector_state.seller = 20;
         selector_state.seller_team_token = 20;
