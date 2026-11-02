@@ -446,7 +446,7 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
     }
     if (save_load_) {
         const auto before = state_json();
-        const bool changed = save_load_->click(x, y, right);
+        const bool changed = save_load_->click(x, y, right, double_click);
         return finish_file_input(changed || before != state_json());
     }
     if (in_preparation_menu()) {

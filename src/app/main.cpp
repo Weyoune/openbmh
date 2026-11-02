@@ -2670,7 +2670,8 @@ int main(int argc, char** argv) {
                                          file_input.button.button == SDL_BUTTON_RIGHT)) {
                                         file_changed |= file_screen.click(file_input.button.x,
                                             file_input.button.y,
-                                            file_input.button.button == SDL_BUTTON_RIGHT);
+                                            file_input.button.button == SDL_BUTTON_RIGHT,
+                                            file_input.button.clicks >= 2);
                                     } else if (file_input.type == SDL_KEYDOWN && !file_input.key.repeat) {
                                         std::string_view key;
                                         switch (file_input.key.keysym.sym) {

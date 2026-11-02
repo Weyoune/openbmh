@@ -42,7 +42,7 @@ public:
     // InfoPress opens5870f on right DOWN; its popup restores on mouse UP.
     bool info_press(int x, int y);
     bool info_open() const { return bool(info_); }
-    bool click(int x, int y, bool right = false);
+    bool click(int x, int y, bool right = false, bool double_click = false);
     bool key(std::string_view key);
     bool text(std::string_view value);
     const std::optional<SaveLoadRequest>& pending() const { return pending_; }

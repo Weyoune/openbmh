@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "ui/save_load.hpp"
+#include "ui/flow.hpp"
 
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <stdexcept>
 
 using namespace bmh;
@@ -30,7 +32,66 @@ int main(int argc, char** argv) {
                 std::pair{SaveLoadFileKind::game, ".FBM"},
                 std::pair{SaveLoadFileKind::settings, ".EIN"},
                 std::pair{SaveLoadFileKind::menu_layout, ".MEN"}}) {
-            std::ofstream(root / (std::string("Existing") + extension)) << "authored filename fixture";
+            const auto existing = root / (std::string("Existing") + extension);
+            const std::string fixture = "authored filename fixture";
+            std::ofstream(existing) << fixture;
+            const auto unchanged = [&] {
+                std::ifstream input(existing);
+                check(std::string(std::istreambuf_iterator<char>(input), {}) == fixture,
+                      "picker interactions never write the selected file");
+            };
+            SaveLoadScreen overwrite(argv[1], root, SaveLoadMode::save, 2, 17, backdrop, true, kind, 9);
+            check(overwrite.click(70, 45) && overwrite.click(70, 45) && !overwrite.pending() &&
+                  overwrite.state_json().find("EXISTIERT") == std::string::npos,
+                  "separate single clicks only select an existing save");
+            check(overwrite.click(70, 45, false, true) && !overwrite.pending() &&
+                  overwrite.state_json().find("ENTER ZUM ERSETZEN") != std::string::npos,
+                  "a true double-click asks for overwrite confirmation without submitting a write");
+            check(overwrite.click(70, 45, false, true) && !overwrite.pending(),
+                  "repeated double-clicks cannot confirm an overwrite");
+            unchanged();
+            check(overwrite.key("ENTER") && overwrite.pending() && overwrite.pending()->overwrite &&
+                  overwrite.pending()->path == existing && overwrite.pending()->manager_slot == 2 &&
+                  overwrite.pending()->revision == 17 && overwrite.pending()->file_kind == kind &&
+                  overwrite.pending()->origin_item_id == 9,
+                  "Enter confirms the exact selected file with its manager, revision and file kind");
+            const auto request = *overwrite.pending();
+            check(!overwrite.click(70, 45, false, true) && !overwrite.key("ENTER") &&
+                  *overwrite.pending() == request,
+                  "queued mouse releases and Enter cannot submit a second pending overwrite");
+            overwrite.acknowledge();
+            check(overwrite.close_requested() && !overwrite.pending(),
+                  "acknowledgement closes the picker and clears its one request");
+            unchanged();
+            for (bool right : {false, true}) {
+                SaveLoadScreen cancel(argv[1], root, SaveLoadMode::save, 0, 7, backdrop, true, kind);
+                cancel.click(70, 45, false, true);
+                check((right ? cancel.click(70, 45, true, true) : cancel.key("ESC")) &&
+                      cancel.close_requested() && !cancel.pending(),
+                      "right-click and Escape cancel an armed overwrite without a write");
+            }
+            const auto second = root / (std::string("Second") + extension);
+            std::ofstream(second) << fixture;
+            SaveLoadScreen change_row(argv[1], root, SaveLoadMode::save, 0, 7, backdrop, true, kind);
+            change_row.click(70, 45, false, true);
+            check(change_row.click(70, 55) && change_row.key("ENTER") && !change_row.pending() &&
+                  change_row.key("ENTER") && change_row.pending() && change_row.pending()->path == second,
+                  "selecting another row cannot reuse the first file's overwrite confirmation");
+            SaveLoadScreen reset(argv[1], root, SaveLoadMode::save, 0, 7, backdrop, true, kind);
+            reset.click(70, 45, false, true);
+            reset.click(70, 45);
+            check(reset.key("ENTER") && !reset.pending() && reset.key("ENTER") && reset.pending(),
+                  "single selection clears confirmation and preserves the existing two-Enter save path");
+            SaveLoadScreen rename(argv[1], root, SaveLoadMode::save, 0, 7, backdrop, true, kind);
+            rename.click(70, 45, false, true);
+            check(rename.text("Other") && rename.key("ENTER") && rename.pending() &&
+                  !rename.pending()->overwrite && rename.pending()->path.filename() == std::string("Other") + extension,
+                  "editing an armed overwrite starts an independent new-file save");
+            SaveLoadScreen activate_load(argv[1], root, SaveLoadMode::load, 0, 7, backdrop, true, kind);
+            check(activate_load.click(70, 45, false, true) && activate_load.pending() &&
+                  activate_load.pending()->action == SaveLoadAction::load && activate_load.pending()->path == existing,
+                  "an explicit double-click also activates an existing load entry");
+            unchanged();
             SaveLoadScreen load(argv[1], root, SaveLoadMode::load, 0, 7, backdrop, true, kind);
             check(load.click(0, 0, true) && load.close_requested() && !load.pending(),
                   "right-click closes every file picker without submitting a load");
@@ -54,6 +115,13 @@ int main(int argc, char** argv) {
             check(edit.pending() && edit.pending()->path.filename() == std::string("Short") + extension,
                   "editing and UTF-8 deletion preserve the resulting host filename");
         }
+        StartupFlow flow(argv[1], root);
+        flow.click(214, 215);
+        check(flow.screen_name() == "save_load", "setup opens its save-list picker");
+        const auto load = flow.click(70, 45, false, true);
+        check(load.request == FlowRequest::file_action && load.file_action.action == SaveLoadAction::load &&
+              load.file_action.path.filename() == "Existing.FBM",
+              "startup flow forwards a real double-click to its active file picker");
         std::cout << "save/load input checks passed\n";
         return 0;
     } catch (const std::exception& error) {

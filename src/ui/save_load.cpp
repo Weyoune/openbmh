@@ -321,7 +321,7 @@ void SaveLoadScreen::request_action() {
                                file_kind_, origin_item_id_};
 }
 
-bool SaveLoadScreen::click(int x, int y, bool right) {
+bool SaveLoadScreen::click(int x, int y, bool right, bool double_click) {
     if (info_) { info_.reset(); return true; }
     if (pending_) return false;
     // OpenBMH deviates from the original: permits cancelling host file dialogs with the right mouse button.
@@ -337,7 +337,11 @@ bool SaveLoadScreen::click(int x, int y, bool right) {
     }
     if (x >= 53 && x <= 199 && select_row(y)) {
         const int row = scroll_ + (y - 40) / 10;
-        if (mode_ == SaveLoadMode::load && row == last_clicked_row_) { request_action(); return true; }
+        // Row selection clears overwrite confirmation before activation. Even a
+        // repeated double-click must ask again; only Enter confirms replacement.
+        if (double_click || (mode_ == SaveLoadMode::load && row == last_clicked_row_)) {
+            request_action(); return true;
+        }
         last_clicked_row_ = row;
         return true;
     }

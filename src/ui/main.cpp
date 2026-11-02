@@ -185,7 +185,8 @@ int main(int argc, char** argv) {
                     const bool held=event.button.button==SDL_BUTTON_LEFT&&left_press&&
                         event.button.x==left_press->x&&event.button.y==left_press->y&&left_press->screen==screen.screen_name()&&SDL_GetTicks()-left_press->time>=2000;
                     auto result = held ? screen.hold(event.button.x,event.button.y,2000) :
-                        screen.click(event.button.x, event.button.y, event.button.button == SDL_BUTTON_RIGHT);
+                        screen.click(event.button.x, event.button.y, event.button.button == SDL_BUTTON_RIGHT,
+                                     event.button.clicks >= 2);
                     auto input=pointer_input(held ? "hold" : event.button.button == SDL_BUTTON_RIGHT ? "right" : "left",event.button.x,event.button.y);
                     if(held){input.pop_back();input+=",\"milliseconds\":"+std::to_string(SDL_GetTicks()-left_press->time)+"}";}
                     left_press.reset();report(screen, result, input);dirty |= result.changed;
