@@ -7100,6 +7100,9 @@ int main(int argc, char** argv) {
     try {
         if (argc != 2 && argc != 3 && argc != 4) throw std::runtime_error("app_controller_tests requires data directory [optional Original save]");
         const std::filesystem::path data = argv[1];
+        if(argc==3 && std::string_view(argv[2])=="--desktop-input-only") {
+            check_date_widget_controller(data); check_menu_layout_session_io(data); return 0;
+        }
         if(argc==3 && std::string_view(argv[2])=="--environment-only") {
             check_environment_controller(data);return 0;
         }

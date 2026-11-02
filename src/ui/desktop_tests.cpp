@@ -812,12 +812,25 @@ int main(int argc, char** argv) {
         check(dropped_child.layout_operation==DeskLayoutOperation::set_folder &&
               folder_drop.take_sound_ids()==std::vector<uint8_t>{12},
               "Source fully enclosed drop unlinks the dragged child exactly once");
-        DesktopScreen unchanged_handle(data,child_desk);
-        unchanged_handle.pointer_down(41,41);
-        check(!unchanged_handle.pending() && unchanged_handle.take_sound_ids().empty(),
-              "existing LMB handle gesture has no invented RMB sound mapping");
-        unchanged_handle.pointer_up(41,41);
-        check(unchanged_handle.take_sound_ids().empty(),"handle release remains silent at this Source boundary");
+        DesktopScreen folder_corner(data,child_desk);
+        const auto corner_close=folder_corner.pointer_down(41,41);
+        check(corner_close.kind==DeskRequestKind::change_layout &&
+              corner_close.layout_operation==DeskLayoutOperation::toggle_quickbar_drawer &&
+              corner_close.item_id==49 && corner_close.layout_target_item==49 &&
+              corner_close.layout_after[5]==0 && corner_close.layout_after[49*16+5]==0xff &&
+              corner_close.layout_after[49*16+6]==0xff &&
+              folder_corner.take_sound_ids()==std::vector<uint8_t>{12},
+              "framed folder LMB corner unlinks its native record and emits the Source removal sound");
+        auto without_folder=child_desk; ++without_folder.revision;
+        without_folder.items.pop_back();
+        for(size_t i=0;i<54;++i)
+            std::copy_n(corner_close.layout_after.begin()+i*16,16,without_folder.layout_records[i].begin());
+        folder_corner.acknowledge(without_folder);
+        check(folder_corner.pointer_up(41,41).kind==DeskRequestKind::none &&
+              !folder_corner.pending() && folder_corner.take_sound_ids().empty(),
+              "folder removal owns its release after ACK without activating the underlying date");
+        check(folder_corner.pointer_up(41,41).kind==DeskRequestKind::advance_turn,
+              "folder removal release barrier leaves a subsequent independent date click available");
         auto covered_child=child_desk;
         covered_child.items.push_back(DeskItem{6,60,48,32,25,21,0,0,false,false});
         covered_child.layout_records[49][5]=6;
