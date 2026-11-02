@@ -783,7 +783,7 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `EnglishLayoutTranslation157` | `0x6e094` | English image adapter |
 | `EnglishLayoutTranslation158` | `0x6e0b8` | English image adapter |
 | `EnglishLayoutTranslation159` | `0x6e0bb` | English image adapter |
-| `EnglishLayoutTranslation16` | `0x6be4f` | English image adapter |
+| `EnglishLayoutTranslation16` | `0x6be50` | English image adapter |
 | `EnglishLayoutTranslation160` | `0x6e0d8` | English image adapter |
 | `EnglishLayoutTranslation161` | `0x6e110` | English image adapter |
 | `EnglishLayoutTranslation162` | `0x6e11c` | English image adapter |
@@ -1005,7 +1005,7 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `EnglishLayoutTranslation70` | `0x6d270` | English image adapter |
 | `EnglishLayoutTranslation71` | `0x6d272` | English image adapter |
 | `EnglishLayoutTranslation72` | `0x6d274` | English image adapter |
-| `EnglishLayoutTranslation73` | `0x6d29c` | English image adapter |
+| `EnglishLayoutTranslation73` | `0x6d29d` | English image adapter |
 | `EnglishLayoutTranslation74` | `0x6d3b4` | English image adapter |
 | `EnglishLayoutTranslation75` | `0x6d404` | English image adapter |
 | `EnglishLayoutTranslation76` | `0x6d408` | English image adapter |
@@ -1490,19 +1490,19 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `Pitch_FormatError_TextPointer2` | `0xaf178` | German-compatible image / runtime field |
 | `Pitch_FormatError_TextPointer3` | `0xaf17c` | German-compatible image / runtime field |
 | `Pitch_Render_RuntimeField` | `0xa3cbc` | German-compatible image / runtime field |
-| `PitchPreferenceDepthBases` | `0xa3cc3` | Four position-depth bases for native pitch feedback |
-| `PitchPreferenceRed` | `0xa3cc7` | Ten native pointer red components |
-| `PitchPreferenceGreen` | `0xa3cd1` | Ten native pointer green components |
-| `OriginalPointerPixels` | `0xa45b4` | Native 11 by 11 indexed pointer bitmap |
-| `EnglishPitchPreferenceDepthBases` | `0x6e230` | English position-depth bases |
-| `EnglishPitchPreferenceRed` | `0x6e234` | English pointer red components |
-| `EnglishPitchPreferenceGreen` | `0x6e240` | English pointer green components |
-| `EnglishOriginalPointerPixels` | `0x70554` | English 11 by 11 indexed pointer bitmap |
 | `Pitch_Render_TextPointer` | `0xae0e4` | German-compatible image / runtime field |
 | `Pitch_Render_TextPointer2` | `0xae0ec` | German-compatible image / runtime field |
 | `Pitch_Render_TextPointer3` | `0xae0f0` | German-compatible image / runtime field |
 | `Pitch_Render_TextPointer4` | `0xae0f4` | German-compatible image / runtime field |
 | `Pitch_Render_TextPointer5` | `0xae0f8` | German-compatible image / runtime field |
+| `PitchPreferenceDepthBases` | `0xa3cc3` | German-compatible image / runtime field |
+| `PitchPreferenceRed` | `0xa3cc7` | German-compatible image / runtime field |
+| `PitchPreferenceGreen` | `0xa3cd1` | German-compatible image / runtime field |
+| `OriginalPointerPixels` | `0xa45b4` | German-compatible image / runtime field |
+| `EnglishPitchPreferenceDepthBases` | `0x6e230` | English image adapter |
+| `EnglishPitchPreferenceRed` | `0x6e234` | English image adapter |
+| `EnglishPitchPreferenceGreen` | `0x6e240` | English image adapter |
+| `EnglishOriginalPointerPixels` | `0x70554` | English image adapter |
 | `PitchOrderPositionPointers` | `0xa2a37` | German-compatible image / runtime field |
 | `PitchOrderZoneMasks` | `0xa2a4b` | German-compatible image / runtime field |
 | `PitchOrderZoneTextPointers` | `0xae818` | German-compatible image / runtime field |
@@ -2000,13 +2000,11 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `EnglishSixTeamFixtureTable` | `0x6eed4` | English image adapter |
 | `EnglishTwelveTeamFixtureTable` | `0x6f0bc` | English image adapter |
 | `EnglishTwentyTeamFixtureTable` | `0x6ee40` | English image adapter |
-
-## Verified edition-dependent parameters
-
-| Field | Address | Use |
-|---|---|---|
-| `CalendarDateSetup` | `0x21270` | Verified date setup: weekday byte at +4, initial year dword at +13. Original CD uses 1995/Saturday; checked Diamond editions use 2026/Wednesday. |
-| `ForeignBadgeGateInstruction` | `0x10070` | Verified original drawing gate; operand at +3 selects neutral foreign crests or individual W-sheet selectors. |
-| `EnvironmentBudgetSteps` | `0xa50ff` | Six budget increments in the verified monthly environment implementation. |
-
-Calendar presentation, engine weekday processing and save-list headers share the supplied installation's epoch. The original four-year date arithmetic is preserved; this reader does not substitute a different calendar system or rewrite the installation. Unknown date setup instructions and invalid values are rejected.
+| `EnglishDesktopBinSourceX` | `0x6e180` | English image adapter |
+| `EnglishDesktopBinSourceY` | `0x6e182` | English image adapter |
+| `EnglishDesktopSocketSourceX` | `0x6e184` | English image adapter |
+| `EnvironmentBudgetSteps` | `0xa50ff` | German-compatible image / runtime field |
+| `EnvironmentVerifiedCodeBegin` | `0x6c000` | English image adapter |
+| `EnvironmentVerifiedCodeEnd` | `0x6cb40` | English image adapter |
+| `EnvironmentVerifiedHookBegin` | `0x7af65` | English image adapter |
+| `EnvironmentVerifiedHookEnd` | `0x7b020` | English image adapter |
