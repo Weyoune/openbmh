@@ -132,10 +132,10 @@ LeImage translate_fltd(const fs::path& fltd_exe) {
             en(::bmh::layout::EnglishOriginalPointerPixels + i));
     // Copy the actual English six-budget geometry, numeric steps and suffixes
     // for the common monthly environment model.
-    for(const auto [to,from,count]:{std::array<uint32_t,3>{layout::Environment_FormatError_RuntimeField,0x6d230,6},
-        {layout::Environment_FormatError_RuntimeField2,0x6d238,6},{layout::EnvironmentYouthColors,0x6d240,3},
-        {layout::EnvironmentBudgetSteps,0x6d244,6},{layout::EnvironmentYouthPositionSuffix,0x6d24a,5},
-        {layout::EnvironmentCostSuffix,0x6d24f,2}})for(uint32_t i=0;i<count;++i)put(to+i,en(from+i));
+    for(const auto [to,from,count]:{std::array<uint32_t,3>{layout::Environment_FormatError_RuntimeField,layout::EnglishEnvironmentTileX,6},
+        {layout::Environment_FormatError_RuntimeField2,layout::EnglishEnvironmentTileY,6},{layout::EnvironmentYouthColors,layout::EnglishEnvironmentYouthColors,3},
+        {layout::EnvironmentBudgetSteps,layout::EnglishEnvironmentBudgetSteps,6},{layout::EnvironmentYouthPositionSuffix,layout::EnglishEnvironmentYouthPositionSuffix,5},
+        {layout::EnvironmentCostSuffix,layout::EnglishEnvironmentCostSuffix,2}})for(uint32_t i=0;i<count;++i)put(to+i,en(from+i));
     LeImage out = LeImage::from_bytes(kDeBase, std::move(image));
     return out;
 }

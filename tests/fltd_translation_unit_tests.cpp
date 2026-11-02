@@ -55,11 +55,11 @@ int main() {
             put(layout::EnglishDesktopSocketSourceX + i, uint8_t(30 + i));
         }
         const std::array<uint8_t,6> environment_x{20,80,140,200,250,20},environment_y{40,40,40,80,80,140},environment_steps{2,4,5,5,5,5};
-        for(uint32_t i=0;i<6;++i){put(0x6d230+i,environment_x[i]);put(0x6d238+i,environment_y[i]);put(0x6d244+i,environment_steps[i]);}
-        const std::array<uint8_t,3> youth_colors{0x41,0x42,0x43};for(uint32_t i=0;i<3;++i)put(0x6d240+i,youth_colors[i]);
+        for(uint32_t i=0;i<6;++i){put(layout::EnglishEnvironmentTileX+i,environment_x[i]);put(layout::EnglishEnvironmentTileY+i,environment_y[i]);put(layout::EnglishEnvironmentBudgetSteps+i,environment_steps[i]);}
+        const std::array<uint8_t,3> youth_colors{0x41,0x42,0x43};for(uint32_t i=0;i<3;++i)put(layout::EnglishEnvironmentYouthColors+i,youth_colors[i]);
         const std::string position_suffix=". / ",cost_suffix=".";
-        for(uint32_t i=0;i<=position_suffix.size();++i)put(0x6d24a+i,i<position_suffix.size()?uint8_t(position_suffix[i]):0);
-        for(uint32_t i=0;i<=cost_suffix.size();++i)put(0x6d24f+i,i<cost_suffix.size()?uint8_t(cost_suffix[i]):0);
+        for(uint32_t i=0;i<=position_suffix.size();++i)put(layout::EnglishEnvironmentYouthPositionSuffix+i,i<position_suffix.size()?uint8_t(position_suffix[i]):0);
+        for(uint32_t i=0;i<=cost_suffix.size();++i)put(layout::EnglishEnvironmentCostSuffix+i,i<cost_suffix.size()?uint8_t(cost_suffix[i]):0);
         const auto path = root / "FLTD.EXE";
         { std::ofstream out(path, std::ios::binary); out.write(reinterpret_cast<const char*>(source.data()), std::streamsize(source.size())); }
         const auto image = launch::translate_fltd(path);

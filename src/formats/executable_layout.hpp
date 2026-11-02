@@ -874,6 +874,13 @@ inline constexpr auto EnglishLayoutTranslation255 = 0x6f0ec;
 inline constexpr auto EnglishLayoutTranslation256 = 0x6f2ae;
 inline constexpr auto EnglishLayoutTranslation257 = 0x6f2d4;
 inline constexpr auto EnglishLayoutTranslation258 = 0x6f2e0;
+// English six-budget environment data used by the common monthly model.
+inline constexpr auto EnglishEnvironmentTileX = 0x6d230;
+inline constexpr auto EnglishEnvironmentTileY = 0x6d238;
+inline constexpr auto EnglishEnvironmentYouthColors = 0x6d240;
+inline constexpr auto EnglishEnvironmentBudgetSteps = 0x6d244;
+inline constexpr auto EnglishEnvironmentYouthPositionSuffix = 0x6d24a;
+inline constexpr auto EnglishEnvironmentCostSuffix = 0x6d24f;
 inline constexpr auto EnglishLayoutTranslation259 = 0x6f2fc;
 inline constexpr auto EnglishLayoutTranslation26 = 0x6bf2c;
 inline constexpr auto EnglishLayoutTranslation260 = 0x6f300;
