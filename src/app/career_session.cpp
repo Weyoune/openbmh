@@ -5630,11 +5630,11 @@ bool CareerSession::dispatch_desk_widget(const ui::DeskRequest& request, uint64_
     if (!price && request.kind != ui::DeskRequestKind::change_option) {
         error = "unsupported_desk_widget"; return false;
     }
-    // Keep SDL requests bound to a visible, open and enabled MEN drawer/item.
+    // Keep SDL requests bound to a visible and enabled MEN drawer/item; the frame bit is optional.
     const auto desk = desktop_projection(revision);
     const int expected_kind = price ? 55 : 64;
     const auto item = std::find_if(desk.items.begin(), desk.items.end(), [&](const ui::DeskItem& item) {
-        return item.id == request.item_id && item.kind == expected_kind && item.open && !item.disabled;
+        return item.id == request.item_id && item.kind == expected_kind && !item.disabled;
     });
     if (request.menu_kind != expected_kind || item == desk.items.end()) {
         error = "stale_or_closed_desk_widget"; return false;

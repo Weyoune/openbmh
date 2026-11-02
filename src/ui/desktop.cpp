@@ -400,9 +400,9 @@ DeskRequest DesktopScreen::pointer_down(int x, int y, bool right) {
         }
         if (right && !state_.drawer_handles) return {};
         if (right && bin_mode_ && item.kind!=12) return {};
-        if (!right && item.kind==55 && item.open && !state_.national_team &&
-            x-item.x-4>34 && x-item.x-4<87) return {}; // Original ticket-price scale.
-        if (!right && item.kind==64 && item.open) return {}; // Source automation controls remain clicks.
+        if (!right && item.kind==55 && !state_.national_team &&
+            x-item.x-(item.open?4:0)>34 && x-item.x-(item.open?4:0)<87) return {}; // Original ticket-price scale.
+        if (!right && item.kind==64) return {}; // Source automation controls remain clicks.
         const bool drawer_handle=item.kind>=50&&state_.drawer_handles&&x<=item.x+3&&y<=item.y+3;
         if (!right) return {}; // LMB closes/activates; RMB alone starts a drag.
         layout_drag_ = LayoutDrag{item.id, x - item.x, y - item.y, item.x, item.y, -1, false, false, drawer_handle, right};
@@ -659,9 +659,10 @@ DeskRequest DesktopScreen::click(int x, int y, bool right) {
             return close_drawer(item);
         // The date remains an advance control with or without its optional frame.
         if (item.kind == 58) return request(DeskRequestKind::advance_turn, item);
-        if (item.kind == 55 && item.open && !state_.national_team && x - item.x - 4 > 34 && x - item.x - 4 < 87)
-            return request(DeskRequestKind::change_ticket_price, item, (x - item.x - 4 - 35) / 3 + 8);
-        if (item.kind == 64 && item.open) return request(DeskRequestKind::change_option, item, std::clamp((x - item.x - 4) / 33, 0, 4));
+        const int content_x = item.x + (item.open ? 4 : 0);
+        if (item.kind == 55 && !state_.national_team && x - content_x > 34 && x - content_x < 87)
+            return request(DeskRequestKind::change_ticket_price, item, (x - content_x - 35) / 3 + 8);
+        if (item.kind == 64) return request(DeskRequestKind::change_option, item, std::clamp((x - content_x) / 33, 0, 4));
         return {}; // Noninteractive status fields must not invent layout/game changes.
     }
     return {};

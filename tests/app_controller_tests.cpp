@@ -2402,33 +2402,33 @@ void check_semantic_desk_settings(const std::filesystem::path& data) {
     check(session.finish(init,error),"semantic setting fixture reaches a real desk");
     revision=init.desktop.revision;
     const int manager=game.memory.u8(::bmh::layout::ActiveManager); const size_t rec=size_t(manager)*0xb0c;
-    const auto default_desk=session.desktop_projection(revision);
-    check(std::none_of(default_desk.items.begin(),default_desk.items.end(),[](const auto& item) {
-        return item.kind==64&&item.open&&!item.disabled;
-    }),"parent failure uses the actual default closed automation drawer");
+    // Typed settings remain independent of hidden desktop presentation records.
     int automation_item=-1,price_item=-1;
     for(int i=0;i<54;++i) {
         const auto at=::bmh::layout::DesktopsUnsigned+uint32_t(manager)*0x360+uint32_t(i)*16;
         const auto kind=game.memory.u8(at+12);
-        if(kind==64)automation_item=i;
+        if(kind==64) {
+            automation_item=i;
+            game.memory.set16(at,uint16_t(game.memory.u16(at)|0x1000));
+        }
         if(kind==55) {
             price_item=i;
-            game.memory.set8(at+13,uint8_t(game.memory.u8(at+13)&~0x80));
+            game.memory.set16(at,uint16_t(game.memory.u16(at)|0x1000));
         }
     }
     check(automation_item>=0&&price_item>=0,"Original MEN contains both setting drawers");
     DeskRequest legacy{DeskRequestKind::change_option,manager,automation_item,64,1,revision};
     reject([&]{return session.dispatch_desk_widget(legacy,revision,error);},
-           "original SDL dispatcher still rejects default closed automation");
-    check(error=="stale_or_closed_desk_widget","closed widget fails at the retained SDL item guard");
+           "SDL dispatcher rejects a hidden automation item");
+    check(error=="stale_or_closed_desk_widget","hidden widget fails at the retained SDL item guard");
     for(int value:{8,25,17}) {
         price={identity(),value}; auto expected=game; expected.manager_records[rec+0x26e]=uint8_t(value);
         accept([&]{return session.dispatch_ticket_price(price,revision,error);},expected,
-               "typed price works with a closed drawer and changes only admission, never cash or credit");
+               "typed price works with a hidden drawer and changes only admission, never cash or credit");
     }
     reject([&]{return session.dispatch_ticket_price(price,revision,error);},"stale price replay is wholly neutral");
     legacy={DeskRequestKind::change_ticket_price,manager,price_item,55,12,revision};
-    reject([&]{return session.dispatch_desk_widget(legacy,revision,error);},"typed price does not unlock the SDL drawer");
+    reject([&]{return session.dispatch_desk_widget(legacy,revision,error);},"typed price does not unhide the SDL drawer");
     for(int value:{7,26}) {
         price={identity(),value};
         reject([&]{return session.dispatch_ticket_price(price,revision,error);},"typed price rejects outside Original endpoints");
@@ -2581,7 +2581,8 @@ void check_semantic_desk_settings(const std::filesystem::path& data) {
     std::filesystem::remove_all(directory);
 }
 
-void check_desk_widgets(const std::filesystem::path& data) {
+void check_desk_widgets_for_frame(const std::filesystem::path& data, bool framed) {
+    const int content_x=20+(framed?4:0);
     StartupFlow flow(data);
     flow.click(150, 215); flow.click(5, 225, true); flow.click(5, 225, true);
     flow.click(90, 169);
@@ -2604,7 +2605,7 @@ void check_desk_widgets(const std::filesystem::path& data) {
         game.memory.set8(at + 4, uint8_t(i == 1 ? 36 : 38));
         game.memory.set8(at + 5, uint8_t(i == 1 ? 2 : 0));
         game.memory.set8(at + 12, uint8_t(i == 1 ? 55 : 64));
-        game.memory.set8(at + 13, 0x80);
+        game.memory.set8(at + 13, framed?0x80:0);
     }
     init.desktop = session->desktop_projection(revision);
     init.preparation = session->preparation_projection(revision);
@@ -2629,22 +2630,22 @@ void check_desk_widgets(const std::filesystem::path& data) {
     const auto ws = session->rand().seed();
     const auto gc = session->game().calls(), wc = session->rand().calls();
     const auto rev = revision;
-    const auto price = flow.click(20 + 4 + 86, 90);
+    const auto price = flow.click(content_x + 86, 90);
     check(price.desk_action.value == 25, "rightmost original price hitbox maps to 25");
-    check(flow.click(20 + 4 + 35, 90).request == FlowRequest::none, "pending widget blocks a duplicate");
+    check(flow.click(content_x + 35, 90).request == FlowRequest::none, "pending widget blocks a duplicate");
     execute(price);
     auto changed_records = records;
     changed_records[0x26e] = 25;
     check(game.manager_records == changed_records && game.manager_options == options && revision == rev + 1,
           "price changes only the active manager's admission byte");
-    execute(flow.click(20 + 4 + 35, 90));
+    execute(flow.click(content_x + 35, 90));
     check(game.manager_records[0x26e] == 8, "leftmost original price hitbox maps to 8");
-    check(flow.click(20 + 4 + 34, 90).request == FlowRequest::none &&
-          flow.click(20 + 4 + 87, 90).request == FlowRequest::none,
+    check(flow.click(content_x + 34, 90).request == FlowRequest::none &&
+          flow.click(content_x + 87, 90).request == FlowRequest::none,
           "outside price endpoints remain read-only");
     for (int index : {1, 2, 3, 4}) {
         const auto before = game.manager_options;
-        execute(flow.click(20 + 4 + index * 33 + 10, 140));
+        execute(flow.click(content_x + index * 33 + 10, 140));
         auto expected = before;
         expected[size_t(index)] ^= 1;
         check(game.manager_options == expected, "automation toggles only its Original bit including training high flags");
@@ -2654,12 +2655,12 @@ void check_desk_widgets(const std::filesystem::path& data) {
     game.manager_records[0x219] = 0x02; // Indoor: only formation 2.
     game.manager_options[0] = 0;
     for (int value : {3, 8, 0}) {
-        execute(flow.click(20 + 4 + 10, 140));
+        execute(flow.click(content_x + 10, 140));
         check(game.manager_options[0] == value, "outdoor automation skips unavailable stored formations and wraps to off");
     }
     game.indoor = true;
     for (int value : {2, 0}) {
-        execute(flow.click(20 + 4 + 10, 140));
+        execute(flow.click(content_x + 10, 140));
         check(game.manager_options[0] == value, "indoor automation uses the separate saved formation mask");
     }
     game.indoor = false;
@@ -2686,9 +2687,6 @@ void check_desk_widgets(const std::filesystem::path& data) {
         unchanged(invalid);
     }
     for (int value : {7, 26}) unchanged(DeskRequest{DeskRequestKind::change_ticket_price, 0, 1, 55, value, revision});
-    game.memory.set8(::bmh::layout::Desktops + 2 * 16 + 13, 0);
-    unchanged(request);
-    game.memory.set8(::bmh::layout::Desktops + 2 * 16 + 13, 0x80);
     game.memory.set16(::bmh::layout::Desktops + 2 * 16, 20 | 0x1000);
     unchanged(request);
     game.memory.set16(::bmh::layout::Desktops + 2 * 16, 20);
@@ -2706,7 +2704,7 @@ void check_desk_widgets(const std::filesystem::path& data) {
     const auto national = session->desktop_projection(revision);
     check(national.national_team, "widget fixture projects a national coach");
     DesktopScreen national_screen(data, national);
-    check(national_screen.click(20 + 4 + 35, 90).kind == DeskRequestKind::none,
+    check(national_screen.click(content_x + 35, 90).kind == DeskRequestKind::none,
           "national admission control does not emit a price request");
     unchanged(DeskRequest{DeskRequestKind::change_ticket_price, 0, 1, 55, 10, revision});
     request.value = 4;
@@ -2720,6 +2718,10 @@ void check_desk_widgets(const std::filesystem::path& data) {
           session->game().calls() == gc && session->rand().calls() == wc &&
           game.date == date && game.tactics == board && game.squad_slots == squad,
           "every drawer action preserves both RNG streams, date, board and squad");
+}
+
+void check_desk_widgets(const std::filesystem::path& data) {
+    for(bool framed : {true,false}) check_desk_widgets_for_frame(data,framed);
 }
 
 void check_league_only_national_coach_handoff(const std::filesystem::path& data) {
@@ -7102,7 +7104,7 @@ int main(int argc, char** argv) {
         if (argc != 2 && argc != 3 && argc != 4) throw std::runtime_error("app_controller_tests requires data directory [optional Original save]");
         const std::filesystem::path data = argv[1];
         if(argc==3 && std::string_view(argv[2])=="--desktop-input-only") {
-            check_date_widget_controller(data); check_menu_layout_session_io(data); return 0;
+            check_date_widget_controller(data); check_menu_layout_session_io(data); check_desk_widgets(data); return 0;
         }
         if(argc==3 && std::string_view(argv[2])=="--environment-only") {
             check_environment_controller(data);return 0;

@@ -1177,6 +1177,29 @@ int main(int argc, char** argv) {
         check(date_drag.pointer_up(40,60,true).layout_operation==DeskLayoutOperation::move_item,
               "unframed date retains right-button movement");
         check(desk.render().pixels == pixels,"commands cannot mutate the saved game view");
+        for(bool framed : {true,false}) {
+            auto controls=d;
+            controls.items={{1,20,80,98,36,55,0,0,framed,false},
+                            {2,20,130,173,38,64,0,0,framed,false}};
+            const int origin=20+(framed?4:0);
+            for(int offset : {34,35,86,87}) {
+                DesktopScreen price_control(data,controls);
+                price_control.pointer_down(origin+offset,90);
+                const auto price_action=price_control.pointer_up(origin+offset,90);
+                check(price_action.kind==((offset==35||offset==86)?
+                          DeskRequestKind::change_ticket_price:DeskRequestKind::none),
+                      "framed and unframed admission controls use the rendered Source endpoints");
+                if(offset==35||offset==86)
+                    check(price_action.value==(offset==35?8:25),"admission endpoint preserves its exact value");
+            }
+            for(int offset : {32,33,65,66,98,99,131,132}) {
+                DesktopScreen automation_control(data,controls);
+                automation_control.pointer_down(origin+offset,140);
+                const auto option_action=automation_control.pointer_up(origin+offset,140);
+                check(option_action.kind==DeskRequestKind::change_option && option_action.value==offset/33,
+                      "automation cell boundaries follow the optional frame offset");
+            }
+        }
         desk.reject_action("unsupported_menu");
         check(!desk.pending() && desk.render().pixels == pixels,"rejected command preserves state");
         check(desk.key("A").menu_kind == 3,"original A hotkey opens lineup");
