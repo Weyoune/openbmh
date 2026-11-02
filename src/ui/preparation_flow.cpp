@@ -1144,6 +1144,7 @@ FlowResult StartupFlow::pointer_down(int x,int y,bool right) {
         return {changed};
     }
     if (environment_) return {environment_->pointer_down(x,y,right)};
+    if (advertising_) return {advertising_->move(x,y)};
     if(pitch_){
         const std::string before=pitch_->state_json();
         const auto request=pitch_->pointer_down(x,y,right);
@@ -2293,6 +2294,8 @@ void StartupFlow::acknowledge_advertising(AdvertisingState state, DeskState desk
     // Only contract acceptance resumes the next offer. Spending closes its calculator.
     if (request.kind == AdvertisingActionKind::accept_offer)
         (void)next_advertising->open_offers(request.offer.display_slot);
+    if (const auto pointer = advertising_->pointer_position())
+        (void)next_advertising->move((*pointer)[0], (*pointer)[1]);
     desktop_ = std::move(next_desktop);
     preparation_ = std::move(next_preparation);
     advertising_ = std::move(next_advertising);

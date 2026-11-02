@@ -114,6 +114,7 @@ public:
     bool reject_action(std::string reason);
     int selected_contract() const { return selected_contract_; }
     int hovered_target() const { return hovered_target_; }
+    std::optional<std::array<int, 2>> pointer_position() const { return pointer_position_; }
     int selected_offer() const { return selected_offer_; }
     bool offer_open() const { return offer_open_; }
     bool spending_calculator_open() const { return spending_calculator_open_; }
@@ -139,6 +140,7 @@ private:
     std::optional<Image> spending_backdrop_;
     int selected_contract_ = -1;
     int hovered_target_ = -1;
+    std::optional<std::array<int, 2>> pointer_position_;
     int selected_spending_slot_ = -1;
     int selected_offer_ = -1;
     uint64_t next_request_id_ = 1;
@@ -160,6 +162,7 @@ private:
     bool accept_spending_calculator();
     void close_spending_calculator();
     bool dismiss_notification();
+    void refresh_hover();
     void draw_spending_calculator(Image&) const;
     void draw_notification(Image&) const;
     void pattern_rect(Image&, int x, int y, int width, int height) const;

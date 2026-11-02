@@ -407,6 +407,17 @@ int main(int argc, char** argv) {
               offers.close_requested(),
               "cancel closes the offer browser first; a second ESC closes the screen");
 
+        AdvertisingScreen resumed_offers(data, offer_state);
+        const auto closed_offer_pixels = resumed_offers.render().pixels;
+        check(resumed_offers.open_offers(0) && !resumed_offers.move(-1, -1) &&
+              resumed_offers.key("ESC") && resumed_offers.hovered_target() == -1 &&
+              resumed_offers.render().pixels == closed_offer_pixels,
+              "offer ESC rechecks the pointer moved during the modal without another motion event");
+        check(resumed_offers.open_offers(0) && resumed_offers.click(110, 195) &&
+              resumed_offers.hovered_target() == -1 &&
+              resumed_offers.render().pixels == closed_offer_pixels,
+              "offer cancel rechecks its own click position and removes the old target outline");
+
         // The three source spending controls open the original calculator. All
         // editing remains local; only J/Enter on a changed value creates a
         // manager/revision-bound request for the app controller.
@@ -470,6 +481,20 @@ int main(int argc, char** argv) {
               unchanged_budget.spending_input() == 10000 && unchanged_budget.key("J") &&
               !unchanged_budget.pending() && !unchanged_budget.spending_calculator_open(),
               "accepting an unchanged monthly budget closes locally without an engine request");
+        AdvertisingScreen resumed_budget(data, spending_state);
+        const auto closed_budget_pixels = resumed_budget.render().pixels;
+        check(resumed_budget.click(budget_x, budget_y) && !resumed_budget.move(-1, -1) &&
+              resumed_budget.key("ESC") && resumed_budget.hovered_target() == -1 &&
+              resumed_budget.render().pixels == closed_budget_pixels,
+              "calculator ESC restores the current off-target pointer without another motion event");
+        AdvertisingScreen expected_parent(data, spending_state);
+        check(expected_parent.move(empty_x, empty_y) &&
+              resumed_budget.click(budget_x, budget_y) && !resumed_budget.move(empty_x, empty_y) &&
+              resumed_budget.key("J") && !resumed_budget.pending() &&
+              resumed_budget.hovered_target() == empty_slot &&
+              resumed_budget.render().pixels == expected_parent.render().pixels,
+              "unchanged calculator acceptance resumes hover over the current parent target");
+
 
         AdvertisingScreen preset_budget(data, spending_state, 0x300000018ULL);
         const int preset0_x = 103 + exe.u16(::bmh::layout::Advertising_Click_RuntimeField + 15 * 2);

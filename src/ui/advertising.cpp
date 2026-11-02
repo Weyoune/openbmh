@@ -858,6 +858,7 @@ void AdvertisingScreen::draw_notification(Image& out) const {
 bool AdvertisingScreen::dismiss_notification() {
     if (!notification_open()) return false;
     notification_dismissed_ = true;
+    refresh_hover();
     return true;
 }
 
@@ -894,6 +895,7 @@ void AdvertisingScreen::open_spending_calculator(int display_slot) {
 void AdvertisingScreen::close_spending_calculator() {
     spending_calculator_open_ = false;
     spending_backdrop_.reset();
+    refresh_hover();
 }
 
 bool AdvertisingScreen::accept_spending_calculator() {
@@ -1001,11 +1003,20 @@ bool AdvertisingScreen::reject_action(std::string reason) {
     (void)utf8_to_original(reason);
     if (pending_->kind == AdvertisingActionKind::set_spending) close_spending_calculator();
     pending_.reset();
+    refresh_hover();
     feedback_ = std::move(reason);
     return true;
 }
 
+void AdvertisingScreen::refresh_hover() {
+    if (pointer_position_) (void)move((*pointer_position_)[0], (*pointer_position_)[1]);
+    else hovered_target_ = -1;
+}
+
 bool AdvertisingScreen::move(int x, int y) {
+    // Modal input freezes the parent view, but its last physical position must
+    // be sampled again as soon as that modal returns.
+    pointer_position_ = std::array<int, 2>{x, y};
     if (close_requested_ || pending_ || notification_open() || spending_calculator_open_ || offer_open_)
         return false;
     int target = -1;
@@ -1026,6 +1037,7 @@ bool AdvertisingScreen::move(int x, int y) {
 }
 
 bool AdvertisingScreen::click(int x, int y) {
+    pointer_position_ = std::array<int, 2>{x, y};
     if (close_requested_ || pending_ || x < 0 || y < 0 || x >= 320 || y >= 240) return false;
     if (notification_open()) return dismiss_notification();
     if (spending_calculator_open_) {
@@ -1056,6 +1068,7 @@ bool AdvertisingScreen::click(int x, int y) {
             offer_open_ = false;
             selected_offer_ = -1;
             feedback_.clear();
+            refresh_hover();
             return true;
         }
         if (x >= 164 && x <= 229 && y >= 191 && y <= 200) {
@@ -1133,7 +1146,12 @@ bool AdvertisingScreen::key(std::string_view value) {
         return text(value);
     }
     if (value == "ESC") {
-        if (offer_open_) { offer_open_ = false; selected_offer_ = -1; return true; }
+        if (offer_open_) {
+            offer_open_ = false;
+            selected_offer_ = -1;
+            refresh_hover();
+            return true;
+        }
         close_requested_ = true;
         return true;
     }

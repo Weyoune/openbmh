@@ -1618,7 +1618,14 @@ void check_advertising_controller(const std::filesystem::path& data) {
           "independent source commit accepts the two-board offer");
     const auto expected_bytes = save_stream(expected);
     const int32_t cash_before = signed_u32(game.manager_records, record + 0x314);
+    const auto advertising_exe = load_le(asset_path(data, "BMH.exe"));
+    check(!flow.move_action(
+              advertising_exe.u16(::bmh::layout::Advertising_Click_RuntimeField3 + 18 * 2) + 2,
+              advertising_exe.u16(::bmh::layout::Advertising_Click_RuntimeField4 + 18 * 2) + 2).changed,
+          "accepted offer remembers a moved pointer while its pending browser stays frozen");
     serve(action);
+    check(flow.state_json().find("\"hovered_target\":18") != std::string::npos,
+          "accepted final offer resumes current hover outside its original contract target");
     check(save_stream(game) == expected_bytes && revision == original_revision + 1 &&
           !flow.pending_advertising_action() && flow.screen_name() == "advertising" &&
           flow.desktop()->state().revision == revision &&
@@ -1822,7 +1829,11 @@ void check_advertising_spending_controller(const std::filesystem::path& data) {
     const auto before = save_stream(g);
     const auto w = session->rand(); const auto gr = session->game();
     open(17); flow.text("5000"); (void)flow.render();
-    serve(flow.send_key("ESC"));
+    check(!flow.pointer_down(0, 0, true).changed,
+          "right DOWN records its position while the calculator still owns input");
+    serve(flow.click(0, 0, true));
+    check(flow.state_json().find("\"hovered_target\":-1") != std::string::npos,
+          "calculator right release removes its old outline without a motion event");
     check(save_stream(g) == before && session->rand().calls() == w.calls() &&
           session->game().calls() == gr.calls(), "calculator input and cancel are read-only");
     open(17); flow.text("5000");
@@ -1832,7 +1843,14 @@ void check_advertising_spending_controller(const std::filesystem::path& data) {
     check(save_stream(g) == before && !flow.pending_advertising_action(),
           "forged monthly request cannot mutate state");
     open(17); flow.text("5000"); monthly = submit();
+    const int resumed_x = exe.u16(::bmh::layout::Advertising_Click_RuntimeField3 + 18 * 2) + 2;
+    const int resumed_y = exe.u16(::bmh::layout::Advertising_Click_RuntimeField4 + 18 * 2) + 2;
+    check(!flow.move_action(resumed_x, resumed_y).changed,
+          "pending calculator keeps its parent frozen while remembering the latest pointer");
     serve(monthly);
+    check(flow.state_json().find("\"hovered_target\":18") != std::string::npos &&
+          !flow.move_action(resumed_x, resumed_y).changed,
+          "spending acknowledgement resumes the last pointer over its refreshed parent without new motion");
     check(signed_u32(g.manager_records, record + 0x854) == 5000 &&
           signed_u32(g.manager_records, record + 0x314) == 500000 &&
           session->rand().calls() == w.calls() && session->game().calls() == gr.calls(),
