@@ -592,16 +592,356 @@ void set_preparation_revision_source(PreparationState& state, uint64_t revision,
     if(state.pitch){state.pitch->revision=revision;state.pitch->source=source;}
     for(auto& card:state.player_cards){card.lineup.revision=revision;card.lineup.source=source;}
 }
+// Pointer regressions share synthetic desktop records across supported editions.
+void folder_pointer_input_tests(const std::filesystem::path& data,const LeImage& exe) {
+    auto menu_game = fixture();
+    menu_game.memory.set8(::bmh::layout::Desktops + 44 * 16 + 12, 63); // mailbox occurs before the menu shortcut in this scan
+    menu_game.memory.set8(::bmh::layout::Desktops + 53 * 16 + 12, 72); // final compact-bar cell dispatches MEN
+    auto menu_desk = desk_from_game(menu_game, exe, 6);
+    check(menu_desk.mailbox_shortcut && menu_desk.menu_layout_shortcut &&
+          menu_desk.menu_layout_shortcut->id == 53,
+          "Source final compact-bar cell resolves record 53/kind 72 independently of linked drawers");
+    menu_desk.shortcut_bar_always = false;
+    DesktopScreen edge_bar(data, menu_desk);
+    const auto edge_hidden = edge_bar.render();
+    check(!edge_bar.pointer_move(160, 238), "Source quickbar edge requires exactly y239");
+    check(edge_bar.pointer_move(160, 239) && edge_bar.render().pixels != edge_hidden.pixels &&
+          !edge_bar.pending() && edge_bar.state().layout_records == menu_desk.layout_records,
+          "lower-edge motion shows quickbar without an action or Native layout edits");
+    const auto edge_shown = edge_bar.render();
+    const auto quickbar_art = load_vga(asset_path(data / "KB", "3.VGA"));
+    for (int y = 0; y < 20; ++y) for (int x = 0; x < 20; ++x)
+        check(edge_shown.pixels[size_t(207 + y) * 320 + 299 + x] ==
+              quickbar_art.pixels[size_t(75 + y) * quickbar_art.width + exe.u8(::bmh::layout::Desktop_Render_RuntimeField3) + x],
+              "visible Source quickbar copies the complete normal socket sprite before any press");
+    check(!edge_bar.pointer_move(250, 239) && edge_bar.click(250, 239).kind == DeskRequestKind::none &&
+          edge_bar.render().pixels == edge_shown.pixels,
+          "motion along edge and click at the same edge do not toggle the Source y latch twice");
+    check(edge_bar.pointer_move(292, 221), "MEN quickbar cell motion selects its Source hover label");
+    const auto hover_frame = edge_bar.render();
+    int hover_pixels = 0;
+    for (int y = 0; y < 240; ++y) for (int x = 0; x < 320; ++x)
+        if (hover_frame.pixels[size_t(y) * 320 + x] != edge_shown.pixels[size_t(y) * 320 + x]) {
+            check(y >= 230 && y <= 235, "Source quickbar label changes only the footer Font3 rows");
+            ++hover_pixels;
+        }
+    check(hover_pixels > 0 && !edge_bar.pointer_move(291, 221),
+          "Source hover title renders once and stays stable inside the same cell");
+    check(edge_bar.pointer_move(160, 238) && edge_bar.render().pixels == edge_shown.pixels,
+          "leaving the cell restores the footer without hiding the quickbar");
+    check(edge_bar.pointer_move(160, 239) && edge_bar.render().pixels == edge_hidden.pixels,
+          "re-entering the lower edge toggles the quickbar off without a click");
+    auto always_desk = menu_desk; always_desk.shortcut_bar_always = true;
+    DesktopScreen always_bar(data, always_desk);
+    const auto always_frame = always_bar.render();
+    always_bar.pointer_move(160, 239); always_bar.pointer_move(160, 238); always_bar.pointer_move(160, 239);
+    check(always_bar.render().pixels == always_frame.pixels && !always_bar.pending(),
+          "format field bit1 keeps Always quickbar visible through both bit0 edge transitions");
+    DesktopScreen menu_bar(data, menu_desk);
+    check(menu_bar.click(292,221).kind == DeskRequestKind::none,
+          "MEN shortcut is unavailable before the original compact bar is shown");
+    menu_bar.pointer_move(64,239);
+    auto menu_save = menu_bar.click(292,221);
+    check(menu_save.kind == DeskRequestKind::open_menu && menu_save.menu_kind == 53 &&
+          menu_save.item_id == 53 && menu_save.value == 1,
+          "compact last-cell left click opens the Original menu-layout save path from record 53");
+    menu_bar.resolve_local_menu();
+    auto menu_load = menu_bar.click(292,221,true);
+    check(menu_load.kind == DeskRequestKind::open_menu && menu_load.menu_kind == 53 &&
+          menu_load.item_id == 53 && menu_load.value == 0,
+          "compact last-cell right click opens the Original menu-layout load path from record 53");
+    auto quickbar_drawer = menu_desk;
+    quickbar_drawer.layout_records[50][5]=0xff;
+    quickbar_drawer.layout_records[50][6]=0xff;
+    quickbar_drawer.layout_records[50][12]=50;
+    DesktopScreen quickbar_open(data,quickbar_drawer);
+    quickbar_open.pointer_move(64,239);
+    const auto append_drawer=quickbar_open.click(22,221);
+    check(quickbar_open.take_sound_ids()==std::vector<uint8_t>{15} && quickbar_open.take_sound_ids().empty(),
+          "Source drawer append emits ID15 exactly once through the application boundary");
+    quickbar_open.render(); quickbar_open.pointer_move(23,221); quickbar_open.click(22,221);
+    check(quickbar_open.take_sound_ids().empty(),"render/hover/pending input never replay a drawer sound");
+    check(append_drawer.kind==DeskRequestKind::change_layout&&
+          append_drawer.layout_operation==DeskLayoutOperation::toggle_quickbar_drawer&&
+          append_drawer.layout_after[50*16+5]==0&&append_drawer.layout_after[50*16+13]&0x80,
+          "Original quickbar LMB appends a hidden drawer record and sets its open bit");
+    auto quickbar_close_state=menu_desk;
+    quickbar_close_state.layout_records[0][5]=50;
+    quickbar_close_state.layout_records[50][5]=0;
+    quickbar_close_state.layout_records[50][6]=0;
+    quickbar_close_state.layout_records[50][12]=50;
+    DesktopScreen quickbar_close(data,quickbar_close_state);
+    quickbar_close.pointer_move(64,239);
+    const auto unlink_drawer=quickbar_close.click(22,221,true);
+    check(quickbar_close.take_sound_ids()==std::vector<uint8_t>{12},"Source drawer unlink emits ID12");
+    check(unlink_drawer.kind==DeskRequestKind::change_layout&&
+          unlink_drawer.layout_operation==DeskLayoutOperation::toggle_quickbar_drawer&&
+          unlink_drawer.layout_after[0*16+5]==0&&unlink_drawer.layout_after[50*16+5]==0xff&&
+          unlink_drawer.layout_after[50*16+6]==0xff,
+          "Original quickbar RMB unlinks a visible drawer record with cleared links");
+    auto child_desk=menu_desk;
+    child_desk.layout_records[3][5]=child_desk.layout_records[3][6]=0xff;
+    child_desk.layout_records[3][12]=2;
+    child_desk.layout_records[3][13]=0;
+    child_desk.layout_records[49][12]=50;
+    child_desk.layout_records[49][13]=0x80;
+    child_desk.layout_records[0][5]=49;
+    child_desk.layout_records[49][5]=child_desk.layout_records[49][6]=0;
+    child_desk.folder_icon_slots[0]={3};
+    child_desk.drawer_handles=true;
+    child_desk.items.push_back(DeskItem{49,40,40,100,65,50,0,0,true,false});
+    DesktopScreen folder_click(data,child_desk);
+    const auto child_action=folder_click.click(50,49);
+    check(child_action.kind==DeskRequestKind::open_menu&&child_action.item_id==3&&child_action.menu_kind==2,
+          "Source folder child uses its native record/kind on ordinary LMB activation");
+    DesktopScreen folder_drag(data,child_desk);
+    folder_drag.pointer_down(50,49,true);
+    check(folder_drag.take_sound_ids()==std::vector<uint8_t>({15,12,15}),
+          "folder-child RMB start preserves Source restore/unlink/append ordering");
+    folder_drag.pointer_move(176,100);
+    const auto child_return=folder_drag.pointer_up(176,100,true);
+    check(child_return.kind==DeskRequestKind::change_layout&&
+          child_return.layout_operation==DeskLayoutOperation::return_folder_child&&
+          child_return.layout_before[3*16+5]==0xff&&child_return.layout_after[0*16+5]==49&&
+          child_return.layout_after[49*16+5]==3&&child_return.layout_after[3*16+5]==0&&
+          child_return.layout_after[3*16+6]==49,
+          "RMB drag from the rendered 32×25 folder tile returns it to the visible chain");
+    check(folder_drag.take_sound_ids().empty(),"folder-child release cannot replay its down-event append");
+    // Unframed folders render the same tiles four pixels nearer the origin.
+    auto unframed_child_desk=child_desk;
+    unframed_child_desk.layout_snap=true;
+    unframed_child_desk.items.back().open=false;
+    unframed_child_desk.items.back().width=50;
+    unframed_child_desk.items.back().height=41;
+    unframed_child_desk.layout_records[49][13]=0;
+    unframed_child_desk.layout_records[13]=unframed_child_desk.layout_records[3];
+    unframed_child_desk.layout_records[13][12]=12;
+    unframed_child_desk.folder_icon_slots[0]={13};
+    DesktopScreen unframed_child(data,unframed_child_desk);
+    check(unframed_child.pointer_down(46,45).kind==DeskRequestKind::none &&
+          unframed_child.pointer_up(46,45).kind==DeskRequestKind::advance_turn,
+          "LMB on an unframed folder tile activates its native kickoff action");
+    DesktopScreen unframed_drag(data,unframed_child_desk);
+    unframed_drag.pointer_down(46,45,true);
+    check(unframed_drag.take_sound_ids()==std::vector<uint8_t>({15,12,15}),
+          "unframed child starts extraction rather than dragging the folder body");
+    unframed_drag.pointer_move(176,100);
+    const auto unframed_return=unframed_drag.pointer_up(176,100,true);
+    check(unframed_return.item_id==13 && unframed_return.menu_kind==12 &&
+          unframed_return.layout_operation==DeskLayoutOperation::return_folder_child &&
+          unframed_return.layout_after[13*16]==175 && unframed_return.layout_after[13*16+2]==95 &&
+          unframed_return.layout_after[49*16+5]==13,
+          "RMB extraction uses the rendered unframed tile origin and returns the kickoff icon");
+    DesktopScreen folder_drop(data,child_desk);
+    folder_drop.pointer_down(50,49,true); folder_drop.take_sound_ids();
+    folder_drop.pointer_move(55,52);
+    const auto dropped_child=folder_drop.pointer_up(55,52,true);
+    check(dropped_child.layout_operation==DeskLayoutOperation::set_folder &&
+          folder_drop.take_sound_ids()==std::vector<uint8_t>{12},
+          "Source fully enclosed drop unlinks the dragged child exactly once");
+    DesktopScreen folder_corner(data,child_desk);
+    const auto corner_close=folder_corner.pointer_down(41,41);
+    check(corner_close.kind==DeskRequestKind::change_layout &&
+          corner_close.layout_operation==DeskLayoutOperation::toggle_quickbar_drawer &&
+          corner_close.item_id==49 && corner_close.layout_target_item==49 &&
+          corner_close.layout_after[5]==0 && corner_close.layout_after[49*16+5]==0xff &&
+          corner_close.layout_after[49*16+6]==0xff &&
+          folder_corner.take_sound_ids()==std::vector<uint8_t>{12},
+          "framed folder LMB corner unlinks its native record and emits the Source removal sound");
+    auto without_folder=child_desk; ++without_folder.revision;
+    without_folder.items.pop_back();
+    for(size_t i=0;i<54;++i)
+        std::copy_n(corner_close.layout_after.begin()+i*16,16,without_folder.layout_records[i].begin());
+    folder_corner.acknowledge(without_folder);
+    check(folder_corner.pointer_up(41,41).kind==DeskRequestKind::none &&
+          !folder_corner.pending() && folder_corner.take_sound_ids().empty(),
+          "folder removal owns its release after ACK without activating the underlying date");
+    check(folder_corner.pointer_up(41,41).kind==DeskRequestKind::advance_turn,
+          "folder removal release barrier leaves a subsequent independent date click available");
+    auto covered_child=child_desk;
+    covered_child.items.push_back(DeskItem{6,60,48,32,25,21,0,0,false,false});
+    covered_child.layout_records[49][5]=6;
+    covered_child.layout_records[6][5]=0;
+    covered_child.layout_records[6][6]=49;
+    covered_child.layout_records[6][12]=21;
+    DesktopScreen stacked_icon(data,covered_child);
+    const auto exposed_folder_frame=folder_click.render();
+    const auto covered_folder_frame=stacked_icon.render();
+    const auto desktop_atlas=load_vga(asset_path(data/"KB","3.VGA"));
+    for(int y=0;y<25;++y) for(int x=0;x<32;++x)
+        check(covered_folder_frame.pixels[size_t(48+y)*320+60+x]==
+              desktop_atlas.pixels[size_t(50+y)*desktop_atlas.width+160+x],
+              "top icon renders over the folder child using its own native KB3 tile");
+    check(covered_folder_frame.pixels[size_t(49)*320+50]==exposed_folder_frame.pixels[size_t(49)*320+50],
+          "the uncovered part of a folder child remains visible below the stacked icon");
+    const auto covering_icon_action=stacked_icon.click(65,49);
+    check(covering_icon_action.kind==DeskRequestKind::open_menu&&covering_icon_action.item_id==6&&
+          covering_icon_action.menu_kind==21&&stacked_icon.state().layout_records==covered_child.layout_records,
+          "LMB activates the rendered top icon rather than the covered folder child without layout edits");
+    DesktopScreen stacked_drag(data,covered_child);
+    stacked_drag.pointer_down(65,49,true);
+    check(stacked_drag.take_sound_ids()==std::vector<uint8_t>({12,15}),
+          "visible RMB drag starts with the Source unlink/append pair");
+    stacked_drag.pointer_move(200,120);
+    const auto covering_icon_drag=stacked_drag.pointer_up(200,120,true);
+    check(covering_icon_drag.kind==DeskRequestKind::change_layout&&covering_icon_drag.item_id==6&&
+          covering_icon_drag.layout_operation==DeskLayoutOperation::move_item&&
+          covering_icon_drag.layout_after[3*16+5]==0xff&&covering_icon_drag.layout_after[3*16+6]==0xff,
+          "RMB drags the rendered top icon and leaves the covered child outside the visible link chain");
+    check(stacked_drag.take_sound_ids().empty(),"ordinary move release adds no structural sound");
+    DesktopScreen still_drag(data,covered_child);
+    still_drag.pointer_down(65,49,true); still_drag.pointer_up(65,49,true);
+    check(still_drag.take_sound_ids()==std::vector<uint8_t>({12,15}),
+          "Source RMB reordering sounds happen even without pointer motion");
+    DesktopScreen exposed_child(data,covered_child);
+    check(exposed_child.click(50,49).item_id==3,"an exposed folder tile still opens its native child action");
+    auto status_cover=child_desk;
+    status_cover.items.push_back(DeskItem{48,48,48,42,35,56,0,0,true,false});
+    DesktopScreen stacked_status(data,status_cover);
+    check(stacked_status.render().pixels!=exposed_folder_frame.pixels&&
+          stacked_status.pointer_down(50,49).kind==DeskRequestKind::none&&
+          stacked_status.pointer_up(50,49).kind==DeskRequestKind::none&&!stacked_status.pending(),
+          "an open status drawer covers a folder child and its inert body cannot activate that child");
+    auto empty_folder_cover=child_desk;
+    empty_folder_cover.items.push_back(DeskItem{48,48,48,45,35,51,0,1,true,false});
+    DesktopScreen stacked_empty_folder(data,empty_folder_cover);
+    check(stacked_empty_folder.click(50,49).kind==DeskRequestKind::none&&!stacked_empty_folder.pending(),
+          "an empty part of the top folder blocks a lower folder child");
+    DesktopScreen covered_bin_restore(data,empty_folder_cover);
+    covered_bin_restore.pointer_move(160,239);
+    covered_bin_restore.click(10,215);
+    check(covered_bin_restore.pointer_down(50,49,true).kind==DeskRequestKind::none&&
+          covered_bin_restore.pointer_up(50,49,true).kind==DeskRequestKind::none&&
+          !covered_bin_restore.pending()&&covered_bin_restore.state().layout_records==empty_folder_cover.layout_records,
+          "bin-mode RMB on a covering empty folder cannot restore the lower child or change links");
+    check(covered_bin_restore.take_sound_ids().empty(),"covered bin child cannot emit a restore sound");
+    DesktopScreen exposed_bin_restore(data,covered_child);
+    exposed_bin_restore.pointer_move(160,239);
+    exposed_bin_restore.click(10,215);
+    const auto exposed_restore=exposed_bin_restore.click(50,49,true);
+    check(exposed_bin_restore.take_sound_ids()==std::vector<uint8_t>{15},"bin-mode restore emits only append ID15");
+    check(exposed_restore.layout_operation==DeskLayoutOperation::restore_folder_child&&exposed_restore.item_id==3,
+          "bin-mode RMB still restores an exposed folder child using its native owner");
+    DesktopScreen bin_send(data,covered_child);
+    bin_send.pointer_move(160,239); bin_send.click(10,215);
+    const auto sent_icon=bin_send.click(65,49,true);
+    check(sent_icon.layout_operation==DeskLayoutOperation::send_to_folder &&
+          bin_send.take_sound_ids()==std::vector<uint8_t>{12},"bin-mode send emits only unlink ID12");
+    auto closed_cover=child_desk;
+    closed_cover.items.push_back(DeskItem{48,48,48,14,14,63,0,0,false,false});
+    DesktopScreen stacked_closed_drawer(data,closed_cover);
+    check(stacked_closed_drawer.click(50,49).kind==DeskRequestKind::none&&!stacked_closed_drawer.pending(),
+          "a closed drawer blocks hits inside its Source dimensions minus eight");
+    DesktopScreen outside_closed_drawer(data,closed_cover);
+    check(outside_closed_drawer.click(55,49).item_id==3,
+          "the eight-pixel closed drawer inset allows hits on the exposed lower folder child");
+    const auto menu_test_dir = std::filesystem::temp_directory_path() /
+        ("openbmh-menu-layout-picker-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    std::filesystem::create_directories(menu_test_dir / "load");
+    std::filesystem::create_directories(menu_test_dir / "save");
+    { std::ofstream(menu_test_dir / "load" / "LAYOUT.MEN") << "fixture";
+      std::ofstream(menu_test_dir / "load" / "NOTGAME.FBM") << "fixture"; }
+    SaveLoadScreen menu_load_picker(data, menu_test_dir / "load", SaveLoadMode::load, 0, 6,
+        menu_bar.render(), true, SaveLoadFileKind::menu_layout, 52);
+    check(menu_load_picker.entries().size() == 1 &&
+          menu_load_picker.entries()[0].path.extension() == ".MEN" &&
+          !menu_load_picker.info_press(60,45),
+          "menu-layout picker filters to MEN and never interprets a layout as an FBM information header");
+    menu_load_picker.click(60,45); menu_load_picker.click(60,45);
+    check(menu_load_picker.pending() && menu_load_picker.pending()->file_kind == SaveLoadFileKind::menu_layout &&
+          menu_load_picker.pending()->origin_item_id == 52 &&
+          menu_load_picker.pending()->path.extension() == ".MEN",
+          "MEN load request retains its typed file kind and source drawer identity");
+    SaveLoadScreen menu_save_picker(data, menu_test_dir / "save", SaveLoadMode::save, 0, 6,
+        menu_bar.render(), true, SaveLoadFileKind::menu_layout, 52);
+    menu_save_picker.click(120,214); menu_save_picker.text("LAYOUT"); menu_save_picker.key("ENTER");
+    check(menu_save_picker.pending() && menu_save_picker.pending()->file_kind == SaveLoadFileKind::menu_layout &&
+          menu_save_picker.pending()->path.filename() == "LAYOUT.MEN" &&
+          save_load_request_json(*menu_save_picker.pending()).find("\"file_kind\":\"menu_layout\"") != std::string::npos,
+          "MEN save request uses the native extension and an explicit JSON file-kind discriminator");
+    std::filesystem::remove_all(menu_test_dir);
+}
+
+void desktop_control_input_tests(const std::filesystem::path& data,DeskState& d) {
+    DesktopScreen desk(data,d);
+    const auto pixels = desk.render().pixels;
+    check(desk.render().pixels == pixels,"repeat render is deterministic");
+    check(desk.click(5,23).kind == DeskRequestKind::none,"calendar handle must not advance a turn");
+    auto action = desk.click(50,125);
+    check(action.kind == DeskRequestKind::open_menu && action.menu_kind == 3 && action.manager_slot == 0 && action.revision == 10,"lineup request");
+    check(desk.click(20,40).kind == DeskRequestKind::none,"pending command blocks another turn");
+    rejected([&]{ desk.acknowledge(d); });
+    ++d.revision; desk.acknowledge(d);
+    check(desk.click(20,40).kind == DeskRequestKind::advance_turn,"open calendar advances");
+    check(desk.click(20,40).kind == DeskRequestKind::none,"no duplicate advance request");
+    ++d.revision; desk.acknowledge(d);
+    check(desk.click(165,125).kind == DeskRequestKind::advance_turn,"kickoff icon advances");
+    auto unframed_date=d;
+    unframed_date.items.front().open=false;
+    unframed_date.layout_records[1][13]&=0x7f;
+    DesktopScreen date_click(data,unframed_date);
+    check(date_click.pointer_down(20,40).kind==DeskRequestKind::none,
+          "date press waits for its release without entering layout drag");
+    const auto date_turn=date_click.pointer_up(20,40);
+    check(date_turn.kind==DeskRequestKind::advance_turn && date_turn.menu_kind==58 &&
+          date_turn.manager_slot==d.manager_slot && date_turn.revision==d.revision &&
+          date_click.pointer_up(20,40).kind==DeskRequestKind::none,
+          "unframed date body emits exactly one authenticated advance action");
+    DesktopScreen date_drag(data,unframed_date);
+    date_drag.pointer_down(20,40,true); date_drag.pointer_move(40,60);
+    check(date_drag.pointer_up(40,60,true).layout_operation==DeskLayoutOperation::move_item,
+          "unframed date retains right-button movement");
+    check(desk.render().pixels == pixels,"commands cannot mutate the saved game view");
+    for(bool framed : {true,false}) {
+        auto controls=d;
+        controls.items={{1,20,80,98,36,55,0,0,framed,false},
+                        {2,20,130,173,38,64,0,0,framed,false}};
+        const int origin=20+(framed?4:0);
+        for(int offset : {34,35,86,87}) {
+            DesktopScreen price_control(data,controls);
+            price_control.pointer_down(origin+offset,90);
+            const auto price_action=price_control.pointer_up(origin+offset,90);
+            check(price_action.kind==((offset==35||offset==86)?
+                      DeskRequestKind::change_ticket_price:DeskRequestKind::none),
+                  "framed and unframed admission controls use the rendered Source endpoints");
+            if(offset==35||offset==86)
+                check(price_action.value==(offset==35?8:25),"admission endpoint preserves its exact value");
+        }
+        for(int offset : {32,33,65,66,98,99,131,132}) {
+            DesktopScreen automation_control(data,controls);
+            automation_control.pointer_down(origin+offset,140);
+            const auto option_action=automation_control.pointer_up(origin+offset,140);
+            check(option_action.kind==DeskRequestKind::change_option && option_action.value==offset/33,
+                  "automation cell boundaries follow the optional frame offset");
+        }
+    }
+    desk.reject_action("unsupported_menu");
+    check(!desk.pending() && desk.render().pixels == pixels,"rejected command preserves state");
+    check(desk.key("A").menu_kind == 3,"original A hotkey opens lineup");
+    desk.reject_action("not_implemented");
+    check(desk.key("D").menu_kind == 18,"original D hotkey opens tactics");
+    desk.reject_action("not_implemented");
+    check(desk.key("I").menu_kind == 16 && desk_menu_name(16)=="training" && desk_menu_name(15)=="training_camp",
+          "original I and dispatch distinguish training from training camp");
+
+}
 } // namespace
 
 int main(int argc, char** argv) {
     try {
-        paired_closing_selection();
         if (argc < 2) throw std::runtime_error("data directory required");
         const bool input_only=argc>2 && std::string_view(argv[2])=="--input-only";
         const std::filesystem::path data = argv[1]; const auto exe = bmh::test::load_executable(asset_path(data,"BMH.exe"));
+        if(input_only) {
+            folder_pointer_input_tests(data,exe);
+            auto input_desk=desk_from_game(fixture(),exe,10);
+            desktop_control_input_tests(data,input_desk);
+            std::cout << "Desktop pointer, folders, removal corners and framed/unframed controls passed.\n";
+            return 0;
+        }
+        paired_closing_selection();
         paired_selection_matrix(exe);
-        if(!input_only && argc>3)paired_saved_projection(argv[3],exe);
+        if(argc>3)paired_saved_projection(argv[3],exe);
         // The date arithmetic is checked against a controlled epoch aligned with
         // the original leap cycle, independently of the installation's start year.
         auto oracle_exe = exe;
@@ -668,272 +1008,7 @@ int main(int argc, char** argv) {
         check(ranked_high_frame.pixels[size_t(50)*size_t(ranked_high_frame.width)+150]==
               source_ranked_art.pixels[size_t(25)*size_t(source_ranked_art.width)+50],
               "ranked menu-26 copies Source decimal asset 51 (legacy routine argument 0x33)");
-        auto menu_game = fixture();
-        menu_game.memory.set8(::bmh::layout::Desktops + 44 * 16 + 12, 63); // mailbox occurs before the menu shortcut in this scan
-        menu_game.memory.set8(::bmh::layout::Desktops + 53 * 16 + 12, 72); // final compact-bar cell dispatches MEN
-        auto menu_desk = desk_from_game(menu_game, exe, 6);
-        check(menu_desk.mailbox_shortcut && menu_desk.menu_layout_shortcut &&
-              menu_desk.menu_layout_shortcut->id == 53,
-              "Source final compact-bar cell resolves record 53/kind 72 independently of linked drawers");
-        menu_desk.shortcut_bar_always = false;
-        DesktopScreen edge_bar(data, menu_desk);
-        const auto edge_hidden = edge_bar.render();
-        check(!edge_bar.pointer_move(160, 238), "Source quickbar edge requires exactly y239");
-        check(edge_bar.pointer_move(160, 239) && edge_bar.render().pixels != edge_hidden.pixels &&
-              !edge_bar.pending() && edge_bar.state().layout_records == menu_desk.layout_records,
-              "lower-edge motion shows quickbar without an action or Native layout edits");
-        const auto edge_shown = edge_bar.render();
-        const auto quickbar_art = load_vga(asset_path(data / "KB", "3.VGA"));
-        for (int y = 0; y < 20; ++y) for (int x = 0; x < 20; ++x)
-            check(edge_shown.pixels[size_t(207 + y) * 320 + 299 + x] ==
-                  quickbar_art.pixels[size_t(75 + y) * quickbar_art.width + exe.u8(::bmh::layout::Desktop_Render_RuntimeField3) + x],
-                  "visible Source quickbar copies the complete normal socket sprite before any press");
-        check(!edge_bar.pointer_move(250, 239) && edge_bar.click(250, 239).kind == DeskRequestKind::none &&
-              edge_bar.render().pixels == edge_shown.pixels,
-              "motion along edge and click at the same edge do not toggle the Source y latch twice");
-        check(edge_bar.pointer_move(292, 221), "MEN quickbar cell motion selects its Source hover label");
-        const auto hover_frame = edge_bar.render();
-        int hover_pixels = 0;
-        for (int y = 0; y < 240; ++y) for (int x = 0; x < 320; ++x)
-            if (hover_frame.pixels[size_t(y) * 320 + x] != edge_shown.pixels[size_t(y) * 320 + x]) {
-                check(y >= 230 && y <= 235, "Source quickbar label changes only the footer Font3 rows");
-                ++hover_pixels;
-            }
-        check(hover_pixels > 0 && !edge_bar.pointer_move(291, 221),
-              "Source hover title renders once and stays stable inside the same cell");
-        check(edge_bar.pointer_move(160, 238) && edge_bar.render().pixels == edge_shown.pixels,
-              "leaving the cell restores the footer without hiding the quickbar");
-        check(edge_bar.pointer_move(160, 239) && edge_bar.render().pixels == edge_hidden.pixels,
-              "re-entering the lower edge toggles the quickbar off without a click");
-        auto always_desk = menu_desk; always_desk.shortcut_bar_always = true;
-        DesktopScreen always_bar(data, always_desk);
-        const auto always_frame = always_bar.render();
-        always_bar.pointer_move(160, 239); always_bar.pointer_move(160, 238); always_bar.pointer_move(160, 239);
-        check(always_bar.render().pixels == always_frame.pixels && !always_bar.pending(),
-              "format field bit1 keeps Always quickbar visible through both bit0 edge transitions");
-        DesktopScreen menu_bar(data, menu_desk);
-        check(menu_bar.click(292,221).kind == DeskRequestKind::none,
-              "MEN shortcut is unavailable before the original compact bar is shown");
-        menu_bar.pointer_move(64,239);
-        auto menu_save = menu_bar.click(292,221);
-        check(menu_save.kind == DeskRequestKind::open_menu && menu_save.menu_kind == 53 &&
-              menu_save.item_id == 53 && menu_save.value == 1,
-              "compact last-cell left click opens the Original menu-layout save path from record 53");
-        menu_bar.resolve_local_menu();
-        auto menu_load = menu_bar.click(292,221,true);
-        check(menu_load.kind == DeskRequestKind::open_menu && menu_load.menu_kind == 53 &&
-              menu_load.item_id == 53 && menu_load.value == 0,
-              "compact last-cell right click opens the Original menu-layout load path from record 53");
-        auto quickbar_drawer = menu_desk;
-        quickbar_drawer.layout_records[50][5]=0xff;
-        quickbar_drawer.layout_records[50][6]=0xff;
-        quickbar_drawer.layout_records[50][12]=50;
-        DesktopScreen quickbar_open(data,quickbar_drawer);
-        quickbar_open.pointer_move(64,239);
-        const auto append_drawer=quickbar_open.click(22,221);
-        check(quickbar_open.take_sound_ids()==std::vector<uint8_t>{15} && quickbar_open.take_sound_ids().empty(),
-              "Source drawer append emits ID15 exactly once through the application boundary");
-        quickbar_open.render(); quickbar_open.pointer_move(23,221); quickbar_open.click(22,221);
-        check(quickbar_open.take_sound_ids().empty(),"render/hover/pending input never replay a drawer sound");
-        check(append_drawer.kind==DeskRequestKind::change_layout&&
-              append_drawer.layout_operation==DeskLayoutOperation::toggle_quickbar_drawer&&
-              append_drawer.layout_after[50*16+5]==0&&append_drawer.layout_after[50*16+13]&0x80,
-              "Original quickbar LMB appends a hidden drawer record and sets its open bit");
-        auto quickbar_close_state=menu_desk;
-        quickbar_close_state.layout_records[0][5]=50;
-        quickbar_close_state.layout_records[50][5]=0;
-        quickbar_close_state.layout_records[50][6]=0;
-        quickbar_close_state.layout_records[50][12]=50;
-        DesktopScreen quickbar_close(data,quickbar_close_state);
-        quickbar_close.pointer_move(64,239);
-        const auto unlink_drawer=quickbar_close.click(22,221,true);
-        check(quickbar_close.take_sound_ids()==std::vector<uint8_t>{12},"Source drawer unlink emits ID12");
-        check(unlink_drawer.kind==DeskRequestKind::change_layout&&
-              unlink_drawer.layout_operation==DeskLayoutOperation::toggle_quickbar_drawer&&
-              unlink_drawer.layout_after[0*16+5]==0&&unlink_drawer.layout_after[50*16+5]==0xff&&
-              unlink_drawer.layout_after[50*16+6]==0xff,
-              "Original quickbar RMB unlinks a visible drawer record with cleared links");
-        auto child_desk=menu_desk;
-        child_desk.layout_records[3][5]=child_desk.layout_records[3][6]=0xff;
-        child_desk.layout_records[3][12]=2;
-        child_desk.layout_records[3][13]=0;
-        child_desk.layout_records[49][12]=50;
-        child_desk.layout_records[49][13]=0x80;
-        child_desk.layout_records[0][5]=49;
-        child_desk.layout_records[49][5]=child_desk.layout_records[49][6]=0;
-        child_desk.folder_icon_slots[0]={3};
-        child_desk.drawer_handles=true;
-        child_desk.items.push_back(DeskItem{49,40,40,100,65,50,0,0,true,false});
-        DesktopScreen folder_click(data,child_desk);
-        const auto child_action=folder_click.click(50,49);
-        check(child_action.kind==DeskRequestKind::open_menu&&child_action.item_id==3&&child_action.menu_kind==2,
-              "Source folder child uses its native record/kind on ordinary LMB activation");
-        DesktopScreen folder_drag(data,child_desk);
-        folder_drag.pointer_down(50,49,true);
-        check(folder_drag.take_sound_ids()==std::vector<uint8_t>({15,12,15}),
-              "folder-child RMB start preserves Source restore/unlink/append ordering");
-        folder_drag.pointer_move(176,100);
-        const auto child_return=folder_drag.pointer_up(176,100,true);
-        check(child_return.kind==DeskRequestKind::change_layout&&
-              child_return.layout_operation==DeskLayoutOperation::return_folder_child&&
-              child_return.layout_before[3*16+5]==0xff&&child_return.layout_after[0*16+5]==49&&
-              child_return.layout_after[49*16+5]==3&&child_return.layout_after[3*16+5]==0&&
-              child_return.layout_after[3*16+6]==49,
-              "RMB drag from the rendered 32×25 folder tile returns it to the visible chain");
-        check(folder_drag.take_sound_ids().empty(),"folder-child release cannot replay its down-event append");
-        // Unframed folders render the same tiles four pixels nearer the origin.
-        auto unframed_child_desk=child_desk;
-        unframed_child_desk.layout_snap=true;
-        unframed_child_desk.items.back().open=false;
-        unframed_child_desk.items.back().width=50;
-        unframed_child_desk.items.back().height=41;
-        unframed_child_desk.layout_records[49][13]=0;
-        unframed_child_desk.layout_records[13]=unframed_child_desk.layout_records[3];
-        unframed_child_desk.layout_records[13][12]=12;
-        unframed_child_desk.folder_icon_slots[0]={13};
-        DesktopScreen unframed_child(data,unframed_child_desk);
-        check(unframed_child.pointer_down(46,45).kind==DeskRequestKind::none &&
-              unframed_child.pointer_up(46,45).kind==DeskRequestKind::advance_turn,
-              "LMB on an unframed folder tile activates its native kickoff action");
-        DesktopScreen unframed_drag(data,unframed_child_desk);
-        unframed_drag.pointer_down(46,45,true);
-        check(unframed_drag.take_sound_ids()==std::vector<uint8_t>({15,12,15}),
-              "unframed child starts extraction rather than dragging the folder body");
-        unframed_drag.pointer_move(176,100);
-        const auto unframed_return=unframed_drag.pointer_up(176,100,true);
-        check(unframed_return.item_id==13 && unframed_return.menu_kind==12 &&
-              unframed_return.layout_operation==DeskLayoutOperation::return_folder_child &&
-              unframed_return.layout_after[13*16]==175 && unframed_return.layout_after[13*16+2]==95 &&
-              unframed_return.layout_after[49*16+5]==13,
-              "RMB extraction uses the rendered unframed tile origin and returns the kickoff icon");
-        DesktopScreen folder_drop(data,child_desk);
-        folder_drop.pointer_down(50,49,true); folder_drop.take_sound_ids();
-        folder_drop.pointer_move(55,52);
-        const auto dropped_child=folder_drop.pointer_up(55,52,true);
-        check(dropped_child.layout_operation==DeskLayoutOperation::set_folder &&
-              folder_drop.take_sound_ids()==std::vector<uint8_t>{12},
-              "Source fully enclosed drop unlinks the dragged child exactly once");
-        DesktopScreen folder_corner(data,child_desk);
-        const auto corner_close=folder_corner.pointer_down(41,41);
-        check(corner_close.kind==DeskRequestKind::change_layout &&
-              corner_close.layout_operation==DeskLayoutOperation::toggle_quickbar_drawer &&
-              corner_close.item_id==49 && corner_close.layout_target_item==49 &&
-              corner_close.layout_after[5]==0 && corner_close.layout_after[49*16+5]==0xff &&
-              corner_close.layout_after[49*16+6]==0xff &&
-              folder_corner.take_sound_ids()==std::vector<uint8_t>{12},
-              "framed folder LMB corner unlinks its native record and emits the Source removal sound");
-        auto without_folder=child_desk; ++without_folder.revision;
-        without_folder.items.pop_back();
-        for(size_t i=0;i<54;++i)
-            std::copy_n(corner_close.layout_after.begin()+i*16,16,without_folder.layout_records[i].begin());
-        folder_corner.acknowledge(without_folder);
-        check(folder_corner.pointer_up(41,41).kind==DeskRequestKind::none &&
-              !folder_corner.pending() && folder_corner.take_sound_ids().empty(),
-              "folder removal owns its release after ACK without activating the underlying date");
-        check(folder_corner.pointer_up(41,41).kind==DeskRequestKind::advance_turn,
-              "folder removal release barrier leaves a subsequent independent date click available");
-        auto covered_child=child_desk;
-        covered_child.items.push_back(DeskItem{6,60,48,32,25,21,0,0,false,false});
-        covered_child.layout_records[49][5]=6;
-        covered_child.layout_records[6][5]=0;
-        covered_child.layout_records[6][6]=49;
-        covered_child.layout_records[6][12]=21;
-        DesktopScreen stacked_icon(data,covered_child);
-        const auto exposed_folder_frame=folder_click.render();
-        const auto covered_folder_frame=stacked_icon.render();
-        const auto desktop_atlas=load_vga(asset_path(data/"KB","3.VGA"));
-        for(int y=0;y<25;++y) for(int x=0;x<32;++x)
-            check(covered_folder_frame.pixels[size_t(48+y)*320+60+x]==
-                  desktop_atlas.pixels[size_t(50+y)*desktop_atlas.width+160+x],
-                  "top icon renders over the folder child using its own native KB3 tile");
-        check(covered_folder_frame.pixels[size_t(49)*320+50]==exposed_folder_frame.pixels[size_t(49)*320+50],
-              "the uncovered part of a folder child remains visible below the stacked icon");
-        const auto covering_icon_action=stacked_icon.click(65,49);
-        check(covering_icon_action.kind==DeskRequestKind::open_menu&&covering_icon_action.item_id==6&&
-              covering_icon_action.menu_kind==21&&stacked_icon.state().layout_records==covered_child.layout_records,
-              "LMB activates the rendered top icon rather than the covered folder child without layout edits");
-        DesktopScreen stacked_drag(data,covered_child);
-        stacked_drag.pointer_down(65,49,true);
-        check(stacked_drag.take_sound_ids()==std::vector<uint8_t>({12,15}),
-              "visible RMB drag starts with the Source unlink/append pair");
-        stacked_drag.pointer_move(200,120);
-        const auto covering_icon_drag=stacked_drag.pointer_up(200,120,true);
-        check(covering_icon_drag.kind==DeskRequestKind::change_layout&&covering_icon_drag.item_id==6&&
-              covering_icon_drag.layout_operation==DeskLayoutOperation::move_item&&
-              covering_icon_drag.layout_after[3*16+5]==0xff&&covering_icon_drag.layout_after[3*16+6]==0xff,
-              "RMB drags the rendered top icon and leaves the covered child outside the visible link chain");
-        check(stacked_drag.take_sound_ids().empty(),"ordinary move release adds no structural sound");
-        DesktopScreen still_drag(data,covered_child);
-        still_drag.pointer_down(65,49,true); still_drag.pointer_up(65,49,true);
-        check(still_drag.take_sound_ids()==std::vector<uint8_t>({12,15}),
-              "Source RMB reordering sounds happen even without pointer motion");
-        DesktopScreen exposed_child(data,covered_child);
-        check(exposed_child.click(50,49).item_id==3,"an exposed folder tile still opens its native child action");
-        auto status_cover=child_desk;
-        status_cover.items.push_back(DeskItem{48,48,48,42,35,56,0,0,true,false});
-        DesktopScreen stacked_status(data,status_cover);
-        check(stacked_status.render().pixels!=exposed_folder_frame.pixels&&
-              stacked_status.pointer_down(50,49).kind==DeskRequestKind::none&&
-              stacked_status.pointer_up(50,49).kind==DeskRequestKind::none&&!stacked_status.pending(),
-              "an open status drawer covers a folder child and its inert body cannot activate that child");
-        auto empty_folder_cover=child_desk;
-        empty_folder_cover.items.push_back(DeskItem{48,48,48,45,35,51,0,1,true,false});
-        DesktopScreen stacked_empty_folder(data,empty_folder_cover);
-        check(stacked_empty_folder.click(50,49).kind==DeskRequestKind::none&&!stacked_empty_folder.pending(),
-              "an empty part of the top folder blocks a lower folder child");
-        DesktopScreen covered_bin_restore(data,empty_folder_cover);
-        covered_bin_restore.pointer_move(160,239);
-        covered_bin_restore.click(10,215);
-        check(covered_bin_restore.pointer_down(50,49,true).kind==DeskRequestKind::none&&
-              covered_bin_restore.pointer_up(50,49,true).kind==DeskRequestKind::none&&
-              !covered_bin_restore.pending()&&covered_bin_restore.state().layout_records==empty_folder_cover.layout_records,
-              "bin-mode RMB on a covering empty folder cannot restore the lower child or change links");
-        check(covered_bin_restore.take_sound_ids().empty(),"covered bin child cannot emit a restore sound");
-        DesktopScreen exposed_bin_restore(data,covered_child);
-        exposed_bin_restore.pointer_move(160,239);
-        exposed_bin_restore.click(10,215);
-        const auto exposed_restore=exposed_bin_restore.click(50,49,true);
-        check(exposed_bin_restore.take_sound_ids()==std::vector<uint8_t>{15},"bin-mode restore emits only append ID15");
-        check(exposed_restore.layout_operation==DeskLayoutOperation::restore_folder_child&&exposed_restore.item_id==3,
-              "bin-mode RMB still restores an exposed folder child using its native owner");
-        DesktopScreen bin_send(data,covered_child);
-        bin_send.pointer_move(160,239); bin_send.click(10,215);
-        const auto sent_icon=bin_send.click(65,49,true);
-        check(sent_icon.layout_operation==DeskLayoutOperation::send_to_folder &&
-              bin_send.take_sound_ids()==std::vector<uint8_t>{12},"bin-mode send emits only unlink ID12");
-        auto closed_cover=child_desk;
-        closed_cover.items.push_back(DeskItem{48,48,48,14,14,63,0,0,false,false});
-        DesktopScreen stacked_closed_drawer(data,closed_cover);
-        check(stacked_closed_drawer.click(50,49).kind==DeskRequestKind::none&&!stacked_closed_drawer.pending(),
-              "a closed drawer blocks hits inside its Source dimensions minus eight");
-        DesktopScreen outside_closed_drawer(data,closed_cover);
-        check(outside_closed_drawer.click(55,49).item_id==3,
-              "the eight-pixel closed drawer inset allows hits on the exposed lower folder child");
-        const auto menu_test_dir = std::filesystem::temp_directory_path() /
-            ("openbmh-menu-layout-picker-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
-        std::filesystem::create_directories(menu_test_dir / "load");
-        std::filesystem::create_directories(menu_test_dir / "save");
-        { std::ofstream(menu_test_dir / "load" / "LAYOUT.MEN") << "fixture";
-          std::ofstream(menu_test_dir / "load" / "NOTGAME.FBM") << "fixture"; }
-        SaveLoadScreen menu_load_picker(data, menu_test_dir / "load", SaveLoadMode::load, 0, 6,
-            menu_bar.render(), true, SaveLoadFileKind::menu_layout, 52);
-        check(menu_load_picker.entries().size() == 1 &&
-              menu_load_picker.entries()[0].path.extension() == ".MEN" &&
-              !menu_load_picker.info_press(60,45),
-              "menu-layout picker filters to MEN and never interprets a layout as an FBM information header");
-        menu_load_picker.click(60,45); menu_load_picker.click(60,45);
-        check(menu_load_picker.pending() && menu_load_picker.pending()->file_kind == SaveLoadFileKind::menu_layout &&
-              menu_load_picker.pending()->origin_item_id == 52 &&
-              menu_load_picker.pending()->path.extension() == ".MEN",
-              "MEN load request retains its typed file kind and source drawer identity");
-        SaveLoadScreen menu_save_picker(data, menu_test_dir / "save", SaveLoadMode::save, 0, 6,
-            menu_bar.render(), true, SaveLoadFileKind::menu_layout, 52);
-        menu_save_picker.click(120,214); menu_save_picker.text("LAYOUT"); menu_save_picker.key("ENTER");
-        check(menu_save_picker.pending() && menu_save_picker.pending()->file_kind == SaveLoadFileKind::menu_layout &&
-              menu_save_picker.pending()->path.filename() == "LAYOUT.MEN" &&
-              save_load_request_json(*menu_save_picker.pending()).find("\"file_kind\":\"menu_layout\"") != std::string::npos,
-              "MEN save request uses the native extension and an explicit JSON file-kind discriminator");
-        std::filesystem::remove_all(menu_test_dir);
+        folder_pointer_input_tests(data,exe);
         TextDb desk_texts = load_textd(asset_path(data,"TEXTD.BLK"));
         auto match_game = g; match_game.texts = &desk_texts;
         match_game.club_names.assign(32,0);
@@ -942,12 +1017,9 @@ int main(int argc, char** argv) {
         std::copy_n("BREMEN",6,match_game.club_names.begin()+16);
         match_game.club_ids[12]=0; match_game.club_ids[13]=7; match_game.club_ids[14]=16;
         match_game.results.assign(9 * 0x17c, 0xcc);
-        // Input-only validation needs configured game assets, but no private text inventory.
-        if(!input_only) {
-            check(desk_texts[(::bmh::layout::FixtureDesktopFirstLabelPointer-::bmh::layout::TextPointerTable)/4]==bmh::test::expected_text("desktop_tests.0") &&
-                  desk_texts[(::bmh::layout::FixtureDesktopSecondLabelPointer-::bmh::layout::TextPointerTable)/4]==bmh::test::expected_text("desktop_tests.1"),
-                  "kind-61 rank suffix and strength label resolve from the Source TEXTD addresses");
-        }
+        check(desk_texts[(::bmh::layout::FixtureDesktopFirstLabelPointer-::bmh::layout::TextPointerTable)/4]==bmh::test::expected_text("desktop_tests.0") &&
+              desk_texts[(::bmh::layout::FixtureDesktopSecondLabelPointer-::bmh::layout::TextPointerTable)/4]==bmh::test::expected_text("desktop_tests.1"),
+              "kind-61 rank suffix and strength label resolve from the Source TEXTD addresses");
         check(format_number(match_game,6,2)=="%6" && format_number(match_game,95,2)=="95",
               "legacy routine width 2 keeps a transparent leading cell only for one-digit strength");
         const Font small_font=load_font(data/"F"/"BMH3.FNT");
@@ -1148,66 +1220,8 @@ int main(int argc, char** argv) {
         auto wrong = d.options; wrong.managers = 5; rejected([&]{ validate_desk_profile(wrong); });
         wrong = d.options; wrong.world = false; wrong.league = false; rejected([&]{ validate_desk_profile(wrong); });
 
-        d = desk_from_game(g,exe,10); DesktopScreen desk(data,d);
-        const auto pixels = desk.render().pixels;
-        check(desk.render().pixels == pixels,"repeat render is deterministic");
-        check(desk.click(5,23).kind == DeskRequestKind::none,"calendar handle must not advance a turn");
-        auto action = desk.click(50,125);
-        check(action.kind == DeskRequestKind::open_menu && action.menu_kind == 3 && action.manager_slot == 0 && action.revision == 10,"lineup request");
-        check(desk.click(20,40).kind == DeskRequestKind::none,"pending command blocks another turn");
-        rejected([&]{ desk.acknowledge(d); });
-        ++d.revision; desk.acknowledge(d);
-        check(desk.click(20,40).kind == DeskRequestKind::advance_turn,"open calendar advances");
-        check(desk.click(20,40).kind == DeskRequestKind::none,"no duplicate advance request");
-        ++d.revision; desk.acknowledge(d);
-        check(desk.click(165,125).kind == DeskRequestKind::advance_turn,"kickoff icon advances");
-        auto unframed_date=d;
-        unframed_date.items.front().open=false;
-        unframed_date.layout_records[1][13]&=0x7f;
-        DesktopScreen date_click(data,unframed_date);
-        check(date_click.pointer_down(20,40).kind==DeskRequestKind::none,
-              "date press waits for its release without entering layout drag");
-        const auto date_turn=date_click.pointer_up(20,40);
-        check(date_turn.kind==DeskRequestKind::advance_turn && date_turn.menu_kind==58 &&
-              date_turn.manager_slot==d.manager_slot && date_turn.revision==d.revision &&
-              date_click.pointer_up(20,40).kind==DeskRequestKind::none,
-              "unframed date body emits exactly one authenticated advance action");
-        DesktopScreen date_drag(data,unframed_date);
-        date_drag.pointer_down(20,40,true); date_drag.pointer_move(40,60);
-        check(date_drag.pointer_up(40,60,true).layout_operation==DeskLayoutOperation::move_item,
-              "unframed date retains right-button movement");
-        check(desk.render().pixels == pixels,"commands cannot mutate the saved game view");
-        for(bool framed : {true,false}) {
-            auto controls=d;
-            controls.items={{1,20,80,98,36,55,0,0,framed,false},
-                            {2,20,130,173,38,64,0,0,framed,false}};
-            const int origin=20+(framed?4:0);
-            for(int offset : {34,35,86,87}) {
-                DesktopScreen price_control(data,controls);
-                price_control.pointer_down(origin+offset,90);
-                const auto price_action=price_control.pointer_up(origin+offset,90);
-                check(price_action.kind==((offset==35||offset==86)?
-                          DeskRequestKind::change_ticket_price:DeskRequestKind::none),
-                      "framed and unframed admission controls use the rendered Source endpoints");
-                if(offset==35||offset==86)
-                    check(price_action.value==(offset==35?8:25),"admission endpoint preserves its exact value");
-            }
-            for(int offset : {32,33,65,66,98,99,131,132}) {
-                DesktopScreen automation_control(data,controls);
-                automation_control.pointer_down(origin+offset,140);
-                const auto option_action=automation_control.pointer_up(origin+offset,140);
-                check(option_action.kind==DeskRequestKind::change_option && option_action.value==offset/33,
-                      "automation cell boundaries follow the optional frame offset");
-            }
-        }
-        desk.reject_action("unsupported_menu");
-        check(!desk.pending() && desk.render().pixels == pixels,"rejected command preserves state");
-        check(desk.key("A").menu_kind == 3,"original A hotkey opens lineup");
-        desk.reject_action("not_implemented");
-        check(desk.key("D").menu_kind == 18,"original D hotkey opens tactics");
-        desk.reject_action("not_implemented");
-        check(desk.key("I").menu_kind == 16 && desk_menu_name(16)=="training" && desk_menu_name(15)=="training_camp",
-              "original I and dispatch distinguish training from training camp");
+        d = desk_from_game(g,exe,10);
+        desktop_control_input_tests(data,d);
 
         StartupFlow flow(data); begin(flow);
         auto result = CareerInitializationResult{d,{{0,0,12}}};
@@ -1362,7 +1376,7 @@ int main(int argc, char** argv) {
               results_flow.screen_name()=="desktop" && !results_flow.desktop()->pending(),
               "Escape closes results without issuing another kickoff");
 
-        if (!input_only && argc > 2 && std::string(argv[2]).size()) {
+        if (argc > 2 && std::string(argv[2]).size()) {
             const auto original = read_file(argv[2]);
             auto state = load_reference_desk(argv[2],exe);
             check(state.manager_name=="BMHLAB" && state.runtime_club==12 && state.balance==6243300 && state.strength==86,"captured single-manager baseline");
