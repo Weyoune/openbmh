@@ -139,9 +139,10 @@ void assert_key_source_cell(const StadiumScreen& screen, const std::filesystem::
 
 constexpr std::array<uint32_t, 8> kPrices{300000, 375000, 300000, 350000,
                                            300000, 375000, 300000, 350000};
-constexpr std::array<uint32_t, 8> kMaxima{8000, 18000, 8000, 14000,
-                                           8000, 18000, 8000, 14000};
-constexpr std::array<uint8_t, 8> kWeeks{30, 37, 30, 25, 30, 37, 30, 25};
+// Match the retained 144k expansion policy and size-aware construction periods.
+constexpr std::array<uint32_t, 8> kMaxima{14000, 24000, 14000, 20000,
+                                           14000, 24000, 14000, 20000};
+constexpr std::array<uint8_t, 8> kWeeks{30, 48, 30, 40, 30, 48, 30, 40};
 
 StadiumBlockExpansionEditor editor_for(uint8_t slot = 1, uint32_t total = 8000,
                                        uint8_t features = 0, uint8_t raw_flags = 0) {
@@ -418,7 +419,7 @@ void source_textd_stadium_caption_tests(const std::filesystem::path& data) {
     assert_text_pixels(editor_image, font, 5, 130, text(::bmh::layout::Stadium_RenderBlockExpansion_TextPointer9), 0x6a,
                        "block editor paints the Original TEXTD total-cost label");
 
-    const std::string duration = format_number(GameState{}, 37, 0x82) + text(::bmh::layout::Stadium_FormatError_RuntimeField) +
+    const std::string duration = format_number(GameState{}, 48, 0x82) + text(::bmh::layout::Stadium_FormatError_RuntimeField) +
         exe.cstring(::bmh::layout::Stadium_FormatError_ExecutableField) + exe.cstring(::bmh::layout::CareerSession_FormatNumber_ExecutableField);
     const int duration_x = 148 - font.text_width(duration);
     assert_text_pixels(editor_image, font, duration_x, 54, duration, 0x6c,
@@ -432,7 +433,7 @@ void source_textd_stadium_caption_tests(const std::filesystem::path& data) {
     assert_text_pixels(current_image, font, 221, 29, "Block A", 0x6b,
                        "A-H overview uses its Source TEXTD block prefix");
     assert_text_pixels(current_image, font, 221, 22 + 21, text(::bmh::layout::Stadium_Out_TextPointer5) +
-                       format_number(GameState{}, int32_t(exe.u8(::bmh::layout::CareerSession_Invalid_RuntimeField) * 1000), 5) +
+                       format_number(GameState{}, int32_t(kMaxima[0]), 5) +
                        exe.cstring(::bmh::layout::Stadium_Out_ExecutableField), 0x51,
                        "current overview uses the Original TEXTD maximum-capacity label");
 
@@ -689,7 +690,7 @@ void calculator_tests(const std::filesystem::path& data) {
     check(screen.calculator_open(), "host can query calculator visibility without reading or mutating Native");
     assert_readout_source_text(screen, data, format_number(GameState{}, 0, 7),
                                "initial calculator readout matches Original width-seven FNT3 glyphs");
-    assert_preset_source_cell(screen, data, exe, 7, 18000);
+    assert_preset_source_cell(screen, data, exe, 7, 24000);
     const Image before = screen.render();
     check(screen.pointer_down(116, 36), "the calculator header starts a Source drag");
     screen.pointer_move(1000, 1000);
@@ -759,7 +760,7 @@ void calculator_tests(const std::filesystem::path& data) {
           "preset selection changes the value without the keypad's invented pressed phase");
     const auto preset_accept = keyboard_return_after_source_phase(preset);
     check(preset_accept.kind == StadiumRequestKind::expansion_set_total &&
-          preset_accept.block_total_places == 18000,
+          preset_accept.block_total_places == 24000,
           "a preset value remains usable through the timed Source J action");
 
     StadiumScreen low_total(data, detail_state());
@@ -774,7 +775,7 @@ void calculator_tests(const std::filesystem::path& data) {
     high_total.click(50, 80);
     check(high_total.text("999999"), "large typed input is accepted and clamped to Source maximum");
     const auto maximum = keyboard_return_after_source_phase(high_total);
-    check(maximum.kind == StadiumRequestKind::expansion_set_total && maximum.block_total_places == 18000,
+    check(maximum.kind == StadiumRequestKind::expansion_set_total && maximum.block_total_places == 24000,
           "calculator input never exceeds the slot-B maximum");
 
     StadiumScreen reopened(data, detail_state(1, 15333, 1));
@@ -782,7 +783,7 @@ void calculator_tests(const std::filesystem::path& data) {
     check(reopened.text("1"), "reopened calculator accepts another appended digit");
     const auto appended = keyboard_return_after_source_phase(reopened);
     check(appended.kind == StadiumRequestKind::expansion_set_total &&
-          appended.block_total_places == 18000,
+          appended.block_total_places == 24000,
           "reopening starts from D=7333 and appends instead of replacing it with the first digit");
 
     StadiumScreen zeroes(data, detail_state());
@@ -903,12 +904,12 @@ void offer_ack_tests(const std::filesystem::path& data) {
     auto no_build = no_screen.state(); next_identity(no_build);
     const auto no_quote = no_build.block_expansion->quote;
     no_build.block_expansion.reset(); no_build.construction_tip_dialog.reset();
-    no_build.blocks[1].construction_weeks = 37;
+    no_build.blocks[1].construction_weeks = 48;
     no_build.blocks[1].flags = uint8_t(no_build.blocks[1].flags | 0x10);
     no_build.blocks[1].capacity = 15;
     no_build.balance -= int32_t(no_quote.base_price);
     no_screen.acknowledge(no_build);
-    check(!no_screen.pending() && no_screen.state().blocks[1].construction_weeks == 37,
+    check(!no_screen.pending() && no_screen.state().blocks[1].construction_weeks == 48,
           "a valid NO decision constructs at the original base price and full duration");
 
     auto poor = initial;
@@ -1034,7 +1035,7 @@ void source_compensation_ack_tests(const std::filesystem::path& data) {
           "negative-week compensation path can take the ordinary NO construction");
     const auto no_offer = *negative_weeks.state().block_expansion->offer;
     const int32_t negative_compensation = -66000; // 11,000 * (17-20) * rate 2.
-    negative_weeks.acknowledge(completed_build_state(negative_weeks, 37,
+    negative_weeks.acknowledge(completed_build_state(negative_weeks, 48,
         late.balance - int32_t(no_offer.base_price) - negative_compensation, 14000));
     check(negative_weeks.state().balance == late.balance - int32_t(no_offer.base_price) + 66000,
           "negative Source weeks credit the account while the ticket cap still applies");
@@ -1046,7 +1047,7 @@ void source_compensation_ack_tests(const std::filesystem::path& data) {
     check(!no_account_booking.click(210, 171).accept_tip,
           "level-zero Source path can accept a normal NO construction");
     const auto level_zero_offer = *no_account_booking.state().block_expansion->offer;
-    no_account_booking.acknowledge(completed_build_state(no_account_booking, 37,
+    no_account_booking.acknowledge(completed_build_state(no_account_booking, 48,
         level_zero.balance, 14000));
     check(no_account_booking.state().balance == level_zero.balance &&
           no_account_booking.state().season_tickets == 14000 &&
