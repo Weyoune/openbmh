@@ -160,3 +160,10 @@ Release-driven incoming-transfer presenters require a matching press observed
 inside that modal. An orphan or repeated release from the preceding result table
 cannot decline an offer or dismiss its confirmation. Repeated presses while a
 button is held still form one gesture; fresh left/right clicks keep their actions.
+
+## Host file overwrite confirmation
+
+The file picker reuses the Original overwrite question and Ja/Nein button
+layout. A separate Yes click or Enter confirms; repeated double-clicks do not.
+OpenBMH deviates from the original: host file operations use the shared dialog's
+system identity because the picker does not own a live manager portrait projection.

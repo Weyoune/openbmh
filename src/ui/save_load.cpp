@@ -9,6 +9,7 @@
 #include <system_error>
 
 #include "ui/manager.hpp"
+#include "ui/game_end.hpp"
 #include "ui/host_path.hpp"
 #include "ui/setup.hpp"
 #include "formats/fbm.hpp"
@@ -177,11 +178,24 @@ Image SaveLoadScreen::render() const {
             text(out, 212, y, row.league, 0x6b, -1, footer_font_, true);
         }
     }
+    if (overwrite_confirmation_open_) {
+        TaxDialogProjection question;
+        question.kind = TaxDialogKind::question;
+        question.source_flags = 0x101; // Original overwrite prompt's Ja/Nein selectors.
+        question.source_system_identity = true;
+        question.badge_fallback = true;
+        question.portrait = 14;
+        question.body = exe_.string_at_pointer(::bmh::layout::SaveLoad_OverwriteQuestionPointer);
+        // OpenBMH deviates from the original: the host file picker uses the
+        // shared dialog's system identity without a live manager portrait projection.
+        draw_source_dialog(out, {widgets_, widgets_, nullptr, footer_font_, font_, exe_, sprite_font_, texts_},
+                           question, gradient_text_);
+    }
     return out;
 }
 
 bool SaveLoadScreen::info_press(int x, int y) {
-    if (file_kind_ != SaveLoadFileKind::game || pending_ || info_ || x <= 52 || x >= 200 || y <= 40 ||
+    if (file_kind_ != SaveLoadFileKind::game || pending_ || info_ || overwrite_confirmation_open_ || x <= 52 || x >= 200 || y <= 40 ||
         y >= 192 || !select_row(y)) return false;
     try {
         const auto saved = load_savegame(entries_.at(size_t(selected_)).path);
@@ -316,7 +330,13 @@ void SaveLoadScreen::request_action() {
     std::error_code ec;
     const bool exists = std::filesystem::exists(path, ec);
     if (ec) { feedback_ = "DATEI NICHT PRUEFBAR"; return; }
-    if (exists && !overwrite_armed_) { overwrite_armed_ = true; feedback_ = "EXISTIERT: ENTER ZUM ERSETZEN"; return; }
+    if (exists && !overwrite_armed_) {
+        overwrite_armed_ = true;
+        overwrite_confirmation_open_ = true;
+        feedback_.clear();
+        return;
+    }
+    overwrite_confirmation_open_ = false;
     pending_ = SaveLoadRequest{SaveLoadAction::save, manager_slot_, revision_, path, exists,
                                file_kind_, origin_item_id_};
 }
@@ -324,6 +344,26 @@ void SaveLoadScreen::request_action() {
 bool SaveLoadScreen::click(int x, int y, bool right, bool double_click) {
     if (info_) { info_.reset(); return true; }
     if (pending_) return false;
+    if (overwrite_confirmation_open_) {
+        if (right) {
+            overwrite_confirmation_open_ = overwrite_armed_ = false;
+            close_requested_ = true;
+            return true;
+        }
+        // Only a separate click on the question's buttons can decide. Further
+        // releases from a double/triple click in the file list cannot accept it.
+        if (double_click || y < 166 || y > 176) return false;
+        if (x >= 62 && x <= 137) {
+            overwrite_confirmation_open_ = false;
+            request_action();
+            return true;
+        }
+        if (x >= 175 && x <= 250) {
+            overwrite_confirmation_open_ = overwrite_armed_ = false;
+            return true;
+        }
+        return false;
+    }
     // OpenBMH deviates from the original: permits cancelling host file dialogs with the right mouse button.
     if (right) { close_requested_ = true; return true; }
     if (x >= 206 && y >= 60 && y <= 169)
@@ -338,7 +378,7 @@ bool SaveLoadScreen::click(int x, int y, bool right, bool double_click) {
     if (x >= 53 && x <= 199 && select_row(y)) {
         const int row = scroll_ + (y - 40) / 10;
         // Row selection clears overwrite confirmation before activation. Even a
-        // repeated double-click must ask again; only Enter confirms replacement.
+        // repeated double-click cannot confirm replacement.
         if (double_click || (mode_ == SaveLoadMode::load && row == last_clicked_row_)) {
             request_action(); return true;
         }
@@ -355,7 +395,15 @@ bool SaveLoadScreen::click(int x, int y, bool right, bool double_click) {
 bool SaveLoadScreen::key(std::string_view value) {
     if (info_) return false; // Centered waits for mouse release, not keyboard.
     if (pending_) return false;
-    if (value == "ESC") { close_requested_ = true; return true; }
+    if (value == "ESC") {
+        overwrite_confirmation_open_ = overwrite_armed_ = false;
+        close_requested_ = true;
+        return true;
+    }
+    if (overwrite_confirmation_open_) {
+        if (value == "ENTER") { request_action(); return true; }
+        return false;
+    }
     if (mode_ == SaveLoadMode::load && !entries_.empty()) {
         if (value == "UP") { if (selected_ > 0) --selected_; if (selected_ < scroll_) scroll_ = selected_; return true; }
         if (value == "DOWN") { if (selected_ + 1 < int(entries_.size())) ++selected_; if (selected_ >= scroll_ + 15) scroll_ = selected_ - 14; return true; }
@@ -384,7 +432,7 @@ bool SaveLoadScreen::key(std::string_view value) {
 }
 
 bool SaveLoadScreen::text(std::string_view value) {
-    if (info_ || mode_ != SaveLoadMode::save || !filename_focus_ || pending_ || value.empty()) return false;
+    if (info_ || overwrite_confirmation_open_ || mode_ != SaveLoadMode::save || !filename_focus_ || pending_ || value.empty()) return false;
     const std::string next = (filename_selected_ ? std::string{} : filename_) + std::string(value);
     if (!valid_filename(next)) return false;
     filename_ = next; filename_selected_ = false;
@@ -422,6 +470,7 @@ std::string SaveLoadScreen::state_json() const {
         << ",\"filename\":" << json_quote(filename_) << ",\"entries\":[";
     for (size_t i = 0; i < entries_.size(); ++i) { if (i) out << ','; out << json_quote(path_to_utf8(entries_[i].path.filename())); }
     out << "],\"info_open\":" << (info_ ? "true" : "false")
+        << ",\"overwrite_confirmation_open\":" << (overwrite_confirmation_open_ ? "true" : "false")
         << ",\"pending_action\":" << (pending_ ? save_load_request_json(*pending_) : "null")
         << ",\"feedback\":" << (feedback_.empty() ? "null" : json_quote(feedback_));
     if (file_kind_ == SaveLoadFileKind::menu_layout || file_kind_ == SaveLoadFileKind::settings)

@@ -42,12 +42,12 @@ int main(int argc, char** argv) {
             };
             SaveLoadScreen overwrite(argv[1], root, SaveLoadMode::save, 2, 17, backdrop, true, kind, 9);
             check(overwrite.click(70, 45) && overwrite.click(70, 45) && !overwrite.pending() &&
-                  overwrite.state_json().find("EXISTIERT") == std::string::npos,
+                  overwrite.state_json().find("\"overwrite_confirmation_open\":false") != std::string::npos,
                   "separate single clicks only select an existing save");
             check(overwrite.click(70, 45, false, true) && !overwrite.pending() &&
-                  overwrite.state_json().find("ENTER ZUM ERSETZEN") != std::string::npos,
+                  overwrite.state_json().find("\"overwrite_confirmation_open\":true") != std::string::npos,
                   "a true double-click asks for overwrite confirmation without submitting a write");
-            check(overwrite.click(70, 45, false, true) && !overwrite.pending(),
+            check(!overwrite.click(70, 45, false, true) && !overwrite.pending(),
                   "repeated double-clicks cannot confirm an overwrite");
             unchanged();
             check(overwrite.key("ENTER") && overwrite.pending() && overwrite.pending()->overwrite &&
@@ -63,6 +63,25 @@ int main(int argc, char** argv) {
             check(overwrite.close_requested() && !overwrite.pending(),
                   "acknowledgement closes the picker and clears its one request");
             unchanged();
+            SaveLoadScreen mouse(argv[1], root, SaveLoadMode::save, 0, 7, backdrop, true, kind);
+            const auto list = mouse.render();
+            mouse.click(70, 45, false, true);
+            check(mouse.render().pixels != list.pixels && !mouse.text("IGNORED") &&
+                  !mouse.key("BACKSPACE") && !mouse.info_press(70, 45),
+                  "the original overwrite question owns input and renders over the file list");
+            check(!mouse.click(100, 171, false, true) && !mouse.pending(),
+                  "double-click releases cannot accept even over the question's Yes button");
+            check(mouse.click(210, 171) && !mouse.pending() && !mouse.close_requested() &&
+                  mouse.render().pixels == list.pixels,
+                  "No dismisses the question and restores the unchanged picker");
+            mouse.click(70, 45, false, true);
+            check(mouse.click(100, 171) && mouse.pending() && mouse.pending()->overwrite &&
+                  mouse.pending()->path == existing,
+                  "double-click followed by a separate Yes click submits an entirely mouse-operated overwrite");
+            const auto mouse_request = *mouse.pending();
+            check(!mouse.click(100, 171) && *mouse.pending() == mouse_request,
+                  "additional Yes releases preserve one pending write");
+            unchanged();
             for (bool right : {false, true}) {
                 SaveLoadScreen cancel(argv[1], root, SaveLoadMode::save, 0, 7, backdrop, true, kind);
                 cancel.click(70, 45, false, true);
@@ -74,16 +93,21 @@ int main(int argc, char** argv) {
             std::ofstream(second) << fixture;
             SaveLoadScreen change_row(argv[1], root, SaveLoadMode::save, 0, 7, backdrop, true, kind);
             change_row.click(70, 45, false, true);
+            check(!change_row.click(70, 55) && change_row.selected() == 0,
+                  "the question prevents the file list from changing its target");
+            change_row.click(210, 171); // Decline before selecting another file.
             check(change_row.click(70, 55) && change_row.key("ENTER") && !change_row.pending() &&
                   change_row.key("ENTER") && change_row.pending() && change_row.pending()->path == second,
                   "selecting another row cannot reuse the first file's overwrite confirmation");
             SaveLoadScreen reset(argv[1], root, SaveLoadMode::save, 0, 7, backdrop, true, kind);
             reset.click(70, 45, false, true);
+            reset.click(210, 171);
             reset.click(70, 45);
             check(reset.key("ENTER") && !reset.pending() && reset.key("ENTER") && reset.pending(),
-                  "single selection clears confirmation and preserves the existing two-Enter save path");
+                  "declining and selecting again preserves the existing two-Enter save path");
             SaveLoadScreen rename(argv[1], root, SaveLoadMode::save, 0, 7, backdrop, true, kind);
             rename.click(70, 45, false, true);
+            rename.click(210, 171);
             check(rename.text("Other") && rename.key("ENTER") && rename.pending() &&
                   !rename.pending()->overwrite && rename.pending()->path.filename() == std::string("Other") + extension,
                   "editing an armed overwrite starts an independent new-file save");

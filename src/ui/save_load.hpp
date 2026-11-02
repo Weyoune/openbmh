@@ -72,7 +72,7 @@ private:
     int selected_ = 0, scroll_ = 0;
     std::string filename_, feedback_;
     bool filename_focus_ = false, filename_selected_ = false;
-    bool overwrite_armed_ = false, close_requested_ = false;
+    bool overwrite_armed_ = false, overwrite_confirmation_open_ = false, close_requested_ = false;
     int last_clicked_row_ = -1;
     std::optional<SaveLoadRequest> pending_;
     struct InfoRow { std::string manager, club, league; };

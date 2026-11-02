@@ -37,4 +37,5 @@ describe deliberate changes; they are not a list of every known compatibility li
 - [src/ui/pitch.cpp](../src/ui/pitch.cpp): supports owner-bound designated set-piece selection in the extended manager record.
 - [src/ui/save_load.cpp](../src/ui/save_load.cpp): focuses the host save filename on entry and selects an existing name for replacement.
 - [src/ui/save_load.cpp](../src/ui/save_load.cpp): omits DOS drive and delete buttons in the directory-confined save/load view.
+- [src/ui/save_load.cpp](../src/ui/save_load.cpp): the host file picker uses the shared dialog's system identity without a live manager portrait projection.
 - [src/ui/save_load.cpp](../src/ui/save_load.cpp): permits cancelling host file dialogs with the right mouse button.

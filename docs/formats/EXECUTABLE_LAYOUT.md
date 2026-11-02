@@ -1578,6 +1578,7 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `SaveLoad_Render_RuntimeField` | `0xa2334` | German-compatible image / runtime field |
 | `SaveLoad_Render_RuntimeField2` | `0xa233f` | German-compatible image / runtime field |
 | `SaveLoad_Render_RuntimeField3` | `0xa234a` | German-compatible image / runtime field |
+| `SaveLoad_OverwriteQuestionPointer` | `0xa21c4` | German-compatible image / runtime field |
 | `SaveLoad_Render_TextPointer` | `0xa1512` | German-compatible image / runtime field |
 | `SaveLoad_Render_TextPointer2` | `0xae5f0` | German-compatible image / runtime field |
 | `SaveLoad_Render_TextPointer3` | `0xae620` | German-compatible image / runtime field |
