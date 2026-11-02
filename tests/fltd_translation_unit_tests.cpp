@@ -33,6 +33,13 @@ int main() {
         // empty German slots. An over-wide copy must not import either one.
         put_pointer(english_overwrite_pointer - 4, authored_question_address + 1);
         put_pointer(english_overwrite_pointer + 4, authored_question_address + 2);
+        // The analytics label mapping intentionally replaces the final 72 bytes
+        // of the old empty-pointer range. Give that independent source its own data.
+        Bytes analytics_labels(72);
+        for (uint32_t i = 0; i < analytics_labels.size(); ++i) {
+            analytics_labels[i] = uint8_t(0x31 + i * 3);
+            put(layout::EnglishLayoutTranslation50 + i, analytics_labels[i]);
+        }
         const uint8_t toggle_rows[] = {3, 7, 11, 13, 17, 19};
         put(layout::EnglishLayoutTranslation16 - 1, 99); // alignment padding is not a toggle row
         for (uint32_t i = 0; i < 6; ++i) put(layout::EnglishLayoutTranslation16 + i, toggle_rows[i]);
@@ -51,11 +58,14 @@ int main() {
         check(image.string_at_pointer(layout::SaveLoad_OverwriteQuestionPointer) == authored_question,
               "overwrite question must retain its complete source text");
         for (uint32_t address = layout::Bank_OriginalToUtf8_RuntimeField;
-             address < layout::Bank_OriginalToUtf8_RuntimeField + 144; address += 4) {
+             address < layout::Analytics_FormatError_ExecutableField; address += 4) {
             if (address == layout::SaveLoad_OverwriteQuestionPointer) continue;
             check(image.u32(address) == layout::EmptyString,
-                  "mapping the overwrite question must preserve every adjacent empty pointer");
+                  "mapping the overwrite question must preserve all seventeen other empty pointers before analytics");
         }
+        for (uint32_t i = 0; i < analytics_labels.size(); ++i)
+            check(image.u8(layout::Analytics_FormatError_ExecutableField + i) == analytics_labels[i],
+                  "mapping the overwrite question must preserve the complete independent analytics mapping");
         for (uint32_t i = 0; i < 6; ++i)
             check(image.u8(layout::Setup_FormatError_RuntimeField8 + i) == toggle_rows[i], "toggle mapping includes alignment padding");
         check(image.u8(layout::Desktop_Copy_TextPointer) == 0xfb, "negative balance colour");
