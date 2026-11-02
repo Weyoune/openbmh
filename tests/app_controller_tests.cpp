@@ -7122,6 +7122,13 @@ int main(int argc, char** argv) {
         if(argc==3 && std::string_view(argv[2])=="--poach-only") {
             check_poach_ui_components(data);return 0;
         }
+        if(argc==3 && std::string_view(argv[2])=="--advertising-input-only") {
+            check_advertising_controller(data);
+            check_advertising_renewal_controller(data);
+            check_advertising_spending_controller(data);
+            std::cout << "Advertising hover, modal return and controller actions passed.\n";
+            return 0;
+        }
         check_poach_ui_components(data);
         check_stadium_investment_controller(data);
         check_pairings_timer_controller(data);
