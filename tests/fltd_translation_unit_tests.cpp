@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 
 int main() {
     using namespace bmh;
@@ -19,6 +20,19 @@ int main() {
         source[0] = 'M'; source[1] = 'Z';
         const auto put = [&](uint32_t address, uint8_t value) { source.at(address + 0x496d) = value; };
         const auto check = [](bool value, const char* message) { if (!value) throw std::runtime_error(message); };
+        const auto put_pointer = [&](uint32_t address, uint32_t value) {
+            for (uint32_t i = 0; i < 4; ++i) put(address + i, uint8_t(value >> (i * 8)));
+        };
+        constexpr uint32_t english_overwrite_pointer = 0x6c43c;
+        constexpr uint32_t authored_question_address = layout::EnDataStart + 0x100;
+        const std::string authored_question = "Authored overwrite question?";
+        put_pointer(english_overwrite_pointer, authored_question_address);
+        for (uint32_t i = 0; i <= authored_question.size(); ++i)
+            put(authored_question_address + i, i < authored_question.size() ? uint8_t(authored_question[i]) : 0);
+        // Adjacent English pointers are intentionally distinct from the retained
+        // empty German slots. An over-wide copy must not import either one.
+        put_pointer(english_overwrite_pointer - 4, authored_question_address + 1);
+        put_pointer(english_overwrite_pointer + 4, authored_question_address + 2);
         const uint8_t toggle_rows[] = {3, 7, 11, 13, 17, 19};
         put(layout::EnglishLayoutTranslation16 - 1, 99); // alignment padding is not a toggle row
         for (uint32_t i = 0; i < 6; ++i) put(layout::EnglishLayoutTranslation16 + i, toggle_rows[i]);
@@ -32,6 +46,16 @@ int main() {
         const auto path = root / "FLTD.EXE";
         { std::ofstream out(path, std::ios::binary); out.write(reinterpret_cast<const char*>(source.data()), std::streamsize(source.size())); }
         const auto image = launch::translate_fltd(path);
+        check(image.u32(layout::SaveLoad_OverwriteQuestionPointer) == authored_question_address,
+              "overwrite question pointer must select the original English source slot");
+        check(image.string_at_pointer(layout::SaveLoad_OverwriteQuestionPointer) == authored_question,
+              "overwrite question must retain its complete source text");
+        for (uint32_t address = layout::Bank_OriginalToUtf8_RuntimeField;
+             address < layout::Bank_OriginalToUtf8_RuntimeField + 144; address += 4) {
+            if (address == layout::SaveLoad_OverwriteQuestionPointer) continue;
+            check(image.u32(address) == layout::EmptyString,
+                  "mapping the overwrite question must preserve every adjacent empty pointer");
+        }
         for (uint32_t i = 0; i < 6; ++i)
             check(image.u8(layout::Setup_FormatError_RuntimeField8 + i) == toggle_rows[i], "toggle mapping includes alignment padding");
         check(image.u8(layout::Desktop_Copy_TextPointer) == 0xfb, "negative balance colour");
@@ -42,7 +66,7 @@ int main() {
             check(image.u8(layout::Desktop_Render_RuntimeField3 + i) == 30 + i, "socket source x");
         }
         std::filesystem::remove_all(root);
-        std::cout << "FLTD setup, colour and desktop-control mappings passed\n";
+        std::cout << "FLTD setup, colour, desktop-control and overwrite-question mappings passed\n";
         return 0;
     } catch (const std::exception& error) {
         if (!root.empty()) { std::error_code ec; std::filesystem::remove_all(root, ec); }

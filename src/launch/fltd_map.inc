@@ -122,7 +122,15 @@
     {::bmh::layout::TransferMarket_Click_RuntimeField, 2, Kind::copy, ::bmh::layout::EnglishLayoutTranslation246, {}},
     {::bmh::layout::TransferMarket_Click_RuntimeField2, 2, Kind::copy, ::bmh::layout::EnglishLayoutTranslation246, {}},
     {::bmh::layout::TransferMarket_Click_RuntimeField3, 74, Kind::copy, ::bmh::layout::EnglishLayoutTranslation247, {}},
-    {::bmh::layout::Bank_OriginalToUtf8_RuntimeField, 144, Kind::empty_pointers, 0, {}},
+    // Keep the overwrite pointer's next entry exactly four bytes away: copy
+    // entries extend to their following destination, while other slots stay empty.
+    {::bmh::layout::Bank_OriginalToUtf8_RuntimeField,
+     ::bmh::layout::SaveLoad_OverwriteQuestionPointer - ::bmh::layout::Bank_OriginalToUtf8_RuntimeField,
+     Kind::empty_pointers, 0, {}},
+    {::bmh::layout::SaveLoad_OverwriteQuestionPointer, 4, Kind::copy, kEnglishOverwriteQuestionPointer, {}},
+    {::bmh::layout::SaveLoad_OverwriteQuestionPointer + 4,
+     ::bmh::layout::Bank_OriginalToUtf8_RuntimeField + 144 - (::bmh::layout::SaveLoad_OverwriteQuestionPointer + 4),
+     Kind::empty_pointers, 0, {}},
     {::bmh::layout::Analytics_FormatError_ExecutableField, 72, Kind::copy, ::bmh::layout::EnglishLayoutTranslation50, {}}, // EN196f1: graph labels, distinct from fund-name suffixes
     {::bmh::layout::AdGroupId, 1, Kind::copy, ::bmh::layout::EnglishLayoutTranslation51, {}},
     {::bmh::layout::GameEnd_SourceHyphenator_ExecutableField, 18, Kind::copy, ::bmh::layout::EnglishLayoutTranslation52, {}},

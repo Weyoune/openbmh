@@ -26,6 +26,7 @@ constexpr uint32_t kEnFileOffset = 0x496d;
 constexpr uint32_t kEnDataStart = ::bmh::layout::EnDataStart, kEnDataEnd = ::bmh::layout::Career_CompetitionPointersEnglish_RuntimeField;
 constexpr uint32_t kFltdSize = 507925;
 constexpr uint32_t kEnglishCalendarDateSetup = 0x684;
+constexpr uint32_t kEnglishOverwriteQuestionPointer = 0x6c43c;
 // The German image the engine expects: LE objects from layout field, data object GermanDataSegmentBegin-layout field.
 constexpr uint32_t kDeBase = 0x10000, kDeEnd = ::bmh::layout::GermanImageEnd;
 // A zero byte in the German BSS: the empty string of empty_pointers entries.
