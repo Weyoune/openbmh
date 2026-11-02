@@ -3,6 +3,7 @@
 #include "ui/advertising.hpp"
 #include "ui/source_notice_test_helpers.hpp"
 
+#include <algorithm>
 #include <array>
 #include <filesystem>
 #include <functional>
@@ -281,6 +282,54 @@ int main(int argc, char** argv) {
                 check(pixel(first, exe.u16(::bmh::layout::Advertising_Click_RuntimeField3) + x, exe.u16(::bmh::layout::Advertising_Click_RuntimeField4) + y) ==
                           pixel(logos, x, y),
                       "active board logos use the original KB/34 partner sprite and hitbox coordinates");
+        // Motion alone must display the original rectangle and details; it must
+        // never open negotiations, spending, or emit an engine action.
+        AdvertisingScreen hover(data, state);
+        for (int target = 0; target < 19; ++target) {
+            const uint32_t at = uint32_t(target) * 2;
+            const int x = exe.u16(::bmh::layout::Advertising_Click_RuntimeField3 + at);
+            const int y = exe.u16(::bmh::layout::Advertising_Click_RuntimeField4 + at);
+            const int width = exe.u16(::bmh::layout::Advertising_Click_RuntimeField5 + at);
+            const int height = exe.u16(::bmh::layout::Advertising_Click_RuntimeField6 + at);
+            check(hover.move(x + 1, y + 1) && hover.hovered_target() == target &&
+                  !hover.move(x + 2, y + 2) && !hover.pending() && !hover.offer_open() &&
+                  !hover.spending_calculator_open() && hover.selected_contract() == -1,
+                  "pointer motion follows every original advertising target without an action");
+            const auto highlighted = hover.render();
+            for (int dx = 0; dx < width; ++dx)
+                check(pixel(highlighted, x + dx, y) == 0x27 &&
+                      pixel(highlighted, x + dx, y + height - 1) == 0x27,
+                      "hover paints the original yellow top and bottom rectangle edges");
+            for (int dy = 0; dy < height; ++dy)
+                check(pixel(highlighted, x, y + dy) == 0x27 &&
+                      pixel(highlighted, x + width - 1, y + dy) == 0x27,
+                      "hover paints the original yellow left and right rectangle edges");
+            check(hover.move(-1, -1) && hover.hovered_target() == -1 &&
+                  hover.render().pixels == first.pixels && !hover.move(-1, -1),
+                  "leaving a target restores both the outline and details without sticky selection");
+        }
+        const int empty_slot = int(std::find_if(state.boards.begin(), state.boards.end(),
+            [](const auto& contract) { return !contract.active; }) - state.boards.begin());
+        check(empty_slot < 14 && !state.space_available_text.empty(),
+              "fixture provides an empty advertising surface and edition-specific help");
+        auto no_help_state = state;
+        no_help_state.space_available_text.clear();
+        AdvertisingScreen no_help(data, no_help_state);
+        const int empty_x = exe.u16(::bmh::layout::Advertising_Click_RuntimeField3 + empty_slot * 2) + 1;
+        const int empty_y = exe.u16(::bmh::layout::Advertising_Click_RuntimeField4 + empty_slot * 2) + 1;
+        check(hover.move(empty_x, empty_y) && no_help.move(empty_x, empty_y) &&
+              hover.render().pixels != no_help.render().pixels &&
+              state.space_available_text == original_to_utf8(message_text(game,
+                  ::bmh::layout::Advertising_FormatError_TextPointer7)),
+              "empty-surface hover renders help from the installation's actual TEXTD pointer");
+        AdvertisingScreen spending_hover(data, state);
+        const int spending_x = exe.u16(::bmh::layout::Advertising_Click_RuntimeField3 + 17 * 2) + 1;
+        const int spending_y = exe.u16(::bmh::layout::Advertising_Click_RuntimeField4 + 17 * 2) + 1;
+        check(spending_hover.move(spending_x, spending_y) && hover.move(spending_x, spending_y) &&
+              hover.render().pixels == spending_hover.render().pixels,
+              "moving directly from empty-surface help to spending clears the contract detail panel");
+        check(game.manager_records == records_before,
+              "all hover targets and help rendering leave the manager records unchanged");
         check(screen.click(exe.u16(::bmh::layout::Advertising_Click_RuntimeField3) + 1, exe.u16(::bmh::layout::Advertising_Click_RuntimeField4) + 1) &&
               screen.selected_contract() == 0,
               "a board click selects a local read-only details panel");
@@ -295,6 +344,9 @@ int main(int argc, char** argv) {
                   screen.key("ESC") && screen.close_requested() && !screen.key("LEFT"),
                   "ESC closes an existing offer browser before the screen");
         } else {
+            check(screen.move(-1, -1) && screen.render().pixels == first.pixels &&
+                  screen.selected_contract() == 0,
+                  "a clicked contract without offers does not leave a sticky outline or details");
             check(screen.key("ESC") && screen.close_requested() && !screen.key("LEFT"),
                   "without a saved offer, ESC closes the contract details directly");
         }
@@ -318,6 +370,10 @@ int main(int argc, char** argv) {
         const bool opened = offers.open_offers(0);
         check(opened && offers.offer_open() && offers.selected_offer() == 5,
               "opening the source offer browser selects the highest saved raw offer");
+        const auto offer_pixels = offers.render().pixels;
+        check(!offers.move(empty_x, empty_y) && offers.render().pixels == offer_pixels &&
+              offers.selected_offer() == 5 && !offers.pending(),
+              "offer browser keeps its input and details when the pointer crosses the parent targets");
         check(offers.click(140, 164) && offers.selected_offer() == 4 &&
               !offers.click(190, 195) && !offers.pending(),
               "an empty raw slot cannot create an acceptance request");
@@ -377,6 +433,9 @@ int main(int argc, char** argv) {
               "the original merchandise hitbox opens its calculator with the saved value");
         const auto calculator_art = load_vga(asset_path(data / "KB", "6.VGA"));
         const auto calculator_image = merchandise.render();
+        check(!merchandise.move(empty_x, empty_y) &&
+              merchandise.render().pixels == calculator_image.pixels && !merchandise.pending(),
+              "spending calculator retains its captured parent and does not hover through it");
         check(calculator_image.pixels[size_t(55) * 320 + 103] == calculator_art.pixels[0],
               "the calculator opens over the original advertising screen using KB/6 at source coordinates");
         check(merchandise.text("200000") && merchandise.spending_input() == 200000 &&

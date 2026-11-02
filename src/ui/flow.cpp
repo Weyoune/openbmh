@@ -30,6 +30,7 @@ FlowResult StartupFlow::move_action(int x, int y) {
     if (friendly_match_) return {friendly_match_->move(x,y)};
     if(league_pairings_)return {league_pairings_->move(x,y)};
     if(stadium_)return {stadium_->pointer_move(x,y)};
+    if(advertising_)return {advertising_->move(x,y)};
     if(environment_)return {};
     if (outgoing_transfer_) return {};
     if (transfer_market_ && !player_card_) {

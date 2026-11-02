@@ -105,6 +105,7 @@ public:
     AdvertisingScreen(const std::filesystem::path& data, AdvertisingState state,
                       uint64_t request_id_seed = 1);
     Image render() const;
+    bool move(int x, int y);
     bool click(int x, int y);
     bool key(std::string_view key);
     bool open_offers(int display_slot);
@@ -112,6 +113,7 @@ public:
     const std::optional<AdvertisingRequest>& pending() const { return pending_; }
     bool reject_action(std::string reason);
     int selected_contract() const { return selected_contract_; }
+    int hovered_target() const { return hovered_target_; }
     int selected_offer() const { return selected_offer_; }
     bool offer_open() const { return offer_open_; }
     bool spending_calculator_open() const { return spending_calculator_open_; }
@@ -136,6 +138,7 @@ private:
     std::optional<Image> badge_atlas_;
     std::optional<Image> spending_backdrop_;
     int selected_contract_ = -1;
+    int hovered_target_ = -1;
     int selected_spending_slot_ = -1;
     int selected_offer_ = -1;
     uint64_t next_request_id_ = 1;

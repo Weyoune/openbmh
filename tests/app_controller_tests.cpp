@@ -1523,6 +1523,18 @@ void check_advertising_controller(const std::filesystem::path& data) {
     };
     serve(flow.send_key("W"));
     check(flow.screen_name() == "advertising", "Original W opens advertising through the controller");
+    const auto unhovered_pixels = flow.render().pixels;
+    const auto moved = flow.move_action(40, 30);
+    check(moved.changed && moved.request == FlowRequest::none &&
+          flow.state_json().find("\"hovered_target\":") != std::string::npos &&
+          flow.render().pixels != unhovered_pixels && !flow.pending_advertising_action(),
+          "production flow routes advertising motion into the original hover and help view");
+    check(!flow.pointer_down(40, 30).changed && !flow.pending_advertising_action(),
+          "advertising DOWN does not duplicate the release-owned offer action");
+    unchanged();
+    check(flow.move_action(-1, -1).changed && flow.render().pixels == unhovered_pixels,
+          "production flow restores the advertising view when the pointer leaves");
+    unchanged();
     serve(flow.click(40, 30));
     (void)flow.render();
     unchanged();

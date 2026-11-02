@@ -679,16 +679,14 @@ Image AdvertisingScreen::render() const {
     draw_finance(state_.finance_preview.expenses_text, 198, 222);
     text(image, 254, 218, state_.finance_preview.balance_text, 0x6b, 64);
 
-    if (selected_contract_ >= 0) {
-        const auto& contract = selected_contract_ < kBoardCount
-            ? state_.boards[size_t(selected_contract_)]
-            : selected_contract_ == 14 ? state_.shirt : state_.television;
-        if (selected_contract_ < 16) {
-            const int i = selected_contract_;
-            rectangle(image, exe.u16(::bmh::layout::Advertising_Click_RuntimeField3 + uint32_t(i) * 2), exe.u16(::bmh::layout::Advertising_Click_RuntimeField4 + uint32_t(i) * 2),
-                      exe.u16(::bmh::layout::Advertising_Click_RuntimeField5 + uint32_t(i) * 2), exe.u16(::bmh::layout::Advertising_Click_RuntimeField6 + uint32_t(i) * 2), 0x27);
-        }
-        const auto& offer_list = state_.offers[size_t(selected_contract_)];
+    // The original details panel follows the pointer until the offer browser owns it.
+    const int details_target = offer_open_ ? selected_contract_ :
+        hovered_target_ >= 0 && hovered_target_ < 16 ? hovered_target_ : -1;
+    if (details_target >= 0) {
+        const auto& contract = details_target < kBoardCount
+            ? state_.boards[size_t(details_target)]
+            : details_target == 14 ? state_.shirt : state_.television;
+        const auto& offer_list = state_.offers[size_t(details_target)];
         const bmh::AdvertisingOfferCandidate* offer = nullptr;
         if (offer_open_ && selected_offer_ >= 0)
             for (const auto& candidate : offer_list.offers)
@@ -732,7 +730,7 @@ Image AdvertisingScreen::render() const {
             }
             text(image, 156, 185, show_offer ? state_.offer_label : state_.bonus_label, 0x6c, 34);
             text(image, 191, 185, original_to_utf8(exe_.cstring(::bmh::layout::Advertising_FormatError_ExecutableField)) + (show_offer
-                     ? state_.offer_amount_text[size_t(selected_contract_)][size_t(selected_offer_)]
+                     ? state_.offer_amount_text[size_t(details_target)][size_t(selected_offer_)]
                      : contract.amount_text), 0x6c, 100);
             if (!offer_open_ && contract.active && contract.months_remaining == 0 &&
                 contract.extension_months != 0)
@@ -761,10 +759,12 @@ Image AdvertisingScreen::render() const {
             button(image, 164, 191, 66, state_.accept_label);
         }
     }
-    if (selected_spending_slot_ >= 16 && selected_spending_slot_ <= 18) {
-        const uint32_t i = uint32_t(selected_spending_slot_);
-        rectangle(image, exe_.u16(::bmh::layout::Advertising_Click_RuntimeField3 + i * 2), exe_.u16(::bmh::layout::Advertising_Click_RuntimeField4 + i * 2),
-                  exe_.u16(::bmh::layout::Advertising_Click_RuntimeField5 + i * 2), exe_.u16(::bmh::layout::Advertising_Click_RuntimeField6 + i * 2), 0x27);
+    if (hovered_target_ >= 0) {
+        const uint32_t at = uint32_t(hovered_target_) * 2;
+        rectangle(image, exe.u16(::bmh::layout::Advertising_Click_RuntimeField3 + at),
+                  exe.u16(::bmh::layout::Advertising_Click_RuntimeField4 + at),
+                  exe.u16(::bmh::layout::Advertising_Click_RuntimeField5 + at),
+                  exe.u16(::bmh::layout::Advertising_Click_RuntimeField6 + at), 0x27);
     }
     if (spending_calculator_open_ && spending_backdrop_) image = *spending_backdrop_;
     if (notification_open()) draw_notification(image);
@@ -941,6 +941,7 @@ bool AdvertisingScreen::text(std::string_view input) {
 
 void AdvertisingScreen::begin_offer_browser(int display_slot) {
     selected_contract_ = display_slot;
+    hovered_target_ = display_slot;
     offer_open_ = true;
     selected_offer_ = -1;
     const auto& offers = state_.offers[size_t(display_slot)].offers;
@@ -1004,6 +1005,26 @@ bool AdvertisingScreen::reject_action(std::string reason) {
     return true;
 }
 
+bool AdvertisingScreen::move(int x, int y) {
+    if (close_requested_ || pending_ || notification_open() || spending_calculator_open_ || offer_open_)
+        return false;
+    int target = -1;
+    for (int i = 0; i < 19; ++i) {
+        const uint32_t at = uint32_t(i) * 2;
+        const int left = exe_.u16(::bmh::layout::Advertising_Click_RuntimeField3 + at);
+        const int top = exe_.u16(::bmh::layout::Advertising_Click_RuntimeField4 + at);
+        const int width = exe_.u16(::bmh::layout::Advertising_Click_RuntimeField5 + at);
+        const int height = exe_.u16(::bmh::layout::Advertising_Click_RuntimeField6 + at);
+        if (x >= left && x < left + width && y >= top && y < top + height) {
+            target = i;
+            break;
+        }
+    }
+    if (target == hovered_target_) return false;
+    hovered_target_ = target;
+    return true;
+}
+
 bool AdvertisingScreen::click(int x, int y) {
     if (close_requested_ || pending_ || x < 0 || y < 0 || x >= 320 || y >= 240) return false;
     if (notification_open()) return dismiss_notification();
@@ -1056,6 +1077,7 @@ bool AdvertisingScreen::click(int x, int y) {
         const int right = left + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField5 + uint32_t(i) * 2);
         const int bottom = top + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField6 + uint32_t(i) * 2);
         if (x >= left && x < right && y >= top && y < bottom) {
+            (void)move(x, y);
             const auto& projected = state_.offers[size_t(i)];
             const bool renewal_due = projected.contract_slot >= 0 && projected.contract_slot < 16 &&
                 (projected.contract_bytes[6] & 0x7f) != 0 && projected.contract_bytes[5] == 0;
@@ -1086,6 +1108,7 @@ bool AdvertisingScreen::click(int x, int y) {
         const int right = left + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField5 + uint32_t(i) * 2);
         const int bottom = top + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField6 + uint32_t(i) * 2);
         if (x >= left && x < right && y >= top && y < bottom) {
+            (void)move(x, y);
             selected_contract_ = -1;
             selected_spending_slot_ = i;
             open_spending_calculator(i);
@@ -1122,6 +1145,7 @@ std::string AdvertisingScreen::state_json() const {
     if (!result.empty() && result.back() == '}') result.pop_back();
     result += ",\"spending_calculator_open\":" +
         std::string(spending_calculator_open_ ? "true" : "false") +
+        ",\"hovered_target\":" + std::to_string(hovered_target_) +
         ",\"selected_spending_slot\":" + std::to_string(selected_spending_slot_) +
         ",\"spending_input\":" + std::to_string(spending_input_) +
         ",\"notification_open\":" + std::string(notification_open() ? "true" : "false");
