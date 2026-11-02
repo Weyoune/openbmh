@@ -598,9 +598,10 @@ int main(int argc, char** argv) {
     try {
         paired_closing_selection();
         if (argc < 2) throw std::runtime_error("data directory required");
+        const bool input_only=argc>2 && std::string_view(argv[2])=="--input-only";
         const std::filesystem::path data = argv[1]; const auto exe = bmh::test::load_executable(asset_path(data,"BMH.exe"));
         paired_selection_matrix(exe);
-        if(argc>3)paired_saved_projection(argv[3],exe);
+        if(!input_only && argc>3)paired_saved_projection(argv[3],exe);
         // The date arithmetic is checked against a controlled epoch aligned with
         // the original leap cycle, independently of the installation's start year.
         auto oracle_exe = exe;
@@ -941,9 +942,12 @@ int main(int argc, char** argv) {
         std::copy_n("BREMEN",6,match_game.club_names.begin()+16);
         match_game.club_ids[12]=0; match_game.club_ids[13]=7; match_game.club_ids[14]=16;
         match_game.results.assign(9 * 0x17c, 0xcc);
-        check(desk_texts[(::bmh::layout::FixtureDesktopFirstLabelPointer-::bmh::layout::TextPointerTable)/4]==bmh::test::expected_text("desktop_tests.0") &&
-              desk_texts[(::bmh::layout::FixtureDesktopSecondLabelPointer-::bmh::layout::TextPointerTable)/4]==bmh::test::expected_text("desktop_tests.1"),
-              "kind-61 rank suffix and strength label resolve from the Source TEXTD addresses");
+        // Input-only validation needs configured game assets, but no private text inventory.
+        if(!input_only) {
+            check(desk_texts[(::bmh::layout::FixtureDesktopFirstLabelPointer-::bmh::layout::TextPointerTable)/4]==bmh::test::expected_text("desktop_tests.0") &&
+                  desk_texts[(::bmh::layout::FixtureDesktopSecondLabelPointer-::bmh::layout::TextPointerTable)/4]==bmh::test::expected_text("desktop_tests.1"),
+                  "kind-61 rank suffix and strength label resolve from the Source TEXTD addresses");
+        }
         check(format_number(match_game,6,2)=="%6" && format_number(match_game,95,2)=="95",
               "legacy routine width 2 keeps a transparent leading cell only for one-digit strength");
         const Font small_font=load_font(data/"F"/"BMH3.FNT");
@@ -1335,7 +1339,7 @@ int main(int argc, char** argv) {
               results_flow.screen_name()=="desktop" && !results_flow.desktop()->pending(),
               "Escape closes results without issuing another kickoff");
 
-        if (argc > 2 && std::string(argv[2]).size()) {
+        if (!input_only && argc > 2 && std::string(argv[2]).size()) {
             const auto original = read_file(argv[2]);
             auto state = load_reference_desk(argv[2],exe);
             check(state.manager_name=="BMHLAB" && state.runtime_club==12 && state.balance==6243300 && state.strength==86,"captured single-manager baseline");
