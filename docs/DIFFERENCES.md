@@ -34,9 +34,11 @@ describe deliberate changes; they are not a list of every known compatibility li
 - [src/game/weekly.cpp](../src/game/weekly.cpp): uses the supported weekly-event configuration, with its rule switch disabled.
 - [src/game/weekly.hpp](../src/game/weekly.hpp): uses the supported weekly processing and transfer rule profile.
 - [src/ui/bank.cpp](../src/ui/bank.cpp): read-only totals use wide arithmetic; individual saved account, price, holding and paid fields are unchanged.
+- [src/ui/desk_state.cpp](../src/ui/desk_state.cpp): the desk shows the opponent's badge whenever the data has one.
 - [src/ui/league_table.hpp](../src/ui/league_table.hpp): uses three points for a win in the supported rule profile.
 - [src/ui/pitch.cpp](../src/ui/pitch.cpp): supports owner-bound designated set-piece selection in the extended manager record.
 - [src/ui/save_load.cpp](../src/ui/save_load.cpp): focuses the host save filename on entry and selects an existing name for replacement.
 - [src/ui/save_load.cpp](../src/ui/save_load.cpp): omits DOS drive and delete buttons in the directory-confined save/load view.
 - [src/ui/save_load.cpp](../src/ui/save_load.cpp): the host file picker uses the shared dialog's system identity without a live manager portrait projection.
 - [src/ui/save_load.cpp](../src/ui/save_load.cpp): permits cancelling host file dialogs with the right mouse button.
+- [src/ui/settings.cpp](../src/ui/settings.cpp): the settings page names the product and its build version instead of the original's version text.

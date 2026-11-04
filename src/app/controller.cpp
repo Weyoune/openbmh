@@ -2,6 +2,7 @@
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "app/controller.hpp"
+#include "app/debug_log.hpp"
 #include "app/window_actions.hpp"
 #include "app/desktop_actions.hpp"
 #include "app/audio.hpp"
@@ -1866,6 +1867,20 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         });
         const auto advanced = session->dispatch_kickoff(result.desk_action, revision, error);
         start_original_desk_audio(playback, session->state(), music_enabled);
+        if (app::debug::enabled()) {
+            // -debug: one savegame after every match day, in the debug folder (DBG00001.FBM, ...).
+            app::debug::log("kickoff handled: " + std::string(advanced.kind == TurnDeskKind::Failed ? "failed" : "ok") +
+                            ", date counter " + std::to_string(session->state().date) + ", revision " + std::to_string(revision) +
+                            (error.empty() ? std::string() : ", error " + error));
+            if (advanced.kind != TurnDeskKind::Failed) {
+            const auto path = app::debug::next_save_path();
+            std::string save_error;
+            const int slot = int(session->state().memory.u8(::bmh::layout::ActiveManager));
+            const bool saved = session->save_game(path, slot, true, save_error);
+            app::debug::log(saved ? "debug savegame " + path.filename().string()
+                                  : "debug savegame failed: " + save_error);
+            }
+        }
         if (advanced.kind == TurnDeskKind::Failed || advanced.kind == TurnDeskKind::WaitingAtDesk) {
             flow.reject_desk_action(error.empty() ? advanced.reason : error);
             return {};

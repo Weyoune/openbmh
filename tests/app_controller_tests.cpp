@@ -4222,7 +4222,7 @@ void check_loaded_lineup(const std::filesystem::path& data, const std::filesyste
     check(session.game().calls() == game_calls && session.rand().calls() == random_calls,
           "pre-kickoff swap consumes no RNG");
 
-    bool saw_fixture = false, order_preserved = false, live_overview_roundtrip = false;
+    bool saw_fixture = false, order_preserved = false, live_overview_roundtrip = false, pairings_first_roundtrip = false;
     session.set_live_minute([&](int minute, MatchEngine& engine, std::vector<MatchGroup>& groups, GameState& state) {
         if (!live_overview_roundtrip && minute >= 3 && !groups.empty() && groups[0].desc.size() > 0xcf &&
             groups[0].desc[0] == 0 && std::any_of(groups.begin(),groups.end(),[&](const MatchGroup& group) {
@@ -4237,14 +4237,65 @@ void check_loaded_lineup(const std::filesystem::path& data, const std::filesyste
             if(!opened)throw std::runtime_error("actual WEEK196 live G key failed to open: "+error);
             check(opened->kind==app::CareerSession::LiveOverviewKind::league_table && opened->table.has_value(),
                   "real kickoff observer opens the Source G table for the first league descriptor");
+            // The family's children as the buttons reach them: Tabelle -> Stärken -> Tabelle ->
+            // Spiele -> Tabelle, each handoff accepted while the minute is held.
+            const auto hop=[&](ui::StrengthsIdentity from,int from_child,int target_child,const char* what) {
+                ui::LeagueFamilyRequest nav;
+                nav.identity=from; nav.kind=ui::LeagueFamilyRequestKind::navigate;
+                nav.from_child=from_child; nav.target_child=target_child;
+                auto page=session.dispatch_live_overview(app::CareerSession::LiveOverviewAction{nav},engine,revision,error);
+                if(!page)throw std::runtime_error(std::string("live overview ")+what+" failed: "+error);
+                return *page;
+            };
+            auto strengths=hop(opened->family_identity,1,3,"Tabelle -> Stärken");
+            check(strengths.kind==app::CareerSession::LiveOverviewKind::league_strengths,"the live family opens Stärken");
+            auto table_again=hop(strengths.family_identity,3,1,"Stärken -> Tabelle");
+            auto pairings=hop(table_again.family_identity,1,2,"Tabelle -> Spiele");
+            check(pairings.kind==app::CareerSession::LiveOverviewKind::league_pairings,"the live family opens Spiele");
+            auto table_last=hop(pairings.family_identity,2,1,"Spiele -> Tabelle");
             ui::LeagueFamilyRequest close;
-            close.identity=opened->family_identity; close.kind=ui::LeagueFamilyRequestKind::close;
+            close.identity=table_last.family_identity; close.kind=ui::LeagueFamilyRequestKind::close;
             close.from_child=1; close.target_child=0;
             auto closed=session.dispatch_live_overview(app::CareerSession::LiveOverviewAction{close},engine,revision,error);
             if(!closed)throw std::runtime_error("actual WEEK196 live G key failed to close: "+error);
             check(closed->closed && closed->preparation.has_value() && error.empty(),
                   "real kickoff observer closes the Source G family and resumes the same minute");
             live_overview_roundtrip=true;
+        }
+        // The Spiele page opened first (key slot 1, as at the end of a phase): its Tabelle and
+        // Stärken buttons hand over to the other children and back.
+        if (live_overview_roundtrip && !pairings_first_roundtrip && minute >= 5 && !groups.empty() &&
+            groups[0].desc.size() > 0xcf && groups[0].desc[0] == 0) {
+            pairings_first_roundtrip = true;
+            app::CareerSession::LiveOverviewRequest live;
+            live.key_slot=1; live.minute=minute; live.group_index=0;
+            live.manager_slot=manager; live.runtime_team=team; live.revision=revision;
+            live.sequence=0xfeee;
+            auto opened=session.open_live_overview(live,engine,revision,Image{},error);
+            if(!opened)throw std::runtime_error("live Spiele page failed to open: "+error);
+            check(opened->kind==app::CareerSession::LiveOverviewKind::league_pairings,"key slot 1 opens the Spiele page");
+            const auto hop2=[&](ui::StrengthsIdentity from,int from_child,int target_child,const char* what) {
+                ui::LeagueFamilyRequest nav;
+                nav.identity=from; nav.kind=ui::LeagueFamilyRequestKind::navigate;
+                nav.from_child=from_child; nav.target_child=target_child;
+                auto page=session.dispatch_live_overview(app::CareerSession::LiveOverviewAction{nav},engine,revision,error);
+                if(!page)throw std::runtime_error(std::string("live overview ")+what+" failed: "+error);
+                return *page;
+            };
+            // the buttons of the Spiele page itself: Stärken directly, and back
+            auto direct=hop2(opened->family_identity,2,3,"Spiele -> Stärken");
+            check(direct.kind==app::CareerSession::LiveOverviewKind::league_strengths,"Spiele hands over to Stärken");
+            auto again=hop2(direct.family_identity,3,2,"Stärken -> Spiele");
+            auto table=hop2(again.family_identity,2,1,"Spiele -> Tabelle");
+            check(table.kind==app::CareerSession::LiveOverviewKind::league_table,"Spiele hands over to Tabelle");
+            auto strengths=hop2(table.family_identity,1,3,"Tabelle -> Stärken");
+            auto pairings=hop2(strengths.family_identity,3,2,"Stärken -> Spiele");
+            ui::LeagueFamilyRequest close;
+            close.identity=pairings.family_identity; close.kind=ui::LeagueFamilyRequestKind::close;
+            close.from_child=2; close.target_child=0;
+            auto closed=session.dispatch_live_overview(app::CareerSession::LiveOverviewAction{close},engine,revision,error);
+            if(!closed)throw std::runtime_error("live Spiele page failed to close: "+error);
+            check(closed->closed,"the Spiele page closes and resumes the minute");
         }
         if (saw_fixture) return;
         for (const auto& group : groups) {

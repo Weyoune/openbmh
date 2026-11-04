@@ -374,8 +374,15 @@ void restore_saved_turn_cursor(TurnDriver& driver, GameState& state, const Datab
     const int manager_count = int(state.manager_teams.size());
     if (manager_count > 4 || !state.memory.has(::bmh::layout::ActiveManager) || !state.memory.has(::bmh::layout::DeskPosition))
         throw std::runtime_error("saved turn cursor: manager continuation fields are missing");
-    const int position = int(state.memory.u8(::bmh::layout::DeskPosition));
+    int position = int(state.memory.u8(::bmh::layout::DeskPosition));
     const int active = int(state.memory.u8(::bmh::layout::ActiveManager));
+    // A completed manager loop leaves DeskPosition == ManagerCount (the day's desks are done). A desk
+    // that was saved in that state is the first desk again for a single manager: nothing else can
+    // follow it. Reading the byte as 0 lets the day go on instead of refusing the whole save.
+    if (manager_count == 1 && position == 1 && active == 0) {
+        position = 0;
+        state.memory.set8(::bmh::layout::DeskPosition, 0);
+    }
     if (position < 0 || position >= manager_count)
         throw std::runtime_error("saved turn cursor: manager position is outside the saved roster");
     if (manager_count == 1) {

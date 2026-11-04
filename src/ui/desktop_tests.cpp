@@ -1123,12 +1123,19 @@ int main(int argc, char** argv) {
         auto special=desk_from_game(special_game,exe,10,&prepared,34);
         check(special.next_competition_label==desk_texts[(::bmh::layout::DeskState_FormatError_RuntimeField4-::bmh::layout::TextPointerTable)/4],
               "Source calendar entry 4006 selects the special competition title");
-        MatchGroup fallback_badge_group=cup_fixture;fallback_badge_group.fixtures={12,100};
+        // OpenBMH shows a club badge for every league club; only the cup-only teams keep the computer portrait.
+        MatchGroup fallback_badge_group=cup_fixture;fallback_badge_group.fixtures={12,200};
         std::vector<MatchGroup> fallback_badge_groups{fallback_badge_group};
         auto fallback_badge=desk_from_game(match_game,exe,10,&fallback_badge_groups,34);
-        check(fallback_badge.next_opponent==100&&fallback_badge.next_opponent_badge_fallback&&
+        check(fallback_badge.next_opponent==200&&fallback_badge.next_opponent_badge_fallback&&
               !fallback_badge.next_opponent_badge,
-              "legacy routine special team range uses its computer-portrait fallback");
+              "a cup-only team uses its computer-portrait fallback");
+        fallback_badge_group.fixtures={12,100};
+        fallback_badge_groups={fallback_badge_group};
+        auto foreign_badge=desk_from_game(match_game,exe,10,&fallback_badge_groups,34);
+        check(foreign_badge.next_opponent==100&&!foreign_badge.next_opponent_badge_fallback&&
+              foreign_badge.next_opponent_badge,
+              "a foreign league club shows its badge");
         prepared.clear();
         auto other_fixture = league_fixture; other_fixture.fixtures={13,14}; prepared.push_back(other_fixture);
         auto unmatched = desk_from_game(match_game,exe,10,&prepared,34);

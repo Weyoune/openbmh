@@ -64,6 +64,10 @@ SettingsState settings_from_game(const GameState&, int manager, uint64_t revisio
 std::optional<uint32_t> settings_source_refusal(const GameState& state,
     const SettingsWriteRequest& request, uint64_t revision);
 
+// The product line of the settings page: "OpenBMH" and, below it, this build's version. Set once by the
+// application (the UI library does not include the generated version); empty keeps the original text.
+void set_settings_product_version(std::string version);
+
 class SettingsScreen {
 public:
     SettingsScreen(const std::filesystem::path& data, SettingsState state, int origin_item_id = -1);

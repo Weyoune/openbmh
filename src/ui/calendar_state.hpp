@@ -47,6 +47,7 @@ struct CalendarState {
     bool friendly_selection = false;
     std::vector<RescheduleOption> reschedule_options;
     std::vector<LeagueMatchRef> moved_matches;
+    bool gradient_text = true;  // six-row colour table of the original instead of flat colours
 };
 
 // Projects the current saved season without preparing fixtures, advancing the date,

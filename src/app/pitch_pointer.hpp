@@ -28,8 +28,12 @@ public:
     void show(const std::optional<std::array<uint32_t,121>>& requested, SDL_Renderer* renderer) {
         const auto& pixels = requested ? requested : default_;
         if (!pixels) { SDL_SetCursor(SDL_GetDefaultCursor()); return; }
+        // Cursor bitmaps are sized in window points, not in pixels: on a high-DPI display (macOS
+        // Retina) the renderer's output is larger than the window, and a bitmap scaled to it would
+        // show twice as large. SDL_GetWindowSize gives the points.
         int width = 320, height = 240;
-        SDL_GetRendererOutputSize(renderer, &width, &height);
+        if (SDL_Window* window = SDL_RenderGetWindow(renderer)) SDL_GetWindowSize(window, &width, &height);
+        else SDL_GetRendererOutputSize(renderer, &width, &height);
         const int scale = std::max(1, std::min(width / 320, height / 240));
         if (!cursor_ || pixels != pixels_ || scale != scale_) {
             std::vector<uint32_t> enlarged(size_t(11 * scale) * size_t(11 * scale));

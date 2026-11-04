@@ -77,9 +77,30 @@ CalendarScreen::CalendarScreen(const std::filesystem::path& data, CalendarState 
 void CalendarScreen::text(Image& out, int x, int baseline, std::string_view bytes, uint8_t color) const {
     // TextWidth3 refuses text outside the original screen; no UTF-8 enters BMH3.
     const int top = baseline - font_.baseline;
-    if (x >= 0 && top >= 0 && top + font_.height <= out.height &&
-        x + font_.text_width(bytes) <= out.width)
+    if (!(x >= 0 && top >= 0 && top + font_.height <= out.height &&
+          x + font_.text_width(bytes) <= out.width)) return;
+    // With the gradient on, every set pixel of a glyph takes the colour its row has in the original's
+    // table for this palette token (six rows per token); a token the table does not know stays flat.
+    unsigned slot = 0;
+    while (slot < 32 && exe_.u8(::bmh::layout::Advertising_Text_RuntimeField2 + slot) != color) ++slot;
+    if (!state_.gradient_text || slot == 32) {
         font_.draw(out, x, top, bytes, color);
+        return;
+    }
+    int pen_x = x;
+    for (unsigned char ch : bytes) {
+        const auto& glyph = font_.glyph(ch);
+        for (int row = 0; row < font_.height; ++row) {
+            const uint8_t row_color = exe_.u8(::bmh::layout::Advertising_Text_RuntimeField + slot * 6 + std::min(row, 5));
+            if (row_color == 0) continue;
+            for (int col = 0; col < glyph.bit_width; ++col) {
+                const int bit = glyph.bit_offset + col;
+                if (!(font_.bitmap[size_t(row) * font_.modulo + bit / 8] & (0x80 >> (bit % 8)))) continue;
+                out.at(pen_x + col, top + row) = row_color;
+            }
+        }
+        pen_x += glyph.advance;
+    }
 }
 
 std::string CalendarScreen::information(const CalendarDayProjection& day) const {

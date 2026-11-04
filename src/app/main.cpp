@@ -34,6 +34,7 @@
 #include "version.hpp"
 #include "app/video_session.hpp"
 #include "app/live_matchday_events.hpp"
+#include "app/debug_log.hpp"
 #include "app/pitch_pointer.hpp"
 #include "audio/playback.hpp"
 #include "app/audio.hpp"
@@ -115,7 +116,7 @@ int main(int argc, char** argv) {
     const std::vector<std::string> args = launch::utf8_arguments(argc, argv);  // (file names beyond the code page)
     fs::path data, save_directory;
     uint32_t seed = uint32_t(std::chrono::system_clock::now().time_since_epoch().count());
-    bool muted = false, music_enabled = true;
+    bool muted = false, music_enabled = true, debug_mode = false;
     int live_frame_ms = 0;
     bool live_frame_ms_explicit = false;
     if (const char* configured = std::getenv("BMH_LIVE_FRAME_MS")) {
@@ -139,6 +140,8 @@ int main(int argc, char** argv) {
             data = launch::path_from_utf8(args[++i]);
         } else if (is("--seed") && value) {
             seed = uint32_t(std::strtoul(args[++i].c_str(), nullptr, 0));
+        } else if (is("-debug") || is("--debug")) {
+            debug_mode = true;
         } else if (is("--save-directory") && value) {
             save_directory = launch::path_from_utf8(args[++i]);
         } else if (is("--volume") && value) {
@@ -148,7 +151,7 @@ int main(int argc, char** argv) {
             return 0;
         } else if (is("--help") || is("-h")) {
             std::printf("usage: OpenBMH [<game directory | BMH.EXE | game.zip | game.7z>] [--seed <Watcom seed>] "
-                        "[--save-directory <directory>] [--mute] [--volume <0..1>] [--no-music] [--live-frame-ms <0..1000>]\n");
+                        "[--save-directory <directory>] [--mute] [--volume <0..1>] [--no-music] [--live-frame-ms <0..1000>] [-debug]\n");
             return 0;
         } else if (args[i].rfind("--", 0) != 0 && data.empty()) {
             data = launch::path_from_utf8(args[i]);
@@ -195,6 +198,13 @@ int main(int argc, char** argv) {
         data = game.check.directory;
     }
     if (save_directory.empty()) save_directory = data;
+    if (debug_mode) {
+        // -debug: log in <saves>/debug, with a savegame after every match day (app/debug_log.hpp).
+        if (!app::debug::init(save_directory / "debug")) std::fprintf(stderr, "debug folder cannot be created\n");
+        app::debug::log(std::string("OpenBMH ") + bmh::kOpenBmhVersion + ", data " + data.string() + ", saves " + save_directory.string() + ", seed " + std::to_string(seed));
+        SDL_version linked; SDL_GetVersion(&linked);
+        app::debug::log("SDL " + std::to_string(linked.major) + "." + std::to_string(linked.minor) + "." + std::to_string(linked.patch) + ", platform " + SDL_GetPlatform());
+    }
     try {
         const Palette palette = load_palette(ui::asset_path(data, "M3PC.COL"));
         ui::StartupFlow flow(data, save_directory);
@@ -226,6 +236,7 @@ int main(int argc, char** argv) {
         ui::SportschauEleven sportschau_eleven(data);
         ui::SportschauTeamInfo sportschau_team_info(data);
         ui::CompetitionWinnerScreen competition_winner(data);
+        ui::set_settings_product_version(bmh::kOpenBmhVersion);
         const auto season_exe = load_le(ui::asset_path(data, "BMH.exe"));
         english_game = english_game || season_exe.u8(layout::LeagueSizes) == 20;
         {
@@ -3238,6 +3249,7 @@ int main(int argc, char** argv) {
                         }, &request);
                     if (!closed) throw FormatError("phase results: viewer stopped before Source ACK");
                 }, true);
+                if (app::debug::enabled()) app::debug::log("request " + std::to_string(int(r.request)) + (message.empty() ? std::string(" ok") : " -> " + message));
             if (message == "career_complete") { running = false; return; }
             if (!message.empty()) std::fprintf(stderr, "engine: %s\n", message.c_str());
             if (session) {

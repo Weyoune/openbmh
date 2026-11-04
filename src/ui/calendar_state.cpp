@@ -105,6 +105,10 @@ CalendarState calendar_from_game(const GameState& game, const LeImage& executabl
     if (current_display >= int(state.days.size()))
         throw FormatError("calendar: current date is outside the season calendar");
     state.current_day = current_display;
+    // TextGradientDisabled (a settings switch) clear and the edition's gradient mode 2: the text
+    // takes the original's six-row colour table, as on every other page.
+    state.gradient_text = !game.memory.has(::bmh::layout::TextGradientDisabled) ||
+        (game.memory.u8(::bmh::layout::TextGradientDisabled) == 0 && executable.u8(::bmh::layout::TextGradientMode) == 2);
     return state;
 }
 

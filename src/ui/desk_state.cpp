@@ -621,7 +621,10 @@ DeskState desk_from_game(const GameState& g, const LeImage& exe, uint64_t revisi
             *d.next_opponent < int(g.club_ids.size())) {
             const int opponent = *d.next_opponent;
             d.next_opponent_name = g.club_name(opponent);
-            const bool fallback = original_badge_fallback(opponent,&exe);
+            // OpenBMH deviates from the original: the desk shows the opponent's badge whenever the data has one.
+            // The original draws a computer icon for the clubs between its two gate values (the foreign league
+            // clubs); only the cup-only teams and the empty selector keep the icon.
+            const bool fallback = (opponent & 0xfff) == 0xfff || (opponent >= 168 && opponent < 357);
             d.next_opponent_badge_fallback = fallback;
             if (!fallback) {
                 const size_t badge_at = size_t(opponent) * 2;
