@@ -10,7 +10,9 @@
 
 namespace bmh::app {
 
-// SDL owns pointer position; the UI supplies only the original bitmap/colors.
+// SDL owns pointer position; the UI supplies only the original bitmap/colors. Everywhere but on the
+// pitch page the pointer is the original's default 11x11 bitmap (set_default); the pitch page
+// passes the same bitmap with its position-colour fill.
 class PitchPointer {
 public:
     ~PitchPointer() { clear(); }
@@ -22,7 +24,9 @@ public:
         }
         pixels_.reset();
     }
-    void show(const std::optional<std::array<uint32_t,121>>& pixels, SDL_Renderer* renderer) {
+    void set_default(const std::optional<std::array<uint32_t,121>>& pixels) { default_ = pixels; }
+    void show(const std::optional<std::array<uint32_t,121>>& requested, SDL_Renderer* renderer) {
+        const auto& pixels = requested ? requested : default_;
         if (!pixels) { SDL_SetCursor(SDL_GetDefaultCursor()); return; }
         int width = 320, height = 240;
         SDL_GetRendererOutputSize(renderer, &width, &height);
@@ -43,7 +47,7 @@ public:
     }
 private:
     SDL_Cursor* cursor_ = nullptr;
-    std::optional<std::array<uint32_t,121>> pixels_;
+    std::optional<std::array<uint32_t,121>> pixels_, default_;
     int scale_ = 1;
 };
 

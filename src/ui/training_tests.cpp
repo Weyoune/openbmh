@@ -66,6 +66,16 @@ int main(int argc, char** argv) {
               "projection may not change original game tables");
         TrainingScreen screen(data, s); const auto frame = screen.render().pixels;
         check(frame == screen.render().pixels, "repeat rendering is deterministic and pure");
+        {
+            // FUN_00049399: the seven skill bars follow the player row under the pointer
+            const int bx = exe.u16(::bmh::layout::Training_Click_RuntimeField + 6), by = exe.u8(::bmh::layout::Training_Click_RuntimeField3 + 3);
+            const int dy = exe.u8(::bmh::layout::Training_Click_RuntimeField9 + 3);
+            TrainingScreen hover(data, s);
+            check(!hover.move(0, 0) && hover.render().pixels == frame, "a pointer off the list changes nothing");
+            check(hover.move(bx + 1, by + dy + 1) && hover.render().pixels != frame,
+                  "the skill bars show the player row under the pointer");
+            check(hover.move(0, 0) && hover.render().pixels == frame, "the bars are empty again when the pointer leaves");
+        }
         check(screen.click(175, 26).kind == TrainingRequestKind::none, "condition+technique cannot exceed four balls");
         auto r = screen.click(155, 26);
         check(r.kind == TrainingRequestKind::set_area && r.index == 0 && r.value == 1 && r.manager_slot == 1 &&

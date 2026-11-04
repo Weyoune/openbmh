@@ -3186,28 +3186,46 @@ void check_settings_writer(const std::filesystem::path& data) {
           revision == before_revision + 4 && save_stream(game) == save_stream(expected),
           "operation mismatch is rejected without changing memory or revision");
 
-    const auto unsupported = flow.click(67 + 8 * 24 + 5, 25 + 9 * 10 + 5); // J9, no current Source presentation consumer.
+    // The original stores every unlocked switch, also one that no OpenBMH consumer reads yet:
+    // J9 (a number, steps of two) and O3 (a switch) change their byte, one revision per click.
+    const uint32_t j9_address = ::bmh::layout::LeaguePresentationOptions + 9 * 9 + 8;
+    const uint8_t j9_old = game.memory.u8(j9_address);
+    const auto unsupported = flow.click(67 + 8 * 24 + 5, 25 + 9 * 10 + 5); // J9
     check(unsupported.request == FlowRequest::settings_action &&
           unsupported.settings_action.row == 9 && unsupported.settings_action.operation == SettingsEdit::increment,
           "left half maps to one increment action; no implicit held-step loop");
     serve(unsupported);
-    check(!flow.pending_settings() && revision == before_revision + 4 && save_stream(game) == save_stream(expected),
-          "unconsumed Original numeric field is safely rejected");
+    const bool j9_stepped = j9_old < 198;
+    check(!flow.pending_settings() && revision == before_revision + (j9_stepped ? 5 : 4) &&
+              game.memory.u8(j9_address) == uint8_t(j9_stepped ? j9_old + 2 : j9_old),
+          "an Original numeric field without a consumer is stored, not refused");
     const auto unsupported_minus = flow.click(67 + 8 * 24 + 15, 25 + 9 * 10 + 5);
     check(unsupported_minus.request == FlowRequest::settings_action &&
           unsupported_minus.settings_action.operation == SettingsEdit::decrement,
           "right half maps to one decrement action");
     serve(unsupported_minus);
-    check(revision == before_revision + 4 && save_stream(game) == save_stream(expected),
-          "unconsumed minus action leaves the exact state unchanged");
+    check(revision == before_revision + (j9_stepped ? 6 : 4) && game.memory.u8(j9_address) == j9_old,
+          "the minus action steps the same field back");
 
+    const uint32_t o3_address = ::bmh::layout::LeaguePresentationOptions + 14 * 9 + 2;
+    const auto o3_state = settings_from_game(game, int(game.memory.u8(::bmh::layout::ActiveManager)), revision,
+                                             load_le(asset_path(data, "BMH.exe")));
+    const uint8_t o3_old = game.memory.u8(o3_address);
+    const bool o3_free = o3_state.display_cells && !((*o3_state.display_cells)[14 * 9 + 2] & 0x80) && o3_old <= 1;
     const auto unsupported_o3 = flow.click(67 + 2 * 24 + 5, 25 + 14 * 10 + 5);
     check(unsupported_o3.request == FlowRequest::settings_action &&
           unsupported_o3.settings_action.row == 14 && unsupported_o3.settings_action.column == 2,
           "O3 maps to its exact grid identity");
     serve(unsupported_o3);
-    check(revision == before_revision + 4 && save_stream(game) == save_stream(expected),
-          "unconsumed middle rows/columns are rejected by the bounded source whitelist");
+    check(o3_free ? game.memory.u8(o3_address) == uint8_t(o3_old ^ 1)
+                  : game.memory.u8(o3_address) == o3_old,
+          "an unlocked switch without a consumer toggles; a locked one stays");
+    if (o3_free) {
+        serve(flow.click(67 + 2 * 24 + 5, 25 + 14 * 10 + 5));
+        check(game.memory.u8(o3_address) == o3_old, "O3 toggles back");
+    }
+    const uint64_t settled = revision;
+    check(save_stream(game) == save_stream(expected), "the stepped switches leave the exact state again");
 
     // Exact Q5 date boundary: the Original handler blocks inclusive days 110..230.
     for (size_t i = 0; i < 180; ++i) game.memory.set8(::bmh::layout::LeaguePresentationOptions + uint32_t(i), 0);
@@ -3221,13 +3239,13 @@ void check_settings_writer(const std::filesystem::path& data) {
     };
     auto q5 = q5_request();
     const auto q5_before = save_stream(game);
-    check(!session->dispatch_settings(q5, revision, error) && revision == before_revision + 4 &&
+    check(!session->dispatch_settings(q5, revision, error) && revision == settled &&
           save_stream(game) == q5_before && game.date == game.season_start + 110,
           "Q5 is rejected on day 110 with no memory/revision/date change");
     game.date = game.season_start + 230;
     q5 = q5_request();
     const auto q5_end_before = save_stream(game);
-    check(!session->dispatch_settings(q5, revision, error) && revision == before_revision + 4 &&
+    check(!session->dispatch_settings(q5, revision, error) && revision == settled &&
           save_stream(game) == q5_end_before,
           "Q5 is also rejected on inclusive day 230");
 
@@ -3237,7 +3255,7 @@ void check_settings_writer(const std::filesystem::path& data) {
     for (size_t i = 0; i < locked.expected_raw.size(); ++i) locked.expected_raw[i] = game.memory.u8(::bmh::layout::LeaguePresentationOptions + uint32_t(i));
     locked.row = 1; locked.column = 4; locked.operation = SettingsEdit::toggle_binary;
     const auto lock_before = save_stream(game);
-    check(!session->dispatch_settings(locked, revision, error) && revision == before_revision + 4 &&
+    check(!session->dispatch_settings(locked, revision, error) && revision == settled &&
           save_stream(game) == lock_before,
           "recomputed Original mode lock rejects B5 without a saved write");
 
@@ -3248,7 +3266,7 @@ void check_settings_writer(const std::filesystem::path& data) {
     for (size_t i = 0; i < at_limit.expected_raw.size(); ++i) at_limit.expected_raw[i] = game.memory.u8(::bmh::layout::LeaguePresentationOptions + uint32_t(i));
     at_limit.row = 1; at_limit.column = 7; at_limit.operation = SettingsEdit::increment;
     const auto limit_before = save_stream(game);
-    check(!session->dispatch_settings(at_limit, revision, error) && revision == before_revision + 4 &&
+    check(!session->dispatch_settings(at_limit, revision, error) && revision == settled &&
           save_stream(game) == limit_before,
           "source table upper bound is a no-op, with no write or revision bump");
 
@@ -3259,7 +3277,7 @@ void check_settings_writer(const std::filesystem::path& data) {
         stale_lock.expected_raw[i] = game.memory.u8(::bmh::layout::LeaguePresentationOptions + uint32_t(i));
     stale_lock.row = 10; stale_lock.column = 4; stale_lock.operation = SettingsEdit::toggle_binary;
     const auto stale_lock_before = save_stream(game);
-    check(!session->dispatch_settings(stale_lock, revision, error) && revision == before_revision + 4 &&
+    check(!session->dispatch_settings(stale_lock, revision, error) && revision == settled &&
           save_stream(game) == stale_lock_before,
           "recomputed unlocked display does not authorize writing a raw cell still >=2");
 
@@ -3315,8 +3333,9 @@ void check_settings_writer(const std::filesystem::path& data) {
     other_column9.row = 9;
     for (size_t i = 0; i < other_column9.expected_raw.size(); ++i)
         other_column9.expected_raw[i] = i9_game.memory.u8(::bmh::layout::LeaguePresentationOptions + uint32_t(i));
-    check(!i9_session.dispatch_settings(other_column9, i9_revision, error) && i9_revision == 3,
-          "other ninth-column cells remain unavailable until their consumer is ported");
+    const uint8_t j9_raw = i9_game.memory.u8(::bmh::layout::LeaguePresentationOptions + 9 * 9 + 8);
+    check(i9_session.dispatch_settings(other_column9, i9_revision, error) == (j9_raw < 198),
+          "other ninth-column cells are stored too, without waiting for a consumer");
 }
 
 void check_live_delay_settings_writer(const std::filesystem::path& data,const std::filesystem::path& save_path) {

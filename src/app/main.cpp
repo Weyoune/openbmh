@@ -228,6 +228,18 @@ int main(int argc, char** argv) {
         ui::CompetitionWinnerScreen competition_winner(data);
         const auto season_exe = load_le(ui::asset_path(data, "BMH.exe"));
         english_game = english_game || season_exe.u8(layout::LeagueSizes) == 20;
+        {
+            // The pointer of the original is its default 11x11 bitmap (index 0 transparent, hot spot
+            // top left, set by the window objects' FUN_000559eb); the pitch page draws the same bitmap
+            // with its own fill colour. The edition's own bitmap is used for the English version.
+            std::array<uint32_t, 121> bitmap{};
+            for (uint32_t i = 0; i < bitmap.size(); ++i) {
+                const auto index = season_exe.u8(layout::OriginalPointerPixels + i);
+                bitmap[i] = index == 0 ? 0 : palette.argb[index];
+            }
+            pitch_pointer.set_default(bitmap);
+            pitch_pointer.show({}, renderer);
+        }
         app::QuitConfirmation quit_confirmation(window, english_game);
         try {
             if (!playback.initialize_original(app::original_audio_assets(data, season_exe), audio_error))

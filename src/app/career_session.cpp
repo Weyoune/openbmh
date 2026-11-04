@@ -4539,42 +4539,11 @@ bool CareerSession::dispatch_settings(const ui::SettingsWriteRequest& request, u
     const uint8_t old = raw_value;
     uint8_t next = old;
     if (request.operation == ui::SettingsEdit::toggle_binary) {
-        // Inventory of actual current consumers: direct match-engine buttons,
-        // matchday/season flags and the live-scene switch. Other cells are not
-        // made writable merely because the Original UI displayed a cell.
-        // Tie the write whitelist to the concrete consumer ranges. League
-        // remapping reads rows 0..4, columns 0..3; matchday display kinds 1/2
-        // map to columns 0..2 and rows 0..4 or 17..19.
-        const bool consumed = (sound_cell && sound_capabilities_.has_value()) ||
-            (request.row == 0 && request.column == 4) || // A5: match/Sportschau sound
-            ((request.row <= 4 && request.column <= 3) ||
-            ((request.row <= 4 || request.row >= 17) && request.column <= 2)) ||
-            ((request.row == 5 || (request.row >= 9 && request.row <= 12)) && request.column == 0) ||
-            (request.row == 1 && request.column == 4) || // B5 live-scene option
-            (request.row == 2 && request.column == 4) || // C5: Reality player numbers (RealityMatch_FormatError_ExecutableField)
-            (request.row == 5 && request.column == 5) || // F6: Source manager-match desk gate (MatchdaySetup_MatchdayNeedsManagerDesks_RuntimeField)
-            (request.row == 6 && request.column == 5) || // G6: transfer confirmation wait (OutcomeDelayDisabled)
-            (request.row == 16 && request.column == 6) || // Q7: own-club Sportschau preference (MatchdaySetup_ConsiderSportschauFixture_RuntimeField)
-            (request.row == 13 && request.column == 6) || // N7: Source kickoff competition list (SportschauAwards_MatchdayIntroView_RuntimeField)
-            (request.row == 1 && request.column == 6) || // B7: SportschauIntro intro gate (Controller_FormatError_RuntimeField)
-            (request.row == 2 && request.column == 6) || // C7: SportschauIntro intro-animation gate (Controller_FormatError_RuntimeField2)
-            (request.row == 3 && request.column == 6) || // D7: selected report progression (ReplayProgressionMode)
-            (request.row == 4 && request.column == 6) || // E7: Source-owned Sportschau scenes (ReplayChanceMode)
-            (request.row == 5 && request.column == 6) || // F7: SportschauIntro fixture-report gate (Controller_FormatError_RuntimeField3)
-            (request.row == 6 && request.column == 6) || // G7: MatchdayIntro player/award rating (SportschauAwards_FinishSportschauAwards_RuntimeField)
-            (request.row == 7 && request.column == 6) || // H7: SportschauTeamInfo competition totals (SportschauAwards_SportschauTeamInfoView_RuntimeField)
-            (request.row == 2 && request.column == 5) || // C6 drawer-handle behavior (CareerSession_DispatchDesktopLayout_RuntimeField)
-            (request.row == 3 && request.column == 5) || // D6 native desktop drag raster (CareerSession_DispatchDesktopLayout_RuntimeField2)
-            (request.row == 4 && request.column == 5) || // E6 always-visible shortcut bar (DeskState_FormatError_RuntimeField3)
-            (request.row == 7 && request.column == 5) || // H6 transfer option
-            (request.row == 8 && (request.column == 5 || request.column == 6)) || // I6/I7
-            (request.row >= 10 && request.row <= 13 && request.column == 4) || // K5:N5 match buttons
-            (request.row >= 10 && request.row <= 12 && request.column == 6) || // K7:M7 presentation
-            (request.row == 9 && request.column == 6) || // J7 season-entrant visibility (SeasonEntrants_SeasonEntrantsFromGame_TextPointer)
-            (request.row == 15 && request.column == 4) || // P5
-            (request.row == 16 && request.column == 4) || // Q5
-            (request.row == 17 && request.column == 4);   // R5: secondary leagues (CalendarState_FormatError_RuntimeField2)
-        if (!consumed || (old != 0 && old != 1)) {
+        // The original edits every unlocked switch: the page only stores the value and each
+        // consumer reads it where it needs it. A switch without a consumer in OpenBMH yet is still
+        // stored (and saved) and never refused. Locks (bit 7 of the entry-time availability) and
+        // values other than 0/1 are refused above and below.
+        if (old != 0 && old != 1) {
             error = "Diese Einstellung ist noch nicht verfügbar.";
             return false;
         }
@@ -4593,17 +4562,8 @@ bool CareerSession::dispatch_settings(const ui::SettingsWriteRequest& request, u
         }
         next = old ^ 1;
     } else {
-        // Column8: existing presentation speeds B8:F8, H8 process budget,
-        // J8 postponed limit and K8 autosave. Column9 only exposes values
-        // already read by Main's Source live presenters or CupDrawScreen.
-        const bool consumed = (request.column == 7 &&
-             ((request.row <= 6) || request.row == 7 || request.row == 9 || request.row == 10 ||
-             (scoped_settings && request.row == 8))) ||
-             // A9 match minutes; B9:C9 chance result; D9:E9 bookings; F9:G9 rolling ball;
-             // I9 cup draw; K9 Reality report; M9 preview/shootout; P9 shot.
-             (request.column == 8 && ((request.row >= 0 && request.row <= 6) ||
-                 request.row == 7 || request.row == 8 || request.row == 10 || request.row == 12 || request.row == 15));
-        if (!consumed || old >= 200) {
+        // The numeric columns are stored the same way; values from 200 up are blank cells.
+        if (old >= 200) {
             error = "Diese Einstellung ist noch nicht verfügbar.";
             return false;
         }

@@ -46,7 +46,7 @@ FlowResult StartupFlow::move_action(int x, int y) {
         : contracts_ && !player_card_ ? contracts_->move(x, y)
         : matchday_results_ || in_readonly_view() || friendly_match_ ? false
         : player_card_ ? false : pitch_ ? pitch_->move(x, y)
-        : lineup_ ? lineup_->move(x, y) : training_camp_ ? training_camp_->move(x, y)
+        : lineup_ ? lineup_->move(x, y) : training_ ? training_->move(x, y) : training_camp_ ? training_camp_->move(x, y)
         : toto_ ? toto_->move(x, y)
         : bank_ || stadium_ ? false
         : !desktop_ && manager_ && !pending_ && !awaiting_context_ && manager_->move(x, y);

@@ -250,7 +250,16 @@ Image TrainingScreen::render() const {
     }
     rect(out, 190, 222, 66, 6, 0x44);
     text(out, 190, 220, texts_[(::bmh::layout::Training_Render_TextPointer4 - ::bmh::layout::TextPointerTable) / 4], 0x51, -1, false);
-    for (int i = 0; i < 7; ++i) copy(out, skill_atlas_, 256, 32, 190 + i * 10, 222, 16, 5, 0);
+    // FUN_00049399: seven bars, one per skill (two bits each of the player's skill word); each
+    // takes the atlas tile of its level 0-3, all empty while no player's row is under the pointer.
+    const auto hovered = hovered_row_ ? std::find_if(state_.players.begin(), state_.players.end(),
+                                                    [&](const auto& p) { return p.row == *hovered_row_; })
+                                      : state_.players.end();
+    for (int i = 0; i < 7; ++i) {
+        const int level = hovered == state_.players.end() ? 0 : int(hovered->skills >> (2 * i) & 3);
+        const int sx = 256 + level * 16;  // KB/2 is 314 wide: the last tile may be cut short
+        copy(out, skill_atlas_, sx, 32, 190 + i * 10, 222, std::min(16, skill_atlas_.width - sx), 5, 0);
+    }
     // Int6: four original table-driven groups, transparent index DesktopRuntimeField=0.
     for (int group = 0; group < 4; ++group) {
         const int count = group == 3 ? int(state_.players.size()) : exe_.u8(::bmh::layout::Training_Click_RuntimeField7 + group);
@@ -346,6 +355,24 @@ TrainingRequest TrainingScreen::click(int x, int y, bool right) {
         pending_ = r; last_rejection_.clear(); return r;
     }
     return {};
+}
+bool TrainingScreen::move(int x, int y) {
+    if (pending_) return false;
+    // The player group (3) of the click table: its box selects the row exactly as a click does.
+    std::optional<int> row;
+    const int count = int(state_.players.size());
+    const int bx = exe_.u16(::bmh::layout::Training_Click_RuntimeField + 3 * 2), by = exe_.u8(::bmh::layout::Training_Click_RuntimeField3 + 3);
+    const int dx = exe_.u8(::bmh::layout::Training_Click_RuntimeField8 + 3), dy = exe_.u8(::bmh::layout::Training_Click_RuntimeField9 + 3);
+    const int ball_dx = exe_.u8(::bmh::layout::Training_Click_RuntimeField5 + 3), ball_dy = exe_.u8(::bmh::layout::Training_Click_RuntimeField6 + 3);
+    if (x >= bx - 14 && y >= by && x < bx + count * dx + 3 * ball_dx && y < by + count * dy + 3 * ball_dy) {
+        const int index = dx ? (x - bx) / dx : (y - by) / dy;
+        if (index >= 0 && index < count &&
+            std::any_of(state_.players.begin(), state_.players.end(), [&](const auto& p) { return p.row == index; }))
+            row = index;
+    }
+    const bool changed = row != hovered_row_;
+    hovered_row_ = row;
+    return changed;
 }
 TrainingRequest TrainingScreen::key(std::string_view key) {
     if (!pending_ && (key == "ESC" || key == "ESCAPE" || key == "BACKSPACE")) close_requested_ = true;

@@ -169,6 +169,13 @@ int main(int argc,char**argv){try{
     selector_copy.acknowledge(selected_lineup,selected);
     check(selector_copy.state_json().find("\"shooter_selection\":1")!=std::string::npos,
           "accepted taker write returns the original selector to neutral mode 1");
+    {
+        // the field stays editable inside the editor while no taker kind is chosen
+        const auto neutral_frame=selector_copy.render().pixels;
+        selector_copy.click(20,31);
+        check(selector_copy.render().pixels!=neutral_frame,
+              "inside the editor a click marks a player for placement when no taker kind is chosen");
+    }
     auto automatic=selector_copy.click(260,215);
     check(automatic.kind==PitchRequestKind::auto_set_piece_takers&&
           automatic.expected_set_piece_values[0]==1&&automatic.expected_display_word==0x018b,

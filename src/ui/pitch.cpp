@@ -657,8 +657,11 @@ PitchRequest PitchScreen::click(int x,int y,bool right){
                 r.set_piece_selector=shooter_selection_;r.expected_set_piece_value=extras_.set_piece_takers[size_t(shooter_selection_-2)];
                 pending_=r;return r;
             }
+            if(!selected_)return {};
         }
-        return {};
+        // OpenBMH extension: the field stays editable inside the editor. A click picks a taker
+        // only while a taker kind is chosen; otherwise (or with a player already marked for a
+        // move) the placement below works as on the normal page.
     }
     if(extras_.mode!=1&&order_panel_open_&&x>=243&&x<=315&&y>=179&&y<=226){
         if(!selected_||*selected_>=11){rejection_="Für Anweisungen muss ein Startspieler markiert sein.";return {};}
