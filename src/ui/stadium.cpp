@@ -858,12 +858,6 @@ void StadiumScreen::render_panorama(Image& out) const {
     }
     if (periphery_hover_ < 0) return;
     const size_t object = size_t(periphery_hover_);
-    {
-        // the hit rectangle of the object under the pointer, framed in yellow as on the advertising page
-        const size_t at = ::bmh::layout::Stadium_PeripheryObjectContains_ExecutableField + object * 8;
-        const int left = exe_.u16(at), top = exe_.u16(at + 2), right = exe_.u16(at + 4), bottom = exe_.u16(at + 6);
-        outline(out, left, top, right - left + 1, bottom - top + 1, 0x27);
-    }
     copy_crop(out, periphery_overlay_, 8, 7, 26, 32, 180, 27);
     const bool busy = state_.days[object] != 0;
     const std::string title = texts_[text_id(::bmh::layout::Stadium_RenderPanorama_TextPointer + unsigned(object) * 4)] +

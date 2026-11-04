@@ -186,6 +186,14 @@ void test_toto_source_calculator(const std::filesystem::path& data) {
     check(cancelled_result && cancelled_result->result == TableRangeDialogResult::cancel,
           "Toto calculator cancel has no accepted payment value");
 
+    LeagueTableRangeDialog by_mouse(data, backdrop, TotoStakeDialogProfile{TableRangeTextMode::flat});
+    (void)by_mouse.render(); (void)by_mouse.after_present();
+    check(by_mouse.pointer_down(10, 10, true), "the right button is consumed by the calculator");
+    check(by_mouse.render().pixels == backdrop.pixels, "the right button restores the owned backdrop");
+    const auto by_mouse_result = by_mouse.after_present();
+    check(by_mouse_result && by_mouse_result->result == TableRangeDialogResult::cancel,
+          "the right button closes the calculator as a cancel");
+
     TableRangeDialogProfile table_profile;
     table_profile.text_mode = TableRangeTextMode::flat;
     LeagueTableRangeDialog table(data, backdrop, table_profile);

@@ -287,7 +287,12 @@ bool LeagueTableRangeDialog::activate_cell(int index) {
 
 bool LeagueTableRangeDialog::pointer_down(int px, int py, bool right) {
     if (outcome_delivered_) return false;
-    if (right) return true; // modal consumes RMB but does not infer Source event 8
+    if (right) {
+        // The right button leaves the calculator as event 8 does (as the Toto calculator); the exit
+        // still waits for its final Present. The modal consumes the press either way.
+        (void)cancel_from_source_event();
+        return true;
+    }
     if (dragging_) {
         pointer_x_ = px;
         pointer_y_ = py;
