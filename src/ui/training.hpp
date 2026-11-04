@@ -54,7 +54,7 @@ public:
     Image render() const;
     TrainingRequest click(int x, int y, bool right = false);
     TrainingRequest key(std::string_view key);
-    // Original FUN_00049399: while the pointer rests on a player's row of the training list, the
+    // The original's skill display: while the pointer rests on a player's row of the training list, the
     // seven skill bars (T S S P Z F E) at the bottom show that player's skills; leaving it clears them.
     bool move(int x, int y);
     // Opening an uninitialized original screen invokes Initialize. This

@@ -250,7 +250,7 @@ Image TrainingScreen::render() const {
     }
     rect(out, 190, 222, 66, 6, 0x44);
     text(out, 190, 220, texts_[(::bmh::layout::Training_Render_TextPointer4 - ::bmh::layout::TextPointerTable) / 4], 0x51, -1, false);
-    // FUN_00049399: seven bars, one per skill (two bits each of the player's skill word); each
+    // The original's skill display: seven bars, one per skill (two bits each of the player's skill word); each
     // takes the atlas tile of its level 0-3, all empty while no player's row is under the pointer.
     const auto hovered = hovered_row_ ? std::find_if(state_.players.begin(), state_.players.end(),
                                                     [&](const auto& p) { return p.row == *hovered_row_; })

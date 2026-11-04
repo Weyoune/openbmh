@@ -230,7 +230,7 @@ int main(int argc, char** argv) {
         english_game = english_game || season_exe.u8(layout::LeagueSizes) == 20;
         {
             // The pointer of the original is its default 11x11 bitmap (index 0 transparent, hot spot
-            // top left, set by the window objects' FUN_000559eb); the pitch page draws the same bitmap
+            // top left, set when a window object is created); the pitch page draws the same bitmap
             // with its own fill colour. The edition's own bitmap is used for the English version.
             std::array<uint32_t, 121> bitmap{};
             for (uint32_t i = 0; i < bitmap.size(); ++i) {

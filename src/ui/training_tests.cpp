@@ -67,7 +67,7 @@ int main(int argc, char** argv) {
         TrainingScreen screen(data, s); const auto frame = screen.render().pixels;
         check(frame == screen.render().pixels, "repeat rendering is deterministic and pure");
         {
-            // FUN_00049399: the seven skill bars follow the player row under the pointer
+            // the seven skill bars follow the player row under the pointer
             const int bx = exe.u16(::bmh::layout::Training_Click_RuntimeField + 6), by = exe.u8(::bmh::layout::Training_Click_RuntimeField3 + 3);
             const int dy = exe.u8(::bmh::layout::Training_Click_RuntimeField9 + 3);
             TrainingScreen hover(data, s);
