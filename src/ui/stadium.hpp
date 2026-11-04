@@ -235,6 +235,9 @@ private:
     int pressed_x_ = -1, pressed_y_ = -1;
     std::optional<GameEndTaxDialog> tip_dialog_, periphery_dialog_;
     int periphery_hover_ = -1;
+    // Yellow frame under the pointer, as on the advertising page: an investment icon or a seat block
+    // that a click would act on (-1 none).
+    int hover_investment_ = -1, hover_block_ = -1;
     int periphery_object_at(int x, int y) const;
     bool periphery_object_contains(int object, int x, int y) const;
     void render_panorama(Image&) const;

@@ -1121,6 +1121,22 @@ namespace {
 void source_stadium_data_controls(const std::filesystem::path& data) {
     const auto exe = load_le(asset_path(data, "BMH.exe"));
     auto state = overview_state();
+    {
+        // the yellow hover frame of the advertising page: over a seat block and over an investment icon
+        StadiumScreen scene(data, state);
+        const auto plain = scene.render().pixels;
+        if (state.blocks[0].construction_weeks == 0) {
+            check(scene.pointer_move(250, 30) && scene.render().pixels != plain, "a seat block is framed under the pointer");
+            check(scene.pointer_move(100, 100) && scene.render().pixels == plain, "and the frame is gone when the pointer leaves");
+        }
+        for (int choice = 0; choice < 8 && state.investments_enabled; ++choice) {
+            if (!state.investments[size_t(choice)].available) continue;
+            check(scene.pointer_move(8 + (choice % 4) * 54, 158 + (choice / 4) * 30) && scene.render().pixels != plain,
+                  "an available investment icon is framed under the pointer");
+            check(scene.pointer_move(100, 100) && scene.render().pixels == plain, "and the frame is gone when the pointer leaves");
+            break;
+        }
+    }
     StadiumScreen overview(data, state);
     check(overview.pointer_down(265, 220), "Original stadium data button binds on DOWN");
     const auto held_overview=overview.state_json();

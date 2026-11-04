@@ -858,6 +858,12 @@ void StadiumScreen::render_panorama(Image& out) const {
     }
     if (periphery_hover_ < 0) return;
     const size_t object = size_t(periphery_hover_);
+    {
+        // the hit rectangle of the object under the pointer, framed in yellow as on the advertising page
+        const size_t at = ::bmh::layout::Stadium_PeripheryObjectContains_ExecutableField + object * 8;
+        const int left = exe_.u16(at), top = exe_.u16(at + 2), right = exe_.u16(at + 4), bottom = exe_.u16(at + 6);
+        outline(out, left, top, right - left + 1, bottom - top + 1, 0x27);
+    }
     copy_crop(out, periphery_overlay_, 8, 7, 26, 32, 180, 27);
     const bool busy = state_.days[object] != 0;
     const std::string title = texts_[text_id(::bmh::layout::Stadium_RenderPanorama_TextPointer + unsigned(object) * 4)] +
@@ -932,6 +938,7 @@ Image StadiumScreen::render_scene() const {
                 copy_crop(out, panel_, 219, row_y - 19, 220, row_y + 1, 98, 22);
             }
             source_border(out, 219, row_y, 318, row_y + 23);
+            if (pressed_ == Pressed::none && hover_block_ == int(i)) outline(out, 219, row_y, 100, 24, 0x27);
             const auto& block = state_.blocks[i];
             std::string label = texts_[text_id(::bmh::layout::Stadium_Out_TextPointer)];
             if (label.size() > 6) label[6] = char('A' + i);
@@ -997,7 +1004,8 @@ Image StadiumScreen::render_scene() const {
                     text_at(out, x + (0x35 - label_width) / 2, y + 0x1b, tier, 0x5f);
                 }
             }
-            if (pressed_ == Pressed::investment && pressed_index_ == int(choice))
+            if ((pressed_ == Pressed::investment && pressed_index_ == int(choice)) ||
+                (pressed_ == Pressed::none && hover_investment_ == int(choice)))
                 outline(out, x, y, 0x35, 0x1d, 0x27);
             if (future_information_ && row.construction_weeks) {
                 const std::string weeks = format_number(GameState{}, row.construction_weeks, 0x82) +
@@ -1454,7 +1462,23 @@ bool StadiumScreen::pointer_down(int x, int y, bool right) {
 bool StadiumScreen::pointer_move(int x, int y) {
     if (calculator_source_waiting()) return false;
     if (pressed_ == Pressed::none) {
-        if (!panorama_ || pending_ || state_.quoted_object || state_.data) return false;
+        if (pending_ || state_.quoted_object || state_.data) return false;
+        if (!panorama_) {
+            // the same targets a click acts on: an available investment icon or a finished seat block
+            int investment = -1, block = -1;
+            if (y >= 153 && y <= 211 && x >= 3 && x <= 217) {
+                const int choice = ((y - 153) / 30) * 4 + (x - 3) / 54;
+                if (choice >= 0 && choice < 8 && state_.investments_enabled && state_.investments[size_t(choice)].available)
+                    investment = choice;
+            } else if (x >= 219 && x <= 319 && y >= 22 && y <= 213) {
+                const int slot = (y - 22) / 24;
+                if (slot >= 0 && slot < 8 && state_.blocks[size_t(slot)].construction_weeks == 0) block = slot;
+            }
+            const bool changed = investment != hover_investment_ || block != hover_block_;
+            hover_investment_ = investment;
+            hover_block_ = block;
+            return changed;
+        }
         const int hover = periphery_object_at(x, y);
         if (hover == periphery_hover_) return false;
         periphery_hover_ = hover;
@@ -1564,8 +1588,8 @@ StadiumRequest StadiumScreen::release(int x, int y, bool right) {
         return emit(request(StadiumRequestKind::set_data_ticket_price, index - 8 + 10));
     }
     if (pressed == Pressed::scene_button) {
-        if (index == 0) { panorama_ = !panorama_; future_information_ = false; periphery_hover_ = -1; return {}; }
-        if (index == 1) { future_information_ = !future_information_; periphery_hover_ = -1; return {}; }
+        if (index == 0) { panorama_ = !panorama_; future_information_ = false; periphery_hover_ = -1; hover_investment_ = hover_block_ = -1; return {}; }
+        if (index == 1) { future_information_ = !future_information_; periphery_hover_ = -1; hover_investment_ = hover_block_ = -1; return {}; }
         return emit(request(StadiumRequestKind::open_data));
     }
     if (pressed == Pressed::investment)
