@@ -579,7 +579,9 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
                        opened.identity.runtime_team!=desk.runtime_club||
                        opened.identity.day_counter!=desk.day_counter||desk.manager_slot<0||
                        size_t(desk.manager_slot)>=desk.managers.size()||
-                       opened.identity.club_identity!=desk.session_identity_key(size_t(desk.manager_slot)))
+                       // The session identifies the national-coach desk by the home club
+                       // (stable team behind the desk), not by the desk's own runtime club.
+                       opened.identity.club_identity!=desk.managers[size_t(desk.manager_slot)].club_identity_key)
                         throw FormatError("other games: stale desktop identity");
                     flow.show_other_games(std::move(opened),session->preparation_projection(revision),result.desk_action);
             });
@@ -939,7 +941,8 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
                        opened.identity.day_counter!=desk.day_counter||
                        desk.manager_slot<0||
                        size_t(desk.manager_slot)>=desk.managers.size()||
-                       opened.identity.club_identity!=desk.session_identity_key(size_t(desk.manager_slot)))
+                       // Same home-club identity as the session builds for the national desk.
+                       opened.identity.club_identity!=desk.managers[size_t(desk.manager_slot)].club_identity_key)
                         throw FormatError("top scorers: stale desktop identity");
                     flow.show_top_scorers(std::move(opened),session->preparation_projection(revision),result.desk_action);
             });
