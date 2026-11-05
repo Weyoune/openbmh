@@ -368,6 +368,9 @@ bool LeaguePairingsScreen::release(int x,int y) {
             return true;
         }
         if(button==5)return true; // Source ellipsis has no action.
+        // OpenBMH deviates from the original: the computer tip is ignored silently once a visible result is known, instead of raising an engine error.
+        if(button==4&&std::any_of(state_.source.rows.begin(),state_.source.rows.end(),
+               [](const auto& row){return row.raw_result!=0xcc;}))return true;
         post({button==0?LeaguePairingsAction::reset:button==1?LeaguePairingsAction::search:
             button==2?LeaguePairingsAction::filter_by_club:button==3?LeaguePairingsAction::postponed_list:
             button==4?LeaguePairingsAction::computer_tip:LeaguePairingsAction::unsupported,button});return true;

@@ -35,6 +35,7 @@ describe deliberate changes; they are not a list of every known compatibility li
 - [src/game/weekly.hpp](../src/game/weekly.hpp): uses the supported weekly processing and transfer rule profile.
 - [src/ui/bank.cpp](../src/ui/bank.cpp): read-only totals use wide arithmetic; individual saved account, price, holding and paid fields are unchanged.
 - [src/ui/desk_state.cpp](../src/ui/desk_state.cpp): the desk shows the opponent's badge whenever the data has one.
+- [src/ui/league_pairings.cpp](../src/ui/league_pairings.cpp): the computer tip is ignored silently once a visible result is known, instead of raising an engine error.
 - [src/ui/league_table.hpp](../src/ui/league_table.hpp): uses three points for a win in the supported rule profile.
 - [src/ui/pitch.cpp](../src/ui/pitch.cpp): supports owner-bound designated set-piece selection in the extended manager record.
 - [src/ui/save_load.cpp](../src/ui/save_load.cpp): focuses the host save filename on entry and selects an existing name for replacement.
