@@ -768,6 +768,9 @@ bool CareerSession::commit_manager_join(ui::CareerInitializationResult& result, 
         // ConfirmManager retains the current desk/cursor. Weiter performs the later handoff.
         const auto next_revision = revision + 1;
         turn_driver_.revision = next_revision;
+        // The next opponent of every manager is captured per day for the manager count of that day;
+        // the joined manager has only the default ("no game") until it is captured again.
+        capture_source_desk_callargs();
         ui::CareerInitializationResult next;
         next.desktop = desktop_projection(next_revision); next.managers = managers_;
         next.preparation = preparation_projection(next_revision);

@@ -15,7 +15,9 @@ void rect(Image& out,int x,int y,int w,int h,uint8_t c) {
         for(int xx=std::max(0,x);xx<std::min(out.width,x+w);++xx)out.at(xx,yy)=c;
 }
 void copy(Image& out,const Image& src,int sx,int sy,int x,int y,int w,int h,int transparent=-1) {
-    if(sx<0||sy<0||sx+w>src.width||sy+h>src.height)throw FormatError("player card: original atlas bounds");
+    if(sx<0||sy<0||sx+w>src.width||sy+h>src.height)
+        throw FormatError("club player detail: original atlas bounds "+std::to_string(sx)+","+std::to_string(sy)+
+            ":"+std::to_string(w)+"x"+std::to_string(h)+" in "+std::to_string(src.width)+"x"+std::to_string(src.height));
     for(int yy=0;yy<h;++yy)for(int xx=0;xx<w;++xx){
         const auto c=src.pixels.at(size_t(sy+yy)*src.width+sx+xx);
         if(c!=transparent&&x+xx>=0&&x+xx<out.width&&y+yy>=0&&y+yy<out.height)out.at(x+xx,y+yy)=c;
