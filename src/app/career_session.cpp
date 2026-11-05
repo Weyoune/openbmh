@@ -2267,7 +2267,10 @@ std::optional<ui::StrengthsIdentity> CareerSession::dispatch_family_table_team_i
             before.family==after.family&&before.next_family_id==after.next_family_id&&
             before.next_strengths_scope==after.next_strengths_scope&&
             !before.strengths&&!after.strengths&&!before.pairings&&!after.pairings;
-        if(!live_unchanged||!accepted||(poach_selection?entry_calls<1:entry_calls!=1))
+        // The club information enters the club again on every redraw (view toggle, statistics, player
+        // card), so one entry is the minimum; requiring exactly one threw away the whole visit, also the
+        // Nein/Radio/Video setting made in it.
+        if(!live_unchanged||!accepted||entry_calls<1)
             throw FormatError("league family: TeamInfo presenter changed owner or did not enter the selected club");
         const size_t record=size_t(id.manager)*0xb0c;
         if(next.date!=g_.date||next.manager_teams!=g_.manager_teams||
