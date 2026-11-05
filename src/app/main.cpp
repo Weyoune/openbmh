@@ -3869,6 +3869,12 @@ int main(int argc, char** argv) {
                     const auto released = held ? flow.hold(e.button.x, e.button.y, 2000)
                         : flow.click(e.button.x, e.button.y, e.button.button == SDL_BUTTON_RIGHT, e.button.clicks >= 2);
                     present_formation_save_feedback();
+                    // JA of the manager confirmation is shown pushed in briefly before the
+                    // (possibly slow) next step starts, as in the original.
+                    if (flow.screen_name() == "manager_accepted") {
+                        present_season(flow.render(), "OpenBMH - manager_accepted");
+                        SDL_Delay(150);
+                    }
                     handle(released);
                     present_desk_record_points();
                     press.reset();

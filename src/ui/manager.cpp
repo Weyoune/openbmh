@@ -392,7 +392,9 @@ Image ManagerScreen::render() const {
         badge(out, 54, 89, choice_.master_club); portrait(out, 221, 89, choice_.portrait);
         const auto& prompt = texts_[(::bmh::layout::Manager_SmallText_TextPointer - ::bmh::layout::TextPointerTable) / 4];
         small_text(out, 73 + 170 / 2 - small_.text_width(prompt) / 2, 140, prompt);
-        button(out, 62, 166, 75, texts_[(::bmh::layout::GameEnd_Copy_TextPointer - ::bmh::layout::TextPointerTable) / 4], false);
+        // The original shows JA pushed in for a moment after it is clicked.
+        button(out, 62, 166, 75, texts_[(::bmh::layout::GameEnd_Copy_TextPointer - ::bmh::layout::TextPointerTable) / 4],
+               view_ == ManagerView::accepted);
         button(out, 175, 166, 75, texts_[(::bmh::layout::GameEnd_Copy_TextPointer2 - ::bmh::layout::TextPointerTable) / 4], false);
     }
     return out;
