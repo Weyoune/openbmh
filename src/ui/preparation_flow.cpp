@@ -98,7 +98,7 @@ void validate_strengths_preparation(const StrengthsIdentity& id,const DeskState&
     if(next.desktop.revision!=before.revision+1||next.desktop.revision!=id.revision||
        id.manager!=before.manager_slot||id.runtime_club!=before.runtime_club||id.day_counter!=before.day_counter||
        id.manager<0||size_t(id.manager)>=before.managers.size()||
-       id.club_identity!=before.managers[size_t(id.manager)].club_identity_key)
+       id.club_identity!=before.session_identity_key(size_t(id.manager)))
         throw FormatError("strengths: mismatched desk acknowledgement");
     auto expected=before;expected.revision=id.revision;
     if(desk_json(expected)!=desk_json(next.desktop))throw FormatError("strengths: unrelated desk state changed");
@@ -110,7 +110,7 @@ void validate_other_games_preparation(const OtherGamesIdentity& id, const DeskSt
         id.manager_slot != before.manager_slot || id.runtime_team != before.runtime_club ||
         id.day_counter != before.day_counter || id.manager_slot < 0 ||
         size_t(id.manager_slot) >= before.managers.size() ||
-        id.club_identity != int(before.managers[size_t(id.manager_slot)].club_identity_key))
+        id.club_identity != int(before.session_identity_key(size_t(id.manager_slot))))
         throw FormatError("other games: mismatched desk acknowledgement");
     auto expected = before;
     expected.revision = id.revision;
@@ -175,7 +175,7 @@ void StartupFlow::show_top_scorers(TopScorersState page,PreparationState prepara
        page.identity.runtime_team!=desktop_->state().runtime_club||
        page.identity.day_counter!=desktop_->state().day_counter||
        page.identity.revision!=desktop_->state().revision+1||page.identity.sequence!=0||!page.identity.scope||
-       page.identity.club_identity!=int(desktop_->state().managers.at(size_t(owner.manager_slot)).club_identity_key))
+       page.identity.club_identity!=int(desktop_->state().session_identity_key(size_t(owner.manager_slot))))
         throw FormatError("top scorers: mismatched opening acknowledgement");
     if(preparation.desktop.revision!=page.identity.revision||preparation.desktop.manager_slot!=owner.manager_slot||
        preparation.desktop.runtime_club!=desktop_->state().runtime_club||
@@ -246,7 +246,7 @@ void StartupFlow::show_opportunities(OpportunitiesState page,PreparationState pr
        owner.manager_slot!=desktop_->state().manager_slot||owner.revision!=desktop_->state().revision||
        page.identity.manager_slot!=owner.manager_slot||page.identity.runtime_team!=desktop_->state().runtime_club||
        page.identity.day_counter!=desktop_->state().day_counter||page.identity.revision!=desktop_->state().revision+1||
-       page.identity.sequence!=0||page.identity.stable_club_identity!=int(desktop_->state().managers.at(size_t(owner.manager_slot)).club_identity_key))
+       page.identity.sequence!=0||page.identity.stable_club_identity!=int(desktop_->state().session_identity_key(size_t(owner.manager_slot))))
         throw FormatError("opportunities: mismatched opening acknowledgement");
     if(preparation.desktop.revision!=page.identity.revision||preparation.desktop.manager_slot!=owner.manager_slot||
        preparation.desktop.runtime_club!=desktop_->state().runtime_club||preparation.desktop.day_counter!=desktop_->state().day_counter)
@@ -1167,7 +1167,7 @@ void StartupFlow::show_balance(BalanceState page,const DeskRequest& owner) {
        owner.manager_slot!=desktop_->state().manager_slot||owner.revision!=desktop_->state().revision||
        page.identity.manager_slot!=owner.manager_slot||page.identity.runtime_club!=desktop_->state().runtime_club||
        page.identity.day_counter!=desktop_->state().day_counter||page.identity.revision!=owner.revision||
-       page.identity.sequence!=0||!page.identity.scope||page.identity.club_identity!=int(desktop_->state().managers.at(size_t(owner.manager_slot)).club_identity_key))
+       page.identity.sequence!=0||!page.identity.scope||page.identity.club_identity!=int(desktop_->state().session_identity_key(size_t(owner.manager_slot))))
         throw FormatError("balance: mismatched opening acknowledgement");
     auto screen=std::make_unique<BalanceScreen>(data_,std::move(page));
     desktop_->resolve_local_menu();balance_=std::move(screen);
@@ -1180,7 +1180,7 @@ void StartupFlow::acknowledge_balance(BalanceState page) {
        page.identity.revision!=pending->identity.revision||page.identity.scope!=pending->identity.scope||
        page.identity.revision!=desktop_->state().revision||page.identity.manager_slot!=desktop_->state().manager_slot||
        page.identity.runtime_club!=desktop_->state().runtime_club||page.identity.day_counter!=desktop_->state().day_counter||
-       page.identity.club_identity!=int(desktop_->state().managers.at(size_t(page.identity.manager_slot)).club_identity_key)||
+       page.identity.club_identity!=int(desktop_->state().session_identity_key(size_t(page.identity.manager_slot)))||
        page.identity.sequence!=pending->identity.sequence+1||
        (pending->kind==BalanceAction::close)!=page.pending_close)
         throw FormatError("balance: mismatched preview acknowledgement");
@@ -1198,7 +1198,7 @@ void StartupFlow::close_balance(BalanceState page,PreparationState preparation) 
     if(page.identity!=expected||pending->identity.manager_slot!=desktop_->state().manager_slot||
        pending->identity.revision!=desktop_->state().revision||pending->identity.runtime_club!=desktop_->state().runtime_club||
        pending->identity.day_counter!=desktop_->state().day_counter||
-       pending->identity.club_identity!=int(desktop_->state().managers.at(size_t(pending->identity.manager_slot)).club_identity_key)||
+       pending->identity.club_identity!=int(desktop_->state().session_identity_key(size_t(pending->identity.manager_slot)))||
        preparation.desktop.revision!=expected.revision||
        preparation.desktop.manager_slot!=expected.manager_slot||
        preparation.desktop.manager_teams!=desktop_->state().manager_teams||
@@ -1826,7 +1826,7 @@ void StartupFlow::show_family_table_dispatch(std::array<LeagueTableState, 9> tab
         throw FormatError("league family: mismatched Table dispatch identity");
     if(identity.manager<0||size_t(identity.manager)>=desktop_->state().managers.size()||
        identity.manager!=desktop_->state().manager_slot||identity.runtime_club!=desktop_->state().runtime_club||
-       identity.club_identity!=int(desktop_->state().managers[size_t(identity.manager)].club_identity_key))
+       identity.club_identity!=int(desktop_->state().session_identity_key(size_t(identity.manager))))
         throw FormatError("league family: invalid Table dispatch manager identity");
     if(!league_family_identity_&&(!desktop_->pending()||
        desktop_->pending()->kind!=DeskRequestKind::open_menu||desktop_->pending()->menu_kind!=(friendly_entry?6:0)||
@@ -2081,7 +2081,7 @@ void StartupFlow::begin_league_family(StrengthsIdentity identity) {
        identity.family_id==0)
         throw FormatError("league family: invalid desktop entry identity");
     if(identity.manager<0||size_t(identity.manager)>=desktop_->state().managers.size()||
-       identity.club_identity!=int(desktop_->state().managers[size_t(identity.manager)].club_identity_key))
+       identity.club_identity!=int(desktop_->state().session_identity_key(size_t(identity.manager))))
         throw FormatError("league family: invalid manager identity");
     league_family_identity_=identity;league_family_child_=0;
 }

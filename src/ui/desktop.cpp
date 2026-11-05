@@ -739,8 +739,17 @@ void DesktopScreen::acknowledge(DeskState updated) {
     Image next_badge = badge_;
     if ((updated.badge >> 3) != (state_.badge >> 3))
         next_badge = load_vga(asset_path(data_ / "W", std::to_string(updated.badge >> 3) + ".VGA"));
+    // The opponent changes from day to day: its badge sheet (one W file holds eight badges) is
+    // reloaded with the state, not kept from the day the screen was built.
+    std::optional<Image> next_opponent_badge;
+    if (updated.next_opponent && *updated.next_opponent >= 0 && updated.next_opponent_badge &&
+        !updated.next_opponent_badge_fallback) {
+        const int selector = *updated.next_opponent_badge & 0x1ff;
+        next_opponent_badge = load_vga(asset_path(data_ / "W", std::to_string(selector >> 3) + ".VGA"));
+    }
     shortcut_bar_visible_ = updated.shortcut_bar_always || shortcut_bar_edge_toggle_;
     state_ = std::move(updated); badge_ = std::move(next_badge);
+    next_opponent_badge_ = std::move(next_opponent_badge);
     pending_.reset(); last_rejection_.clear();
 }
 void DesktopScreen::acknowledge_mailbox_parent(DeskState updated) {

@@ -234,6 +234,7 @@ DeskState project(const StaticMemory& memory, const Tables& t, const LeImage& ex
         d.managers.at(0).club_identity_key = coach->club_identity_key;
     }
     if (d.runtime_club < 0 || d.runtime_club >= int(t.name_offsets.size())) throw FormatError("desk: invalid runtime club");
+    d.runtime_club_identity = int(t.name_offsets.at(size_t(d.runtime_club)));
     if (d.national_team && ((!d.options.world && !d.national_coach_takeover) ||
                             d.manager_slot != 0 || d.options.managers != 1))
         throw FormatError("desk: national team requires one manager and world-mode or source takeover evidence");

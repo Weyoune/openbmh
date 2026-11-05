@@ -579,7 +579,7 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
                        opened.identity.runtime_team!=desk.runtime_club||
                        opened.identity.day_counter!=desk.day_counter||desk.manager_slot<0||
                        size_t(desk.manager_slot)>=desk.managers.size()||
-                       opened.identity.club_identity!=desk.managers[size_t(desk.manager_slot)].club_identity_key)
+                       opened.identity.club_identity!=desk.session_identity_key(size_t(desk.manager_slot)))
                         throw FormatError("other games: stale desktop identity");
                     flow.show_other_games(std::move(opened),session->preparation_projection(revision),result.desk_action);
             });
@@ -822,14 +822,14 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             const bool national_source_case=flow.national_friendly_family_active();
             const int stable_identity=national_source_case&&flow.desktop()&&
                 owner.manager_slot>=0&&size_t(owner.manager_slot)<flow.desktop()->state().managers.size()?
-                flow.desktop()->state().managers[size_t(owner.manager_slot)].club_identity_key:-1;
+                flow.desktop()->state().session_identity_key(size_t(owner.manager_slot)):-1;
             auto page=OpportunitiesActions(*session).open(owner,revision,underlay,error,
                 national_source_case,stable_identity,[&](ui::OpportunitiesState& opened) {
                     const auto& desk=flow.desktop()->state();
                     if(opened.identity.manager_slot!=desk.manager_slot||opened.identity.runtime_team!=desk.runtime_club||
                        opened.identity.day_counter!=desk.day_counter||desk.manager_slot<0||
                        size_t(desk.manager_slot)>=desk.managers.size()||
-                       opened.identity.stable_club_identity!=int(desk.managers[size_t(desk.manager_slot)].club_identity_key))
+                       opened.identity.stable_club_identity!=int(desk.session_identity_key(size_t(desk.manager_slot))))
                         throw FormatError("opportunities: stale desktop identity");
                     flow.show_opportunities(std::move(opened),session->preparation_projection(revision),owner);
                 });
@@ -939,7 +939,7 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
                        opened.identity.day_counter!=desk.day_counter||
                        desk.manager_slot<0||
                        size_t(desk.manager_slot)>=desk.managers.size()||
-                       opened.identity.club_identity!=desk.managers[size_t(desk.manager_slot)].club_identity_key)
+                       opened.identity.club_identity!=desk.session_identity_key(size_t(desk.manager_slot)))
                         throw FormatError("top scorers: stale desktop identity");
                     flow.show_top_scorers(std::move(opened),session->preparation_projection(revision),result.desk_action);
             });
@@ -1321,7 +1321,7 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
                 const auto& desk=flow.desktop()->state();
                 if(!semantic||semantic->identity.manager!=desk.manager_slot||semantic->identity.runtime_club!=desk.runtime_club||
                    semantic->identity.day_counter!=desk.day_counter||desk.manager_slot<0||size_t(desk.manager_slot)>=desk.managers.size()||
-                   semantic->identity.club_identity!=desk.managers[size_t(desk.manager_slot)].club_identity_key)
+                   semantic->identity.club_identity!=desk.session_identity_key(size_t(desk.manager_slot)))
                     throw FormatError("strengths: stale desktop identity");
                 const auto applied=session->dispatch_strengths(*semantic,revision,error);
                 if(!applied)throw FormatError(error.empty()?"league family Strengths entry rejected":error);
