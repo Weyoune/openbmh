@@ -59,9 +59,16 @@ PitchExtras extras(const StaticMemory& memory,const Bytes& managers,const Bytes&
     const int count=memory.u8(::bmh::layout::ManagerCount);
     if(count<1||count>4||e.manager_slot>=count||teams.size()!=size_t(count))throw FormatError("pitch: invalid active manager");
     e.runtime_club=teams.at(e.manager_slot);
-    if(e.runtime_club<0||e.runtime_club>=exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField))throw FormatError("pitch: unsupported club");
+    // The national-team desk has no club of its own (runtime club kNoTeam) and runs on the
+    // national pool; the lineup page accepts it under the same condition (see lineup.cpp).
+    const bool national=e.runtime_club==kNoTeam&&e.manager_slot==0&&count==1&&
+        ((memory.u32(::bmh::layout::CompetitionSelection)&2)!=0||
+         (memory.has(::bmh::layout::CoachActive)&&memory.u8(::bmh::layout::CoachActive)!=0));
+    if(e.runtime_club<0||(e.runtime_club>=exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField)&&!national))
+        throw FormatError("pitch: unsupported club");
     const size_t m=size_t(e.manager_slot)*0xb0c,f=size_t(e.manager_slot)*0x160;
-    if(managers.size()<m+0xb0c||formations.size()<f+0x160||badges.size()<size_t(e.runtime_club+1)*2)
+    if(managers.size()<m+0xb0c||formations.size()<f+0x160||
+       (!national&&badges.size()<size_t(e.runtime_club+1)*2))
         throw FormatError("pitch: truncated manager/formations/badges");
     e.formation_mask=managers.at(m+0x218);e.automatic_weights=managers.at(m+0x288);
     auto manager_u16=[&](size_t at){return uint16_t(managers.at(m+at)|uint16_t(managers.at(m+at+1))<<8);};
@@ -69,7 +76,8 @@ PitchExtras extras(const StaticMemory& memory,const Bytes& managers,const Bytes&
     e.set_piece_signature=manager_u16(0xb0a);
     if(memory.has(uint32_t(::bmh::layout::CareerSession_AnyOf_ExecutableField+e.manager_slot*2)))
         e.native_display_word=memory.u16(uint32_t(::bmh::layout::CareerSession_AnyOf_ExecutableField+e.manager_slot*2));
-    e.badge=le16(badges,size_t(e.runtime_club)*2)&0x1ff;
+    // The national team has no club badge entry; badge sheet 0 is used.
+    e.badge=national?0:le16(badges,size_t(e.runtime_club)*2)&0x1ff;
     e.mode=memory.has(::bmh::layout::GameMode)?memory.u8(::bmh::layout::GameMode):exe.u8(::bmh::layout::GameMode);
     std::copy_n(formations.begin()+f,8*22,e.formations.begin());
     return e;
@@ -120,7 +128,8 @@ PitchExtras pitch_extras_from_game(const GameState& game,const LeImage& exe,uint
                 const size_t assignment=own_base+size_t(own)*0x58+0x44;
                 if(assignment+1>=game.tactics.size())throw FormatError("pitch: truncated own marking rows");
                 const uint16_t marked=uint16_t(game.tactics[assignment]|uint16_t(game.tactics[assignment+1])<<8);
-                if(marked==id){const int own_id=game.squad_slots.at(squad_range(e.runtime_club).first+size_t(own))&0x0fff;
+                if(marked==id){const size_t own_first=e.runtime_club==kNoTeam?size_t(3072):squad_range(e.runtime_club).first;
+                    const int own_id=game.squad_slots.at(own_first+size_t(own))&0x0fff;
                     if(own_id!=0x0fff)opponent.current_marker_player_id=own_id;break;}
             }
             e.opponent_players.push_back(std::move(opponent));
