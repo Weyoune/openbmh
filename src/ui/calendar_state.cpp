@@ -24,12 +24,13 @@ void require_memory(const GameState& game, uint32_t address) {
 CalendarState calendar_from_game(const GameState& game, const LeImage& executable) {
     if (!executable.contains(::bmh::layout::CalendarState_CalendarFromGame_ExecutableField) || !executable.contains(::bmh::layout::CalendarState_CalendarFromGame_ExecutableField2))
         throw FormatError("calendar: missing executable month lengths");
-    require_memory(game, ::bmh::layout::CalendarState_FormatError_RuntimeField3);
-    require_memory(game, ::bmh::layout::DaysIntoSeason);
-    const uint32_t native_start = game.memory.u16(::bmh::layout::CalendarState_FormatError_RuntimeField3);
-    const int native_current = game.memory.u16(::bmh::layout::DaysIntoSeason);
-    if (game.date < native_start || game.date - native_start != uint32_t(native_current))
-        throw FormatError("calendar: saved native season cursor disagrees with current date");
+    // The season origin and the day of the season are the live values of the game. Their copies in
+    // the memory image hold only the day the game was loaded or saved; they are not kept up to date
+    // while the career runs, so reading them failed from the first kickoff on.
+    const uint32_t native_start = game.season_start;
+    const int native_current = game.season_day();
+    if (game.date < native_start || native_current < 0)
+        throw FormatError("calendar: the season origin lies after the current date");
     const DeskDate first_native_date = desk_date(native_start, executable);
     if (first_native_date.month != 7 || first_native_date.day < 1 || first_native_date.day > 7)
         throw FormatError("calendar: native season start is outside the first July week");

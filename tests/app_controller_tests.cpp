@@ -1269,6 +1269,18 @@ void check_calendar_readonly_controller(const std::filesystem::path& data) {
     check(flow.click(0, 0, true).request == FlowRequest::none, "menu 7 close release is consumed");
     check(!flow.calendar() && flow.screen_name() == "desktop",
         "right event8 closes menu 7 and returns to the refreshed desk");
+    // After a kickoff the memory copy of the season day is only the day the game was loaded: the
+    // calendar follows the live day (it was refused from the first kickoff on).
+    ui::DeskRequest kickoff;
+    kickoff.kind = ui::DeskRequestKind::advance_turn;
+    kickoff.manager_slot = int(game.memory.u8(::bmh::layout::ActiveManager));
+    kickoff.revision = revision;
+    std::string kickoff_error;
+    const auto advanced = session->dispatch_kickoff(kickoff, revision, kickoff_error);
+    check(advanced.kind != TurnDeskKind::Failed, "the fixture's first kickoff is played");
+    const auto after_kickoff = ui::calendar_from_game(game, load_le(asset_path(data, "BMH.exe")));
+    check(after_kickoff.current_day == game.season_day() + after_kickoff.leading_days,
+        "the calendar after a kickoff shows the live day of the season");
 }
 
 void check_readonly_views(const std::filesystem::path& data) {
@@ -4305,6 +4317,36 @@ void check_loaded_lineup(const std::filesystem::path& data, const std::filesyste
             order_preserved = (state.squad_slots.at(squad.first) & 0x0fff) == (second & 0x0fff) &&
                               (state.squad_slots.at(squad.first + 11) & 0x0fff) == (first & 0x0fff);
         }
+    });
+    // The end-of-phase results page (key slot 1 at the Source phase boundary) is the viewer the
+    // players meet after every match: Spiele -> Stärken -> Spiele -> Tabelle -> close must not strand it.
+    int phase_pages = 0;
+    session.set_phase_results([&](const PhaseResultRequest&, const std::vector<MatchGroup>&, const GameState&) {
+        if (phase_pages >= 2) return;
+        std::string phase_error;
+        auto opened = session.open_phase_results(revision, Image{}, phase_error);
+        if (!opened) return; // a phase of another group or competition: nothing to view here
+        ++phase_pages;
+        const auto hop = [&](ui::StrengthsIdentity from, int from_child, int target_child, const char* what) {
+            ui::LeagueFamilyRequest nav;
+            nav.identity = from; nav.kind = ui::LeagueFamilyRequestKind::navigate;
+            nav.from_child = from_child; nav.target_child = target_child;
+            auto page = session.dispatch_phase_results(app::CareerSession::LiveOverviewAction{nav}, revision, phase_error);
+            if (!page) throw std::runtime_error(std::string("phase results ") + what + " failed: " + phase_error);
+            return *page;
+        };
+        ui::StrengthsIdentity at = opened->family_identity;
+        int child = opened->kind == app::CareerSession::LiveOverviewKind::league_table ? 1 : 2;
+        const int path[] = {3, 2, 1, 3, 1, 2};
+        for (const int next : path) {
+            auto page = hop(at, child, next, "handover");
+            at = page.family_identity; child = next;
+        }
+        ui::LeagueFamilyRequest close;
+        close.identity = at; close.kind = ui::LeagueFamilyRequestKind::close;
+        close.from_child = child; close.target_child = 0;
+        auto closed = session.dispatch_phase_results(app::CareerSession::LiveOverviewAction{close}, revision, phase_error);
+        if (!closed || !closed->closed) throw std::runtime_error("phase results page did not close: " + phase_error);
     });
     int turns = 0;
     for (; turns < 8 && (!saw_fixture || turns < 2); ++turns) {

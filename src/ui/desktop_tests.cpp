@@ -315,8 +315,14 @@ void calendar_projection_tests(const LeImage& exe) {
           "saved calendar mask 0xa2594 clears effective bit 0x10");
 
     auto malformed = calendar_fixture(exe,0,0);
-    malformed.memory.set16(::bmh::layout::CalendarState_FormatError_RuntimeField3,1);
+    malformed.season_start = 5; // the origin of the season lies after the current date
     rejected([&]{ calendar_from_game(malformed,exe); });
+    // the memory copies of origin and day hold only the day the game was loaded: after a kickoff the
+    // live values rule (this failed the calendar from the first kickoff on)
+    auto advanced = calendar_fixture(exe,0,0);
+    advanced.date = 24;
+    check(calendar_from_game(advanced,exe).current_day == 24,
+          "the calendar follows the live day of the season, not the load-day copy in memory");
     auto outside = calendar_fixture(exe,0,0);
     outside.date = 365;
     rejected([&]{ calendar_from_game(outside,exe); });

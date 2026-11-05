@@ -2352,13 +2352,17 @@ std::optional<CareerSession::StrengthsDispatch> CareerSession::dispatch_strength
     const ui::StrengthsRequest& request,uint64_t& revision,std::string& error,
     const TransferOfferTeamInfoPresenter& team_info,bool family_transition) {
     error.clear();const auto& id=request.identity;const bool opening=request.kind==ui::StrengthsAction::open;
+    // The turn driver marks the claimed turn as Failed until it completes (a guard against replaying
+    // a half-played turn), so inside the running matchday the stage is not a desk. The Stärken page
+    // of the live overview (G key, results page after a phase) belongs to that running turn.
+    const bool running_turn=live_overview_owner_.has_value()&&turn_driver_.stage==TurnDriver::Stage::Failed;
     if(league_family_teaminfo_active_||strengths_dispatch_active_||revision==UINT64_MAX||id.revision!=revision||id.sequence==UINT64_MAX||
        id.manager<0||id.manager>3||!g_.memory.has(::bmh::layout::ActiveManager)||g_.memory.u8(::bmh::layout::ActiveManager)!=id.manager||
        size_t(id.manager)>=g_.manager_teams.size()||id.runtime_club!=g_.manager_teams[size_t(id.manager)]||
        id.runtime_club<0||size_t(id.runtime_club)>=g_.club_ids.size()||
        id.club_identity!=int(g_.club_ids[size_t(id.runtime_club)])||id.day_counter!=g_.date||
        id.league<0||id.league>8||career_complete()||
-       (turn_driver_.stage!=TurnDriver::Stage::MatchdayDesks&&turn_driver_.stage!=TurnDriver::Stage::SeasonEndDesk)||
+       (turn_driver_.stage!=TurnDriver::Stage::MatchdayDesks&&turn_driver_.stage!=TurnDriver::Stage::SeasonEndDesk&&!running_turn)||
        pending_offer_dispatch_active_||market_dispatch_active_||calendar_advance_active_||league_pairings_draft_||
        league_pairings_dispatch_active_||transfer_offer_editor_||manager_join_||contract_quote_||
        stadium_.investment||stadium_.tip||stadium_.periphery_quote||top_scorers_owner_||top_scorers_dispatch_active_ || stadium_.block_expansion||other_games_owner_||other_games_dispatch_active_) {
