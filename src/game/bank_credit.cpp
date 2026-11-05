@@ -2,6 +2,7 @@
 #include "formats/executable_layout.hpp"
 #include "game/bank_credit.hpp"
 
+#include <array>
 #include <bit>
 #include <cmath>
 #include <cstring>
@@ -29,6 +30,102 @@ uint32_t read_record(const GameState& g, size_t at) {
     for (int i = 0; i < 4; ++i) v |= uint32_t(g.manager_records.at(at + i)) << (i * 8);
     return v;
 }
+// The original evaluates ((base / 100) * den) / 100 on the x87 stack: every step is rounded to a
+// 64-bit mantissa (round to nearest even), only the final store rounds to a 53-bit double. The
+// host's long double is not that format (64 bits on MSVC and on Apple silicon), which changed the
+// result by 1 for loans of about a million and more. This evaluates the same chain exactly with
+// integers, so the result is the same on every platform. Returns the value truncated toward zero.
+struct Wide {  // 128-bit unsigned, little-endian 32-bit limbs
+    std::array<uint32_t, 4> l{};
+    unsigned bit_length() const {
+        for (int i = 3; i >= 0; --i)
+            if (l[size_t(i)]) return unsigned(i) * 32 + unsigned(32 - std::countl_zero(l[size_t(i)]));
+        return 0;
+    }
+    bool bit(unsigned n) const { return n < 128 && (l[n / 32] >> (n % 32)) & 1u; }
+    bool any_below(unsigned n) const {  // any bit below position n set
+        for (unsigned i = 0; i < n && i < 128; ++i) if (bit(i)) return true;
+        return false;
+    }
+    static Wide from(uint64_t v) { Wide w; w.l[0] = uint32_t(v); w.l[1] = uint32_t(v >> 32); return w; }
+    uint64_t window(unsigned lo) const {  // the 64 bits starting at bit `lo`
+        uint64_t v = 0;
+        for (unsigned i = 0; i < 64; ++i) if (bit(lo + i)) v |= uint64_t(1) << i;
+        return v;
+    }
+};
+struct Extended { uint64_t m = 0; int e = 0; };  // value = m * 2^e, m has 64 bits (or is zero)
+// Round `w` (plus a "something was dropped" flag) to 64 bits, nearest even; value = w * 2^exp.
+Extended round_to_64(const Wide& w, bool sticky, int exp) {
+    const unsigned len = w.bit_length();
+    Extended r;
+    if (len == 0) return r;
+    if (len <= 64) {
+        const unsigned up = 64 - len;
+        r.m = w.window(0) << up;
+        r.e = exp - int(up);
+        return r;
+    }
+    const unsigned s = len - 64;
+    r.m = w.window(s);
+    const bool guard = w.bit(s - 1), rest = sticky || w.any_below(s - 1);
+    r.e = exp + int(s);
+    if (guard && (rest || (r.m & 1))) {
+        if (++r.m == 0) { r.m = uint64_t(1) << 63; ++r.e; }
+    }
+    return r;
+}
+Extended x87_divide_small(const Extended& a, uint32_t d) {
+    Wide n;                       // a.m * 2^64, divided limb by limb
+    n.l[2] = uint32_t(a.m); n.l[3] = uint32_t(a.m >> 32);
+    uint64_t rem = 0;
+    Wide q;
+    for (int i = 3; i >= 0; --i) {
+        const uint64_t cur = (rem << 32) | n.l[size_t(i)];
+        q.l[size_t(i)] = uint32_t(cur / d);
+        rem = cur % d;
+    }
+    return round_to_64(q, rem != 0, a.e - 64);
+}
+Extended x87_multiply_small(const Extended& a, uint32_t b) {
+    Wide p;
+    uint64_t carry = 0;
+    const uint32_t limb[2] = {uint32_t(a.m), uint32_t(a.m >> 32)};
+    for (int i = 0; i < 2; ++i) {
+        const uint64_t cur = uint64_t(limb[i]) * b + carry;
+        p.l[size_t(i)] = uint32_t(cur);
+        carry = cur >> 32;
+    }
+    p.l[2] = uint32_t(carry);
+    return round_to_64(p, false, a.e);
+}
+// ((base / 100) * den) / 100 stored as a double and truncated toward zero. `zero` reports an exact
+// zero before truncation (the original's "exact zero becomes 1" rule looks at the stored double).
+int64_t x87_amount_chain(int32_t base, uint32_t den, bool& zero) {
+    zero = base == 0 || den == 0;
+    if (zero) return 0;
+    const bool negative = base < 0;
+    const uint64_t magnitude = negative ? uint64_t(-int64_t(base)) : uint64_t(base);
+    Extended v = round_to_64(Wide::from(magnitude), false, 0);
+    v = x87_divide_small(v, 100);
+    v = x87_multiply_small(v, den);
+    v = x87_divide_small(v, 100);
+    // store as double: 53-bit mantissa, nearest even
+    uint64_t m53 = v.m >> 11;
+    int e = v.e + 11;
+    const bool guard = (v.m >> 10) & 1, rest = (v.m & 0x3ff) != 0;
+    if (guard && (rest || (m53 & 1))) ++m53;  // a carry to 2^53 is still exact
+    uint64_t whole;
+    if (e >= 0) {
+        if (e > 10) throw std::invalid_argument("invalid native credit amount");
+        whole = m53 << e;
+    } else {
+        whole = -e >= 64 ? 0 : m53 >> unsigned(-e);
+    }
+    if (whole > uint64_t(std::numeric_limits<int32_t>::max()) + (negative ? 1u : 0u))
+        throw std::invalid_argument("invalid native credit amount");
+    return negative ? -int64_t(whole) : int64_t(whole);
+}
 // Amount: signed IMUL/IDIV, x87 intermediate, QWORD store,
 // exact-zero floor, then Amount2's explicit rounding toward zero.
 int32_t amount(const BankCreditContext& c, uint32_t months, int32_t principal) {
@@ -37,15 +134,10 @@ int32_t amount(const BankCreditContext& c, uint32_t months, int32_t principal) {
     const int32_t factor = c.rate_table[months];
     const int32_t base = divide(mul(principal, factor), 100);
     const int32_t den = divide(10000, factor - 100);
-    const long double intermediate = (static_cast<long double>(base) / c.divisor)
-        * den / c.divisor;
-    double raw = static_cast<double>(intermediate);
-    if (raw == 0 && principal != 0) raw = 1;
-    raw = std::trunc(raw);
-    if (!std::isfinite(raw) || raw < std::numeric_limits<int32_t>::min()
-        || raw > std::numeric_limits<int32_t>::max())
-        throw std::invalid_argument("invalid native credit amount");
-    return static_cast<int32_t>(raw);
+    bool zero = false;
+    int64_t result = x87_amount_chain(base, uint32_t(den), zero);
+    if (zero && principal != 0) result = 1;
+    return static_cast<int32_t>(result);
 }
 void balance(const BankCreditContext& c, BankCreditDraft& d) {
     int32_t result = add(c.cash, signed_word(d.values[0]));
