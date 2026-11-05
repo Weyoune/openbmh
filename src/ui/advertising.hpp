@@ -158,6 +158,8 @@ private:
               int max_width = 310, bool use_gradient = true) const;
     void begin_offer_browser(int display_slot);
     void submit_selected_offer();
+    // True when the selected offer of the open browser can be accepted (draws ANNEHMEN).
+    bool offer_acceptable() const;
     void open_spending_calculator(int display_slot);
     bool accept_spending_calculator();
     void close_spending_calculator();

@@ -756,7 +756,10 @@ Image AdvertisingScreen::render() const {
             copy(image, logos_, 32, 217, 138, 174, 11, 14);
 
             button(image, 89, 191, 66, state_.cancel_label);
-            button(image, 164, 191, 66, state_.accept_label);
+            // The original shows ABBRECHEN only when the selected offer cannot be accepted
+            // (for example while a running sponsor contract is not terminable).
+            if (offer_acceptable())
+                button(image, 164, 191, 66, state_.accept_label);
         }
     }
     if (hovered_target_ >= 0) {
@@ -968,6 +971,14 @@ bool AdvertisingScreen::open_offers(int display_slot) {
     if (!any_offer) return false;
     begin_offer_browser(display_slot);
     return true;
+}
+
+bool AdvertisingScreen::offer_acceptable() const {
+    if (!offer_open_ || selected_contract_ < 0 || selected_contract_ >= 16 || selected_offer_ < 0) return false;
+    for (const auto& candidate : state_.offers[size_t(selected_contract_)].offers)
+        if (candidate.raw_slot == selected_offer_)
+            return candidate.present && candidate.can_accept && candidate.monthly_amount != 0;
+    return false;
 }
 
 void AdvertisingScreen::submit_selected_offer() {
