@@ -110,7 +110,7 @@ void validate_other_games_preparation(const OtherGamesIdentity& id, const DeskSt
         id.manager_slot != before.manager_slot || id.runtime_team != before.runtime_club ||
         id.day_counter != before.day_counter || id.manager_slot < 0 ||
         size_t(id.manager_slot) >= before.managers.size() ||
-        id.club_identity != int(before.session_identity_key(size_t(id.manager_slot))))
+        id.club_identity != int(before.managers[size_t(id.manager_slot)].club_identity_key))
         throw FormatError("other games: mismatched desk acknowledgement");
     auto expected = before;
     expected.revision = id.revision;
@@ -175,7 +175,7 @@ void StartupFlow::show_top_scorers(TopScorersState page,PreparationState prepara
        page.identity.runtime_team!=desktop_->state().runtime_club||
        page.identity.day_counter!=desktop_->state().day_counter||
        page.identity.revision!=desktop_->state().revision+1||page.identity.sequence!=0||!page.identity.scope||
-       page.identity.club_identity!=int(desktop_->state().session_identity_key(size_t(owner.manager_slot))))
+       page.identity.club_identity!=int(desktop_->state().managers[size_t(owner.manager_slot)].club_identity_key))
         throw FormatError("top scorers: mismatched opening acknowledgement");
     if(preparation.desktop.revision!=page.identity.revision||preparation.desktop.manager_slot!=owner.manager_slot||
        preparation.desktop.runtime_club!=desktop_->state().runtime_club||
