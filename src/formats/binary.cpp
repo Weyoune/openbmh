@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the basic file helpers declared in binary.hpp: read_file() loads a whole
+// file into a Bytes vector (FormatError if it cannot be opened) and iso646de_to_utf8()
+// converts the game's ISO 646-DE strings ([ \ ] { | } ~ stand for the umlauts and the sharp s)
+// to UTF-8. No state.
 #include "formats/binary.hpp"
 
 #include <fstream>

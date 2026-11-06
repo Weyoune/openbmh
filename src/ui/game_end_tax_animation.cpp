@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the tax animation declared in game_end_tax_animation.hpp: decoding the animation script bytes
+// into steps, loading the art, and advancing the screen one step at a time (copy rectangles, present by
+// swapping buffers, optional full-frame copy). Timing is only reported, never waited on here.
 #include "formats/executable_layout.hpp"
 #include "ui/game_end_tax_animation.hpp"
 

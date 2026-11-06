@@ -1,4 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Entry point of openbmh_cli, the headless front end without a window. Besides parsing the
+// command line (Arguments) it offers several modes on top of the same engine: the JSON
+// protocol on stdin/stdout (protocol.hpp) with --log/--replay, the console language
+// (docs/CLI_CONCEPT) as plain session, replay, mailbox server (--serve), multi-seat server
+// (--seats, SeatHub), TCP listener on 127.0.0.1 (--listen), and --send to hand one block to
+// a running mailbox session. --data may be a game directory, the game's EXE or an archive
+// (src/launch resolves it). All game logic stays in the engine; this file only moves lines.
 #include "cli/protocol.hpp"
 #include "cli/console/console.hpp"
 #include "cli/seat_hub.hpp"

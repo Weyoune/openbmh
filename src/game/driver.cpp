@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Match day driver: plays the minutes of all match groups of a matchday in phases (first half,
+// second half, extra phases), shows or hides screens per button table and handles the phase end
+// (cup tie decisions, results, reseeding via stir_random).
+// Works on MatchGroup lists, GameState and the MatchEngine of match_engine.cpp.
+// Passes both generators on to the engine; itself only reseeds them at phase end.
+// Interface in driver.hpp; neighbours are matchday_setup.cpp and season.cpp.
 #include "game/driver.hpp"
 
 #include <algorithm>

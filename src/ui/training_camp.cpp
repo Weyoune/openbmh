@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of TrainingCampScreen and training_camp_from_game() (training_camp.hpp): resort rows with hover, price and star display, and booking/focus request construction.
 #include "formats/executable_layout.hpp"
 #include "ui/training_camp.hpp"
 

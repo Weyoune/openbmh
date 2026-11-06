@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// GameState construction and accessors: building the state from a loaded save and the database
+// counts, manager of a team, club and player names, formation and formation positions.
+// Squad table layout constants are defined here. Draws no random numbers.
+// Interface in state.hpp; every other file in this directory works on GameState.
 #include "formats/executable_layout.hpp"
 #include "game/state.hpp"
 #include "game/bank_robbery.hpp"

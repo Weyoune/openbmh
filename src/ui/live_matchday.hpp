@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Live matchday overview: all matches of the day with minute, scores, statistics, attendance and weather,
+// plus chance, booking and shoot-out projections. LiveMatchdayFrame is an owned copy made synchronously from
+// the engine's observation hook. LiveScoreReveal keeps preview scores until the result hook so simulation is
+// not delayed. LiveMatchdayScreen renders frames. Implementation: live_matchday.cpp.
 #pragma once
 
 #include <filesystem>

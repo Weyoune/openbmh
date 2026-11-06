@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the end-of-career screens declared in game_end.hpp (highscore, final messages, tax dialog,
+// program error screen) and wrap_source_text(). Each screen loads its own art and font and renders from
+// values supplied by the caller; nothing here changes game state.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/game_end.hpp"

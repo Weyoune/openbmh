@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Cup competitions: Masters qualification, replay lists, group tables and qualifiers, friendly
+// preparation, national tournament end and the draw/advance step advance_cup for each round.
+// Works on the cup entries in the static memory of GameState and on MatchGroup results.
+// Draws from WatcomRandom (tie ordering) and GameRandom (shuffling the Masters field).
+// Interface in cup.hpp; matchday_setup.cpp creates the matches, driver.cpp and season.cpp are neighbours.
 #include "formats/executable_layout.hpp"
 #include "game/cup.hpp"
 

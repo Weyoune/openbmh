@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// SDL event helpers for the live match-day presentation, which runs while the engine is
+// synchronously paused in its observer hook. live_matchday_board_side() turns a mouse press
+// into a side (0 or 1) of the board only at the allowed minutes and screen intervals;
+// pump_live_matchday_events() drains the SDL queue, reports a quit request and an ESC skip
+// through its return value / out-parameter, and re-queues only non-interactive system events.
+// Header-only; owns no state.
 #pragma once
 
 #include <SDL.h>

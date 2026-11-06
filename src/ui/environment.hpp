@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Environment screen (stadium surroundings and youth work): levels for several cost items with formatted costs.
+// EnvironmentView is a read-only copy built by environment_from_game(), tagged with a revision and owner
+// request. EnvironmentScreen raises EnvironmentRequest values (set item level) that the session applies and
+// confirms through acknowledge() or refuses with reject_action(). environment_notice_dialog() builds a
+// notice dialog projection. Implementation: environment.cpp.
 #pragma once
 
 #include <array>

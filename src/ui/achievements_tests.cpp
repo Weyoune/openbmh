@@ -1,3 +1,4 @@
+// Tests for the achievements projection and screen (ui/achievements.hpp).
 #include "../../tests/test_inputs.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"

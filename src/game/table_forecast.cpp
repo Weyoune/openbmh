@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Table screen forecast: combines the played table with predicted results of the remaining
+// matchdays (computer tips from source_tip.cpp) into a league table projection.
+// Reads GameState; works on a copy of the game generator and returns it in the result, so
+// callers commit it only with the accepted transition. Interface in table_forecast.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/table_forecast.hpp"
 

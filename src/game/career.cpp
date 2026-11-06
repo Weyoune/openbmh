@@ -1,4 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Start of a new career: league strength ranges read from the executable, generation of players
+// (startup squads, the extra and market players), initial club moods and markets, the starting
+// state built from the data files, plus new-manager setup (stadium, sponsors, competition blocks).
+// Writes most of GameState (players, squad_slots, memory, manager records).
+// Draws from both generators: WatcomRandom for attributes and levels, GameRandom for the
+// reseeding done by stir_random and the mood reset.
+// Interface in career.hpp; the season-wide steps follow in season.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/career.hpp"
 #include "game/lineup.hpp"

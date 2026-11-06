@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements RealityFieldScreen declared in live_reality.hpp: loads the ball and digit atlases for the chosen
+// ball style and renders a RealityMotionFrame over the supplied backdrop. Drawing only.
 #include "ui/live_reality.hpp"
 
 #include "ui/setup.hpp"

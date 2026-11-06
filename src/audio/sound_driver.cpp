@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Command line tool openbmh_sound for the audio module. It works either on one sound
+// container file (play or export a sample, a test tone, or an original effect id as WAV) or,
+// with --original DATA_DIR, on the user's game data through OriginalSynth (export a song or
+// effect to WAV, or play ids through the real device). It also plays or exports the
+// synthetic semantic cues and the fallback music loop. Own state only: parsed arguments.
+// Bounds on seconds, loops and ids are checked before anything runs.
 #include "formats/executable_layout.hpp"
 #include "container.hpp"
 #include "music_fallback.hpp"

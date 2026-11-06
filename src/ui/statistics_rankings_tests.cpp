@@ -1,5 +1,6 @@
 #include "../../tests/test_inputs.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for StatisticsRankingsScreen: category selection requests, pressed-state cancel on move-off, and reachability of the oldest archived rows.
 #include "formats/executable_layout.hpp"
 #include "ui/statistics_rankings.hpp"
 #include "ui/setup.hpp"

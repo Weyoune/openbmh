@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the national-team friendly stage machine declared in national_friendly_ui.hpp.
+// Builds the cost and payer question dialogs from the GameState and returns the next action; it never books
+// anything itself, the session answers the quote and booking requests.
 #include "formats/executable_layout.hpp"
 #include "national_friendly_ui.hpp"
 

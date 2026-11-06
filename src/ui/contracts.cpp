@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the contracts screen declared in contracts.hpp: contracts_from_game() builds the player rows
+// and premiums from the game, and ContractsScreen renders list, negotiation and insurance views and converts
+// input into ContractRequest values. Applying an offer or insurance is left to the session.
 #include "formats/executable_layout.hpp"
 #include "ui/contracts.hpp"
 #include "ui/game_end.hpp"

@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of OutgoingTransferScreen (outgoing_transfer.hpp): draws the bid rows and the money/mode-3
+// calculators, handles click, key and text input, and builds the request JSON used by tests and tooling.
+// It reuses IncomingTransferScreen for the shared panel; the quote values are carried as owner context and
+// never recomputed here.
 #include "formats/executable_layout.hpp"
 #include "ui/outgoing_transfer.hpp"
 

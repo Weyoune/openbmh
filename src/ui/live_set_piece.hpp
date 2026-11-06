@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Set-piece animation frames: live_set_piece_frames() converts the values already drawn by the match engine
+// for a set piece into camera positions and sprites. It rejects missing, mismatched or surplus draws instead
+// of inventing a scene. Implementation: live_set_piece.cpp.
 #pragma once
 
 #include "formats/le.hpp"

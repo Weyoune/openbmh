@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Application-boundary facades for the club and league windows: league table/pairings/
+// strengths, transfer market and offers, bank, stadium, desk actions and lineup. Same pattern
+// as desktop_actions.hpp: a class per owner that wraps a CareerSession, offers apply() as a
+// rollback transaction and takes the shared revision counter plus an acknowledgement
+// callback from the front end. Implemented in window_actions.cpp, called from controller.cpp.
 #pragma once
 
 #include "app/career_session.hpp"

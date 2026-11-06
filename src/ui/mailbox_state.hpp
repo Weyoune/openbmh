@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Read-only projection of the mailbox for one manager. MailboxMessage keeps the exact raw entry, recipient and
+// keep masks and the decoded text; MailboxState lists them in reader order (date, then physical slot).
+// mailbox_state_from_game() never marks, deletes or keeps messages. MailboxActionRequest describes a keep or
+// delete action together with the expected raw entry for stale-state checks. Used by mailbox_screen.hpp.
 #pragma once
 
 #include <cstdint>

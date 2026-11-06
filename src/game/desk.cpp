@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Entering a human manager's desk: desk button table per game mode, the random stir, the table
+// prediction messages, the autosave hook and the manager's prestige (weighted sum of ratings and
+// money). Reads and writes manager records and the mailbox in GameState.
+// Draws from WatcomRandom (the four save draws) and reseeds both generators via stir_random.
+// Interface in desk.hpp; called from turn.cpp before each desk.
 #include "formats/executable_layout.hpp"
 #include "game/desk.hpp"
 

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the league table projection, controls and family requests (ui/league_table.hpp).
 #include "formats/executable_layout.hpp"
 #include "ui/league_table.hpp"
 

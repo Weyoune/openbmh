@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Top scorers view: ranks players of a league or of the human managers by goals, assists or
+// scorer score and determines the owning manager of each club.
+// Read-only projection of GameState; invalid input throws FormatError. Draws no random numbers.
+// Interface in top_scorers.hpp.
 #include "game/top_scorers.hpp"
 
 #include <array>

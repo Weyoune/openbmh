@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of SaveLoadScreen (save_load.hpp): lists matching files, draws the list, filename box and
+// footer, handles double-click, keyboard and text editing, and arms the overwrite confirmation before
+// emitting a request. Picker interaction alone never writes a file.
 #include "formats/native_save_version.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/save_load.hpp"

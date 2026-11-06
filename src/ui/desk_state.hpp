@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// DeskState: the copyable, read-only state the manager desk (desktop.hpp) renders, including setup options,
+// managers, dates, opponent history, rank curves and the saved desk layout.
+// Built by desk_from_game()/desk_from_save() in desk_state.cpp. Engine changes are never made here;
+// the desk raises explicit DeskRequest values instead. Runtime club ids are not master database ids.
 #pragma once
 
 #include <array>

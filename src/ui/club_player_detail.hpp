@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Club player detail card shown above a club info page.
+// ClubPlayerDetailProjection is built by club_player_detail_from_game() from a redraw produced by the engine
+// once per card rebuild; render, move, press and release never touch game state or the random generators.
+// ClubPlayerDetailScreen raises ClubPlayerDetailRequest values (close, redraw card, national action, offer
+// action) and keeps the parent frame it is drawn over. Implementation: club_player_detail.cpp.
 #pragma once
 
 #include "game/club_player_detail.hpp"

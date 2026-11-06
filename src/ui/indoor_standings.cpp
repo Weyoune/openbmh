@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the indoor standings page declared in indoor_standings.hpp: indoor_standings_from_game() copies
+// the ranking and title holders from the game, and IndoorStandingsScreen draws the table, footer and prizes.
+// Presentation only; it changes no game state.
 #include "formats/executable_layout.hpp"
 #include "ui/indoor_standings.hpp"
 

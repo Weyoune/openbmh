@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of OtherGamesScreen (other_games.hpp): draws the source panel, selector, arrows and fixture
+// rows with the original fonts, and hit-tests fixtures and buttons. It never writes game state; navigation is
+// only requested through pending() and takes effect when the session returns a new state.
 #include "formats/executable_layout.hpp"
 #include "ui/other_games.hpp"
 

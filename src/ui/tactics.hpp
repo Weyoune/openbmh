@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tactics screen: board of ten outfield positions (depth and lane) and the tactic option arrows, including the
+// assistant attitude. State: TacticsState projected from a save or the live game. A click or key returns a
+// TacticsRequest (set_tactic with the desired value, and optionally a new assistant attitude) carrying revision
+// guards; the session applies it and calls acknowledge() or reject_action(). Implemented in tactics.cpp.
 #pragma once
 
 #include <array>

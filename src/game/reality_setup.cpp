@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Reality scene setup: finds the manager of a team, derives the formations on the pitch grid and
+// places the players of both teams with their positions, card values and movement limits.
+// Reads GameState (tactics, formations, players). The setup function takes both generators as
+// parameters. Interface in reality_setup.hpp; used by reality_scene.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/reality_setup.hpp"
 

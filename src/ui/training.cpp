@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of TrainingScreen and the training projections (training.hpp): initialization state, skill bars under the pointer, request construction and JSON output.
 #include "formats/executable_layout.hpp"
 #include "ui/training.hpp"
 

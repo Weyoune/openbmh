@@ -1,3 +1,4 @@
+// Tests for the environment view, rendering and requests (ui/environment.hpp).
 #include "../../tests/runtime_fixture_tables.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"

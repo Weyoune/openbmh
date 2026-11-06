@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Finance totals page (eleven rows of club income and expenses with formatted amounts).
+// finance_totals_from_game() builds the read-only FinanceTotals; the monthly values reuse the finance preview
+// from advertising.cpp. FinanceTotalsScreen only renders over the supplied underlay and raises no requests.
+// Implementation: finance_totals.cpp.
 #pragma once
 
 #include <array>

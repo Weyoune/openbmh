@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of StatisticsMenuScreen and OpportunitiesScreen (see opportunities.hpp): rendering from the
+// original executable layout tables and art, pointer/key handling, and the pending-request/acknowledge flow.
+// Drawing never changes the projection; only an acknowledged state replaces the displayed one.
 #include "formats/executable_layout.hpp"
 #include "ui/opportunities.hpp"
 

@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the Reality scene: caller-owned context, stop reasons, scene, result and tick
+// types and the create/advance/exit functions implemented in reality_scene.cpp.
 #pragma once
 
 #include "game/reality_duel.hpp"

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the mailbox projection: filtering, ordering and identity (ui/mailbox_state.hpp).
 #include "ui/mailbox_state.hpp"
 
 #include <functional>

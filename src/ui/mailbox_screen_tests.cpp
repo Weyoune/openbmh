@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for MailboxScreen paging, rendering and request handling (ui/mailbox_screen.hpp).
 #include "ui/mailbox_screen.hpp"
 
 #include <functional>

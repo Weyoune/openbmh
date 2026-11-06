@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// League table screen: rank, record, goals, points, previous rank and form per club, with round-range,
+// forecast and league selection controls. LeagueTableState is built by league_table_from_game() from an
+// explicit LeagueTableProjectionContext; the screen raises LeagueFamilyRequest values and, in family mode,
+// shares an identity with the other league family screens (league_family_request.hpp).
+// Implementation: league_table.cpp; the numeric dialog lives in league_table_range_dialog.hpp.
 #pragma once
 
 #include <array>

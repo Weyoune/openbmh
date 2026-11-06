@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of synthesize_semantic_cue() (semantic_cues.hpp): builds each cue in code
+// (the whistles from frequency sweeps with attack and release shaping) at 22050 Hz and
+// clamps the result to 16-bit PCM. Pure and deterministic.
 #include "semantic_cues.hpp"
 
 #include <algorithm>

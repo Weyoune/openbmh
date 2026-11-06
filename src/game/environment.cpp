@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Club environment budgets of a human manager (youth teams, academy, co-trainer, doctor,
+// physiotherapist): monthly cost per level, setting a level, and the youth team results and
+// season handover. Reads and writes the budget and youth blocks in the static memory of GameState.
+// advance_youth_teams draws from WatcomRandom; setting levels draws nothing.
+// Interface in environment.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/environment.hpp"
 #include <algorithm>

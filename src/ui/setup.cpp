@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of SetupScreen (setup.hpp): layout tables read from the executable, shared render and hit-testing, and the limits between managers and league/world options.
 #include "formats/executable_layout.hpp"
 #include "ui/setup.hpp"
 

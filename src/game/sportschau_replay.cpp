@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Sportschau replay: converts the logged events of a fixture into the timed steps of the report
+// and re-runs a fixture with a MatchEngine on a copy of the state for the replay.
+// The engine takes the caller's GameRandom and WatcomRandom. Declared in
+// sportschau_presentation.hpp; siblings are sportschau_awards.cpp and sportschau_rating.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/sportschau_presentation.hpp"
 

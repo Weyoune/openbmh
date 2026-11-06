@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Reality scene, fouls and duels: decides whether a duel ends in a foul, whistle, card or
+// injury, and the follow-up steps of the scene. Executes the forced event callback supplied by the
+// caller instead of substituting a default.
+// Reads GameState and the RealitySetup; draws from WatcomRandom. Interface in reality_duel.hpp.
 #include "game/reality_duel.hpp"
 
 #include <algorithm>

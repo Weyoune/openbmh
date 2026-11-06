@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Cup draw screen: shows a cup round draw (or group overview) as captured at a hook of the season engine.
+// CupDrawProjection is an owned snapshot (entry order, heading, footer, group rows); the renderer never
+// advances cup state or consumes either game random generator. Built by cup_draw_from_game(),
+// presented by CupDrawScreen. Implementation: cup_draw.cpp.
 #pragma once
 
 #include <array>

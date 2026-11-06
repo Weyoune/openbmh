@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// All-or-nothing wrapper for one UI window action on a CareerSession (used by
+// desktop_actions.cpp and window_actions.cpp). It snapshots the game state, the RNG and the
+// revision counter, runs the action and, if the action returns false or throws, restores
+// all three, so a rejected action leaves no half-applied change behind.
+// apply_native() is the variant for owners that keep their state in CareerSession::state().
+// Header-only; owns no state of its own.
 #pragma once
 
 #include "app/career_session.hpp"

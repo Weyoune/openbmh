@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// League pairings screen: the fixture view of a league round (filtered, postponed and per team),
+// paging preferences and the computer tip (predicted results) for the shown round.
+// Reads and writes GameState (memory preferences, squad data) through the screen owner struct.
+// Computer tips use the game generator; closing the screen reseeds both generators via
+// stir_random. Interface in league_pairings.hpp; the tip arithmetic is shared with source_tip.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/league_pairings.hpp"
 

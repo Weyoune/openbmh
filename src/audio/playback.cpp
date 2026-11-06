@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of Playback (playback.hpp): opens the SDL audio device, feeds either the
+// OriginalSynth from the SDL callback (original mode) or bounded blocks from the Mixer via
+// pump() (software mode), and maps original ids and semantic cues to sound played on the
+// device. Duplicate or out-of-order event ids are rejected before anything is played;
+// shutdown() releases the device.
 #include "playback.hpp"
 
 #include <algorithm>

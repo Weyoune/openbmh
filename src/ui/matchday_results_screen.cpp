@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements MatchdayResultsScreen declared in matchday_results_screen.hpp: lays the groups and matches out
+// into rows and pages, draws names and scores with the original font, and handles paging and close input.
+// Presentation only; the data comes from matchday_results.cpp.
 #include "ui/matchday_results_screen.hpp"
 
 #include <algorithm>

@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Calendar epoch (start year and weekday of the season calendar), read from the date setup code
+// of the loaded executable image. Unknown or unverified setups are rejected with FormatError.
+// Holds one process-wide installed epoch; reads no GameState and draws no random numbers.
+// Declared in calendar.hpp.
 #include "game/calendar.hpp"
 #include "formats/executable_layout.hpp"
 #include "formats/le.hpp"

@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the Reality scene movement layer: per-iteration move context and the attacker/
+// defender move functions implemented in reality_movement.cpp (WatcomRandom as declared below).
 #pragma once
 
 #include "game/reality_space.hpp"

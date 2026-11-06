@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the synthetic matchday loop (music_fallback.hpp): a fixed 22050 Hz,
+// 108 bpm, 8-bar sequence of bass, chord and lead notes defined by constant MIDI tables,
+// rendered to mono PCM16. No game state or randomness is involved, so the output is the
+// same on every run.
 #include "music_fallback.hpp"
 
 #include <algorithm>

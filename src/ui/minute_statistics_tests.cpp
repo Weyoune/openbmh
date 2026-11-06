@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the minute statistics projection and overlay (ui/minute_statistics.hpp).
 #include "ui/minute_statistics.hpp"
 
 #include <iostream>

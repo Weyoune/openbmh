@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the computer tip score function implemented in source_tip.cpp. It consumes
+// GameRandom draws, including the final goal-cap draw, and touches no GameState.
 #pragma once
 
 #include <array>

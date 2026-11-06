@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the pre-match preparation flow: owner handling, pending acknowledgements, and expiry/close behaviour of the stadium, balance and advertising pages.
 #include "formats/executable_layout.hpp"
 #include "ui/flow.hpp"
 

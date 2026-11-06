@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the club info screen declared in club_info.hpp: club_info_from_game() builds the player rows
+// (including loan projections and manager board data for human clubs), and ClubInfoScreen renders both data
+// views and converts button and row clicks into ClubInfoRequest values. It does not change the game itself.
 #include "formats/executable_layout.hpp"
 #include "ui/club_info.hpp"
 

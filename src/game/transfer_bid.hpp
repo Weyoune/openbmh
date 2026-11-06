@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Request/result types for rating a transfer bid (source slot, list entry and ownership are
+// supplied by the caller, which owns the career-mode decisions).
+// Header only; the functions that use these types take WatcomRandom and a MinuteReport as shown below.
 #pragma once
 
 #include <cstdint>

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of statistics_rankings_from_game() and StatisticsRankingsScreen (statistics_rankings.hpp): season paging, category buttons with press/cancel handling, and list drawing.
 #include "formats/executable_layout.hpp"
 #include "ui/statistics_rankings.hpp"
 

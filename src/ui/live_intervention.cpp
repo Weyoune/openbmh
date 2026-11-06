@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the live intervention helpers and dialog declared in live_intervention.hpp: building and
+// validating substitution, formation, position and tactic proposals against the copied context, serialising
+// a proposal to JSON, and rendering the lineup, formation and tactics pages. Proposals are descriptive only.
 #include "ui/live_intervention.hpp"
 
 #include "formats/binary.hpp"

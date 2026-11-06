@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of transfer_history_from_game() and TransferHistoryScreen (transfer_history.hpp): row decoding, date formatting and row drawing over the underlay.
 #include "formats/executable_layout.hpp"
 #include "ui/transfer_history.hpp"
 

@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Minimal JSON value type for the CLI protocol (no external library). A Json holds null,
+// bool, a 64-bit integer, string, array or object (std::map) in one std::variant; the
+// accessors return null pointers when the type does not match, so callers must check.
+// Numbers are integers only. parse_json() throws JsonError on bad input; dump_json() writes
+// compact text. Used by protocol.*, seat_hub.cpp and main.cpp; implemented in json.cpp.
 #pragma once
 
 #include <cstdint>

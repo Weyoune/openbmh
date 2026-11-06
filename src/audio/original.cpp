@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of OriginalSynth (original.hpp). The hidden State holds the parsed
+// songs, tracks, channels, sample banks and the Nuked-OPL3 chip core (src/audio/third_party);
+// tick() runs one sequencer step of the original timer interrupt, render() produces output
+// samples from the chip and the PCM channel. load() validates every input and fails
+// cleanly on malformed data; the register and sample observers exist only for offline
+// validation (original_validation.cpp, sound_driver.cpp).
 #include "original.hpp"
 #include "container.hpp"
 #include "third_party/nuked-opl3/opl3.h"

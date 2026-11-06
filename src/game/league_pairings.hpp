@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the league pairings screen: constants, owner state, tip result and view types
+// and the open/move/close functions implemented in league_pairings.cpp. No mutator here calls a
+// presenter, advances a day or saves; generators are passed in by the caller where needed.
 #pragma once
 
 #include <array>

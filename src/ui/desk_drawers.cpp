@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements DeskDrawerRenderer and source_drawer_team() declared in desk_drawers.hpp: loads the drawer icons
+// and font and draws each drawer kind from the read-only DeskState. It is used by DesktopScreen
+// (desktop.cpp) and writes only into the target image.
 #include "formats/executable_layout.hpp"
 #include "ui/desk_drawers.hpp"
 

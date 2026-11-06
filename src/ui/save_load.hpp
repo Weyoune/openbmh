@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// File picker screen for loading and saving games, menu layouts and settings files. State: directory listing,
+// selection and scroll, typed filename, overwrite confirmation and info popup. It never reads or writes the
+// chosen file itself: a click or key produces a pending SaveLoadRequest (action, path, overwrite flag) that the
+// session performs and then confirms with acknowledge() or reject(). Implemented in save_load.cpp.
 #pragma once
 
 #include <cstdint>

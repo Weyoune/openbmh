@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the Reality scene motion layer: figure motion and path types, grid and the
+// functions of reality_motion.cpp. Deliberately independent of GameState and both generators.
 #pragma once
 
 #include <array>

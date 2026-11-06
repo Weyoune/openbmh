@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Team strengths screen for one league: sortable columns (condition, technique, form, morale and position
+// averages), league selector and group toggle, with links to pairings, table and team info. Renders a
+// StrengthsState; clicks become a pending StrengthsRequest with identity guards that the session acknowledges
+// or rejects. The projection and control-word rules live in strengths_state.hpp. Implemented in strengths.cpp.
 #pragma once
 
 #include "formats/font.hpp"

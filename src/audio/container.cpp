@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of container.hpp: parse_container() checks the FORM/ALPTRAUM header and
+// walks the adjacent little-endian chunks (no alignment byte) with bounds checks, filling
+// a Container of offsets; decode_sample() and decode_original_cue() convert the bounded
+// sample data to PCM. Pure functions on byte spans, no state; failures are reported through
+// the std::string& error argument and a false result.
 #include "container.hpp"
 
 #include <algorithm>

@@ -1,5 +1,6 @@
 #include "../../tests/test_inputs.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for OutgoingTransferScreen: calculator typing and cancellation, process-timer expiry, and the submit/cancel/info requests.
 #include "ui/outgoing_transfer.hpp"
 
 #include <cstdio>

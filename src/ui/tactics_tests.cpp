@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for TacticsScreen: projection of board and options, wrap-around of arrows and wings, and that requests do not fake committed state.
 #include "formats/executable_layout.hpp"
 #include "ui/tactics.hpp"
 

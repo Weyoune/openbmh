@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface for the club environment budgets (youth teams, academy, co-trainer, doctor,
+// physiotherapist): item enum, monthly cost steps, state view and the functions implemented in
+// environment.cpp. Setting a level draws no random number; youth match results use WatcomRandom.
 #pragma once
 #include <array>
 #include <cstdint>

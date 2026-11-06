@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for TrainingCampScreen: deterministic rendering, hover restore, duplicate-input blocking while pending, and acknowledged focus updates.
 #include "formats/executable_layout.hpp"
 #include "../../tests/test_inputs.hpp"
 #include "ui/training_camp.hpp"

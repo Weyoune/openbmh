@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Sportschau (sports show) presentation screens: competition winner page, the intro animation, the matchday
+// intro, the eleven-player selection, team info and the matchday report. All are pure renderers over owned
+// inputs and original art; they hold no match or engine state. Timing, input pumping and audio belong to the
+// caller, and palette overrides are exposed for the caller to install. Implemented in sportschau.cpp.
 #pragma once
 
 #include <array>

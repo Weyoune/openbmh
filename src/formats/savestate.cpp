@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the savegame stream layout (savestate.hpp). save_layout() lists the
+// blocks in the exact order the original wrote them, with sizes that are constants or depend
+// on DbCounts; the SaveState constructor splits a decrypted stream along that list, reads
+// the four string-pool trailer blocks and the optional OpenBMH extension, and throws
+// FormatError if the sizes do not add up. append_save_extension() writes that extension.
 #include "formats/executable_layout.hpp"
 #include "formats/savestate.hpp"
 

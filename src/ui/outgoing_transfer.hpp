@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interactive editor for an outgoing transfer bid (fee, monthly salary, contract years, seven bonus fields
+// and a loan quote toggle) with the original number calculator. State: OutgoingTransferEditorState wrapping the
+// shared incoming-transfer panel, plus a confirmed copy. Edits become typed OutgoingTransferRequests (edit field,
+// quote change, team/player info, submit, cancel) with identity guards; the session acknowledges with a new
+// state or rejects. The renderer must not invent calculator limits: they are supplied by the caller.
+// Implemented in outgoing_transfer.cpp.
 #pragma once
 
 #include <array>

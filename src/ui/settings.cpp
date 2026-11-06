@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of SettingsScreen, SettingsReadmeScreen and settings_from_game() (settings.hpp): row/column
+// layout from the executable, toggle and arrow handling, availability rules, and the readme text viewer.
+// Raw bytes are preserved; availability bits and the value 2 are not treated as booleans.
 #include "formats/executable_layout.hpp"
 #include "ui/settings.hpp"
 

@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Manager intervention while a watched match is paused: substitutions, formation, player position and
+// tactic changes. LiveInterventionContext is a copied view; the propose_live_* helpers only turn an existing
+// preparation request into a LiveInterventionProposal (accepted or rejected with a reason) and never write
+// GameState or draw random numbers. LiveInterventionDialog presents the pages and reports resume or
+// proposal events. Implementation: live_intervention.cpp.
 #pragma once
 
 #include <array>

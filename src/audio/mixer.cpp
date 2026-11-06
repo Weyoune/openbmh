@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of Mixer (mixer.hpp). Incoming PCM is resampled to the output rate with
+// range and overflow checks and a total/per-voice byte ceiling (2 MiB overall, an eighth of
+// that per voice); mix_block() sums music and active voices into the output block, applies
+// the volume and advances the cursors (the music loops).
 #include "mixer.hpp"
 
 #include <algorithm>

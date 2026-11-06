@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Minute-by-minute match simulation: chances and goals, shooter/assistant/taker picking,
+// fouls, cards, injuries, substitutions and tactics changes, producing a MinuteReport per minute.
+// Reads and writes the match state in GameState and the MatchGroup fixtures it was built with.
+// Draws from both generators (WatcomRandom and GameRandom); the draw counts are compared with
+// recordings in regression tests.
+// MatchEngine is declared in match_engine.hpp; driver.cpp calls it.
 #include "formats/executable_layout.hpp"
 #include "game/match_engine.hpp"
 

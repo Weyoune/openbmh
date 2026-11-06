@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Club info screen: the squad list of a club with two data views, statistics, category change and a jump
+// into the player detail card. ClubInfoProjection is the owned, read-only input built by club_info_from_game();
+// the screen raises ClubInfoRequest values (close, toggle view, statistics, category, player detail) that the
+// session or flow handles. The same projection is also used for the lineup screen.
+// Implementation: club_info.cpp.
 #pragma once
 
 #include <array>

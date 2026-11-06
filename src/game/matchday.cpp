@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Matchday processing shared by all competitions: match results into club tables, cards and
+// statistics, bonus payments, morale and player development after a match, league screens
+// and rating of the manager, plus stir_random (reseeding both generators).
+// Reads and writes GameState (players, tables, manager records, memory).
+// Draws from GameRandom and WatcomRandom as named at each use below.
+// Interface in matchday.hpp; the matches are set up in matchday_setup.cpp and played in driver.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/environment.hpp"
 #include "game/matchday.hpp"

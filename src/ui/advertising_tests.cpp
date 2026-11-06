@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the advertising projection, rendering and request handling (ui/advertising.hpp).
 #include "formats/executable_layout.hpp"
 #include "ui/advertising.hpp"
 #include "ui/source_notice_test_helpers.hpp"

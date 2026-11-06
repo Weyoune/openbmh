@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Shared request types for the family of league screens (table, pairings and the strengths page).
+// StrengthsIdentity is the ownership token (manager, club, league, revision, scope, sequence, family
+// nonce) that guards against stale requests; LeagueFamilyRequest describes navigation, close, team info,
+// control, league selection and table dialog replies. league_table.hpp and league_pairings.hpp use these
+// types to talk to the session.
 #pragma once
 
 #include <cstdint>

@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Reality scene, ball decisions: shot or pass choice and scoring, blockers on a path, duel and
+// dribble outcomes and applying the result to the scene.
+// Reads GameState (players, tactics) and the RealitySetup; mutates the owned scene structures.
+// Draws from WatcomRandom (and takes GameRandom as a parameter). Interface in reality_ball.hpp;
+// driven by reality_scene.cpp.
 #include "game/reality_ball.hpp"
 #include "game/reality_duel.hpp"
 

@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Table prediction and season bonus: predicted final league position of a team, the season
+// bonus paid to a manager and the expected bonus for players.
+// Reads GameState (tables, tactics boards, manager records); season_bonus can book the payment.
+// Draws no random numbers. Interface in prediction.hpp; included by desk.cpp and balance_plan.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/prediction.hpp"
 

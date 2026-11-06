@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Toto (football pools) screen: eleven matches with home/away picks, stake entry and the previous week tips
+// and winnings. TotoState is projected from the GameState by toto_from_game(). Submitting produces a
+// TotoRequest with the tips and stake plus revision guards; the session answers via acknowledge() or
+// reject_action(). Implemented in toto.cpp.
 #pragma once
 
 #include <array>

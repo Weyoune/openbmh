@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Business plan (balance plan) screen of a human manager: builds a draft of the plan rows
+// (income, running costs, shares and loans, catering, ticket price), checks per-row maxima when
+// the player edits a row and writes the accepted plan back on close.
+// Reads and writes the manager records in GameState (manager_records); reads schedule, table and
+// prediction data for the forecast. Draws no random numbers.
+// Interface in balance_plan.hpp; monthly bookings of similar figures live in month.cpp / week.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/environment.hpp"
 #include "game/balance_plan.hpp"

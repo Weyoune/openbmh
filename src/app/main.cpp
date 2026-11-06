@@ -1,4 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Entry point of the SDL front end (openbmh_play) and the owner of everything the player
+// sees and hears: window, renderer, 320x240 indexed canvas, audio Playback, quit handling.
+// It parses the command line, resolves the game data (src/launch), builds ui::StartupFlow and
+// then runs the event loops. The request/acknowledge model works like this:
+//   - Input events go to the StartupFlow; a click or key may return a FlowResult carrying a
+//     FlowRequest (kickoff, desk action, transfer, save/load, ...).
+//   - main.cpp's handle() passes that result to app::serve_flow_request() (controller.cpp),
+//     together with the shared revision counter and a large set of presenter lambdas.
+//   - The controller asks the CareerSession (career_session.cpp, the engine side) to do the
+//     work and acknowledges the outcome to the flow; the engine may call a presenter lambda
+//     back, synchronously, to show a modal dialog or a live match frame, which runs its own
+//     nested event loop here until the player answers.
+//   - A non-empty message from the controller is printed to stderr; "career_complete" ends
+//     the program; the screen is redrawn only when the flow marks it dirty.
+// The engine never draws and the UI never advances the engine on its own.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "app/start_screen.hpp"

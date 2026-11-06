@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Mouse pointer for the pitch page. SDL owns the pointer position; the UI only hands over
+// the original 11x11 pixel bitmap (121 ARGB values). PitchPointer builds an SDL colour
+// cursor from it, enlarged by an integer scale derived from the window size in points, and
+// caches it until the pixels or the scale change. set_default() sets the bitmap used on all
+// other pages. Header-only; the cursor is freed in clear() / the destructor.
 #pragma once
 
 #include <SDL.h>

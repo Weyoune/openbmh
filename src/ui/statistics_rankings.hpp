@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Historical title rankings page (nine title lists across seasons) opened as a child of the statistics menu.
+// StatisticsRankingState holds title holders, club names and colors per category plus the visible page;
+// statistics_rankings_from_game() builds it. Clicking a category yields a typed request for the parent menu
+// (select_category or close). Implemented in statistics_rankings.cpp.
 #pragma once
 
 #include <array>

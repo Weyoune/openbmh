@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the alternate score screen declared in game_end_alternate.hpp: loading assets, the calculator
+// buttons and presets, text and mouse input, the point-by-point drawing phase and rendering of each phase.
+// It reports state through phase(), value() and accepted_value(); the caller decides what to do with them.
 #include "formats/executable_layout.hpp"
 #include "ui/game_end_alternate.hpp"
 

@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the player detail screen: selection and context types (squad vs market pool row,
+// loan data, national mode) and the functions implemented in club_player_detail.cpp.
+// Context building is read-only; actions take both generators (GameRandom, WatcomRandom) and
+// a MinuteReport, as documented at each declaration below.
 #pragma once
 
 #include <array>

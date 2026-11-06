@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the strengths projection and settings-word helpers (strengths_state.hpp). Pure projection:
+// throws FormatError for incomplete save state and uses no RNG; settings words are returned, never stored.
 #include "formats/executable_layout.hpp"
 #include "ui/strengths_state.hpp"
 

@@ -1,3 +1,4 @@
+// Tests for the analytics projection, toggles and acknowledgement (ui/analytics.hpp).
 #include "../../tests/test_inputs.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"

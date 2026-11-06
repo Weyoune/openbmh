@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Data model for the Other games screen: identity guards, typed request, display and table rows, and the
+// projection struct. other_games_state_from_game() formats immutable game bytes into display strings while the
+// GameState is available. Opening and navigation writes belong to the session, never to this value adapter.
+// Paired with other_games.hpp/other_games.cpp (renderer) and other_games_state.cpp.
 #pragma once
 
 #include <array>

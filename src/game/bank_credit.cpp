@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Bank credit dialog: loans from the bank or from another manager, held in the per-manager loan
+// matrix of the manager records. Implements the amount/fee/monthly-payment arithmetic (with the
+// original's extended-precision rounding emulated in integers), draft editing with bounds, and
+// the interest-rate change. Reads the manager records and executable tables via BankCreditContext;
+// only change_bank_credit_interest writes GameState here. Draws no random numbers.
+// Types are declared in bank_credit.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/bank_credit.hpp"
 

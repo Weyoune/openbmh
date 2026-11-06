@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the all-time table declared in alltime_table.hpp: alltime_table_from_game() collects and sorts
+// the per-club records for the chosen nation, and AllTimeTableScreen draws the table and buttons and queues
+// requests for the owning screen. It does not modify game state.
 #include "formats/executable_layout.hpp"
 #include "alltime_table.hpp"
 #include <algorithm>

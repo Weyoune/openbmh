@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Test driver for the setup screen: needs the original data directory as its single argument and checks defaults, limits, requests and rendering size.
 #include <cstdio>
 #include <stdexcept>
 

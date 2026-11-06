@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements LeagueTableRangeDialog declared in league_table_range_dialog.hpp: draws the calculator-style
+// numeric dialog over its backdrop, handles pointer, key and text input, and produces a
+// TableRangeDialogOutcome. It requires an explicit text mode from the caller instead of guessing a setting.
 #include "formats/executable_layout.hpp"
 #include "ui/league_table_range_dialog.hpp"
 

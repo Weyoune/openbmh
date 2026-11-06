@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the finance totals page declared in finance_totals.hpp: finance_totals_from_game() collects the
+// row values and formats them with the game's currency settings, and FinanceTotalsScreen draws them.
+// Row 4 is a group separator without a value. Presentation only.
 #include "formats/executable_layout.hpp"
 #include "finance_totals.hpp"
 

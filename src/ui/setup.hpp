@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Start-up setup screen: season duration, difficulty, number of managers, game mode and league/world options,
+// with buttons to start a new game or load one. State: SetupOptions in the original representation (duration 5 =
+// unlimited, difficulty 0..9 shown as 1..10). It mutates only its own options; a click can return a
+// SetupRequest (new or load) for the caller to act on. Implemented in setup.cpp.
 #pragma once
 
 #include <array>

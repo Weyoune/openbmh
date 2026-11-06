@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Per-match environment values of the match engine: weather and temperature by month and region,
+// crowd bonus for the home side, and the start-of-match tactics choice for computer teams.
+// Reads GameState (clubs, month, spectators); the match state is filled by the caller.
+// Draws from WatcomRandom (weather, crowd, substitution mode); the minute simulation itself is
+// match_engine.cpp. Interface in match.hpp.
 #include "game/match.hpp"
 
 #include <cstdlib>

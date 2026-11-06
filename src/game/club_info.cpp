@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Club information screen preparation: sets the line-up markers (first eleven / bench) in the
+// club's squad_slots, clears markers of injured players and applies the chosen player category.
+// Reads players and squad ranges, writes squad_slots in GameState. Draws no random numbers.
+// Interface in club_info.hpp; line-up rules themselves are in lineup.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/club_info.hpp"
 #include <stdexcept>

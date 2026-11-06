@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Aggregate pre-match state: PreparationState bundles the Desk, lineup, training, training camp, bank, stadium,
+// toto, transfer market, tactics, pitch extras and player cards under one revision, and PreparationRequest is
+// the variant of all their requests. preparation_from_game() builds it without executing the engine.
+// Used by the startup flow (flow.hpp, preparation_flow.cpp); implemented in preparation.cpp.
 #pragma once
 
 #include <variant>

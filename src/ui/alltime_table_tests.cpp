@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the all-time table projection and ordering (ui/alltime_table.hpp).
 #include "formats/executable_layout.hpp"
 #include "alltime_table.hpp"
 #include "game/table.hpp"

@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of StadiumScreen and stadium_data_from_game()/stadium_data_points() (stadium.hpp): rendering of
+// the scene, investment dialogs, block calculator and data page, pointer and key handling, and request
+// construction. Source-tick timing for the calculator is advanced by the caller.
 #include "formats/executable_layout.hpp"
 #include "ui/stadium.hpp"
 

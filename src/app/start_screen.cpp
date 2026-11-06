@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of StartScreen (start_screen.hpp): decodes the embedded JPEG
+// (start_screen_data.hpp) with stb_image into an RGB24 texture, switches the renderer's
+// logical size to the image size while presenting and restores the previous logical size in
+// the destructor. Errors are reported as std::runtime_error; the stb_image implementation
+// is compiled into this file only (JPEG decoding, no stdio).
 #include "app/start_screen.hpp"
 #include "app/start_screen_data.hpp"
 #include <SDL.h>

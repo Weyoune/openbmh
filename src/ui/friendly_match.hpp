@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Friendly match booking screen: opponent choice, venue, quote and cost confirmation, calendar date choice,
+// owner approval and booking. FriendlyStage tracks the progress; FriendlyMatchRequest (quote or book) is a
+// controller-facing value to which the app adds and validates revision, manager and request id before calling
+// the engine helpers. The screen itself does not change game state. Implementation: friendly_match.cpp.
 #pragma once
 
 #include <array>

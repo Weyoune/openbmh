@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of parse_json()/dump_json() (json.hpp): a small recursive-descent Parser
+// over a string_view that reports the byte position in JsonError messages, UTF-8 handling
+// for string escapes, and a serializer for the Json variant. No state beyond the parser's
+// position in the input.
 #include "cli/json.hpp"
 
 #include <charconv>

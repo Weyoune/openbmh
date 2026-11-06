@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the Reality reporter: frame and state types and the initialise/report functions
+// implemented in reality_reporter.cpp. The scene owner supplies the frame values.
 #pragma once
 
 #include <string>

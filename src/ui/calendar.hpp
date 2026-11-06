@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Season calendar screen (July to June grid) including the reschedule-match mode.
+// CalendarScreen renders a CalendarState (built in calendar_state.cpp) and raises a RescheduleAction
+// (move or undo a league match to a target day) through pending_reschedule(); the owner applies it and
+// answers with acknowledge_reschedule() or reject_reschedule(). calendar_cell() gives the cell geometry.
+// Implementation: calendar.cpp; the read-only projection lives in calendar_state.hpp/calendar_state.cpp.
 #pragma once
 
 #include "formats/font.hpp"

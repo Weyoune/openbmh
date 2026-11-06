@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Matchday setup: builds the match groups of a calendar day (descriptors, teams, weather,
+// attendance and catering income, winter postponements, indoor tournament, live match choice,
+// kick-off) and the football pools coupon.
+// Reads and writes GameState (memory descriptors, squad_slots, manager records).
+// Draws heavily from WatcomRandom and also from GameRandom (see the calls below).
+// Interface in matchday_setup.hpp; results are handled in matchday.cpp and driver.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/matchday_setup.hpp"
 #include "game/trace.hpp"

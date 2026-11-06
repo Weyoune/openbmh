@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Minute statistics page: an overlay chart of four stored 18-byte series from the manager record, drawn on
+// top of the accepted underlay of the parent statistics page (page 8). MinuteStatisticsProjection keeps every
+// stored byte. MinuteStatisticsScreen only renders and closes on a source event code; it adds no title or
+// controls. Built by minute_statistics_from_game(). Implementation: minute_statistics.cpp.
 #pragma once
 
 #include <array>

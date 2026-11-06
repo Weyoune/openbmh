@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Reality scene geometry and motion: direction quantisation on the pitch grid, projection to
+// screen positions from the executable's tables, per-figure motion, paths and grid placement.
+// Independent of GameState and draws no random numbers. Interface in reality_motion.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/reality_motion.hpp"
 

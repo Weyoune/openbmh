@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the top scorers view: metric and scope enums, row type and the ranking function
+// implemented in top_scorers.cpp. Read-only; no random numbers are drawn.
 #pragma once
 
 #include <cstdint>

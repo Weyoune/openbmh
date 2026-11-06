@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Decides which club badge tokens the original draws as a fallback instead of an individual
+// crest. The cut-off for foreign clubs differs between game editions, so it is read from one
+// instruction in the loaded executable (layout::ForeignBadgeGateInstruction) and stored in the
+// process-wide original_foreign_badge_end by install_original_badge_policy(). An executable
+// that does not match the verified pattern falls back to 138. Header-only; the club
+// selectors themselves stay in the database and savegame data.
 #pragma once
 
 #include "formats/executable_layout.hpp"

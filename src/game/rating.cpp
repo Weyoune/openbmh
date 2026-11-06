@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Player and team ratings: player_value weighs selected attributes (condition, technique,
+// skills, form) and team_rating adds corrections for human managers' players and per-position terms.
+// Reads players and tactics boards in GameState; the generators come from the RatingContext.
+// Draws from WatcomRandom through that context in the human-board corrections and for teams
+// without squads. Interface in rating.hpp.
 #include "game/rating.hpp"
 
 #include <array>

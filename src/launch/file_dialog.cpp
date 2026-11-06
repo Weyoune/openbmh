@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of choose_game_file() (file_dialog.hpp) with the native file dialog
+// library (nfd): one filter for ZIP, 7z and EXE files. Returns std::nullopt when the user
+// cancels and throws std::runtime_error when no dialog can be shown. It only picks a path;
+// whether the file is a usable game is decided later by game_data.cpp.
 #include "launch/file_dialog.hpp"
 
 #include <stdexcept>

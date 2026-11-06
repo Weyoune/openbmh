@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements minute_statistics_from_game() and MinuteStatisticsScreen declared in minute_statistics.hpp:
+// copies the four stored series for a manager and draws the chart atlas and text over the supplied
+// underlay. handle_source_event() sets the closed flag; no game state is written.
 #include "formats/executable_layout.hpp"
 #include "ui/minute_statistics.hpp"
 

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for TrainingScreen: squad projection, skill bars, blocking of input while a request is pending, rejection, and right-button return to the desktop.
 #include "formats/executable_layout.hpp"
 #include "ui/training.hpp"
 

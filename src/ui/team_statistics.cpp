@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the team statistics projection and screen (team_statistics.hpp): league calculations, record and head-to-head panels, badge drawing and the position-history chart.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/team_statistics.hpp"

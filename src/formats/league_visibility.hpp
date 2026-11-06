@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Reads from the loaded executable how many league levels a player can see; the original
+// separates internal domestic league slots from these visible levels. Throws
+// std::invalid_argument when the stored constants fail the sanity check. Header-only,
+// stateless; the address comes from executable_layout.hpp and the image from le.hpp.
 #pragma once
 #include "formats/executable_layout.hpp"
 #include "formats/le.hpp"

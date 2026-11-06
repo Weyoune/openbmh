@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Player detail screen opened from a club squad or the market pool: resolves the selection to a
+// squad slot, builds the context (loans, national nomination mode, pending offers) and runs the
+// actions the screen offers (market value, add to national squad, offers).
+// Reads and writes players, squad_slots and manager data in GameState.
+// Draws from WatcomRandom (market value, adding to a squad) and reseeds both generators via
+// stir_random. Interface in club_player_detail.hpp; related code in national.cpp and weekly.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/club_player_detail.hpp"
 

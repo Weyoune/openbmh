@@ -1,3 +1,4 @@
+// Tests for the finance totals projection (ui/finance_totals.hpp).
 #include "../../tests/runtime_fixture_tables.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"

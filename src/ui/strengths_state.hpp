@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Data model for the strengths screen: control enum, identity guards, row and projection types, and the age
+// scratch cache. strengths_from_game() projects one manager league; the *_source helpers reproduce the
+// original settings-word handling (draw words, control words, family word) and only return values, the owner
+// decides whether to persist them. Paired with strengths.hpp/strengths.cpp.
 #pragma once
 
 #include <array>

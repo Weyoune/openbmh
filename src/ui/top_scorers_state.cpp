@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the helpers declared in top_scorers_state.hpp, building the top scorers state from the GameState.
 #include "ui/top_scorers_state.hpp"
 
 #include <stdexcept>

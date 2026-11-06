@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the series records projection: independent source flag columns and the combined home/away column.
 #include "formats/executable_layout.hpp"
 #include "series_records.hpp"
 

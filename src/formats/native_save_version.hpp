@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Accepted savegame version markers for the native (original-layout) save format. The FBM
+// container (fbm.hpp) carries a version string; V2.24 and V3.7 share the same block order,
+// while expanded careers use their own marker (O1.1) and layout. require_native_savegame()
+// throws FormatError on a bad checksum or an unsupported marker; callers still validate the
+// full state layout afterwards (savestate.hpp). Header-only.
 #pragma once
 #include "formats/fbm.hpp"
 #include <string_view>

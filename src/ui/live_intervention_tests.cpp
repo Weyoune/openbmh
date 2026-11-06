@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for live intervention proposals (ui/live_intervention.hpp).
 #include "ui/live_intervention.hpp"
 
 #include <cstdlib>

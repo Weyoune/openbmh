@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the friendly match screen stages and requests (ui/friendly_match.hpp).
 #include "formats/executable_layout.hpp"
 #include "ui/friendly_match.hpp"
 

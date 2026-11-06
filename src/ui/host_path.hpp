@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tiny helper for showing host directory paths in the UI. The legacy font has no usable backslash glyph,
+// so save_directory_label() always formats paths with portable forward separators.
 #pragma once
 
 #include <filesystem>

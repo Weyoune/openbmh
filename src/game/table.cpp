@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// League table computation: adding results with win bonus, sort keys and sorting, and
+// compute_league_table over a range of matchdays for a league.
+// Reads GameState (fixtures and results); returns a LeagueTable. Draws no random numbers.
+// Interface in table.hpp.
 #include "game/table.hpp"
 
 #include <vector>

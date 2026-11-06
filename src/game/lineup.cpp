@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Line-up rules: position types per formation depth, player suitability values, automatic
+// line-up for computer teams and the optimizer for human boards, plus preparing the line-up
+// entry of a team. Reads players, formations and tactics boards; writes squad_slots and boards.
+// Draws from WatcomRandom in two places of the automatic selection (see the rand calls below).
+// Interface in lineup.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/lineup.hpp"
 #include "formats/le.hpp"

@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Balance plan (budget) screen with its calculator dialog and notices.
+// Owns BalanceState (a BalancePlanDraft copy plus captured desktop underlay) and BalanceScreen.
+// Actions (edit row, cycle view, take actuals, close, confirm close) become BalanceRequest values tagged with
+// a BalanceIdentity (revision, scope, sequence); the session applies them, and reject_action() reports refusal.
+// Time-driven parts (notice timer, calculator flash) are fed by the caller through millisecond tick calls.
+// Implementation: balance_plan.cpp.
 #pragma once
 
 #include <optional>

@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Other games Desk screen: competition selector, round arrows, fixture rows and a compact/full display toggle.
+// Renders an OtherGamesState (see other_games_state.hpp) and owns only pressed-button and rejection state.
+// Clicks become a pending OtherGamesRequest (selector slot, round change, team info, close) carrying the
+// identity guards; the session applies it and supplies a new state or calls reject_action. Implemented in other_games.cpp.
 #pragma once
 
 #include <optional>

@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the achievements screen declared in achievements.hpp: achievements_from_game() builds the
+// read-only per-season state (league, cup and Europe result text and graph position) from the game, and
+// AchievementsScreen renders it over the supplied underlay and answers pointer input.
+// The only request it can raise is a close request; it never writes game state.
 #include "formats/executable_layout.hpp"
 #include "ui/achievements.hpp"
 

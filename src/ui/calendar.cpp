@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements CalendarScreen from calendar.hpp: draws the July-to-June calendar grid and day information from
+// a CalendarState, tracks the selected day, and turns clicks in reschedule mode into RescheduleAction requests.
+// It pairs with calendar_state.cpp, which builds the state; this file changes no game data.
 #include "formats/executable_layout.hpp"
 #include "ui/calendar.hpp"
 #include "game/schedule.hpp"

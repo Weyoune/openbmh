@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Team statistics page (home, away or combined) for one club in a league: table figures, strength averages,
+// season record, head-to-head against the active manager and position history. TeamStatisticsProjection is an
+// owned, read-only input built from the league table model; the screen draws it. Implemented in team_statistics.cpp.
 #pragma once
 
 #include <array>

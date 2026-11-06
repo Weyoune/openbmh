@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Debug mode (command line -debug): a process-wide, mutex-protected log file plus numbered
+// automatic savegames, both kept in one folder. State is a function-local static; every
+// function is a no-op until init() has succeeded, so callers may log unconditionally.
+// init() also redirects stderr into the same folder. Header-only.
 #pragma once
 
 #include <chrono>

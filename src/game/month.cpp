@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Monthly processing: new transfer list entries and free agents, return of loans, monthly expenses
+// and income, shares and loans, market value and contract demands/offers/bonuses, and the
+// month change itself.
+// Reads and writes GameState (transfer list in memory, squad_slots, players, manager records).
+// Draws from WatcomRandom (list generation, demands); no GameRandom draws are made here.
+// Interface in month.hpp; called from turn.cpp, weekly steps are in weekly.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/environment.hpp"
 #include "game/month.hpp"

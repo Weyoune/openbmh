@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of series_records_from_game() and SeriesRecordsScreen (series_records.hpp): record decoding, streak tables and text drawing with the original font.
 #include "formats/executable_layout.hpp"
 #include "series_records.hpp"
 

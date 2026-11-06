@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Drawer content for the manager desk (desktop.hpp): folder, rank curve, recent matches, head-to-head,
+// rank/strength, opponent name and badge views.
+// DeskDrawerRenderer draws only the content; the caller keeps the native drawer frame. The paired-drawer
+// selection helper source_drawer_team() maps a drawer kind to a team from the DeskState.
+// Implementation: desk_drawers.cpp.
 #pragma once
 
 #include <filesystem>

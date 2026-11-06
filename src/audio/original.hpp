@@ -1,4 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Emulation of the original game's sound system (MIDI-style sequencer, OPL FM instruments
+// and one Sound Blaster PCM channel) as OriginalSynth. The application reads the sound
+// containers (S/2000..2003) and the frequency/operator tables from the user's executable
+// and hands them in as OriginalAssets; this module knows nothing about game state, file
+// layout, the simulation clock or random generators. command() takes the original sound ids
+// (0 title, 1 desk, 2 intro, 3 crowd, 8 stop, 10..22 effects); render() fills PCM blocks
+// without allocating. Implemented in original.cpp, driven by Playback and the audio tools.
 #pragma once
 
 #include <array>

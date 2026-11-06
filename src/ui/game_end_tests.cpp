@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for source text wrapping and end-of-career rendering (ui/game_end.hpp).
 #include "ui/game_end.hpp"
 
 #include <algorithm>

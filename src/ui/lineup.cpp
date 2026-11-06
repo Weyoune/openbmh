@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the lineup screen declared in lineup.hpp: lineup_from_game() and lineup_from_save() project
+// the squad, and LineupScreen renders both data views and converts clicks into LineupRequest values.
+// Swapping or preparing is done by the session, not here.
 #include "formats/executable_layout.hpp"
 #include "ui/lineup.hpp"
 

@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the Reality scene setup: formations, placement and RealitySetup types and the
+// functions implemented in reality_setup.cpp.
 #pragma once
 
 #include "game/reality_motion.hpp"

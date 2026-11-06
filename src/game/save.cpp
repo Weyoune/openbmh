@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Savegame writing: serialises GameState into the save file layout (header, stream, date text,
+// check bytes) and builds the Savegame record.
+// Reads GameState; make_savegame draws from WatcomRandom (savegame id and two bytes), the same
+// draws counted by save_game_draws in desk.cpp. Interface in save.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/save.hpp"
 #include "game/bank_robbery.hpp"

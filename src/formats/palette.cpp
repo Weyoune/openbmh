@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the palette loader (palette.hpp). load_palette() reads a 256-entry,
+// 6 bits per channel RGB file and converts it to 32-bit ARGB via vga_dac_rgb8();
+// load_optional_embedded_palette() reads the palette that may follow the RLE data of a VGA
+// image file (std::nullopt if there is none); Palette::nearest() returns the index of the
+// closest colour by squared RGB distance. FormatError on short or inconsistent files.
 #include "formats/palette.hpp"
 
 #include "formats/binary.hpp"

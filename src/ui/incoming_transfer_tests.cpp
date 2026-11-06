@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the incoming transfer decision view and requests (ui/incoming_transfer.hpp).
 #include "formats/executable_layout.hpp"
 #include "ui/incoming_transfer.hpp"
 #include "ui/source_notice_test_helpers.hpp"

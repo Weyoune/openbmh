@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of SpriteFont (sprite_font.hpp): glyph interval lookup, width measurement and seven-pixel row blitting from the atlas.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/sprite_font.hpp"

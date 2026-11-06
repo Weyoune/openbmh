@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the league table declared in league_table.hpp: league_table_from_game() and
+// league_tables_from_game() project engine tables into rows (ranks, form bits, highlight colours),
+// and LeagueTableScreen renders them and the control buttons, handles input, and acknowledges family
+// selector changes. Requests go to the session; no game state is written here.
 #include "formats/executable_layout.hpp"
 #include "ui/league_table.hpp"
 

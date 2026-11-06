@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// League pairings screen: the matches of a round with names, results, first legs, dates and temperature,
+// and an active-match packet. LeaguePairingsState is built by league_pairings_from_game() and tagged with
+// a LeaguePairingsIdentity (revision, scope, sequence). The screen raises LeaguePairingsRequest values, and
+// in family mode shares an identity with the league family (league_family_request.hpp).
+// Implementation: league_pairings.cpp.
 #pragma once
 
 #include <optional>

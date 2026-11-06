@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Reader for the original sound container (a FORM/ALPTRAUM chunk wrapper) and for the PCM
+// samples inside it. A Container only lists chunk ids and payload offsets; the payload bytes
+// stay in the caller's buffer, which must outlive any use of the offsets. decode_sample()
+// turns unsigned 8-bit samples into signed 16-bit mono PCM; decode_original_cue() resolves
+// only the PCM-backed effects (original ids 17..22). Pairs with container.cpp; the PCM types
+// are shared by mixer, playback, semantic cues and the music fallback.
 #pragma once
 
 #include <cstddef>

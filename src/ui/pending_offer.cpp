@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the presenters declared in pending_offer.hpp: composes dialog bodies from original text
+// templates and GameState values, and resolves the owning team for a manager, including the restored
+// post-national-desk owner. Read-only with respect to the GameState.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/pending_offer.hpp"

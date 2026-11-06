@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Daily and weekly bookkeeping: daily interest on balances, player training and attribute
+// changes, familiarity decay, auto training, the stock market and the bank robbery month key.
+// Reads and writes GameState (manager records, players, memory).
+// Draws from WatcomRandom (daily interest, familiarity, training) and GameRandom (training).
+// Interface in week.hpp; larger weekly steps are in weekly.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/week.hpp"
 #include "game/calendar.hpp"

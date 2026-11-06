@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of ProcessTimer (process_timer.hpp): countdown arithmetic from host timestamps and the paint routine using the executable layout data.
 #include "formats/executable_layout.hpp"
 #include "ui/process_timer.hpp"
 #include <algorithm>

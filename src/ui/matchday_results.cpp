@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements matchday_results_from_snapshot() declared in matchday_results.hpp: converts a turn result
+// snapshot and the game state into MatchdayResults groups (names, scores, status, cup decision), without
+// modifying either. The result is displayed by matchday_results_screen.cpp.
 #include "formats/executable_layout.hpp"
 #include "ui/matchday_results.hpp"
 

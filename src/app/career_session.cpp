@@ -1,4 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of CareerSession (career_session.hpp): the engine side of the career. It
+// owns the GameState, the two random generators, the turn driver and every "owner" of an
+// open modal window (transfer editor, league table, bank, contracts, ...), and it is the
+// only code the UI flow reaches into for game logic, through the controller.
+// Request/acknowledge model: the UI sends a typed request that carries the revision it
+// observed; the session checks that revision, applies the change (or rejects it with an
+// error text), bumps the revision only when something changed and returns a projection or
+// dispatch result. The front end then acknowledges that result (controller.cpp and the
+// *Actions facades roll the session back if the acknowledgement fails). Live match events and
+// notices flow the other way: the session calls presenter hooks synchronously and waits.
+// This file also contains the checkpoint/restore code used by those rollbacks, the career
+// start (options, manager join), save/load through the .FBM container and autosave.
 #include "formats/native_save_version.hpp"
 #include "formats/badge_policy.hpp"
 #include "game/calendar.hpp"

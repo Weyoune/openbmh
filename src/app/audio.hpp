@@ -1,4 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Glue between the original-audio engine (src/audio/playback.hpp) and the app: builds the
+// asset set from the game's sound containers and the frequency/operator tables read from the
+// executable, derives the music/click/match-sound options from the saved settings bytes of
+// the GameState, and sends sound commands only when the original sound path is ready.
+// OriginalMouseSound is an SDL event watch that plays the click sound on each real mouse
+// button press; it touches only the Playback object, never the GameState, because the
+// watch can run on SDL's event thread. Header-only.
 #include "formats/executable_layout.hpp"
 #pragma once
 

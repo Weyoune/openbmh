@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the live matchday overview declared in live_matchday.hpp: LiveMatchdayScreen and the live
+// projection functions declared there. It only observes engine data copied into frames and does not change
+// the running match.
 #include "formats/executable_layout.hpp"
 #include "ui/live_matchday.hpp"
 

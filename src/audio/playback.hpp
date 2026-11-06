@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Audio output device wrapper (SDL) and the single audio object the application uses.
+// Playback owns the SDL device, a software Mixer (PCM effects, optional music loop) and the
+// OriginalSynth (the full original driver, streamed from SDL's audio callback so modal
+// windows cannot starve it). Cue requests carry a session id and an increasing event id
+// chosen by the controller; submit() consumes each event once and returns a CueStatus.
+// Mute and volume apply to both paths. Pairs with playback.cpp and app/audio.hpp.
 #pragma once
 
 #include "container.hpp"

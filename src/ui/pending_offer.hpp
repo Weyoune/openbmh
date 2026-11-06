@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Pure presenters that turn pending club/player events (transfer offers, loan returns, advertising renewals,
+// stadium construction notices, season-ticket compensation) into TaxDialogProjection dialogs, plus the
+// transfer-decision panel projection. Text stays in the original single-byte encoding until drawn.
+// No state is owned and no game state is changed; the session shows the dialogs and applies the answers.
+// Implemented in pending_offer.cpp.
 #pragma once
 
 #include <string_view>

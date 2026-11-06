@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the Reality scene foul/duel logic: forced-event and sound callbacks, foul cue and
+// result types, implemented in reality_duel.cpp. Draws use WatcomRandom as declared below.
 #pragma once
 
 #include <functional>

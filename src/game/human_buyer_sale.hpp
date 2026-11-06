@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Types for completing the sale of a player to a human buyer (allocator gate, direct mode,
+// result status). The unsaved observations named here are supplied by the caller; missing
+// evidence means "unsupported", never an implicit default.
+// The matching settle_human_buyer_sale function is implemented in weekly.cpp and takes WatcomRandom.
 #pragma once
 
 #include <cstddef>

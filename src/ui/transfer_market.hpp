@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Transfer market screen with three views: market listing, own-squad selling and offer review. TransferMarketState
+// is an owned projection (items, squad, previews, club roster) so no GameState pointer is kept. Actions (bid,
+// list player, open offer, quote preview, poach, review offers) become TransferMarketRequests that the caller
+// applies through the desk actions, then it attaches a new projection or a rejection. Implemented in transfer_market.cpp.
 #pragma once
 
 #include <array>

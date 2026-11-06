@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Player card screen for a player of the active manager squad, with the monthly statistics curves sub-view.
+// State: PlayerCardState (lineup row, club/nationality names, optional loan and statistics context) and local
+// UI flags. Unsupported cases (loan, negotiation) are reported in the state, and no request is sent to the
+// engine. player_card_market_value() deliberately returns unknown where the original draws random numbers.
+// Implemented in player_card.cpp.
 #pragma once
 
 #include "ui/lineup.hpp"

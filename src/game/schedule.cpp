@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// League scheduling: fixture round tables per league size installed from the loaded
+// executable, league sizes and calendar groups, team to league mapping and generation of the
+// fixtures of a matchday.
+// Process-wide tables, no GameState writes and no random numbers. Interface in schedule.hpp;
+// used by table_forecast.cpp, reschedule.cpp and others.
 #include "game/schedule.hpp"
 #include "formats/executable_layout.hpp"
 #include "formats/le.hpp"

@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Advertising (sponsor) screen: board contracts, shirt sponsor, television rights, offers and spending.
+// Owns AdvertisingState (a read-only copy built by advertising_from_game, tagged with a revision) and the
+// AdvertisingRequest values the screen raises (accept offer, set spending, check renewal).
+// Also exposes original_finance_preview(), the monthly income/expense preview shared with the statistics
+// pages and finance_totals.hpp. Implementation: advertising.cpp.
+// Request/acknowledge flow: a request carries manager, club and revision so the session can reject stale input.
 #pragma once
 
 #include <array>

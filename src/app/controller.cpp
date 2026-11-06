@@ -1,4 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the controller (controller.hpp): the request/acknowledge model between
+// the UI flow, the controller and the session.
+//   1. The SDL loop in main.cpp feeds input to ui::StartupFlow, which returns a FlowResult
+//      with a FlowRequest (desk action, transfer, friendly match, load game, ...).
+//   2. serve_flow_request() is the single entry for that request. It rejects requests whose
+//      revision no longer matches (stale UI), or that are blocked by an open owner.
+//   3. It forwards the request to the matching *Actions facade (desktop_actions.*,
+//      window_actions.*), which runs it on the CareerSession inside a rollback transaction.
+//   4. The result is acknowledged back to the flow (for example flow.acknowledge_*,
+//      show_*), which then changes what is drawn; rendering alone never advances the engine.
+//   5. A non-empty return string is an error message (main.cpp prints it); "career_complete"
+//      ends the program. The shared revision counter grows only when state really changed.
+// Presenters (dialogs, live match frames) are optional hooks; an empty hook means the
+// headless default. The anonymous namespace holds friendly-match and national-friendly helpers.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "app/controller.hpp"

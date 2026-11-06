@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the matchday results projection and screen (ui/matchday_results.hpp, ui/matchday_results_screen.hpp).
 #include "formats/executable_layout.hpp"
 #include "ui/matchday_results_screen.hpp"
 

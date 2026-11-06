@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// All-time table screen (cumulative points and goals per club, selectable by nation, absolute or relative).
+// Owns AllTimeTableState (copied from the game, with the parent underlay) and AllTimeTableScreen, which
+// raises AllTimeRequest values (close, select nation, toggle relative) through pending().
+// The owning screen applies them and rebuilds the state. Implementation: alltime_table.cpp.
 #pragma once
 #include <array>
 #include <cstdint>

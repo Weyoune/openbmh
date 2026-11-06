@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the advertising screen declared in advertising.hpp: building AdvertisingState from the game
+// (contracts, offers, spending, texts), rendering, and turning clicks into AdvertisingRequest values.
+// Also holds the monthly finance preview formulas that finance_totals.cpp reuses through
+// original_finance_preview(). Game changes happen only when the session accepts a request.
 #include "formats/executable_layout.hpp"
 #include "game/environment.hpp"
 #include "ui/advertising.hpp"

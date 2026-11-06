@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the bank screen declared in bank.hpp: bank_from_game() builds the state (including formatted
+// number texts and credit lender candidates) from the game, and BankScreen draws the finance, share, fund
+// and credit views and converts input into BankRequest values. State changes happen only after the session
+// accepts a request.
 #include "formats/executable_layout.hpp"
 #include "ui/bank.hpp"
 #include "ui/game_end.hpp"

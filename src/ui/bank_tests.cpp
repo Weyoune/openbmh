@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the bank projection, rendering and request validation (ui/bank.hpp).
 #include "formats/executable_layout.hpp"
 #include "ui/bank.hpp"
 #include "ui/source_notice_test_helpers.hpp"

@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the cup draw screen declared in cup_draw.hpp: cup_draw_from_game() copies the drawn clubs
+// or group table rows into a CupDrawProjection, and CupDrawScreen draws it. It is presentation only and
+// does not change cup or game state.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/cup_draw.hpp"

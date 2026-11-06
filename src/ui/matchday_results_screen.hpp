@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Paged screen listing the matchday results held in a MatchdayResults copy (matchday_results.hpp).
+// MatchdayResultsScreen renders pages, handles click and key input and reports close_requested(); it also
+// offers state_json(). It holds no engine access. Implementation: matchday_results_screen.cpp.
 #pragma once
 
 #include <filesystem>

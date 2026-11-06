@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of preparation_from_game(), load_preparation_reference(), validate_preparation_context() and
+// preparation_request_json() declared in preparation.hpp: assembles each sub-screen projection for the active
+// manager and checks that the parts are consistent.
 #include "formats/native_save_version.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/preparation.hpp"

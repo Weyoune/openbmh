@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the contracts projection and request flow (ui/contracts.hpp).
 #include "ui/contracts.hpp"
 #include "ui/source_notice_test_helpers.hpp"
 #include "ui/manager.hpp"

@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Two Desk statistics screens: the statistics menu (StatisticsMenuScreen) and the Opportunities screen
+// (OpportunitiesScreen), which shows a rank ladder of reachable, possible and secured league positions.
+// State: identity guards (manager, club, day counter, revision) plus the ladder projection and a captured
+// underlay image. Input produces a pending request (mode A..D or close) that the session acknowledges with a
+// new state or rejects; the menu returns a typed request naming the child page to open.
 #pragma once
 
 #include <array>

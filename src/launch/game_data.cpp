@@ -1,4 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of game_data.hpp: recognises the game family from the EXE name and size
+// (German BMH.EXE, English FLTD.EXE, the 1994 disk version as unsupported), checks that
+// the required data files exist with the expected sizes (tables of pictures, badges and
+// common files in this file; file names matched without regard to case), unpacks an archive
+// into the cache directory under a content hash, and resolves directory/EXE/archive input to
+// a ResolvedGame. The English game is converted via fltd.hpp. Problems are collected as text
+// in GameCheck::problems rather than thrown; describe() formats them for message boxes.
 #include "launch/game_data.hpp"
 
 #include <algorithm>

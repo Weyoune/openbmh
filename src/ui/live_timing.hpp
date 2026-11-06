@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Timing helpers for the live match views: live_delay_milliseconds() converts the saved delay setting into
+// milliseconds (values below six are halved, zero disables the pause), and kOriginalRefreshHz records the
+// fixed 70 Hz mode 13h timing that is independent of the host monitor.
 #pragma once
 #include <cstdint>
 

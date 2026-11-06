@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Manager selection screens: selection, name edit, club picker, confirmation and accepted view for one
+// manager slot. ManagerScreen owns only UI choices (ManagerChoice) and works with a SelectionContext, the
+// club order loaded by load_selection_context(). ManagerChoice uses master database club ids, not the remapped
+// team ids of an initialised career; the roster revision guards against applying an id to a later club order.
+// Implementation: manager.cpp.
 #pragma once
 
 #include <array>

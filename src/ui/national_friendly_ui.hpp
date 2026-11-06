@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// National-team friendly flow: a stage machine (picker, venue question, quote, cost and payer questions,
+// calendar, booking) that is only constructed by the verified menu-6 caller, never by the normal Desk menu 23.
+// State: the caller-owned owner token, manager/opponent identities and the current stage.
+// Every step returns an action (open picker, quote, show question, book, return) for the session to carry out;
+// quotes and bookings come back from the session and are only accepted via accept_quote / accept_booking.
+// Implemented in national_friendly_ui.cpp.
 #pragma once
 
 #include <cstdint>

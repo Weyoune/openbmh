@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Semantic sound cues (kickoff whistle, goal, full-time whistle) synthesized in code for
+// use when no verified original effect is available. They are labels of intent, never
+// original sound ids. The generator is deterministic mono PCM16 at 22050 Hz and has no
+// dependency on game state, randomness or rendering; implemented in semantic_cues.cpp.
 #pragma once
 
 #include "container.hpp"

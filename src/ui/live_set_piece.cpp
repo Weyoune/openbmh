@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements live_set_piece_frames() declared in live_set_piece.hpp: derives the camera and sprite
+// placement of a set-piece scene from the event data and the executable layout, using only values that the
+// engine has already drawn.
 #include "formats/executable_layout.hpp"
 #include "ui/live_set_piece.hpp"
 

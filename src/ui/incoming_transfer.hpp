@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Incoming transfer offers: the decision screen where a manager reviews bids on a listed player (four raw
+// bid slots) and accepts or declines. IncomingTransferDecisionView is a read-only copy built from the game;
+// each UI row keeps the engine's bid slot index. The screen raises requests for the session, which applies
+// the transaction. Implementation: incoming_transfer.cpp.
 #pragma once
 
 #include <array>

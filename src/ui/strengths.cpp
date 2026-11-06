@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of StrengthsScreen (strengths.hpp): column and selector drawing, button hit-testing and construction of the pending requests.
 #include "formats/executable_layout.hpp"
 #include "ui/strengths.hpp"
 

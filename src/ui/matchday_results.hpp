@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Immutable UI copy of the results of one matchday, grouped by competition. MatchResultStatus and
+// MatchdayResultMatch carry UTF-8 names and goals (a cup match also records whether it was decided in
+// extra time or on penalties), plus league or cup ids. It owns no engine references.
+// Built by matchday_results_from_snapshot() in matchday_results.cpp and shown by MatchdayResultsScreen.
 #pragma once
 
 #include <cstdint>

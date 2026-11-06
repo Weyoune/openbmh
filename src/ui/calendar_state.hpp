@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Read-only projection of the saved season calendar for the calendar screen (calendar.hpp).
+// CalendarState holds one CalendarDayProjection per display day (starting on July 1, with leading days
+// bridging to the saved calendar words) and, in reschedule mode, the movable matches and their target days.
+// Built by calendar_from_game() and reschedule_calendar_from_game() in calendar_state.cpp.
 #pragma once
 
 #include <array>

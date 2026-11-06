@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the long-career extension block (extension id, statistics and title history
+// archive types, record/reset/swap functions and encode/decode) implemented in long_career.cpp.
+// No random numbers are drawn.
 #pragma once
 #include <array>
 #include <cstdint>

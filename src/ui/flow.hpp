@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// StartupFlow: the screen controller that routes input to the setup, manager, desktop and submenu screens
+// and returns one FlowResult per event. FlowResult carries the FlowRequest kind plus the typed request of
+// whichever screen raised it (desk, contracts, advertising, league family, statistics and others).
+// It is a value boundary for the engine adapter: it uses no random numbers and writes no saves;
+// the session performs the action and calls the matching acknowledge or reject method. Implementation: flow.cpp.
 #pragma once
 
 #include <memory>

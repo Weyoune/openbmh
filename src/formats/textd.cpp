@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the TEXTD.BLK loader (textd.hpp): skips the 7-byte header, keeps the whole
+// blob and splits it into NUL-terminated strings, recording each string's offset. Exactly
+// TEXT_COUNT strings must be found, otherwise FormatError. No state.
 #include "formats/textd.hpp"
 
 #include "formats/binary.hpp"

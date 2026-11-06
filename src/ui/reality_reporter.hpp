@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Text layout panel for the live reality reporter commentary: appends already selected original-byte text to a
+// 320x240 surface, with word wrapping, justification and syllable hyphenation. State: RealityReporterLayoutState
+// (next baseline, pending text, recorded word ends), kept by the caller between calls.
+// No template evaluation, GameState access, timer or RNG here. Implemented in reality_reporter.cpp.
 #pragma once
 
 #include <string>

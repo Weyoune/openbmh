@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Mailbox screen: paged view of the manager's messages with keep and delete actions.
+// MailboxScreen renders a MailboxState (see mailbox_state.hpp) over the desktop background. Article actions
+// are requests (MailboxActionRequest) held in pending(); only the app adapter writes recipient and keep
+// bits, then calls acknowledge() with the new state or reject(). Navigation changes neither the
+// notification flag nor random generators. Implementation: mailbox_screen.cpp.
 #pragma once
 
 #include <array>

@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Manager desk screen: the main hub with icons, drawers, folders and the quickbar.
+// DesktopScreen renders a DeskState and turns input into a single DeskRequest (open menu, advance turn,
+// change layout/option/ticket price, end session). A request waits for acknowledge() with a strictly newer
+// revision, so repeated input never advances time twice; reject_action() changes nothing.
+// Sound ids are handed out through take_sound_ids(); the application owns playback. Implementation: desktop.cpp.
 #pragma once
 
 #include <array>

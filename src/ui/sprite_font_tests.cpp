@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for SpriteFont: mode-5 text width, space advance and title centering.
 #include "formats/executable_layout.hpp"
 #include "ui/sprite_font.hpp"
 

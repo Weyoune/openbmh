@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Indoor tournament standings page: a copied ranking of clubs by points, title holders and prize texts.
+// indoor_standings_from_game() builds the read-only IndoorStandingsState; IndoorStandingsScreen only
+// renders it and raises no requests. No draw or qualification is written here.
+// Implementation: indoor_standings.cpp.
 #pragma once
 
 #include <array>

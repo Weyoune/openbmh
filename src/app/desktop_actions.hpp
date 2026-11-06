@@ -1,4 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Application-boundary facades for desk-level windows: one small class per owner (desk
+// settings, balance plan, other games, top scorers, opportunities, manager join, mailbox,
+// menu layout, environment, reschedule, contracts, friendly matches). Each wraps a
+// CareerSession reference; its apply() runs an action under a rollback transaction (see
+// action_transaction.hpp), and open()/dispatch() take the UI request plus the shared
+// revision counter and an optional "accept" callback that carries the front end's
+// acknowledgement. Implemented in desktop_actions.cpp; window_actions.hpp holds the club windows.
 #pragma once
 
 #include "app/career_session.hpp"

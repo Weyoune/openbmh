@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of PlayerCardScreen and its projections (player_card.hpp): portrait, attribute and loan
+// rendering, the statistics graph (player_statistics_points), and the market-value helper. Rendering is
+// deterministic and uses no engine RNG.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/player_card.hpp"

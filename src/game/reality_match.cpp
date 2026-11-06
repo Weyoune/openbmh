@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Bridge between one real match of the match engine and the Reality scene: validates that the
+// engine, generators and fixture still own the scene, advances the scene and settles deferred
+// substitution requests when it ends.
+// Works on the MatchEngine state and its two generators; the draws are made by the scene code
+// it calls (reality_scene.cpp). Interface in reality_match.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/reality_match.hpp"
 

@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Alternate score screen at the end of a career: a calculator dialog to choose a value, then the points are
+// drawn one pixel at a time and acknowledged. The screen owns its assets (load_game_end_alternate_score_assets)
+// and has no GameState or random generator access. The caller owns presentation timing, source waits and the
+// career lifecycle, and calls advance_point()/finish_points() between presented frames.
+// Implementation: game_end_alternate.cpp; embedded by desk_records.hpp.
 #pragma once
 
 #include <array>

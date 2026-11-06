@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Self-contained checks for the audio module that need no game data: container parsing
+// against authored fixtures, sample and cue decoding, the mixer, the playback request
+// rules and the synthetic music fallback. The fixtures are built in code and are not
+// copied from any game asset. Returns non-zero on the first failed CHECK; companion of
+// original_validation.cpp, which covers the original-driver emulation.
 #include "container.hpp"
 #include "music_fallback.hpp"
 #include "playback.hpp"

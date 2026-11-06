@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Reality scene, player movement: speed of a figure, movement context for the ball decision,
+// attacker and defender moves and the defensive push.
+// Reads GameState (players) and the RealitySetup; draws from WatcomRandom.
+// Interface in reality_movement.hpp; driven by reality_scene.cpp.
 #include "game/reality_movement.hpp"
 
 #include <algorithm>

@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the balance plan screen declared in balance_plan.hpp: balance_from_game() builds the state from
+// the game and a plan draft, and BalanceScreen renders rows, calculator and notice dialogs, handles pointer,
+// key and text input, and queues BalanceRequest values for the session instead of editing the plan itself.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/balance_plan.hpp"

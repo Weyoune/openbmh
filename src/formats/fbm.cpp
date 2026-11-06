@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the .FBM savegame container (fbm.hpp): fbm_encrypt()/fbm_decrypt() are the
+// stream cipher whose key changes by 0x29 per byte, and load_savegame() finds the "KRON_FBM"
+// magic, splits the plain header from the encrypted stream, decrypts it and verifies the
+// one-byte checksum, which is reported in Savegame::checksum_ok (not thrown). The decrypted
+// stream is interpreted by savestate.cpp. Pure functions, no state.
 #include "formats/fbm.hpp"
 
 #include <algorithm>

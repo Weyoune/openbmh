@@ -1,5 +1,6 @@
 #include "../../tests/runtime_fixture_tables.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the settings screen: availability rules, edit requests, sound capabilities and the readme viewer paging.
 #include "formats/executable_layout.hpp"
 #include "ui/settings.hpp"
 

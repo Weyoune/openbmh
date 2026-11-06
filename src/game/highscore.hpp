@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the high-score table: row/table/projection types and the scoring and file
+// functions implemented in highscore.cpp. Names keep the original text encoding.
+// Reads GameState only; no random numbers are drawn.
 #pragma once
 
 #include <array>

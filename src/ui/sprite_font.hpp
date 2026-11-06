@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Sprite font that draws text from the glyph atlas of the original executable (modes 5 and 6); stateless apart from the loaded atlas and shared by any screen using that font.
 #pragma once
 
 #include <filesystem>

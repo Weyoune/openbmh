@@ -1,3 +1,4 @@
+// Tests for the desk state projection, DesktopScreen input and request flow (ui/desktop.hpp, ui/desk_state.hpp).
 #include "../../tests/runtime_fixture_tables.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"

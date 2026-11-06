@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// High-score table of the game: computes a manager's score from his record (assets, history,
+// titles), builds projections of the ranked table and reads/writes the five-row score file bytes.
+// Reads manager records in GameState; the file images are passed in and out as bytes.
+// Draws no random numbers. Interface in highscore.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/highscore.hpp"
 

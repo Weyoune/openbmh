@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the league pairings screen declared in league_pairings.hpp: league_pairings_from_game() formats
+// the rows and button texts from the game, and LeaguePairingsScreen renders them and queues requests for the
+// session. It also defines the constants and time conversion helper declared in the header.
 #include "formats/executable_layout.hpp"
 #include "ui/league_pairings.hpp"
 

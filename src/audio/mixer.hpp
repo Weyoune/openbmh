@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Small PCM mixer used by the software (non-original) playback path: one looping music
+// buffer plus up to 8 one-shot voices, all converted to the output rate when added.
+// start_music_loop()/add_voice() may allocate; mix_block() only reads the prepared buffers
+// and writes into caller-owned storage, so it is safe to call from the audio path. Owned
+// by Playback (playback.hpp); the byte limits are in mixer.cpp.
 #pragma once
 
 #include "container.hpp"

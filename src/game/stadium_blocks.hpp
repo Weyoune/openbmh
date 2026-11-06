@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the stadium block expansion: slots A-H, constants, immutable quote and the
+// quote/commit functions implemented in stadium_blocks.cpp. Block slots are distinct from the
+// stadium facilities used by the business plan.
 #pragma once
 
 #include "game/desk_actions.hpp"

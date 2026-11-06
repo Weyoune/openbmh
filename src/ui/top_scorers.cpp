@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of TopScorersScreen (top_scorers.hpp): list and podium drawing, footer button handling including drag-off cancel, and request construction.
 #include "formats/executable_layout.hpp"
 #include "ui/top_scorers.hpp"
 

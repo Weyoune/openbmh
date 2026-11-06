@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Lineup screen: the squad list of the human club with two data views and the actions swap players,
+// prepare lineup, open player info and open pitch. LineupState is a read-only copy built by lineup_from_game()
+// or lineup_from_save(), tagged with a revision. LineupScreen raises LineupRequest values that the session
+// applies; LineupPlayer rows are also reused by the contracts and live intervention headers.
+// Implementation: lineup.cpp.
 #pragma once
 
 #include <array>

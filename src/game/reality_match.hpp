@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the Reality match bridge: deferred request and RealityMatchScene types and the
+// settle function implemented in reality_match.cpp. Requests survive scene end and run later.
 #pragma once
 
 #include "game/match_engine.hpp"

@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Long-career extension: per-club player statistics (appearances, goals, assists) and title
+// history archives kept in an OpenBMH extension block outside the original save fields, with
+// encoding to and decoding from bytes for saving.
+// Reads and writes GameState (memory extension, manager records). Draws no random numbers.
+// Interface in long_career.hpp.
 #include "game/long_career.hpp"
 #include "game/state.hpp"
 #include "formats/executable_layout.hpp"

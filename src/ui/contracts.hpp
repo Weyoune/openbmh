@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Contracts screen: player list with remaining months, salary demands, offers, bonuses and insurance.
+// ContractsState is a read-only copy built by contracts_from_game() (tagged with revision and request id base);
+// ContractsScreen raises ContractRequest values (request demands, submit offer, submit bonuses, insure player)
+// that carry request id, revision and quote id so the session can reject stale input.
+// Implementation: contracts.cpp.
 #pragma once
 
 #include <array>

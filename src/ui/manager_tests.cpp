@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for ManagerScreen selection, name entry and confirmation (ui/manager.hpp).
 #include <cstdio>
 #include <stdexcept>
 #include <numeric>

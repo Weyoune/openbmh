@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for TopScorersScreen: rejection keeps the shown projection and dragging off a footer button cancels its pressed state.
 #include "ui/top_scorers.hpp"
 
 #include <filesystem>

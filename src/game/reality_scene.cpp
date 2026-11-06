@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Reality scene control loop: creates a scene from a fixture, advances it tick by tick
+// (ball decision, reporter, movement of attackers and defenders), detects stop conditions
+// (goal mouth, shot, boundary, forced event, user exit) and finishes it.
+// Reads GameState and the RealitySetup; draws from WatcomRandom and passes both generators on to
+// its parts. Interface in reality_scene.hpp; builds on reality_ball.cpp, reality_movement.cpp,
+// reality_duel.cpp and reality_reporter.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/reality_scene.hpp"
 

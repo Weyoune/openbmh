@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Score arithmetic of the computer's league table forecast tip: from team ratings and secondary
+// values it produces one predicted result using the game generator.
+// A pure function of its arguments; each call consumes a fixed pattern of GameRandom draws.
+// Interface in source_tip.hpp; used by table_forecast.cpp.
 #include "game/source_tip.hpp"
 
 #include <bit>

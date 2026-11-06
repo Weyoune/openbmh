@@ -1,4 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of fltd.hpp. translate_fltd() builds the German-layout image of the English
+// FLTD.EXE: a table of entries (generated include launch/fltd_map.inc) says for every German
+// data object whether to copy it from its English address, keep the German values, fill
+// pointers with an empty string, or use one of OpenBMH's own English texts (kOwnTexts, which
+// must fit the German text's room); the English data segment is also placed at its own
+// addresses. prepare_english_game() writes that image and copies the text, database and
+// other data files into the target directory. Addresses come from formats/executable_layout.hpp.
 #include "formats/executable_layout.hpp"
 #include "launch/fltd.hpp"
 

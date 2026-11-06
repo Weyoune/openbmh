@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Achievements screen (manager career history): one league/cup/Europe result triple per season, up to 50 seasons.
+// Owns AchievementsState (copied from the game by achievements_from_game, plus the captured desktop underlay)
+// and AchievementsScreen, which renders it and only reports a close request through pending().
+// The implementation is in achievements.cpp.
 #pragma once
 
 #include <array>

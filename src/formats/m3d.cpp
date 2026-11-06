@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the M3D.MAN master database loader (m3d.hpp). load_database() reads the
+// file sequentially with a bounds-checked Reader: first the lengths of the four string pools
+// (clubs, players, referees, stadiums), then the pools, the name offset tables and the raw
+// record blocks, whose sizes depend on the DbCounts passed in. Several blocks are kept as raw
+// bytes in the Database (raw_* fields). Throws FormatError on a truncated file.
 #include "formats/m3d.hpp"
 
 #include <cstring>

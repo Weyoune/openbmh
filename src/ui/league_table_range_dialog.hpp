@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Numeric dialog used by the league table to pick a start or end matchday, plus the stake dialog profile.
+// LeagueTableRangeDialog is an isolated presenter: the caller supplies the already rendered frame under the
+// modal, and the object owns that backdrop and its resources. It has no GameState, random generator, save
+// writer or mutation callback; the result (accept or cancel, value, position) is returned to the caller.
+// Implementation: league_table_range_dialog.cpp.
 #include "formats/executable_layout.hpp"
 #pragma once
 

@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tax animation shown at the end of a career: a script of rectangle copies and waits decoded from executable
+// data (decode_tax_animation_script) and played step by step by GameEndTaxAnimationScreen.
+// The renderer has no game state, random generator or event loop; callers present each frame and wait the
+// reported milliseconds. It keeps two buffers so the next dialog can use the correct backdrop.
+// Implementation: game_end_tax_animation.cpp.
 #pragma once
 
 #include <filesystem>

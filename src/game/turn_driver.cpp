@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Turn driver: walks the calendar day by day to the next desk, starts event passes, runs the
+// current matchday through the MatchEngine and reports audio events and desk results.
+// Reads and writes GameState and the TurnDriver state; passes GameRandom and WatcomRandom to
+// everything it calls (setup, matches, daily interest). Interface in turn_driver.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/turn_driver.hpp"
 

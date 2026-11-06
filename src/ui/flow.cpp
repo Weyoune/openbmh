@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements StartupFlow declared in flow.hpp: owns the currently open screen objects, forwards clicks, keys,
+// text, holds and timer events to the active one, and converts their pending requests into FlowResult values
+// for the session. Which screen is shown next is decided here.
 #include "ui/flow.hpp"
 #include "ui/source_hold.hpp"
 

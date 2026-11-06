@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for PitchScreen: drag/swap requests, rendering without mutating positions, hover and affinity colors, set-piece editor and team-sheet actions.
 #include "formats/executable_layout.hpp"
 #include "ui/pitch.hpp"
 #include "ui/source_hold.hpp"

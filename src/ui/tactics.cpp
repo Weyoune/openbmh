@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of TacticsScreen and the tactics_from_save/game projections (tactics.hpp): option arrow cycling, board drawing and request JSON; changes are never committed locally.
 #include "formats/executable_layout.hpp"
 #include "ui/tactics.hpp"
 

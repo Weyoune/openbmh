@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements mailbox_state_from_game() declared in mailbox_state.hpp: filters the mailbox entries for one
+// manager, decodes their text and orders them for the reader. It does not modify messages or the date.
+// The result feeds MailboxScreen in mailbox_screen.cpp.
 #include "ui/mailbox_state.hpp"
 
 #include <algorithm>

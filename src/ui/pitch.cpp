@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of PitchScreen and the pitch_extras_from_save/game projections (pitch.hpp): board geometry,
+// drag-and-drop, formation and set-piece editors, and request construction. Rendering does not mutate the
+// authoritative positions; changes only appear after the session acknowledges a new lineup and extras.
 #include "formats/executable_layout.hpp"
 #include "ui/pitch.hpp"
 

@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the executable image loader (le.hpp): load_le() reads the original
+// DOS/4GW LE executable, places its objects at their link addresses and applies the internal
+// fixups (FormatError for other files or external fixups). It also accepts the OpenBMH image
+// format written by save_image(), so a translated image can replace the executable.
+// LeImage::cstring() reads NUL-terminated strings from the image. No global state.
 #include "formats/le.hpp"
 
 #include <algorithm>

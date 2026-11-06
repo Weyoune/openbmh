@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the .VGA image support (vga.hpp): Image::blit() copies one indexed image
+// into another with clipping, decode_vga() unpacks the run-length data (a byte of 0x80 or
+// more is a run, below that a literal block) and checks the length fields and the single
+// trailing byte, and load_vga() reads a file and decodes it. FormatError on malformed data.
 #include "formats/vga.hpp"
 
 namespace bmh {

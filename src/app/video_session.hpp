@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// RAII guard for SDL video: SDL_Init(SDL_INIT_VIDEO) in the constructor (throws
+// std::runtime_error on failure) and SDL_Quit in the destructor. It must exist before any
+// native file picker is opened (see the comment on the class). Non-copyable, header-only.
 #pragma once
 #include <SDL.h>
 #include <stdexcept>

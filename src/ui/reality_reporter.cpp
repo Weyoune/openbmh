@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of RealityReporterPanel (reality_reporter.hpp): hyphenation rules from the executable, justified line drawing and scrolling of the report area.
 #include "formats/executable_layout.hpp"
 #include "ui/reality_reporter.hpp"
 

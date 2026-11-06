@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Sportschau ratings: reads the rating tables from the executable and derives the player ratings
+// of a match group from the logged events of a fixture.
+// Reads the fixture view and writes ratings into the MatchGroup; draws from WatcomRandom
+// (score offsets). Declared in sportschau_presentation.hpp; siblings are sportschau_awards.cpp
+// and sportschau_replay.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/sportschau_presentation.hpp"
 

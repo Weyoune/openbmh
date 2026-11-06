@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the Sportschau renderers declared in sportschau.hpp: frame composition from the original image atlases, position tables, and text drawing. No GameState writes.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/sportschau.hpp"

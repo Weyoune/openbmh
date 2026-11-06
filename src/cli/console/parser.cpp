@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the console line parser (parser.hpp): trimming, top-level splitting of
+// the argument list (commas inside quotes or brackets do not split), parsing of one
+// argument (positional or name=value), canonical name comparison that ignores case, '.' and
+// '_', line classification, and the integer/bool converters for arguments. Pure functions;
+// no console state. The console (console.cpp, windows_*.cpp) checks the argument types.
 #include "cli/console/parser.hpp"
 
 #include <cctype>

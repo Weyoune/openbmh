@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Series records page (streaks and best series per league view) opened from a Desk statistics page.
+// series_records_from_game() projects the saved records, league tables and streak bytes of one manager;
+// SeriesRecordsScreen draws them over the accepted parent frame. Draw-only: no request or acknowledge flow.
+// Implemented in series_records.cpp.
 #pragma once
 
 #include <array>

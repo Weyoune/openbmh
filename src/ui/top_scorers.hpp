@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Top scorers Desk screen: renders a TopScorersState (goals, assists or scorer metric; league or managers
+// scope) with podium art and footer buttons. Owns only the pressed-button and rejection state. Button clicks
+// become a pending TopScorersRequest with identity guards (see top_scorers_state.hpp) that the session
+// acknowledges with a new state or rejects. Implemented in top_scorers.cpp.
 #pragma once
 
 #include <filesystem>

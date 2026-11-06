@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Data model for the top scorers screen: metric, scope and action enums, the identity guard binding every
+// result to the active Desk owner, the request, and TopScorersState holding the game-side projection and a
+// captured underlay frame. Paired with top_scorers.hpp (renderer) and top_scorers_state.cpp.
 #pragma once
 
 #include <cstdint>

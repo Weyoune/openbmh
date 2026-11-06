@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// The JSON line protocol of openbmh_cli (the non-console mode): one request object with a
+// "cmd" field in, one response object ("ok", "revision", result or error) out. Protocol owns
+// one app::CareerSession (created by "new" or "load") and the revision counter that every
+// state-changing command must echo back, so stale requests are refused like in the UI
+// flow. text_request()/text_response() translate a simple one-line text form to and from the
+// same JSON. Implemented in protocol.cpp; Protocol::help() lists the commands.
 #pragma once
 
 #include "cli/json.hpp"

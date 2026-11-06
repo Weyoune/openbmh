@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Training camp booking screen: eight resorts with prices and quality values, focus selection and booking.
+// TrainingCampState carries balance, currency conversion, stay counter (booked this week flag and visit count,
+// limit three) and the last feedback. Focus changes and bookings become TrainingCampRequests with revision
+// guards; a pending request blocks input until acknowledge() or reject_action(). Implemented in training_camp.cpp.
 #pragma once
 
 #include <array>

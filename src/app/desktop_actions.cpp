@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the desk-level action facades declared in desktop_actions.hpp. Each
+// method checkpoints the relevant session owner, runs the request through CareerSession,
+// lets the accept callback acknowledge the result to the UI, and rolls everything back via
+// detail::apply_window if the callback returns false or throws. Errors are returned through
+// the std::string& error parameter. The request/acknowledge flow as a whole is described
+// at the top of controller.cpp.
 #include "formats/executable_layout.hpp"
 #include "app/desktop_actions.hpp"
 #include "app/action_transaction.hpp"

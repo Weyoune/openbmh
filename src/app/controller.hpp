@@ -1,4 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// The controller: the one synchronous boundary between the UI flow (ui::StartupFlow) and
+// the engine session (CareerSession). The flow turns a click or key into a ui::FlowResult
+// that carries a request; serve_flow_request() validates it against the current revision,
+// calls the session, and acknowledges the outcome back to the flow. Everything the engine
+// needs from the front end (dialogs, live match presentation, notices) is passed in as
+// std::function "presenter" hooks, so tests can drive the same code without a window.
+// Pairs with controller.cpp; the real hooks are supplied by main.cpp.
 #pragma once
 
 #include "app/career_session.hpp"

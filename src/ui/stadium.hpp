@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Stadium screen family: investment list, block expansion editor, data charts, panorama scene and the
+// construction tip/notice dialogs with the money calculator. State: StadiumState with investment rows,
+// block overviews and a data projection. Actions become StadiumRequests with revision guards; edits stay
+// presentation state until the session returns an accepted projection via acknowledge() or reject_action().
+// Implemented in stadium.cpp.
 #pragma once
 
 #include <array>

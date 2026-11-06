@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Desk record pages: the fair play table and the highscore view, with a calculator variant for the alternate
+// score screen. DeskRecordsState is built from the game (fair_play_state_from_game) or supplied with a
+// highscore projection; the highscore file update is done by the caller before constructing the state.
+// DeskRecordsScreen only renders and reports closed(). Implementation: desk_records.cpp.
 #pragma once
 
 #include <filesystem>

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of TotoScreen and toto_from_game() (toto.hpp): match rows with ratings, stake handling, pick cycling and the JSON helpers for state and request.
 #include "formats/executable_layout.hpp"
 #include "ui/toto.hpp"
 

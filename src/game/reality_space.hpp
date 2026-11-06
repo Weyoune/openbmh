@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the Reality scene spatial helpers (path, offside, nearby, penalty area, line
+// occupants) implemented in reality_space.cpp.
 #pragma once
 
 #include "game/reality_setup.hpp"

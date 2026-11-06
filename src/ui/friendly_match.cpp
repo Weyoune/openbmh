@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements FriendlyMatchScreen and friendly_calendar_cell() declared in friendly_match.hpp: renders the
+// stages from opponent list to booking, handles input, and builds FriendlyMatchRequest values for the
+// controller to validate and execute.
 #include "ui/friendly_match.hpp"
 
 #include <algorithm>

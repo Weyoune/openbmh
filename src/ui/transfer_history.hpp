@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Transfer history page listing a manager saved transfers (sell, buy, lend, borrow) with date, fee and
+// counterparty club. transfer_history_from_game() decodes the manager saved rows; TransferHistoryScreen
+// overlays them on the accepted statistics page and closes on the original exit event supplied by the page owner.
+// Read-only. Implemented in transfer_history.cpp.
 #pragma once
 
 #include <cstdint>

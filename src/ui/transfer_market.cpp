@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of TransferMarketScreen and the market projection (transfer_market.hpp): list drawing and sorting, quote preview, view switching and request construction.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/transfer_market.hpp"

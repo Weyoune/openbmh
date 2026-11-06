@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Bank screen: account and fixed deposit, stock and fund trading, stock tips, and bank or inter-manager credit.
+// Owns BankState (a read-only copy of balances, prices, holdings and credit offers built by bank_from_game,
+// tagged with a revision) and BankScreen. Money-moving actions are BankRequest values (kind, amount, asset
+// index, expected credit terms) that the session validates against the revision before applying.
+// Implementation: bank.cpp.
 #pragma once
 
 #include <cstdint>

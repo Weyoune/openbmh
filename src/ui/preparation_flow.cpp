@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Part of StartupFlow (declared in flow.hpp): the show_*/finish_*/acknowledge_*/close_* methods that open and
+// close the Desk child pages (strengths, top scorers, opportunities, statistics menu and rankings, other games,
+// league tables, calendar, mailbox, settings, advertising and more). Handlers check the new state against the
+// owning Desk request before swapping the current screen; screens only emit requests, the flow forwards them.
 #include "formats/executable_layout.hpp"
 #include "ui/flow.hpp"
 

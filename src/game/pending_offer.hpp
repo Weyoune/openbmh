@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Types for answering pending transfer offers manually (yes / no / unsupported answers, the
+// question and dispatch context, allocator gate). Absence of an answer never means "no".
+// Declarations only; the generators are passed in by the caller as shown below.
 #pragma once
 
 #include <functional>

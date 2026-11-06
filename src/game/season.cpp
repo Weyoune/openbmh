@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Season-wide steps: offers, club moods and balances, European qualification and cup fields,
+// annual accounts and profit tax, season awards, promotion/relegation, league shuffling, player
+// regeneration and release, and the first-season setup of a career.
+// Reads and writes most of GameState (memory, players, squad_slots, manager records).
+// Draws from WatcomRandom and GameRandom (see the calls below). Interface in season.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/environment.hpp"
 #include "game/season.hpp"

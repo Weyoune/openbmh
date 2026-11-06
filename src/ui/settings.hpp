@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Settings screen over the 180 saved setting bytes of a manager, plus the in-settings readme viewer
+// (SettingsReadmeScreen). SettingsState keeps the raw bytes unmodified; the display copy with entry-time
+// availability is derived by project_settings_availability(). An edit becomes a SettingsWriteRequest holding the
+// expected raw bytes; file actions use SaveLoadRequest. The session answers with acknowledge()/reject().
+// Implemented in settings.cpp.
 #pragma once
 
 #include <array>

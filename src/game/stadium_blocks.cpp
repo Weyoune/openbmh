@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Stadium block expansion (blocks A-H): reads the edition's price/duration/limit constants,
+// quotes an expansion bound to the record values it depends on, and commits the construction
+// order and payment.
+// Reads and writes the manager records in GameState; the commit path takes WatcomRandom and a
+// notice hook for the payment. Interface in stadium_blocks.hpp.
 #include "game/stadium_blocks.hpp"
 
 #include "game/matchday.hpp"

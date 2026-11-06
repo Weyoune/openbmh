@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements calendar_from_game() and reschedule_calendar_from_game() declared in calendar_state.hpp.
+// They project the saved season into CalendarState (dates, competition bitmaps, matchday ordinals,
+// reschedule options) without preparing fixtures, advancing the date or consuming random numbers.
+// The projection feeds CalendarScreen in calendar.cpp.
 #include "formats/executable_layout.hpp"
 #include "ui/calendar_state.hpp"
 

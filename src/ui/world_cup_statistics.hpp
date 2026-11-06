@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// World Cup statistics page: 18 editions of four placements, a medal ranking of 62 nations and a flag map.
+// It is read-only from the Desk; only the Friendly Match nation picker owner enables selecting an opponent,
+// which yields a select_opponent request for that caller. WorldCupStatisticsProjection is built by
+// world_cup_statistics_from_game(). Implemented in world_cup_statistics.cpp.
 #pragma once
 
 #include <array>

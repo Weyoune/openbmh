@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Test helper shared by UI tests: checks that a notice dialog uses the original red exclamation-mark art.
 #pragma once
 #include <stdexcept>
 #include "formats/vga.hpp"

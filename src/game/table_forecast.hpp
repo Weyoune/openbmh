@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the table forecast: the LeagueTableForecast result (table plus the game generator
+// state after all draws) and compute_league_table_forecast, implemented in table_forecast.cpp.
+// Never changes the native results or the current matchday.
 #pragma once
 
 #include <array>

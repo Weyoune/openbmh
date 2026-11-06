@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the player detail card declared in club_player_detail.hpp: club_player_detail_from_game() copies
+// club, nationality and offer data into the projection, and ClubPlayerDetailScreen renders the card over the
+// parent frame and turns presses and releases into ClubPlayerDetailRequest values for the caller to handle.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/club_player_detail.hpp"

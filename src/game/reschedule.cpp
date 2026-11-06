@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Rescheduling a home league match of a human manager on the calendar screen: which days are
+// offered, conflicts with the friendly plan and replays, and moving the match.
+// Reads and writes the competition calendar, postponed list and friendly plan in the static
+// memory of GameState. Draws no random numbers. Interface in reschedule.hpp; uses schedule.cpp
+// and matchday_setup.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/reschedule.hpp"
 

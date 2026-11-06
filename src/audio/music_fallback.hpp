@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Synthetic fallback matchday music: a deterministic 8-bar loop generated in code. It is
+// presentation filler, not decoded original music and not tied to any original sound id.
+// The result is a PcmSample that Playback::start_music_loop() can play; implemented in
+// music_fallback.cpp.
 #pragma once
 
 #include "container.hpp"

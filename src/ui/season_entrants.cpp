@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of season_entrants_from_game() and SeasonEntrantsScreen (season_entrants.hpp): placement tables from the executable, badge atlas drawing and footer text.
 #include "formats/executable_layout.hpp"
 #include "ui/season_entrants.hpp"
 

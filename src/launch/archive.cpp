@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of archive.hpp. The archive file is read into memory once (refused above
+// 512 MB) and then parsed by miniz (ZIP) or the LZMA SDK's C decoder (7z) through an in-memory
+// stream; entry names are normalised to UTF-8 with '/' (ZIP names without the UTF-8 flag are
+// taken as DOS code page 437). The file also holds the UTF-8 <-> filesystem path helpers and
+// the UTF-8 program arguments (the wide command line on Windows). Archive::Impl is private
+// to this file; failures throw ArchiveError.
 #include "launch/archive.hpp"
 
 #include <cstring>

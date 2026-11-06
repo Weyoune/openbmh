@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Quit confirmation (a deliberate deviation from the original): a native message box in
+// German or English whose default button is "Cancel". poll() and peep() wrap
+// SDL_PollEvent / SDL_PeepEvents and drop SDL_QUIT events the user does not confirm. The
+// dialog is shown from the UI thread only, and a dialog that fails to open counts as "not
+// confirmed". The presenter is injectable (defaults to SDL_ShowMessageBox). Header-only.
 #pragma once
 
 #include <SDL.h>

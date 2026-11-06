@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of other_games_state_from_game(): builds fixture rows, selector labels, headings and table rows
+// for one competition, linked page and round from the GameState and original text tables. Pure projection:
+// it reads the game and executable data but does not mutate either.
 #include "formats/executable_layout.hpp"
 #include "ui/other_games_state.hpp"
 

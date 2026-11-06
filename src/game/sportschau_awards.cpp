@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Sportschau (TV sports show) support: the matchday intro view built from the match groups
+// and the competition title of a group.
+// Read-only projection of GameState and the groups. Draws no random numbers.
+// Declared in sportschau_presentation.hpp; sportschau_rating.cpp and sportschau_replay.cpp are siblings.
 #include "formats/executable_layout.hpp"
 #include "game/sportschau_presentation.hpp"
 #include <algorithm>

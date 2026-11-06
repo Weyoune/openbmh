@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Reality field renderer: only the lower pitch field of the live reality view, drawn from a motion frame
+// and a backdrop. Header and reporter text are owned by the caller; this renderer cannot select a pass,
+// a player or a match result. Implementation: live_reality.cpp.
 #pragma once
 
 #include <filesystem>

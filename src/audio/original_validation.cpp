@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Validation executable for the original-sound emulation (original.hpp, playback.hpp). It
+// needs the user's game data directory as its single argument, loads the executable tables
+// and sound containers from it, and runs oracle checks on song/effect output, transitions,
+// malformed input, option and mute handling, effect priorities and the audio callback
+// lifecycle. With an empty argument it prints SKIP and exits with 77 (test skipped).
+// Contains no game assets itself.
 #include "formats/executable_layout.hpp"
 #include "original.hpp"
 #include "playback.hpp"

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of SeasonPromotionScreen and season_promotion_from_game() (season_promotion.hpp): club columns, badges, league footer and the scanline exchange frames.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/season_promotion.hpp"

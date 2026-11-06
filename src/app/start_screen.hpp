@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Start screen shown before the game data is loaded: one embedded picture drawn with its
+// own renderer logical size, independent of the indexed game canvas. Owns the SDL
+// texture; non-copyable. Implemented in start_screen.cpp, the image bytes come from
+// start_screen_data.hpp.
 #pragma once
 struct SDL_Renderer;
 struct SDL_Texture;

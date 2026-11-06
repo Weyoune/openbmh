@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Season-end promotion/relegation page: SeasonPromotionProjection lists relegated and promoted clubs for one
+// league group and SeasonPromotionScreen draws it, including the scanline transition steps (0 to 38).
+// Draw-only; the caller owns transition order, waits and whether the animation is suppressed.
+// season_promotion_from_game() builds the projection from a SeasonPromotionEvent. Implemented in season_promotion.cpp.
 #pragma once
 
 #include <cstddef>

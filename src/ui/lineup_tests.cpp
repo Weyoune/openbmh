@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the lineup projection, rendering and request flow (ui/lineup.hpp).
 #include "formats/executable_layout.hpp"
 #include "../../tests/test_inputs.hpp"
 #include "ui/lineup.hpp"

@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the environment screen declared in environment.hpp: environment_from_game() fills the view and
+// the formatted costs, EnvironmentScreen renders it over the underlay and converts clicks and keys into
+// EnvironmentRequest values; environment_notice_dialog() builds the accompanying notice projection.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/environment.hpp"

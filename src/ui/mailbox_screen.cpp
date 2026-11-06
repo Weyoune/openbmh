@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements MailboxScreen declared in mailbox_screen.hpp: validates the state, lays out and renders the
+// message pages and buttons, handles clicks and keys, and queues keep or delete requests for the app.
+// It pairs with mailbox_state.cpp, which builds the state it displays.
 #include "formats/executable_layout.hpp"
 #include "ui/mailbox_screen.hpp"
 

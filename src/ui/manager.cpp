@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements ManagerScreen and load_selection_context() declared in manager.hpp: renders the selection,
+// name entry, club picker and confirmation dialogs, handles click, move and text input and keeps the
+// current ManagerChoice. The flow applies the confirmed choice; this file does not initialise a career.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/manager.hpp"

@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the bank credit dialog: context (rate table, liquidity, saved loan row), draft,
+// edit and bounds types plus the projection/edit functions implemented in bank_credit.cpp.
+// Case "bank" and case "another manager lends" share these types; projection and draft editing
+// are read-only with respect to GameState. No random numbers are drawn.
 #pragma once
 
 #include <array>

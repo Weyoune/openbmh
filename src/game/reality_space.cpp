@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Reality scene spatial decisions: paths in the penalty box, whether a cell is on a path,
+// offside, nearby players and penalty area occupancy, with side and bounds validation.
+// Reads the RealitySetup; sampling among line occupants uses WatcomRandom, not GameRandom.
+// Interface in reality_space.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/reality_space.hpp"
 

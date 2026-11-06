@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of SeatHub (seat_hub.hpp): routes the blocks of several clients into one
+// console::Console. It runs a block as the seat's manager ("@k"), classifies each output
+// line with Console::LineInfo, queues lines that concern other seats as their "meanwhile"
+// feed, holds WaitTurn blocks until they can be answered, and holds the Run/Step of a live
+// match until every seat has sent one. State per seat is a small Seat record; the game
+// itself lives in the console.
 #include "cli/seat_hub.hpp"
 
 #include <algorithm>

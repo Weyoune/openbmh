@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for SaveLoadScreen: no writes from picker input, overwrite confirmation, cancel paths, and filename editing.
 #include "ui/save_load.hpp"
 #include "ui/flow.hpp"
 

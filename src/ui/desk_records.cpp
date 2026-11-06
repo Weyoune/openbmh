@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the desk record pages declared in desk_records.hpp: fair_play_state_from_game() projects the
+// fair play rows for a league, and DeskRecordsScreen renders the fair play or highscore page and forwards
+// input to the embedded alternate score calculator (game_end_alternate.hpp) when that variant is active.
 #include "formats/executable_layout.hpp"
 #include "ui/desk_records.hpp"
 

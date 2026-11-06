@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Season-start pages listing the German entrants of the UEFA, Champions League and Cup Winners Cup
+// competitions with their badges. season_entrants_from_game() projects those pages (empty when the original
+// guards suppress them) and SeasonEntrantsScreen draws one page. Draw-only: no input, request or engine state.
+// Implemented in season_entrants.cpp.
 #pragma once
 
 #include <filesystem>

@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Training screen: team training types per position group, focus areas, per-player intensity and focus, and the
+// automation flag. TrainingState is an owned projection of the squad and the manager training bytes (from a
+// save or the live game). Every edit becomes a TrainingRequest with revision guards, and further input is
+// blocked until the session calls acknowledge() or reject_action(). Implemented in training.cpp.
 #pragma once
 
 #include <array>

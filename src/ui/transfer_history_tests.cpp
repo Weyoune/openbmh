@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the transfer history projection: buyer rows and the special counterparty label are decoded from the saved bytes.
 #include "ui/transfer_history.hpp"
 
 #include <iostream>

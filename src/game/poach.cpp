@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Poaching a player from another club: asking percentage of the club, remaining attempts per
+// manager and the start and finish of a poach attempt.
+// Reads and writes GameState (manager records attempt list, transfer list in memory, squad_slots).
+// Draws from WatcomRandom. Interface in poach.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/poach.hpp"
 

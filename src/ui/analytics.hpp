@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Analytics statistics page: six data series with per-metric toggles and an absolute/relative scale switch.
+// Owns AnalyticsState (values copied from the game, never simulated, plus the parent underlay) and
+// AnalyticsScreen. Toggles raise AnalyticsRequest values carrying expected and target flag bytes;
+// the owner persists the flags and calls acknowledge(), or reject() to drop the request.
+// Implementation: analytics.cpp.
 #pragma once
 
 #include <array>

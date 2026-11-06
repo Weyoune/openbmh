@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Reality scene, live reporter text: parses the reporter text templates (selectable variants
+// and nested expressions) and evaluates them into commentary lines for the current action.
+// Parsing draws nothing; evaluation draws from WatcomRandom.
+// Reads the RealitySetup and executable text pools. Interface in reality_reporter.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/reality_reporter.hpp"
 

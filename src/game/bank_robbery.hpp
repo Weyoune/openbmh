@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Per-manager guard against repeated bank robbery events: one blocked month key per manager,
+// stored in an OpenBMH-owned extension block of the static memory in GameState (not in the
+// original save fields). The month key function is implemented in week.cpp.
+// Header-only accessors; no random numbers are drawn.
 #pragma once
 #include "game/state.hpp"
 #include <limits>

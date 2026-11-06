@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// "Other games" desk view: rows of the results and fixtures of a competition round (group or
+// knockout), linked pages and club metadata for display. A read-only projection of GameState
+// and the loaded texts; the parameter named game is the GameState, not a random generator.
+// Draws no random numbers. Interface in other_games.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/other_games.hpp"
 

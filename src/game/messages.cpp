@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Mailbox and text helpers: posting messages to managers, looking up message texts and
+// formatting numbers with the original's flag conventions.
+// Reads and writes the mailbox of GameState and reads the text tables installed from the
+// executable. Draws no random numbers. Interface in messages.hpp.
 #include "formats/executable_layout.hpp"
 #include "game/messages.hpp"
 #include "game/schedule.hpp"

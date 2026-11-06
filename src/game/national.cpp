@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// National team: nomination of players, swapping the national coach record into the spare
+// manager slot on international days, adding players to a squad and creating board entries.
+// Reads and writes GameState (manager records, tactics boards, squad_slots, static bytes).
+// Draws from WatcomRandom when creating board entries and values. Interface in national.hpp;
+// called from turn.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/national.hpp"
 

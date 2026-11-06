@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Day-by-day turn processing: plain days, empty event days, month step, stock market day,
+// season end day and the preparation and finish of an event with its desk.
+// Reads and writes GameState and calls into month.cpp, weekly.cpp, week.cpp, season.cpp and the
+// matchday code. Takes both generators (GameRandom, WatcomRandom) and reseeds via stir_random at
+// league screens. Interface in turn.hpp; the calendar loop around it is in turn_driver.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/turn.hpp"
 #include "game/trace.hpp"

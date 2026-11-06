@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the "other games" view: row, club metadata and page types and the const
+// projection functions implemented in other_games.cpp. Read-only; no random numbers are drawn.
 #pragma once
 
 #include <cstdint>

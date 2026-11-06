@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface for entering a human manager's desk (the part before the desk screen appears):
+// enter_desk, the draws made when saving, and the prestige update.
+// Implemented in desk.cpp; uses both generators (GameRandom, WatcomRandom) as documented below.
 #pragma once
 // Entering a human manager's desk (DeskDate, the part before the desk screen).
 

@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the incoming transfer screen declared in incoming_transfer.hpp: building the decision view from
+// the game (including the pending-decision variant), rendering bids, player data and notices, and converting
+// input into requests. The transfer itself is performed only by the session.
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/incoming_transfer.hpp"

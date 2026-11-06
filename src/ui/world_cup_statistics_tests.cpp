@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the World Cup statistics helpers: medal key and nation ordering and the selection request.
 #include "world_cup_statistics.hpp"
 
 #include <filesystem>

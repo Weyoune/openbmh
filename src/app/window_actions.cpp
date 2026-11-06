@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the club and league window facades declared in window_actions.hpp. Each
+// method validates the UI request against the session state, runs it on the CareerSession
+// inside an apply() transaction (state, RNG and revision are restored on rejection or an
+// exception) and hands the result to the front end's acknowledgement callback. Errors come
+// back through the std::string& error parameter; see controller.cpp for the overall model.
 #include "formats/executable_layout.hpp"
 #include "app/window_actions.hpp"
 #include "app/action_transaction.hpp"

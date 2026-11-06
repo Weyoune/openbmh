@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the turn driver: audio event, desk kind, advance request/result and result
+// snapshot types and the TurnDriver runtime state kept between a desk and the next one.
+// The caller owns the generators; implemented in turn_driver.cpp.
 #pragma once
 
 #include <cstdint>

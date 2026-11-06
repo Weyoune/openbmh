@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for the balance plan projection, calculator and requests (ui/balance_plan.hpp).
 #include "formats/executable_layout.hpp"
 #include "ui/balance_plan.hpp"
 #include "ui/setup.hpp"

@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the .FNT bitmap font loader and renderer (font.hpp): load_font() reads
+// the header, the 1-bit glyph bitmap and the per-character location (and spacing) tables and
+// checks that the file size matches exactly; Font::glyph(), text_width() and draw() look up
+// glyphs (out-of-range characters use the last glyph) and draw them into an indexed Image.
+// No state beyond the Font object.
 #include "formats/font.hpp"
 
 namespace bmh {

@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Weekly processing: manager offers, season ticket compensation, facility ageing and damage,
+// club attraction, advertising, transfer bids and offers (evaluate, execute, pending offers,
+// human buyer sale) and the transfer list countdown.
+// Reads and writes most of GameState (transfer list, squad_slots, players, manager records).
+// Draws heavily from WatcomRandom and also from GameRandom.
+// Interface in weekly.hpp; monthly steps are in month.cpp, daily ones in week.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/weekly.hpp"
 #include "game/desk_actions.hpp"

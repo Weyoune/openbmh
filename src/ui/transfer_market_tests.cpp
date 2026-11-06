@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for TransferMarketScreen: projection of native inputs, quote and bid requests, owner preview, feedback text and listing order.
 #include "formats/executable_layout.hpp"
 #include "ui/transfer_market.hpp"
 

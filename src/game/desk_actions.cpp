@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Actions a human manager can take at the desk: friendly match quotes and booking (including
+// the national team variant), training camp configuration, and the transfer offer editor
+// with bids and market previews.
+// Reads and writes manager records, memory (friendly plan, calendar), players and squad_slots.
+// Quotes draw from WatcomRandom on a staged copy that is committed only when accepted; booking
+// also handles GameRandom. Interface in desk_actions.hpp; bids are settled in weekly.cpp.
 #include "formats/executable_layout.hpp"
 #include "game/desk_actions.hpp"
 

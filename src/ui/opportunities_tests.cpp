@@ -1,5 +1,6 @@
 #include "../../tests/test_inputs.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for OpportunitiesScreen and StatisticsMenuScreen: mode buttons, rank strip clipping, owner refresh and request guards.
 #include "formats/executable_layout.hpp"
 #include "ui/opportunities.hpp"
 #include "ui/manager.hpp"

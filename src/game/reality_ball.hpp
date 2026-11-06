@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Interface of the Reality scene ball logic: ball history, decision and outcome types and the
+// decide/apply functions implemented in reality_ball.cpp. The functions take WatcomRandom (and
+// GameRandom where declared).
 #pragma once
 
 #include "game/rating.hpp"

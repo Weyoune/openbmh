@@ -1,4 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the JSON protocol (protocol.hpp). Protocol::handle() validates the
+// request keys per command (check_keys / check_command_keys), then calls the CareerSession
+// and the same projection functions the SDL front end uses (desk, table, mail, tactics,
+// training, camp, bank, stadium, kickoff, save/load, ...), and wraps the result with the
+// current revision. Errors are returned as {"ok": false, "error": ...}, never thrown to the
+// caller. The "replay" flag lets a logged session be played again (saves may overwrite).
+// text_request()/text_response() implement the one-line text form of the protocol.
 #include "formats/executable_layout.hpp"
 #include "cli/protocol.hpp"
 

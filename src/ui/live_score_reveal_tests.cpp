@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Tests for LiveScoreReveal keeping preview scores until the result hook (ui/live_matchday.hpp).
 #include "ui/live_matchday.hpp"
 #include <stdexcept>
 using namespace bmh::ui;

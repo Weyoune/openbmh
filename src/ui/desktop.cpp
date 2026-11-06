@@ -1,4 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements DesktopScreen declared in desktop.hpp: loads the desk art and fonts, renders icons and drawers
+// (via desk_drawers.cpp), handles pointer, key and timer events, queues DeskRequest values, and applies
+// acknowledged DeskState updates. It also provides desk_request_json() and desk_menu_name().
 #include "formats/executable_layout.hpp"
 #include "ui/desktop.hpp"
 

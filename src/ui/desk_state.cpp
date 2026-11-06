@@ -1,4 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implements the DeskState builders declared in desk_state.hpp (desk_from_game, desk_from_save,
+// load_reference_desk, desk_json) and the validation of profile and state. It projects saved blocks,
+// the club roster, calendar date, table position and automation formation into the read-only structure
+// rendered by DesktopScreen.
 #include "formats/native_save_version.hpp"
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Implementation of the World Cup statistics projection, medal ordering, hit-testing and WorldCupStatisticsScreen (world_cup_statistics.hpp).
 #include "formats/executable_layout.hpp"
 #include "world_cup_statistics.hpp"
 

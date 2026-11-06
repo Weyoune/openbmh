@@ -1,4 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
+// Pitch / team-sheet screen: drag and swap players on the formation board, choose formations, automatic
+// weights, set-piece takers, player order and marking. State: the lineup projection plus PitchExtras (indoor
+// flag, formations, set-piece takers, live opponent players), which is owned context outside the squad data.
+// Every placement emits a PitchRequest with revision guards; only an acknowledged projection updates the rows.
+// The indoor flag is transient and never inferred from a saved file. Implemented in pitch.cpp.
 #pragma once
 
 #include "ui/lineup.hpp"
