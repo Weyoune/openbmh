@@ -48,7 +48,7 @@ constexpr int kLeagueClubs = 0x8a;      // CareerSession_DispatchLineup_RuntimeF
 // are the extra value above 500 points.
 constexpr uint8_t kDevelopment[20] = {6, 6, 6, 5, 5, 5, 4, 4, 3, 1, 10, 15, 20, 30, 40, 45, 55, 75, 85, 95};
 // BalancePlanRuntimeField5: value of the facilities (maintenance per month), u16 per facility.
-constexpr uint16_t kFacilityValue[22] = {2000, 3000, 3000, 8000, 4000, 3000, 2500, 2500, 2500, 2500, 2600,
+constexpr uint16_t kFacilityValue[22] = {2000, 10000, 17000, 8000, 4000, 10000, 2500, 2500, 2500, 2500, 2600,
                                          2600, 2600, 2600, 13000, 9000, 9000, 8000, 1000, 1500, 1500, 2000};
 // BalancePlanRuntimeField6: monthly income of facilities 0-5 per level.
 constexpr uint16_t kFacilityIncome[6] = {0, 5000, 5000, 4800, 2400, 8000};

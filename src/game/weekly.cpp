@@ -76,8 +76,8 @@ constexpr int8_t kEuropeBonus[4] = {0, 1, 3, 2};
 constexpr uint8_t kWinnerEntry[4] = {0x00, 0x0f, 0x13, 0x15};
 constexpr int8_t kWinnerBonus[4] = {0x14, 0x1e, 0x14, 0x0f};
 constexpr int32_t kWinnerPremium[4] = {400000, 850000, 1000000, 850000};  // Diamond 3.7 (500000, 1500000, 2500000, 1500000 before)
-// Statistics: value of the facilities (BalancePlanRuntimeField5, u16 per facility).
-constexpr uint16_t kFacilityValue[22] = {2000, 3000, 3000, 8000, 4000, 3000, 2500, 2500, 2500, 2500, 2600,
+// Statistics: value of the facilities (BalancePlanRuntimeField5, u16 per facility). Diamond 3.7 values (entries 1, 2 and 5 were 3000 before).
+constexpr uint16_t kFacilityValue[22] = {2000, 10000, 17000, 8000, 4000, 10000, 2500, 2500, 2500, 2500, 2600,
                                          2600, 2600, 2600, 13000, 9000, 9000, 8000, 1000, 1500, 1500, 2000};
 
 struct Record {

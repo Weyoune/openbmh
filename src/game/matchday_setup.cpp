@@ -108,7 +108,7 @@ void restore_forfeit_squad(GameState& g, int team) {
 // per facility 0-13 that exists, BalancePlanRuntimeField7[k] * attendance * level / 100 (level of
 // facility 0 = its size step), then scaled by W(85, 115) %.
 int32_t catering_income(const GameState& g, int manager, int32_t spectators, WatcomRandom& rand) {
-    static const uint8_t kPerVisitor[14] = {0, 10, 10, 3, 5, 15, 3, 3, 3, 3, 2, 2, 2, 2};  // BalancePlanRuntimeField7
+    static const uint8_t kPerVisitor[14] = {0, 10, 15, 3, 5, 10, 3, 3, 3, 3, 2, 2, 2, 2};  // BalancePlanRuntimeField7
     const size_t rec = size_t(manager) * kManagerRecord;
     uint32_t sum = 0;
     for (int k = 0; k < 14; k++) {

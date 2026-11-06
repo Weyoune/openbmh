@@ -36,7 +36,7 @@ constexpr uint16_t kFacilityCost[22] = {2000, 3000, 3000, 8000, 4000, 3000, 2500
 // BalancePlanRuntimeField6: monthly income of the first six facilities (FacilityIncome)
 constexpr uint16_t kFacilityIncome[6] = {0, 5000, 5000, 4800, 2400, 8000};
 // BalancePlanRuntimeField7: catering income per visitor of the facilities 0-13 (BookMoney)
-constexpr uint8_t kPerVisitor[14] = {0, 10, 10, 3, 5, 15, 3, 3, 3, 3, 2, 2, 2, 2};
+constexpr uint8_t kPerVisitor[14] = {0, 10, 15, 3, 5, 10, 3, 3, 3, 3, 2, 2, 2, 2};  // Diamond 3.7 (entries 2 and 5 were 10 and 15)
 // Rec32: price units of the six funds (BMH.exe+MonthRuntimeField10)
 constexpr int32_t kShareUnits[6] = {15, 18, 21, 24, 27, 30};
 

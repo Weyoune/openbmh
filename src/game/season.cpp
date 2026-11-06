@@ -505,7 +505,7 @@ int club_popularity(GameState& g, int m, int team, bool pay) {
 void season_tickets(GameState& g, int m, WatcomRandom& rand) {
     static const uint8_t kBase[5] = {50, 40, 30, 30, 20};                  // SeasonRuntimeField17
     static const uint16_t kTickets[5] = {5000, 2000, 1000, 1000, 300};     // SeasonRuntimeField15
-    static const uint16_t kPrice[5] = {330, 270, 240, 240, 225};           // SeasonRuntimeField16
+    static const uint16_t kPrice[5] = {300, 270, 240, 240, 225};           // SeasonRuntimeField16
     const int team = g.manager_teams.at(size_t(m));
     const int league = std::min(club_league(team), 4);
     const int pop = club_popularity(g, m, team, true);
