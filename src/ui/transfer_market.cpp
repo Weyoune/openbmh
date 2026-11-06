@@ -15,16 +15,22 @@
 
 namespace bmh::ui {
 namespace {
+// Layout constants of the market projection: index of the first market pool word in the
+// squad-slot array, number of list entries, base address and stride of one entry in the
+// in-memory transfer list, and the byte size of one manager record.
 constexpr size_t kPoolFirst = 0xb70;
 constexpr int kMarketEntries = 40;
 constexpr uint32_t kTransferTable = ::bmh::layout::EditorList;
 constexpr uint32_t kTransferEntrySize = 0x58;
 constexpr size_t kManagerRecordSize = 0xb0c;
 
+// Fills a rectangle with one palette index, clipped to the image.
 void rect(Image& out,int x,int y,int w,int h,uint8_t color) {
     for(int yy=std::max(0,y);yy<std::min(out.height,y+h);++yy)
         for(int xx=std::max(0,x);xx<std::min(out.width,x+w);++xx)out.at(xx,yy)=color;
 }
+// Copies a w*h block from a source image to the output at (x,y), clipped to the output.
+// Pixels equal to `key` are skipped (transparent); throws if the source rectangle is invalid.
 void copy(Image& out,const Image& source,int sx,int sy,int x,int y,int w,int h,int key=-1) {
     if(sx<0||sy<0||w<0||h<0||sx+w>source.width||sy+h>source.height)
         throw FormatError("transfer market: Original asset rectangle outside source");
@@ -33,9 +39,11 @@ void copy(Image& out,const Image& source,int sx,int sy,int x,int y,int w,int h,i
         if(pixel!=key&&x+xx>=0&&x+xx<out.width&&y+yy>=0&&y+yy<out.height)out.at(x+xx,y+yy)=pixel;
     }
 }
+// Decimal text of n, left-padded to `width` with '%' characters (used to align number columns).
 std::string padded(uint64_t n,int width=2) {
     auto text=std::to_string(n);if(int(text.size())<width)text.insert(0,size_t(width-int(text.size())),'%');return text;
 }
+// Formats an amount with '.' as thousands separator (e.g. 1.234.567) and a leading '-' if negative.
 std::string money(int64_t value) {
     const bool negative = value < 0;
     uint64_t n = uint64_t(negative ? -value : value);
@@ -44,6 +52,7 @@ std::string money(int64_t value) {
     if (negative) digits.insert(digits.begin(), '-');
     return digits;
 }
+// Short German position label: TW, ABW, MIT, STU.
 const char* position_name(int position) {
     switch (position) {
     case 0: return "TW";
@@ -53,16 +62,19 @@ const char* position_name(int position) {
     default: return "?";
     }
 }
+// Reads a little-endian 32-bit signed value from a byte vector (bounds-checked).
 int32_t rd32(const std::vector<uint8_t>& v, size_t at) {
     return int32_t(uint32_t(v.at(at)) | uint32_t(v.at(at + 1)) << 8 |
                    uint32_t(v.at(at + 2)) << 16 | uint32_t(v.at(at + 3)) << 24);
 }
+// Label of an offer-form field: 0 = fee, 1 = monthly salary, 2 = contract years, 3.. = numbered bonuses.
 std::string field_name(int index) {
     if (index == 0) return "Ablöse";
     if (index == 1) return "Monatsgehalt";
     if (index == 2) return "Laufzeit (Jahre)";
     return "Prämie " + std::to_string(index - 2);
 }
+// Parses typed digits to a number; returns 0 for empty or malformed input.
 uint32_t parse_input(std::string_view input) {
     uint32_t value = 0;
     if (input.empty()) return 0;
@@ -72,6 +84,9 @@ uint32_t parse_input(std::string_view input) {
 }
 } // namespace
 
+// Builds the screen's data projection from the game state: balance, the 40-entry market list
+// (listing seller, asking fee, bids), the manager's own squad rows, borrowed players and team
+// averages. Called whenever a fresh projection is needed (screen open, after each acknowledged request).
 TransferMarketState transfer_market_from_game(const GameState& g, uint64_t revision) {
     const int manager = g.memory.u8(::bmh::layout::ActiveManager);
     if (manager < 0 || size_t(manager) >= g.manager_teams.size())
@@ -92,8 +107,10 @@ TransferMarketState transfer_market_from_game(const GameState& g, uint64_t revis
     state.club_name = g.club_name(state.runtime_club);
     state.source = "engine_projection";
 
+    // Marks which players already appear in the market list (used for the squad's already_listed flag).
     std::vector<bool> listed_players(g.players.size(), false);
     for (int i = 0; i < kMarketEntries; ++i) {
+        // Market pool word: low 12 bits are the player id; 0x0fff means the entry is empty.
         const int player_id = g.squad_slots.at(kPoolFirst + size_t(i)) & 0x0fff;
         if (player_id == 0x0fff) continue;
         if (size_t(player_id) >= g.players.size()) throw FormatError("transfer market: pool player is outside attributes");
@@ -107,6 +124,7 @@ TransferMarketState transfer_market_from_game(const GameState& g, uint64_t revis
         item.age = player.age(); item.position = player.position(); item.strength = player.strength();
         item.attributes=player;item.source_word=g.squad_slots.at(kPoolFirst+size_t(i));
         item.nationality=uint8_t(player.nationality()+(size_t(player_id)<g.player_bonus.size()?((g.player_bonus[size_t(player_id)]&128)>>2):0));
+        // Seller word: 0xffff means no club (listing without a seller); otherwise the low 15 bits are the club.
         const uint16_t seller_raw = g.memory.u16(entry + 8);
         if (seller_raw == 0xffff) {
             item.seller = -1;
@@ -116,11 +134,14 @@ TransferMarketState transfer_market_from_game(const GameState& g, uint64_t revis
             item.seller_name = g.club_name(item.seller);
             item.own_listing = item.seller == state.runtime_club;
         }
+        // Asking fee as stored in the list entry, scaled as the original does (value/10000 times 0x30d4); must fit in int32.
         const uint64_t fee = uint64_t(g.memory.u32(entry + 0x2c) / 10000) * 0x30d4;
         if (fee > uint64_t(std::numeric_limits<int32_t>::max())) throw FormatError("transfer market: asking fee out of range");
         item.asking_fee = int32_t(fee);
         item.salary_reference = g.memory.u32(entry + 0x30);
         item.salary_demand_percent = g.memory.u8(entry + 0x55);
+        // Each entry holds up to four bids; 0xffff marks a free bid slot. A bid by the active manager's own club
+        // is kept in full so the offer form can be pre-filled.
         for (int bid = 0; bid < 4; ++bid) {
             const uint16_t buyer = g.memory.u16(entry + uint32_t(bid) * 2);
             if (buyer == 0xffff) continue;
@@ -132,6 +153,7 @@ TransferMarketState transfer_market_from_game(const GameState& g, uint64_t revis
                 own.source_slot=item.source_slot;
                 own.fee=int32_t(g.memory.u32(entry+0x1c+uint32_t(bid)*4));
                 own.annual_salary=int32_t(g.memory.u32(entry+0x0c+uint32_t(bid)*4));
+                // Stored term is in months (low 7 bits); converted to whole years, rounded up.
                 own.contract_years=uint8_t((int(g.memory.u8(entry+0x34+uint32_t(bid))&0x7f)-1)/12+1);
                 for(size_t bonus=0;bonus<own.bonuses.size();++bonus)
                     own.bonuses[bonus]=g.memory.u8(entry+0x38+uint32_t(bid)*7+uint32_t(bonus));
@@ -142,12 +164,15 @@ TransferMarketState transfer_market_from_game(const GameState& g, uint64_t revis
         state.items.push_back(std::move(item));
     }
 
+    // View flags of the original screen (position filters, Komplett, loan/purchase mode);
+    // default 0x1f0 (all position filters on) when the saved field is not available.
     state.source_view_flags=g.memory.has(::bmh::layout::TransferMarket_ListedPlayers_RuntimeField+uint32_t(manager)*2)?g.memory.u16(::bmh::layout::Savestate_Layout_ExecutableField3+uint32_t(manager)*2):uint16_t(0x1f0);
     state.gradient_text=!g.memory.has(::bmh::layout::TextGradientDisabled)||g.memory.u8(::bmh::layout::TextGradientDisabled)==0;
     state.decorated_background=!g.memory.has(::bmh::layout::PlainBackground)||g.memory.u8(::bmh::layout::PlainBackground)==0;
     state.textured_panes=!g.memory.has(::bmh::layout::SolidPanelBackground)||g.memory.u8(::bmh::layout::SolidPanelBackground)==0;
     state.source_market_mode=g.memory.has(::bmh::layout::GameMode)?g.memory.u8(::bmh::layout::GameMode):uint8_t(0);
     if(g.memory.has(::bmh::layout::ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField)&&g.memory.has(::bmh::layout::ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField2))state.currency=std::pair<int32_t,int32_t>{int32_t(g.memory.u32(::bmh::layout::CurrencyMultiplier)),int32_t(g.memory.u32(::bmh::layout::CurrencyDivisor))};
+    // Roster block shown on the left side of the screen (same data as the club info screen).
     state.roster.runtime_team=state.runtime_club;state.roster.original_club_name=state.club_name;
     state.roster.has_squad=true;state.roster.gradient_text=state.gradient_text;
     state.roster.decorated_background=state.decorated_background;
@@ -167,11 +192,14 @@ TransferMarketState transfer_market_from_game(const GameState& g, uint64_t revis
         auto& averages=all?state.team_strengths:state.active_strengths;
         for(size_t n=0;n<5;++n)averages[n]=count[n]?uint16_t(sum[n]/count[n]):uint16_t(0);
     }
+    // Collect loan slots (up to 12) whose borrowing manager is the active one; these players are
+    // shown at the bottom of the roster in addition to the ordinary squad rows.
     std::vector<int> borrowed;
     if(g.memory.has(::bmh::layout::Career_CareerManagersEnd_RuntimeField+23)&&g.memory.has(::bmh::layout::ClubInfo_FormatError_RuntimeField2+11))
         for(int loan=0;loan<12;++loan)if(g.memory.u16(::bmh::layout::Career_CareerManagersEnd_RuntimeField+uint32_t(loan)*2)!=0x0fff&&g.memory.u8(::bmh::layout::ClubInfo_FormatError_RuntimeField2+uint32_t(loan))==manager)borrowed.push_back(loan);
     if(borrowed.size()>range.count)throw FormatError("transfer market: borrowed roster exceeds Source squad range");
     const size_t ordinary_count=range.count-borrowed.size();
+    // Ordinary squad rows first; rendered_row counts only non-empty rows and drives the alternating row colours.
     int rendered_row=0;
     for(size_t row=0;row<ordinary_count;++row) {
         ClubInfoPlayer p;p.row=int(row);p.physical_row=int(row);p.displayed_slot=g.squad_slots.at(range.first+row);
@@ -195,6 +223,7 @@ TransferMarketState transfer_market_from_game(const GameState& g, uint64_t revis
         if (p.manager_board && p.player_id >= 0) p.statistics = player_club_statistics(g, state.runtime_club, p.player_id, *p.manager_board);
         state.roster.players.push_back(std::move(p));
     }
+    // Borrowed players are appended after the ordinary rows and also get a snapshot preview for quotes.
     for(size_t index=0;index<borrowed.size();++index) {
         const int loan=borrowed[index],id=g.memory.u16(::bmh::layout::Career_CareerManagersEnd_RuntimeField+uint32_t(loan)*2);
         if(auto preview=transfer_market_snapshot_preview(g,manager,state.runtime_club,loan))state.snapshot_previews.push_back(*preview);
@@ -209,6 +238,7 @@ TransferMarketState transfer_market_from_game(const GameState& g, uint64_t revis
         p.statistics = player_club_statistics(g, state.runtime_club, p.player_id, *p.manager_board);
         state.roster.players.push_back(std::move(p));
     }
+    // Compact squad list used for selling: only the active manager's own (non-borrowed) players.
     for (size_t row = 0; row < ordinary_count; ++row) {
         const uint16_t slot = g.squad_slots.at(range.first + row);
         const int player_id = slot & 0x0fff;
@@ -221,6 +251,7 @@ TransferMarketState transfer_market_from_game(const GameState& g, uint64_t revis
     return state;
 }
 
+// Serialises the projection as JSON (items and squad) for diagnostics and tests.
 std::string transfer_market_state_json(const TransferMarketState& state) {
     std::ostringstream out;
     out << "{\"screen\":\"transfer_market\",\"source\":" << json_quote(state.source)
@@ -255,6 +286,7 @@ std::string transfer_market_state_json(const TransferMarketState& state) {
     return out.str();
 }
 
+// Builds the notice dialog (manager name, portrait, club badge) shown for the result of a poach attempt.
 TaxDialogProjection poach_notice_from_game(const GameState& game,const PoachStart& attempt,std::string body) {
     const int manager=attempt.manager;
     const size_t base=size_t(manager)*kManagerRecordSize;
@@ -280,6 +312,7 @@ TaxDialogProjection poach_notice_from_game(const GameState& game,const PoachStar
     return out;
 }
 
+// Serialises a request as JSON, including the quote-preview fields and selected players.
 std::string transfer_market_request_json(const TransferMarketRequest& r) {
     const char* kind = r.kind == TransferMarketRequestKind::submit_bid ? "submit_bid" :
         r.kind == TransferMarketRequestKind::list_player ? "list_player" :
@@ -306,6 +339,8 @@ std::string transfer_market_request_json(const TransferMarketRequest& r) {
     return out.str();
 }
 
+// Loads all fonts, images and the executable data needed for drawing and validates the
+// background (318x207) and frame (320x240) sizes and the row count.
 TransferMarketScreen::TransferMarketScreen(const std::filesystem::path& data, TransferMarketState state)
     : state_(std::move(state)), font_(load_font(asset_path(data / "F", "BMH3.FNT"))),
       exe_(load_le(asset_path(data,"BMH.exe"))),texts_(load_textd(asset_path(data,"TEXTD.BLK"))),sprite_font_(data),
@@ -316,10 +351,13 @@ TransferMarketScreen::TransferMarketScreen(const std::filesystem::path& data, Tr
     if (background_.width != 318 || background_.height != 207 || frame_.width!=320 || frame_.height!=240 || state_.manager_slot < 0 || state_.runtime_club < 0)
         throw FormatError("transfer market: invalid screen state or assets");
     if (state_.items.size() > 40) throw FormatError("transfer market: too many list rows");
+    // Keep the saved filter bits (low 11) and force bit 0x800 on.
     view_flags_=uint16_t((state_.source_view_flags & 0x7ff) | 0x800);
+    // The atlas image is 314 pixels wide; widen it to 320 so later copies can use fixed coordinates.
     if(atlas_.width==314){Image padded(320,atlas_.height);padded.blit(atlas_,0,0);atlas_=std::move(padded);}
 }
 
+// Draws UTF-8 text with the bitmap font; text that would not fit completely is not drawn.
 void TransferMarketScreen::draw_text(Image& out, int x, int y, std::string_view value, uint8_t color) const {
     // User-facing strings and notices are UTF-8. The original bitmap font uses
     // the game's single-byte encoding, so convert only at this render boundary.
@@ -333,11 +371,14 @@ void TransferMarketScreen::draw_text(Image& out, int x, int y, std::string_view 
     font_.draw(out, x, y, encoded, color);
 }
 
+// Stores the digits typed so far into the active offer field and clears the input buffer.
 void TransferMarketScreen::commit_numeric_field() {
     if (!numeric_input_.empty()) offer_values_.at(size_t(active_field_)) = parse_input(numeric_input_);
     numeric_input_.clear();
 }
 
+// Returns the indices of the visible market items: filtered by the position bits (bit 5 + position)
+// of view_flags_ and sorted by position, then by descending strength.
 std::vector<int> TransferMarketScreen::market_order() const {
     std::vector<int> rows;std::vector<uint32_t> keys;
     for(size_t n=0;n<state_.items.size();++n) {
@@ -362,6 +403,8 @@ std::vector<int> TransferMarketScreen::market_order() const {
     };
     sort(sort,0,rows.size());return rows;
 }
+// Returns (roster index, baseline y) for every roster row to draw. Rows start at y=36 with 7 pixels per
+// row, 2 extra pixels where the status bits (0xc000) change; borrowed players are drawn from y=209 upwards.
 std::vector<std::pair<int,int>> TransferMarketScreen::roster_rows() const {
     std::vector<std::pair<int,int>> rows;int baseline=36,loan=0;
     for(size_t n=0;n<state_.roster.players.size();++n) {
@@ -373,6 +416,8 @@ std::vector<std::pair<int,int>> TransferMarketScreen::roster_rows() const {
     }
     return rows;
 }
+// Draws text with the original font. If `right` is set the text is centred between x and right.
+// The colour index may be replaced by a vertical gradient from the executable when gradient text is on.
 void TransferMarketScreen::original_text(Image& out,int x,int baseline,std::string_view value,uint8_t color,int right) const {
     const int width=font_.text_width(value);if(right>=0)x+=(right-x)/2-width/2;
     if(x<0||x+width>out.width||baseline<5||baseline>=out.height)return;
@@ -382,6 +427,9 @@ void TransferMarketScreen::original_text(Image& out,int x,int baseline,std::stri
     for(int y=0;y<6;++y)for(int xx=0;xx<width;++xx)if(mask.at(xx,y))
         out.at(x+xx,baseline-5+y)=shade?exe_.u8(::bmh::layout::Advertising_Text_RuntimeField+gradient*6+y):color;
 }
+// Draws a button at (x,y) with the given width. Wide buttons (>31) use a 31 pixel left part, repeated
+// middle strips and a right end from the widget image; narrow ones are built from corner and edge tiles.
+// Active buttons look pressed (the frame is drawn on the other side).
 void TransferMarketScreen::button(Image& out,int x,int y,int width,std::string_view label,bool active) const {
     const int height=width>31?10:9;
     if(active){const uint8_t c=out.at(x,y+height);rect(out,x,y,width+1,2,c);rect(out,x,y,2,height+1,c);x+=2;y+=2;}
@@ -402,6 +450,8 @@ void TransferMarketScreen::button(Image& out,int x,int y,int width,std::string_v
     if(mode==3)original_text(out,x,y+height/2+2,label,0,x+width);
     else sprite_font_.draw(out,x+width/2-sprite_font_.text_width(original_to_utf8(label))/2,y+height/2+2,original_to_utf8(label),mode);
 }
+// Draws the left roster pane. `full` (Komplett) adds the extended columns; data_b_ switches between
+// two data pages (the one with skill bars and statistics, and the one with attributes).
 void TransferMarketScreen::draw_roster(Image& out,bool full) const {
     const auto header=texts_[text_id(data_b_?::bmh::layout::ClubInfo_Render_TextPointer4: ::bmh::layout::ClubInfo_Render_TextPointer3)];
     // LineupScreen renders the complete header, then19c1c restores the right
@@ -411,10 +461,12 @@ void TransferMarketScreen::draw_roster(Image& out,bool full) const {
         const auto& p=state_.roster.players[size_t(row)];const auto& a=p.attributes;
         if(p.displayed_slot&0xc000) {
             const int jersey=(p.cards&31)+1;
+            // Jersey number: colour depends on the slot status bits (0x1000, borrowed, 0x8000).
             const uint8_t color=p.displayed_slot&0x1000?0xf3:p.borrowed?0x75:p.displayed_slot&0x8000?0x6c:0x68;
             original_text(out,4,baseline,std::to_string(jersey%10),color);
             if(jersey>=10)original_text(out,0,baseline,exe_.cstring(::bmh::layout::ClubInfo_Render_TextPointer),color);
         }
+        // Name colour: borrowed, pending offer, or alternating rows; 0x27 highlights the selected or marked player.
         uint8_t color=p.borrowed?0x65:p.offer_name_color?0x75:uint8_t(p.rendered_row%2?0x67:0x6b);
         if((selected_snapshot_&&state_.snapshot_previews.at(size_t(*selected_snapshot_)).snapshot_index==p.human_loan_index)||
            (selected_squad_&&state_.squad.at(size_t(*selected_squad_)).row==p.physical_row)||
@@ -458,6 +510,8 @@ void TransferMarketScreen::draw_roster(Image& out,bool full) const {
         }
     }
 }
+// Draws the roster plus, unless Komplett is on, the market list (six rows per page), the balance and
+// quote preview, the strength bars and the filter buttons, then the bottom buttons.
 void TransferMarketScreen::draw_market_overview(Image& out) const {
     const bool full=(view_flags_&1)!=0;
     draw_roster(out,full);
@@ -493,6 +547,8 @@ void TransferMarketScreen::draw_market_overview(Image& out) const {
             original_text(out,250,150,original_money(preview_->projected_balance),0x5f);
             original_text(out,242,150,exe_.cstring(::bmh::layout::TransferMarket_Rect_TextPointer),0x69);
         }
+        // Strength bars: shows the averages of the whole team (flag 0x400) or of the active players;
+        // the bar height is the share of the overall average clamped to 91..109 percent.
         const auto& average=(view_flags_&0x400)?state_.team_strengths:state_.active_strengths;
         for(int n=0;n<4;++n) {
             const int height=std::clamp(average[4]?average[size_t(n)]*100/average[4]:0,91,109)-90,x=228+n*23;
@@ -502,12 +558,15 @@ void TransferMarketScreen::draw_market_overview(Image& out) const {
             original_text(out,236+n*23,172,padded(average[size_t(n)]),0x6b);
         }
         original_text(out,201,183,padded(average[4]),0x6b);
+        // Filter and mode buttons: positions and rectangles come from a table in the executable (6 bytes per entry).
         for(int n=4;n<13;++n)button(out,exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField + n*6),exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField2+n*6),exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField3+n*6),texts_[text_id(::bmh::layout::TransferMarket_Rect_TextPointer5)+size_t(n)],(view_flags_&(1u<<n))!=0);
     }
     button(out,1,215,51,texts_[text_id(data_b_?::bmh::layout::TransferMarket_Rect_TextPointer3: ::bmh::layout::TransferMarket_Rect_TextPointer4)],true);
     button(out,55,215,51,texts_[text_id(::bmh::layout::TransferMarket_Rect_TextPointer5)],full);
     for(int n=1;n<4;++n)if(!full&&state_.source_market_mode==3)button(out,exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField + n*6),exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField2+n*6),exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField3+n*6),texts_[text_id(::bmh::layout::TransferMarket_Rect_TextPointer5)+size_t(n)],(view_flags_&(1u<<n))!=0);
 }
+// Formats an amount like the original: converted with the currency multiplier/divisor,
+// left-padded to 9 characters and followed by the currency suffix.
 std::string TransferMarketScreen::original_money(int32_t value) const {
     const int32_t numerator=state_.currency?state_.currency->first:int32_t(exe_.u32(::bmh::layout::CurrencyMultiplier));
     const int32_t denominator=state_.currency?state_.currency->second:int32_t(exe_.u32(::bmh::layout::CurrencyDivisor));
@@ -517,6 +576,8 @@ std::string TransferMarketScreen::original_money(int32_t value) const {
     if(result.size()<9)result.insert(0,9-result.size(),'%');
     return result+exe_.cstring(::bmh::layout::CurrencySuffixText);
 }
+// Renders the complete 320x240 screen: frame (or plain bars), title, club name, the overview and a
+// feedback line that replaces the club name line when set (shortened to fit 310 pixels).
 Image TransferMarketScreen::render() const {
     Image out=state_.decorated_background?frame_:Image(320,240);
     if(!state_.decorated_background){rect(out,0,4,320,13,0x44);rect(out,1,5,318,11,0x39);rect(out,0,228,320,10,0x44);rect(out,1,229,318,8,0x39);}
@@ -537,6 +598,8 @@ Image TransferMarketScreen::render() const {
     return out;
 }
 
+// Validates the offer form (fee and salary non-zero, 1..4 years, bonuses 0..100, not an own player)
+// and creates a submit_bid request; the screen then waits for the session's acknowledgement.
 TransferMarketRequest TransferMarketScreen::make_bid() {
     if (pending_ || !selected_item_) return {};
     if (offer_values_[0] == 0 || offer_values_[1] == 0 || offer_values_[2] < 1 || offer_values_[2] > 4) {
@@ -564,6 +627,8 @@ TransferMarketRequest TransferMarketScreen::make_bid() {
     return request;
 }
 
+// Creates a request to list the selected squad player (sell or loan). If the player is already listed,
+// opens the offer review instead.
 TransferMarketRequest TransferMarketScreen::make_listing(bool loan) {
     if (pending_ || !selected_squad_) return {};
     const auto& item = state_.squad.at(size_t(*selected_squad_));
@@ -582,6 +647,7 @@ TransferMarketRequest TransferMarketScreen::make_listing(bool loan) {
     return request;
 }
 
+// Creates a quote-preview request for the selected market item (purchase), loan snapshot or squad player.
 TransferMarketRequest TransferMarketScreen::make_preview(bool purchase) {
     if(pending_)return {};
     TransferMarketRequest request;request.kind=TransferMarketRequestKind::preview_quote;
@@ -607,6 +673,7 @@ TransferMarketRequest TransferMarketScreen::make_preview(bool purchase) {
     }
     pending_=request;preview_.reset();return request;
 }
+// Creates a request to review the bids on one of the player's own listings; refuses if there are none.
 TransferMarketRequest TransferMarketScreen::make_review(const TransferMarketItem& item) {
     if (pending_) return {};
     if (item.offers == 0) { feedback_ = "Noch keine Angebote für diesen Spieler."; return {}; }
@@ -618,6 +685,7 @@ TransferMarketRequest TransferMarketScreen::make_review(const TransferMarketItem
     request.bid.source_slot = item.source_slot;
     pending_ = request; feedback_.clear(); return request;
 }
+// Creates a request to open the offer screen for the selected market item; own listings go to the review instead.
 TransferMarketRequest TransferMarketScreen::make_open_offer(bool loan) {
     if(pending_||!selected_item_)return {};
     const auto& item=state_.items.at(size_t(*selected_item_));
@@ -630,6 +698,8 @@ TransferMarketRequest TransferMarketScreen::make_open_offer(bool loan) {
     request.selected_players.push_back({item.list_entry,item.source_slot,item.player,item.seller,-1});
     pending_=request;return request;
 }
+// Selection by position over the market rows (x 201..297, y 25..115, 15 px per row) or the roster
+// names (x 9..60). A new selection requests a quote preview unless Komplett is on.
 TransferMarketRequest TransferMarketScreen::move(int x,int y) {
     if(pending_||close_requested_)return {};
     if(!(view_flags_&1)&&x>=201&&x<=297&&y>=25&&y<115) {
@@ -654,6 +724,9 @@ TransferMarketRequest TransferMarketScreen::move(int x,int y) {
     }
     selected_item_.reset();selected_squad_.reset();selected_snapshot_.reset();preview_.reset();return {};
 }
+// Handles a mouse click. Right click on the market pane turns the page, elsewhere closes the screen.
+// Left click handles the Data/Komplett buttons, poach and filter buttons, marking of rows, and the action bar
+// (y 202..212; the right part x>=254 means loan).
 TransferMarketRequest TransferMarketScreen::click(int x,int y,bool right) {
     if(pending_||close_requested_)return {};
     if(right) {
@@ -724,6 +797,8 @@ TransferMarketRequest TransferMarketScreen::click(int x,int y,bool right) {
     }
     return {};
 }
+// Keyboard shortcuts: Esc closes, B or Enter opens an offer for the selected market item,
+// V or Enter lists the selected squad player.
 TransferMarketRequest TransferMarketScreen::key(std::string_view key) {
     if(pending_||close_requested_)return {};
     if(key=="ESC"||key=="ESCAPE"){close_requested_=true;return {};}
@@ -736,6 +811,7 @@ TransferMarketRequest TransferMarketScreen::key(std::string_view key) {
     return {};
 }
 
+// Accepts typed digits (at most 10) while the offer form is shown; returns whether the input was used.
 bool TransferMarketScreen::text(std::string_view value) {
     if (pending_ || close_requested_ || view_ != View::offer) return false;
     if (value.empty() || numeric_input_.size() + value.size() > 10 ||
@@ -743,6 +819,8 @@ bool TransferMarketScreen::text(std::string_view value) {
     numeric_input_.append(value); return true;
 }
 
+// Session acknowledgement of a request: replaces the state with a newer revision of the same manager,
+// clears the pending request and all selections and shows the notice.
 void TransferMarketScreen::acknowledge(TransferMarketState updated, std::string notice) {
     if (!pending_ || updated.manager_slot != state_.manager_slot || updated.runtime_club != state_.runtime_club ||
         updated.revision <= state_.revision) throw FormatError("transfer market: acknowledgement requires same manager and newer revision");
@@ -750,10 +828,13 @@ void TransferMarketScreen::acknowledge(TransferMarketState updated, std::string 
     view_ = View::market; numeric_input_.clear();marked_items_.clear();marked_squad_.clear();
     feedback_ = std::move(notice);
 }
+// Session acknowledgement when the request changed nothing: only releases the pending request.
 void TransferMarketScreen::acknowledge_unchanged() {
     if (!pending_) throw FormatError("transfer market: no pending request to acknowledge");
     pending_.reset(); numeric_input_.clear(); feedback_.clear();
 }
+// Session acknowledgement of a quote preview: checks that the quote matches the pending request exactly
+// (manager, club, slot, player, seller, kind), re-finds the selection in the new state and stores the quote.
 void TransferMarketScreen::acknowledge_preview(TransferMarketState updated,TransferMarketPreview quote) {
     if(!pending_||pending_->kind!=TransferMarketRequestKind::preview_quote||
        updated.manager_slot!=state_.manager_slot||updated.runtime_club!=state_.runtime_club||updated.revision<state_.revision||
@@ -780,6 +861,7 @@ void TransferMarketScreen::acknowledge_preview(TransferMarketState updated,Trans
     state_=std::move(updated);pending_.reset();preview_=quote;
     if(quote.purchase)selected_item_=selected;else if(request.preview_snapshot_index>=0)selected_snapshot_=selected;else selected_squad_=selected;
 }
+// Takes a fresh state after the offer screen has been left; clears selections and marks.
 void TransferMarketScreen::refresh_after_offer(TransferMarketState updated) {
     if (pending_ || updated.manager_slot != state_.manager_slot || updated.runtime_club != state_.runtime_club ||
         updated.revision < state_.revision)
@@ -789,10 +871,12 @@ void TransferMarketScreen::refresh_after_offer(TransferMarketState updated) {
     marked_items_.clear(); marked_squad_.clear();
     feedback_.clear();
 }
+// Session rejection of the pending request: releases it and shows the reason as feedback.
 void TransferMarketScreen::reject_action(std::string reason) {
     if (!pending_ || reason.empty()) throw FormatError("transfer market: rejection requires pending request/reason");
     pending_.reset(); feedback_ = std::move(reason); numeric_input_.clear();
 }
+// Serialises the screen state (view, selections, pending request, preview, visible rows) as JSON for tests.
 std::string TransferMarketScreen::state_json() const {
     std::ostringstream out;
     out << "{\"screen\":\"transfer_market\",\"view\":\""

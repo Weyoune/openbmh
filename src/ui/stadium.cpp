@@ -20,11 +20,13 @@
 
 namespace bmh::ui {
 namespace {
+// Fills a w*h rectangle with one palette index, clipped to the image. Used for panels, shadows and backgrounds.
 void fill(Image& im, int x, int y, int w, int h, uint8_t color) {
     for (int yy = std::max(0, y); yy < std::min(im.height, y + h); ++yy)
         for (int xx = std::max(0, x); xx < std::min(im.width, x + w); ++xx)
             im.at(xx, yy) = color;
 }
+// Draws a 1-pixel rectangle outline (w*h, clipped to the image). Used for hover and press highlights.
 void outline(Image& im, int x, int y, int w, int h, uint8_t color) {
     if (w <= 0 || h <= 0) return;
     const int right = x + w - 1;
@@ -38,6 +40,7 @@ void outline(Image& im, int x, int y, int w, int h, uint8_t color) {
         if (right >= 0 && right < im.width) im.at(right, yy) = color;
     }
 }
+// Draws the 1-pixel panel border over the inclusive rectangle: 0x46 on top/left, 0x40 on bottom/right.
 void source_border(Image& im, int left, int top, int right, int bottom) {
     // PaintsFourBorderEdges draws these inclusive edges in this order. The bottom edge
     // overwrites the lower-left pixel from the first edge; the right edge
@@ -47,6 +50,8 @@ void source_border(Image& im, int left, int top, int right, int bottom) {
     for (int x = left; x <= right; ++x) im.at(x, bottom) = 0x40;
     for (int y = top; y <= bottom; ++y) im.at(right, y) = 0x40;
 }
+// Copies a w*h crop of src (starting at sx,sy) to dst at (x,y); pixels outside either image are skipped.
+// With transparent=true, palette index 0 in the source is treated as the transparent key.
 void copy_crop(Image& dst, const Image& src, int sx, int sy, int x, int y, int w, int h,
                bool transparent = false) {
     for (int yy = 0; yy < h; ++yy) for (int xx = 0; xx < w; ++xx) {
@@ -57,11 +62,14 @@ void copy_crop(Image& dst, const Image& src, int sx, int sy, int x, int y, int w
         if (!transparent || color != 0) dst.at(dx, dy) = color;
     }
 }
+// Draws the 2-pixel dark (0x40) shadow strips below and to the right of a w*h box at (x,y).
 void source_shadow(Image& out, int x, int y, int w, int h) {
     // ColorBottomRightBevel draws its two inclusive rectangles after clipping to the screen.
     fill(out, x + 2, y + h, w, 2, 0x40);
     fill(out, x + w, y + 2, 2, h, 0x40);
 }
+// Draws a dialog frame: optional shadow, a 16x16 background pattern read from the executable, the four
+// corner pieces from the widget atlas, and the edge strips tiled in runs of 74 px (top/bottom) and 96 px (left/right).
 void source_frame(Image& out, const Image& atlas, const LeImage& exe,
                   int x, int y, int w, int h, bool shadow = true) {
     if (shadow) { fill(out, x + 2, y + h, w, 2, 0x40); fill(out, x + w, y + 2, 2, h, 0x40); }
@@ -82,6 +90,9 @@ void source_frame(Image& out, const Image& atlas, const LeImage& exe,
         copy_crop(out, atlas, 4, 8, x + w - 4, y + at, 4, n);
     }
 }
+// Draws text with its baseline at `baseline` (skipped entirely if it would leave the screen vertically).
+// In gradient mode (executable flag == 2) a color found in the 32-entry gradient table is recolored per glyph row
+// from a 6-row gradient; color 0x40 and unknown colors are drawn plain.
 void draw_source_font(Image& out, const Font& font, const LeImage& exe, int x, int baseline,
                       std::string_view text, uint8_t color, bool gradient) {
     const int y = baseline - font.baseline;
@@ -92,6 +103,7 @@ void draw_source_font(Image& out, const Font& font, const LeImage& exe, int x, i
     }
     unsigned slot = 0;
     while (slot < 32 && exe.u8(::bmh::layout::Advertising_Text_RuntimeField2 + slot) != color) ++slot;
+    // color is not in the gradient table: fall back to a plain draw
     if (slot == 32) { font.draw(out, x, y, text, color); return; }
     Image mask(std::max(1, font.text_width(text)), font.height, 0);
     font.draw(mask, 0, 0, text, 1);
@@ -100,13 +112,16 @@ void draw_source_font(Image& out, const Font& font, const LeImage& exe, int x, i
             if (mask.at(column, row) && x + column >= 0 && x + column < out.width)
                 out.at(x + column, y + row) = exe.u8(::bmh::layout::Advertising_Text_RuntimeField + slot * 6 + size_t(std::min(row, 5)));
 }
+// Reads a little-endian int32 from a manager record at byte offset `at` (bounds-checked).
 int32_t record_i32(const std::vector<uint8_t>& bytes, size_t at) {
     return int32_t(uint32_t(bytes.at(at)) | uint32_t(bytes.at(at + 1)) << 8 |
                    uint32_t(bytes.at(at + 2)) << 16 | uint32_t(bytes.at(at + 3)) << 24);
 }
+// Reads a little-endian uint16 from a manager record at byte offset `at` (bounds-checked).
 uint16_t record_u16(const std::vector<uint8_t>& bytes, size_t at) {
     return uint16_t(bytes.at(at) | uint16_t(bytes.at(at + 1)) << 8);
 }
+// Reads the base price and construction duration of the 8 investments from the executable tables.
 StadiumInvestmentConstants investment_constants(const LeImage& exe) {
     StadiumInvestmentConstants constants;
     for (unsigned choice = 0; choice < 8; ++choice) {
@@ -115,21 +130,27 @@ StadiumInvestmentConstants investment_constants(const LeImage& exe) {
     }
     return constants;
 }
+// True if periphery object 0..13 can still be built: no construction running and not yet built
+// (object 0 stays available until its level reaches 0xab).
 bool periphery_available(const StadiumState& state, int object) {
     return object >= 0 && object < 14 && state.days[size_t(object)] == 0 &&
         (object == 0 ? state.level[0] < 0xab : state.level[size_t(object)] == 0);
 }
+// Display name of an investment row (its original label text).
 std::string investment_name(const StadiumInvestmentRow& row) {
     return row.original_label;
 }
+// Looks up a TEXTD string through a text pointer variable; empty if the id is out of range.
 std::string textd_string(const TextDb& textd, uint32_t pointer_variable) {
     const size_t id = text_id(pointer_variable);
     return id < textd.strings.size() ? textd[id] : std::string{};
 }
+// Same as textd_string, using the texts loaded in the game state; empty if none are loaded.
 std::string game_textd_string(const GameState& game, uint32_t pointer_variable) {
     if (!game.texts) return {};
     return textd_string(*game.texts, pointer_variable);
 }
+// Copies a stored name, replacing each ':' marker with the given separator text.
 std::string expand_original_club_label(std::string_view name, std::string_view separator) {
     std::string expanded;
     for (char byte : name) {
@@ -138,6 +159,8 @@ std::string expand_original_club_label(std::string_view name, std::string_view s
     }
     return expanded;
 }
+// Formats a duration: the number, then a unit text from TEXTD, an extra executable string when value != 1,
+// and a trailing executable string.
 std::string original_duration_text(const GameState& game, const TextDb& textd,
                                    const LeImage& exe, int value, uint8_t format,
                                    uint32_t unit_address) {
@@ -146,6 +169,7 @@ std::string original_duration_text(const GameState& game, const TextDb& textd,
     result += exe.cstring(::bmh::layout::CareerSession_FormatNumber_ExecutableField);
     return result;
 }
+// Serializes a block expansion quote as a JSON object (part of the state dump).
 std::string block_quote_json(const StadiumBlockExpansionQuote& q) {
     std::ostringstream out;
     out << "{\"manager\":" << q.manager << ",\"manager_club\":" << q.manager_club
@@ -163,6 +187,7 @@ std::string block_quote_json(const StadiumBlockExpansionQuote& q) {
         << ",\"base_weeks\":" << unsigned(q.base_weeks) << '}';
     return out.str();
 }
+// True for the request kinds that belong to the block expansion editor (they carry block fields).
 bool block_request_kind(StadiumRequestKind kind) {
     switch (kind) {
     case StadiumRequestKind::expansion_select:
@@ -174,6 +199,8 @@ bool block_request_kind(StadiumRequestKind kind) {
     default: return false;
     }
 }
+// True if two quotes describe the same manager, club, slot, current block state, price table entry and limits.
+// The target-dependent costs are deliberately not compared.
 bool same_block_quote_owner(const StadiumBlockExpansionQuote& a,
                             const StadiumBlockExpansionQuote& b) {
     return a.manager == b.manager && a.manager_club == b.manager_club && a.slot == b.slot &&
@@ -183,6 +210,8 @@ bool same_block_quote_owner(const StadiumBlockExpansionQuote& a,
         a.company_price_percent == b.company_price_percent && a.price_per_1000 == b.price_per_1000 &&
         a.max_places == b.max_places && a.base_weeks == b.base_weeks;
 }
+// Recomputes a block expansion quote from (total places, features) and the constants and returns true only if
+// every field of `q` matches and all ranges are valid. Used to validate quotes in acknowledgements.
 bool canonical_block_quote(const StadiumBlockExpansionQuote& q, uint32_t total,
                            uint8_t features,const StadiumBlockExpansionConstants& constants) {
     const auto& prices=constants.price_per_1000;const auto& maxima=constants.max_places;const auto& weeks=constants.weeks;
@@ -198,6 +227,7 @@ bool canonical_block_quote(const StadiumBlockExpansionQuote& q, uint32_t total,
         return false;
     const uint32_t current = uint32_t(q.current_capacity_thousands) * 1000u;
     const uint32_t added = total - current;
+    // Cost component = price_per_1000 * (places/1000) * multiplier / divisor; fails if the product exceeds int32.
     const auto component = [&](uint32_t places, uint32_t multiplier, uint32_t divisor,
                                uint32_t& out) {
         const uint64_t value = uint64_t(q.price_per_1000) * (places / 1000u) * multiplier;
@@ -205,6 +235,8 @@ bool canonical_block_quote(const StadiumBlockExpansionQuote& q, uint32_t total,
         out = uint32_t(value / divisor);
         return true;
     };
+    // New places are charged in full; seats cost 45% and roof 30% of the per-place price. If the feature is
+    // already built (raw flag set), only the newly added places are charged for it, otherwise the whole block.
     uint32_t new_cost = 0, seats = 0, roof = 0;
     if (!component(added, 1, 1, new_cost) ||
         ((features & 1) && !component((q.current_raw_flags & 1) ? added : total, 45, 100, seats)) ||
@@ -219,12 +251,15 @@ bool canonical_block_quote(const StadiumBlockExpansionQuote& q, uint32_t total,
         q.undiscounted_cost == sum &&
         q.base_price == uint32_t(sum * uint32_t(q.company_price_percent) / 100u);
 }
+// True if the editor mirrors its quote (target places, features) and the quote is canonical.
+// header_text_variant must be in 3..10.
 bool valid_editor_projection(const StadiumBlockExpansionEditor& editor,const StadiumBlockExpansionConstants& constants) {
     return editor.total_target_places == editor.quote.total_target_places &&
         editor.desired_features == editor.quote.desired_features &&
         editor.header_text_variant >= 3 && editor.header_text_variant <= 10 &&
         canonical_block_quote(editor.quote, editor.total_target_places, editor.desired_features,constants);
 }
+// True if all 8 block overviews are identical (construction weeks, flags, capacity levels, capacities).
 bool same_block_overviews(const std::array<StadiumBlockOverview, 8>& a,
                           const std::array<StadiumBlockOverview, 8>& b) {
     for (size_t i = 0; i < a.size(); ++i)
@@ -233,6 +268,7 @@ bool same_block_overviews(const std::array<StadiumBlockOverview, 8>& a,
             return false;
     return true;
 }
+// Like same_block_overviews, but ignores the slot that was just changed.
 bool same_other_block_overviews(const std::array<StadiumBlockOverview, 8>& a,
                                 const std::array<StadiumBlockOverview, 8>& b,
                                 size_t changed_slot) {
@@ -244,10 +280,13 @@ bool same_other_block_overviews(const std::array<StadiumBlockOverview, 8>& a,
     }
     return true;
 }
+// True if the presentation flags (backgrounds, dialog frame, gradient text) are identical.
 bool same_source_stadium_style(const StadiumState& a, const StadiumState& b) {
     return a.plain_background == b.plain_background && a.compact_dialog_frame == b.compact_dialog_frame &&
         a.solid_panel_background == b.solid_panel_background && a.gradient_text == b.gradient_text;
 }
+// True if style and the inputs of the ticket compensation (level, live round, refund rate, season tickets)
+// are unchanged; allow_ticket_cap permits season_tickets to differ (they may be capped after a build).
 bool same_block_compensation_context(const StadiumState& a, const StadiumState& b,
                                     bool allow_ticket_cap = false) {
     return same_source_stadium_style(a, b) &&
@@ -255,6 +294,8 @@ bool same_block_compensation_context(const StadiumState& a, const StadiumState& 
         a.ticket_refund_rate == b.ticket_refund_rate &&
         (allow_ticket_cap || a.season_tickets == b.season_tickets);
 }
+// Sum of the capacity levels (thousands of places) of all blocks that are not under construction,
+// excluding the block that is just becoming busy.
 uint8_t source_usable_capacity_thousands(const std::array<StadiumBlockOverview, 8>& blocks,
                                          size_t newly_busy_slot) {
     uint8_t usable = 0;
@@ -264,9 +305,12 @@ uint8_t source_usable_capacity_thousands(const std::array<StadiumBlockOverview, 
     }
     return usable;
 }
+// Truncates a 64-bit value to 32 bits with wrap-around (two's complement), as 32-bit arithmetic would.
 int32_t source_wrap_i32(int64_t value) {
     return std::bit_cast<int32_t>(uint32_t(uint64_t(value)));
 }
+// Refund owed for season tickets that no longer fit into the usable capacity:
+// missing tickets * min(15, 17 - live round) weeks * refund rate, wrapped to int32. Zero if everything fits.
 int32_t source_immediate_compensation(uint16_t tickets, uint8_t usable_thousands,
                                       uint8_t live_round, int32_t rate) {
     const int32_t capacity = int32_t(usable_thousands) * 1000;
@@ -275,14 +319,19 @@ int32_t source_immediate_compensation(uint16_t tickets, uint8_t usable_thousands
     const int32_t weeks = std::min(15, 17 - int32_t(live_round));
     return source_wrap_i32(int64_t(missing) * int64_t(weeks) * int64_t(rate));
 }
+// Season tickets capped to the usable capacity (thousands * 1000).
 uint16_t source_ticket_cap(uint16_t tickets, uint8_t usable_thousands) {
     return uint16_t(std::min<uint32_t>(tickets, uint32_t(usable_thousands) * 1000u));
 }
 }
 
+// Projects the live game state of the active manager into a StadiumState for the screen: balance, texts,
+// periphery levels/days, seat blocks and the 8 investment rows with their options.
+// Throws FormatError if the active manager or its record is invalid.
 StadiumState stadium_from_game(const GameState& game, const LeImage& exe, uint64_t revision,
                                int construction_percent) {
     const int manager = int(game.memory.u8(::bmh::layout::ActiveManager));
+    // Each manager has a fixed 0xb0c-byte record in manager_records; all record offsets below are relative to it.
     const size_t record = size_t(manager) * 0xb0c;
     if (size_t(manager) >= game.manager_teams.size() || record + 0x5d > game.manager_records.size())
         throw FormatError("stadium: invalid active manager or truncated record");
@@ -290,9 +339,13 @@ StadiumState stadium_from_game(const GameState& game, const LeImage& exe, uint64
     state.manager_slot = manager;
     state.runtime_club = game.manager_teams.at(size_t(manager));
     state.revision = revision;
+    // balance is stored at record offset 0x314
     state.balance = record_i32(game.manager_records, record + 0x314);
     state.balance_text = format_number(game, state.balance, 0x181);
     state.construction_percent = construction_percent;
+    // Title and footer texts. The footer is the stadium name followed by the capacity in seats. The name comes
+    // from the stadium-name pool (indexed through club_heap_bc) unless a runtime flag selects a fixed text;
+    // if no name is found, a TEXTD prefix plus the club name is used instead.
     if (state.runtime_club >= 0 && size_t(state.runtime_club) < game.club_ids.size()) {
         state.original_stadium_title = game.club_name(state.runtime_club);
         std::string footer_name;
@@ -316,11 +369,13 @@ StadiumState stadium_from_game(const GameState& game, const LeImage& exe, uint64
             format_number(game, int32_t(uint32_t(game.manager_records.at(record + 0x5c)) * 1000), 1) +
             game_textd_string(game, ::bmh::layout::Stadium_FormatError_ExecutableField3);
     }
+    // Presentation flags read from game memory (absent memory counts as off).
     state.plain_background = game.memory.has(::bmh::layout::PlainBackground) && game.memory.u8(::bmh::layout::PlainBackground) != 0;
     state.compact_dialog_frame = game.memory.has(::bmh::layout::CompactDialogFrame) && game.memory.u8(::bmh::layout::CompactDialogFrame) != 0;
     state.decorated_stadium_header = !state.plain_background;
     state.periphery_animation_tick = game.memory.has(::bmh::layout::CareerSession_Invalid_RuntimeField2) ? game.memory.u32(::bmh::layout::CareerSession_Invalid_RuntimeField2) : 0;
     state.periphery_balance_text = format_number(game, state.balance, 0x187) + exe.cstring(::bmh::layout::CareerSession_FormatNumber_ExecutableField);
+    // Pre-formatted price and duration texts of the 14 periphery objects.
     for (size_t i = 0; i < 14; ++i) {
         state.periphery_price_text[i] = format_number(game, int32_t(exe.u32(::bmh::layout::StadiumPriceTable + i * 4)), 0x187) +
             exe.cstring(::bmh::layout::CareerSession_FormatNumber_ExecutableField);
@@ -329,10 +384,12 @@ StadiumState stadium_from_game(const GameState& game, const LeImage& exe, uint64
         if (days != 1) state.periphery_duration_text[i] += exe.cstring(::bmh::layout::Stadium_FormatError_ExecutableField);
         state.periphery_duration_text[i] += exe.cstring(::bmh::layout::CareerSession_FormatNumber_ExecutableField);
     }
+    // Per-object build level (record +0) and remaining construction days (record +0x1e).
     for (size_t i = 0; i < state.level.size(); ++i) {
         state.level[i] = game.manager_records.at(record + i);
         state.days[i] = game.manager_records.at(record + 0x1e + i);
     }
+    // The 8 seat blocks: construction weeks (+0x34), flags (+0x44), capacity level (+0x4c), capacity (+0x54).
     for (unsigned i = 0; i < 8; ++i) {
         auto& block = state.blocks[i];
         block.construction_weeks = game.manager_records.at(record + 0x34 + i);
@@ -340,6 +397,8 @@ StadiumState stadium_from_game(const GameState& game, const LeImage& exe, uint64
         block.capacity_level = game.manager_records.at(record + 0x4c + i);
         block.capacity = game.manager_records.at(record + 0x54 + i);
     }
+    // The 8 investment rows: status (+0x3c), remaining weeks (+0x2c), the available options and their price texts.
+    // The price of option n is the base price times (n + 1).
     const auto constants = investment_constants(exe);
     for (unsigned i = 0; i < 8; ++i) {
         auto& row = state.investments[i];
@@ -360,6 +419,9 @@ StadiumState stadium_from_game(const GameState& game, const LeImage& exe, uint64
     return state;
 }
 
+// Builds the data page projection for a manager (slot 0..4): ticket price, six history curves with their
+// scale limits, the 3x7 statistics table texts and the required attendance text.
+// Throws FormatError on invalid selectors or out-of-range record contents.
 StadiumDataProjection stadium_data_from_game(const GameState& game, const LeImage& exe,
                                               int manager, uint8_t flags) {
     if (manager < 0 || manager > 4) throw FormatError("stadium data: invalid manager");
@@ -368,6 +430,9 @@ StadiumDataProjection stadium_data_from_game(const GameState& game, const LeImag
     const size_t at = size_t(manager) * 0xb0c;
     const auto& r = game.manager_records;
     out.ticket_price = r.at(at + 0x26e);
+    // Curves: the executable assigns each curve a history selector (0..3) whose record counter gives the
+    // number of samples. Sample values are read from different record arrays per curve; the scale limits come
+    // from executable tables.
     for (int curve = 0; curve < 6; ++curve) {
         const int selector = exe.u8(::bmh::layout::Analytics_FormatError_RuntimeField2 + 6 + curve);
         if (selector < 0 || selector > 3) throw FormatError("stadium data: invalid Source history selector");
@@ -390,8 +455,10 @@ StadiumDataProjection stadium_data_from_game(const GameState& game, const LeImag
         out.minimum[size_t(curve)] = std::bit_cast<int32_t>(exe.u32(::bmh::layout::Analytics_FormatError_RuntimeField3 + 24 + curve * 4));
         out.maximum[size_t(curve)] = std::bit_cast<int32_t>(exe.u32(::bmh::layout::Analytics_FormatError_RuntimeField4 + 24 + curve * 4));
     }
+    // Maximum of curves 0 and 1 derives from the stadium capacity (record +0x5c, in thousands): x1000 and x20000.
     out.maximum[0] = int32_t(r.at(at + 0x5c)) * 1000;
     out.maximum[1] = int32_t(r.at(at + 0x5c)) * 20000;
+    // Formats a day counter as dd.mm.yy using the executable's separator string; '%' padding becomes '0'.
     const auto date_text = [&](uint32_t counter) {
         const auto date = desk_date(counter, exe);
         auto text = format_number(game, date.day, 2) + exe.cstring(::bmh::layout::OtherGamesState_ResultText_ExecutableField) +
@@ -400,6 +467,8 @@ StadiumDataProjection stadium_data_from_game(const GameState& game, const LeImag
         std::replace(text.begin(), text.end(), '%', '0');
         return text;
     };
+    // Statistics table: 3 columns (kind) x 7 rows. Rows 0..3 hold a record value with date or an opponent name
+    // (row 1 and 3 hold the name, rows 0 and 2 the value), rows 4..6 are numeric: a count, a value divided by that count, and a third stored value.
     for (int kind = 0; kind < 3; ++kind) for (int row = 0; row < 7; ++row) {
         auto text = row == 1 || row == 3 ? std::string{} : message_text(game, ::bmh::layout::Stadium_StadiumDataFromGame_TextPointer);
         if (row < 4) {
@@ -432,6 +501,9 @@ StadiumDataProjection stadium_data_from_game(const GameState& game, const LeImag
     return out;
 }
 
+// Converts one curve of the data page into screen points (x, y). Without the fixed-scale flag (0x40) the
+// values are normalised to 0..100 first. The graph is 83 px high with its baseline at y=101, and x spreads
+// the samples over 298 px starting at x=13.
 std::vector<std::pair<int, int>> stadium_data_points(const StadiumDataProjection& data,
                                                    const LeImage& exe, int curve) {
     if (curve < 0 || curve >= 6) throw FormatError("stadium data: invalid curve");
@@ -448,6 +520,7 @@ std::vector<std::pair<int, int>> stadium_data_points(const StadiumDataProjection
     }
     if (low > high) throw FormatError("stadium data: reversed Source graph scale");
     const int selector = exe.u8(::bmh::layout::Analytics_FormatError_RuntimeField2 + 6 + curve);
+    // number of x slots the samples are spread over (at least 34 for selector 0, otherwise 17)
     const int horizon = std::max(int(values.size()), selector == 0 ? 34 : 17);
     std::vector<std::pair<int, int>> points;
     for (size_t sample = 0; sample < values.size(); ++sample) {
@@ -461,6 +534,7 @@ std::vector<std::pair<int, int>> stadium_data_points(const StadiumDataProjection
     return points;
 }
 
+// Only updates the construction percent; the investment options are reprojected by the owner of the game state.
 void stadium_apply_price_table(StadiumState& state, const LeImage& exe, int construction_percent) {
     (void)exe;
     // Options must be reprojected from the live GameState by the App owner; this
@@ -468,6 +542,7 @@ void stadium_apply_price_table(StadiumState& state, const LeImage& exe, int cons
     state.construction_percent = construction_percent;
 }
 
+// Serializes the full StadiumState as JSON (state dump for tests and tooling).
 std::string stadium_state_json(const StadiumState& s) {
     std::ostringstream out;
     out << "{\"manager_slot\":" << s.manager_slot << ",\"runtime_club\":" << s.runtime_club
@@ -554,6 +629,7 @@ std::string stadium_state_json(const StadiumState& s) {
     return out.str();
 }
 
+// Serializes a request, including its kind name and the optional expected block quote, as JSON.
 std::string stadium_request_json(const StadiumRequest& r) {
     const char* kind = "none";
     switch (r.kind) {
@@ -598,6 +674,8 @@ std::string stadium_request_json(const StadiumRequest& r) {
     return out.str();
 }
 
+// Loads the executable, text database, graphics and fonts the screen needs and validates the scene sizes.
+// Empty investment labels are filled from TEXTD (ids 734..741). Throws FormatError on unusable assets.
 StadiumScreen::StadiumScreen(const std::filesystem::path& data, StadiumState state)
     : state_(std::move(state)), data_(data), exe_(load_le(asset_path(data, "BMH.exe"))),
       texts_(load_textd(asset_path(data, "TEXTD.BLK"))),
@@ -621,15 +699,19 @@ StadiumScreen::StadiumScreen(const std::filesystem::path& data, StadiumState sta
     rebuild_tip_dialog();
 }
 
+// Draws text in the screen font at a baseline position; gradient is applied only if the state enables it.
 void StadiumScreen::text_at(Image& out, int x, int baseline, std::string_view text, uint8_t color,
                             bool gradient) const {
     draw_source_font(out, font_, exe_, x, baseline, text, color,
                      gradient && state_.gradient_text);
 }
 
+// Draws a button in the original style at (x,y) with size w*h; `selected` draws the pressed/active look.
+// Wide buttons (w > 31) are assembled from left/middle/right slices of the widget atlas, narrow ones use a frame.
 void StadiumScreen::original_button(Image& out, int x, int y, int w, int h,
                                     std::string_view label, bool selected) const {
     // FormatError3's requested 9px height becomes 10px for these wide controls.
+    // wide buttons requested with height 9 are drawn 10 px high
     const int visible_h = w > 31 && h == 9 ? 10 : h;
     if (visible_h != 10 && !(w <= 31 && visible_h == 9)) throw FormatError("stadium: unsupported Original button height");
     if (selected) {
@@ -654,6 +736,8 @@ void StadiumScreen::original_button(Image& out, int x, int y, int w, int h,
                       y + 7, original_to_utf8(label), exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(selected)));
 }
 
+// Creates a request stamped with the identity of the current state (manager, club, scope, sequence and revision).
+// acknowledge() later checks these stamps against the engine's answer, so stale requests are rejected.
 StadiumRequest StadiumScreen::request(StadiumRequestKind kind, int object, int option,
                                      int32_t price, bool accept_tip) const {
     StadiumRequest r;
@@ -664,6 +748,9 @@ StadiumRequest StadiumScreen::request(StadiumRequestKind kind, int object, int o
     return r;
 }
 
+// Creates a request for the block expansion editor. It also carries the quote the editor currently shows
+// (expected_block_quote), which the engine must still find unchanged. A zero total/features means 'keep the
+// editor's current value'; set_total and toggle_feature always use the value passed in.
 StadiumRequest StadiumScreen::block_request(StadiumRequestKind kind, uint32_t total,
                                              uint8_t features) const {
     if (!block_request_kind(kind)) throw FormatError("stadium: invalid block expansion request kind");
@@ -685,6 +772,7 @@ StadiumRequest StadiumScreen::block_request(StadiumRequestKind kind, uint32_t to
     return r;
 }
 
+// Creates the initial open request; it is also stored as pending until acknowledge() is called.
 StadiumRequest StadiumScreen::initialize() {
     if (pending_) throw FormatError("stadium: open already pending");
     auto r = request(StadiumRequestKind::open);
@@ -692,6 +780,8 @@ StadiumRequest StadiumScreen::initialize() {
     return r;
 }
 
+// Rebuilds the modal dialogs (periphery quote and construction tip) over a snapshot of the current scene.
+// Called after the state changes.
 void StadiumScreen::rebuild_tip_dialog() {
     tip_dialog_.reset();
     periphery_dialog_.reset();
@@ -709,6 +799,8 @@ void StadiumScreen::rebuild_tip_dialog() {
     }
 }
 
+// Renders the block expansion editor dialog (title, balance, duration, current and target places, per-feature
+// icons and costs, total with discount, Build/Cancel buttons) over the given scene image.
 Image StadiumScreen::render_block_expansion(Image out) const {
     if (!state_.block_expansion) return out;
     const auto& editor = *state_.block_expansion;
@@ -755,6 +847,8 @@ Image StadiumScreen::render_block_expansion(Image out) const {
                 editor.new_places_cost_text, 0x6c, true);
     }
 
+    // Two feature rows: seats (bit 1) and roof (bit 2), each with an icon cropped from the interior atlas,
+    // an on/off status text and its cost.
     for (unsigned feature = 0; feature < 2; ++feature) {
         const uint8_t bit = uint8_t(1u << feature);
         const int icon_y = feature == 0 ? 73 : 89;
@@ -774,6 +868,8 @@ Image StadiumScreen::render_block_expansion(Image out) const {
     return out;
 }
 
+// Renders the numeric calculator window over the editor (only while it is open and not in its cancel wait).
+// Its position (block_calculator_x_/y_) is draggable; key and preset positions come from executable tables.
 Image StadiumScreen::render_block_calculator(Image out) const {
     if (!block_calculator_open_ || block_calculator_cancel_wait_ || !state_.block_expansion) return out;
     const int x0 = block_calculator_x_, y0 = block_calculator_y_;
@@ -784,6 +880,7 @@ Image StadiumScreen::render_block_calculator(Image out) const {
     const std::string title = texts_[1118];
     const int width = font_.text_width(title);
     text_at(out, x0 + 8 + (105 - 8) / 2 - width / 2, y0 + 14, title, 0x62, true);
+    // key labels in index order: digits 0-9, D delete, R restore, C clear, J accept, N cancel
     constexpr std::string_view keys = "0123456789DRCJN";
     for (int i = 0; i < 15; ++i) {
         const int x = x0 + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField + size_t(i) * 2);
@@ -794,6 +891,8 @@ Image StadiumScreen::render_block_calculator(Image out) const {
         text_at(out, x + 5 + int(pressed), y + 9 + int(pressed), keys.substr(size_t(i), 1), 0x62, false);
     }
     const uint32_t current = uint32_t(editor.quote.current_capacity_thousands) * 1000;
+    // Preset buttons (indices 15..22): current capacity plus 0..5 thousand, the current capacity again, and the maximum.
+    // Presets above the maximum are not shown.
     std::array<uint32_t, 8> presets{};
     for (uint32_t i = 0; i < 6; ++i) presets[i] = current + i * 1000;
     presets[6] = current; presets[7] = editor.quote.max_places;
@@ -810,12 +909,15 @@ Image StadiumScreen::render_block_calculator(Image out) const {
     return out;
 }
 
+// Renders the panorama view: opaque underlay, capacity-dependent stands sprite, then every built or
+// under-construction periphery object back to front, with construction details, plus the hover info box.
 void StadiumScreen::render_panorama(Image& out) const {
     // ConstructionPricePercent uses KB70 as the opaque panorama underlay; KB35 is an atlas,
     // not a full-screen background. CopyCrop skips the Original zero key.
     copy_crop(out, periphery_overlay_, 0, 0, 18, 25, 279, 183);
     fill(out, 297, 32, 6, 183, 0x40);
     fill(out, 25, 208, 272, 7, 0x40);
+    // Draws sprite `slot`: its screen rectangle and atlas source position come from executable tables.
     const auto sprite = [&](unsigned slot) {
         const int x = exe_.u16(::bmh::layout::Stadium_PeripheryObjectContains_ExecutableField + slot * 8), y = exe_.u16(::bmh::layout::Stadium_RenderPanorama_RuntimeField + slot * 8);
         const int w = exe_.u16(::bmh::layout::Stadium_RenderPanorama_RuntimeField2 + slot * 8) - x + 1;
@@ -825,7 +927,10 @@ void StadiumScreen::render_panorama(Image& out) const {
     };
     unsigned capacity = 0;
     for (const auto& block : state_.blocks) capacity += block.capacity_level;
+    // total capacity level of 10 or more selects one of up to four stands sprites
     if (capacity > 9) sprite(14 + std::min(3u, (capacity - 10) / 10));
+    // Paint order is given by an executable table. Objects 0..5 are shown while under construction, others only
+    // once built (level != 0). Busy objects additionally draw their construction parts.
     for (unsigned order = 0; order < 14; ++order) {
         const unsigned object = exe_.u8(::bmh::layout::Stadium_RenderPanorama_RuntimeField6 + order);
         const unsigned level = state_.level[object];
@@ -849,6 +954,7 @@ void StadiumScreen::render_panorama(Image& out) const {
             const int sx = 200 + exe_.u8(bounds), sy = exe_.u8(bounds + 1);
             const int w = exe_.u8(bounds + 2) - exe_.u8(bounds) + 1;
             const int h = exe_.u8(bounds + 3) - sy + 1;
+            // tile 8 is an animated part: it is mirrored depending on the animation tick and placed at a fixed position
             const bool flip = tile == 8 && ((state_.periphery_animation_tick >> (object == 2)) & 1);
             const int x = flip ? (object == 2 ? 28 : 104) : exe_.u16(at + 2);
             const int y = flip ? 127 : exe_.u16(at + 4);
@@ -859,6 +965,8 @@ void StadiumScreen::render_panorama(Image& out) const {
             }
         }
     }
+    // Hover info box for the object under the pointer: title plus either remaining days (under construction)
+    // or price, duration and balance (available to build).
     if (periphery_hover_ < 0) return;
     const size_t object = size_t(periphery_hover_);
     copy_crop(out, periphery_overlay_, 8, 7, 26, 32, 180, 27);
@@ -886,6 +994,7 @@ void StadiumScreen::render_panorama(Image& out) const {
     }
 }
 
+// True if (x,y) lies inside the inclusive hit rectangle of a periphery object (from an executable table).
 bool StadiumScreen::periphery_object_contains(int object, int x, int y) const {
     if (object < 0 || object >= 14) return false;
     const size_t at = ::bmh::layout::Stadium_PeripheryObjectContains_ExecutableField + size_t(object) * 8;
@@ -893,6 +1002,8 @@ bool StadiumScreen::periphery_object_contains(int object, int x, int y) const {
         x <= exe_.u16(at + 4) && y <= exe_.u16(at + 6);
 }
 
+// Returns the periphery object at (x,y) or -1. Only active in the panorama view with investments enabled.
+// Candidates are objects under construction, or buildable ones when future information is shown.
 int StadiumScreen::periphery_object_at(int x, int y) const {
     if (!panorama_ || !state_.investments_enabled) return -1;
     // Source hit order deliberately differs from the back-to-front paint order.
@@ -905,6 +1016,8 @@ int StadiumScreen::periphery_object_at(int x, int y) const {
     return -1;
 }
 
+// Renders the base scene: header, club title and footer, then either the panorama or the interior view with
+// the 8 seat block rows and 8 investment icons, the three scene buttons and the feedback line.
 Image StadiumScreen::render_scene() const {
     Image out(320, 240);
     if (state_.decorated_stadium_header) out = header_background_;
@@ -916,6 +1029,7 @@ Image StadiumScreen::render_scene() const {
         sprite_font_.text_width(original_to_utf8(title)) / 2, 13, original_to_utf8(title));
     sprite_font_.draw(out, 5, 235, original_to_utf8(state_.original_stadium_footer.empty() ?
         state_.club_name : state_.original_stadium_footer));
+    // Interior view layers, in order: shadow and interior picture, seat block rows (right column), investment icons.
     if (panorama_) render_panorama(out);
     else {
         // ConstructionPricePercent draws ColorBottomRightBevel, then the opaque KB38 crop.
@@ -924,6 +1038,8 @@ Image StadiumScreen::render_scene() const {
 
         // Original's eight separate block rows (ConstructionPricePercent). These read-only facts
         // retain the block branch's real records and never act as facility rows.
+        // Seat block rows A-H: 100x24 px cells at x=219, stacked from y=22. Shows the label, then either the current
+        // usable capacity and maximum, or (future information) the new capacity or construction state.
         for (unsigned i = 0; i < state_.blocks.size(); ++i) {
             const int row_y = 22 + int(i) * 24;
             if (state_.solid_panel_background) {
@@ -935,12 +1051,14 @@ Image StadiumScreen::render_scene() const {
                 copy_crop(out, panel_, 219, row_y - 19, 220, row_y + 1, 98, 22);
             }
             source_border(out, 219, row_y, 318, row_y + 23);
+            // hover frame around the row under the pointer
             if (pressed_ == Pressed::none && hover_block_ == int(i)) outline(out, 219, row_y, 100, 24, 0x27);
             const auto& block = state_.blocks[i];
             std::string label = texts_[text_id(::bmh::layout::Stadium_Out_TextPointer)];
             if (label.size() > 6) label[6] = char('A' + i);
             text_at(out, 221, row_y + 7, label, 0x6b);
             if (block.capacity || block.capacity_level) {
+                // Normal mode: current usable capacity, maximum, and icons for the built features (flag bits 1 and 2).
                 if (!future_information_) {
                     const unsigned available = block.capacity ? 0 : block.capacity_level;
                     const std::string current = format_number(GameState{}, int32_t(available * 1000), 0x85) +
@@ -968,6 +1086,7 @@ Image StadiumScreen::render_scene() const {
                                                    block.construction_weeks, 2, ::bmh::layout::Stadium_FormatError_RuntimeField);
                         text_at(out, 221, row_y + 21, duration, 0x51);
                     }
+                    // future information: pending features are stored in flag bits 4 and 5
                     const unsigned pending_flags = (block.flags >> 4) & 3;
                     if (pending_flags & 1) copy_crop(out, interior_, 180, 1, 307, row_y + 2, 10, 10, true);
                     if (pending_flags & 2) copy_crop(out, interior_, 180, 12, 307, row_y + 12, 10, 10, true);
@@ -975,6 +1094,8 @@ Image StadiumScreen::render_scene() const {
             }
         }
 
+        // Investment icons: 53x29 px sprites at positions from executable tables. The level (status bits 0..2, or the
+        // target level in bits 4..6 with future information) selects the sprite; level 0 shows the empty slot.
         for (unsigned choice = 0; choice < 8; ++choice) {
             const uint32_t x_table = ::bmh::layout::Stadium_Out_ExecutableField2 + choice * 2;
             const uint32_t y_table = ::bmh::layout::Stadium_Out_ExecutableField3 + choice * 2;
@@ -984,6 +1105,7 @@ Image StadiumScreen::render_scene() const {
             const auto& row = state_.investments[choice];
             unsigned visual_level = future_information_ ? (row.current_status >> 4) & 7 : 0;
             if (visual_level == 0) visual_level = row.current_status & 7;
+            // choices 2 and 3 have one sprite less (their level is shifted down by one)
             if (choice == 2 || choice == 3) {
                 if (visual_level > 0) --visual_level;
             }
@@ -1001,6 +1123,7 @@ Image StadiumScreen::render_scene() const {
                     text_at(out, x + (0x35 - label_width) / 2, y + 0x1b, tier, 0x5f);
                 }
             }
+            // hover/press frame around the icon
             if ((pressed_ == Pressed::investment && pressed_index_ == int(choice)) ||
                 (pressed_ == Pressed::none && hover_investment_ == int(choice)))
                 outline(out, x, y, 0x35, 0x1d, 0x27);
@@ -1012,6 +1135,8 @@ Image StadiumScreen::render_scene() const {
             }
         }
     }
+    // The three scene buttons at y=215: view switch (hidden when investments are disabled), future information
+    // switch, and data page.
     const std::array<std::string, 3> labels = panorama_
         ? std::array<std::string, 3>{texts_[150], texts_[151], texts_[152]}
         : std::array<std::string, 3>{texts_[153], texts_[154], texts_[155]};
@@ -1028,6 +1153,8 @@ Image StadiumScreen::render_scene() const {
     return out;
 }
 
+// Renders the investment dialog for the selected investment: title, balance, duration, and up to three
+// option icons with tier label and price, plus Build/Cancel buttons.
 Image StadiumScreen::render_investment_dialog(Image out) const {
     if (!state_.selected_investment) return out;
     const unsigned choice = unsigned(*state_.selected_investment);
@@ -1057,6 +1184,7 @@ Image StadiumScreen::render_investment_dialog(Image out) const {
         text_at(out, 148 - font_.text_width(variant), 70, variant, 0x6c);
     }
 
+    // Option cells: 60 px apart starting at x=5, sprite at y=74 (53x29 px), tier label at y=110, price at y=117.
     for (size_t i = 0; i < row.options.size() && i < 3; ++i) {
         const auto& option = row.options[i];
         const int x = 5 + int(i) * 60;
@@ -1086,6 +1214,8 @@ Image StadiumScreen::render_investment_dialog(Image out) const {
     return out;
 }
 
+// Hit test for the data page controls. Returns 0..5 for the curve buttons, 6..7 for the scale buttons,
+// 8..23 for ticket prices 10..25, or -1.
 int StadiumScreen::data_control_at(int x, int y) const {
     for (int curve = 0; curve < 6; ++curve) {
         const int bx = 27 + (curve % 2) * 120, by = 107 + (curve / 2) * 11;
@@ -1102,6 +1232,8 @@ int StadiumScreen::data_control_at(int x, int y) const {
     return -1;
 }
 
+// Renders the data page: header, graph frame and curves (with their toggle buttons and color keys), scale
+// buttons, the statistics table, required attendance and the ticket price buttons (10..25).
 Image StadiumScreen::render_data() const {
     const auto& data = *state_.data;
     Image out = header_background_;
@@ -1109,6 +1241,7 @@ Image StadiumScreen::render_data() const {
         fill(out, 0, 4, 320, 13, 0x44); fill(out, 1, 5, 318, 11, 0x39); }
     const auto title = original_to_utf8(state_.original_stadium_title.empty() ? state_.club_name : state_.original_stadium_title);
     sprite_font_.draw(out, 172 + 55 - sprite_font_.text_width(title) / 2, 13, title);
+    // Draws a clipped line from (x,y) to (end_x,end_y) with a Bresenham-style step loop.
     const auto line = [&](int x, int y, int end_x, int end_y, uint8_t color) {
         const int dx = std::abs(end_x - x), sx = x < end_x ? 1 : -1;
         const int dy = std::abs(end_y - y), sy = y < end_y ? 1 : -1;
@@ -1119,9 +1252,12 @@ Image StadiumScreen::render_data() const {
             else if (dy) { y += sy; error += dx; if (error >= dy) { error -= dy; x += sx; } }
         }
     };
+    // graph frame edges: coordinates and colors come from executable tables
     for (int edge = 0; edge < 4; ++edge)
         line(exe_.u16(::bmh::layout::Analytics_Render_RuntimeField3 + edge * 4 + 2), exe_.u8(::bmh::layout::Analytics_Render_RuntimeField2 + edge * 2 + 1) - 35,
              exe_.u16(::bmh::layout::Analytics_Render_RuntimeField3 + edge * 4), exe_.u8(::bmh::layout::Analytics_Render_RuntimeField2 + edge * 2) - 35, exe_.u8(::bmh::layout::Analytics_Render_RuntimeField + edge));
+    // Per curve: color key, toggle button (selected when its flag bit is set or it is pressed) and, when shown,
+    // the polyline with a 3x3 marker per sample.
     for (int curve = 0; curve < 6; ++curve) {
         const int x = 27 + (curve % 2) * 120, y = 107 + (curve / 2) * 11;
         const uint8_t color = exe_.u8(::bmh::layout::Analytics_FormatError_RuntimeField + curve);
@@ -1146,9 +1282,11 @@ Image StadiumScreen::render_data() const {
     else copy_crop(out, panel_, 0, 126, 1, 146, 318, 93);
     source_border(out, 0, 145, 319, 239);
     fill(out, 1, 227, 318, 12, 0x42);
+    // Draws text centred between the x positions left and right.
     const auto centered = [&](int left, int right, int baseline, std::string_view text, uint8_t color) {
         text_at(out, left + (right - left) / 2 - font_.text_width(text) / 2, baseline, text, color);
     };
+    // Table header and rows: three columns 85 px apart. Rows 1 and 3 are 9 px high, others 7 px.
     for (int kind = 0; kind < 3; ++kind)
         centered(60 + kind * 85, 145 + kind * 85, 154, texts_[text_id(::bmh::layout::Stadium_CopyCrop_TextPointer + kind * 4)], 0x6a);
     int y = 164;
@@ -1156,11 +1294,13 @@ Image StadiumScreen::render_data() const {
         text_at(out, 3, y, texts_[text_id(::bmh::layout::Stadium_CopyCrop_TextPointer2 + row * 4)], 0x6b);
         for (int kind = 0; kind < 3; ++kind) {
             const auto& text = data.table[size_t(row)][size_t(kind)];
+            // texts starting with '(' are drawn one pixel lower
             const int shift = row < 4 && !text.empty() && text[0] == '(' ? 1 : 0;
             centered(60 + kind * 85, 145 + kind * 85, y + shift, text, 0x6c);
         }
         y += row == 1 || row == 3 ? 9 : 7;
     }
+    // Required attendance line and ticket price buttons at the bottom of the page.
     // TextId restores this seven-pixel region from TextId2's saved
     // background; it adds no field frame or shadow.
     const auto needed = texts_[text_id(::bmh::layout::Stadium_CopyCrop_TextPointer4)] + std::to_string(data.ticket_price) + texts_[text_id(::bmh::layout::Stadium_CopyCrop_TextPointer5)];
@@ -1173,6 +1313,8 @@ Image StadiumScreen::render_data() const {
     return out;
 }
 
+// Renders the current frame. Priority: data page, then construction tip dialog, then the scene with the
+// active editor/dialog, the calculator, or the periphery question on top.
 Image StadiumScreen::render() const {
     if (state_.data) return render_data();
     if (state_.construction_tip_dialog && tip_dialog_) {
@@ -1193,11 +1335,14 @@ Image StadiumScreen::render() const {
     return out;
 }
 
+// Image shown behind a construction notice: the scene with the active block editor or investment dialog.
 Image StadiumScreen::construction_notice_backdrop() const {
     return state_.block_expansion ? render_block_expansion(render_scene())
                                   : render_investment_dialog(render_scene());
 }
 
+// Text input for the block calculator (digits only). Appends digits to the value (clamped to the block's
+// maximum, at most 10 digits). Returns true if the value changed.
 bool StadiumScreen::text(std::string_view input) {
     if (pending_ || calculator_source_waiting() || !block_calculator_open_ ||
         !state_.block_expansion || input.empty()) return false;
@@ -1221,6 +1366,7 @@ bool StadiumScreen::text(std::string_view input) {
     return true;
 }
 
+// Moves the calculator window to (x,y), clamped so it stays on the 320x240 screen. Returns true if it moved.
 bool StadiumScreen::calculator_drag_to(int x, int y) {
     if (!block_calculator_open_ || block_calculator_cancel_wait_) return false;
     x = std::clamp(x, 0, 207);
@@ -1230,11 +1376,15 @@ bool StadiumScreen::calculator_drag_to(int x, int y) {
     return true;
 }
 
+// Called after the frame was shown: starts the key-press delay once a key (or the cancel wait) is visible.
 void StadiumScreen::calculator_mark_presented() {
     if (block_calculator_pressed_key_ >= 0 || block_calculator_cancel_wait_)
         block_calculator_presented_ = true;
 }
 
+// Advances the calculator's wait timer by `ticks` (only counts after the frame was presented). When it reaches
+// zero the key is released, the cancel wait closes the calculator, or a pending keyboard accept is applied.
+// Returns true if the visible state changed.
 bool StadiumScreen::calculator_advance_source_ticks(unsigned ticks) {
     if (!calculator_source_waiting() || !block_calculator_presented_ || ticks == 0) return false;
     const unsigned before = block_calculator_ticks_;
@@ -1257,15 +1407,19 @@ bool StadiumScreen::calculator_advance_source_ticks(unsigned ticks) {
     return block_calculator_ticks_ != before || before == 0;
 }
 
+// True while the calculator is in a timed wait (key held down or cancel pending); input is ignored then.
 bool StadiumScreen::calculator_source_waiting() const {
     return block_calculator_ticks_ != 0 &&
         (block_calculator_pressed_key_ >= 0 || block_calculator_cancel_wait_);
 }
 
+// True while a calculator key is held by the mouse (not by the keyboard accept).
 bool StadiumScreen::calculator_waiting_for_key_release() const {
     return pressed_ == Pressed::block_calculator_key && !block_calculator_keyboard_j_;
 }
 
+// Accepts the calculator value (J key or Enter). A value below the current capacity is first clamped up and the
+// calculator stays open; otherwise a set_total request is issued and stored as pending. Returns {} when nothing is sent.
 StadiumRequest StadiumScreen::accept_block_calculator_value() {
     if (!state_.block_expansion || pending_ || calculator_source_waiting()) return {};
     const uint32_t minimum = uint32_t(state_.block_expansion->quote.current_capacity_thousands) * 1000;
@@ -1285,6 +1439,7 @@ StadiumRequest StadiumScreen::accept_block_calculator_value() {
     return result;
 }
 
+// Executes the calculator key with index 0..14 (digits, D, R, C, J, N). Only J can return a request.
 StadiumRequest StadiumScreen::activate_block_calculator_key(int key_index) {
     if (!state_.block_expansion || !block_calculator_open_ || pending_) return {};
     if (key_index >= 0 && key_index <= 9) {
@@ -1314,6 +1469,7 @@ StadiumRequest StadiumScreen::activate_block_calculator_key(int key_index) {
         block_calculator_edited_ = true;
         return {};
     case 13: return accept_block_calculator_value(); // J: accept
+    // N: sets the value to the 'cancelled' sentinel and starts a 50-tick wait before the calculator closes
     case 14: // N: cancel local calculator edit
         block_calculator_value_ = UINT32_MAX;
         block_calculator_text_ = std::to_string(block_calculator_value_);
@@ -1327,6 +1483,10 @@ StadiumRequest StadiumScreen::activate_block_calculator_key(int key_index) {
     }
 }
 
+// Handles a mouse button press at (x,y) and decides which control becomes `pressed_` (the request is only sent
+// on release). Right button closes the current level (data page, editor or scene). Returns true if the press
+// was used. Layers are checked from top to bottom: data page, tip dialog, calculator, block editor,
+// periphery question, investment dialog, scene.
 bool StadiumScreen::pointer_down(int x, int y, bool right) {
     if (pending_ || calculator_source_waiting()) return false;
     pressed_ = Pressed::none; pressed_index_ = -1; pressed_x_ = x; pressed_y_ = y;
@@ -1349,6 +1509,7 @@ bool StadiumScreen::pointer_down(int x, int y, bool right) {
         for (int i = 0; i < 15; ++i) {
             const int key_x = x0 + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField + size_t(i) * 2);
             const int key_y = y0 + exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2 + size_t(i));
+            // key hit box: 17x15 pixels
             if (x >= key_x && x <= key_x + 16 && y >= key_y && y <= key_y + 14) {
                 if (i == 14) {
                     // Source N jumps straight to4ad4e: restore the backdrop,
@@ -1370,11 +1531,13 @@ bool StadiumScreen::pointer_down(int x, int y, bool right) {
             if (value > quote.max_places) continue;
             const int key_x = x0 + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField + (i + 15) * 2);
             const int key_y = y0 + exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2 + i + 15);
+            // preset button hit box: 54x15 pixels
             if (x >= key_x && x <= key_x + 53 && y >= key_y && y <= key_y + 14) {
                 pressed_ = Pressed::block_calculator_preset; pressed_index_ = int(i);
                 return true;
             }
         }
+        // top strip of the calculator window: starts dragging it
         if (x >= x0 && x <= x0 + 113 && y >= y0 && y <= y0 + 16) {
             pressed_ = Pressed::block_calculator_drag;
             return true;
@@ -1389,6 +1552,8 @@ bool StadiumScreen::pointer_down(int x, int y, bool right) {
             pending_ = block_request(StadiumRequestKind::expansion_cancel);
             return true;
         }
+        // Editor hit boxes: Build button, Cancel button, amount field (opens the calculator), and the seats and roof
+        // rows (only if that feature is not already built).
         if (x >= 7 && x <= 76 && y >= 136 && y <= 145) pressed_ = Pressed::block_build;
         else if (x >= 107 && x <= 176 && y >= 136 && y <= 145) pressed_ = Pressed::block_cancel;
         else if (x >= 5 && x <= 99 && y >= 74 && y <= 99) pressed_ = Pressed::block_amount;
@@ -1408,6 +1573,7 @@ bool StadiumScreen::pointer_down(int x, int y, bool right) {
     }
     if (state_.selected_investment) {
         if (right) return false;
+        // Investment dialog hit boxes: Build button, Cancel button, and the option cells (60 px wide, from x=5).
         if (x >= 7 && x <= 76 && y >= 136 && y <= 145) pressed_ = Pressed::build;
         else if (x >= 107 && x <= 176 && y >= 136 && y <= 145) pressed_ = Pressed::cancel;
         else if (y >= 74 && y <= 103 && x >= 5 && x < 5 + int(state_.investments[size_t(*state_.selected_investment)].options.size()) * 60) {
@@ -1422,6 +1588,7 @@ bool StadiumScreen::pointer_down(int x, int y, bool right) {
         pending_ = request(StadiumRequestKind::close);
         return true;
     }
+    // Scene buttons row (y 215..224): view switch, future information and data page.
     if (y >= 215 && y <= 224) {
         if (x >= 2 && x < 117) {
             if (!state_.investments_enabled) return false;
@@ -1430,6 +1597,7 @@ bool StadiumScreen::pointer_down(int x, int y, bool right) {
         if (x >= 125 && x < 215) { pressed_ = Pressed::scene_button; pressed_index_ = 1; return true; }
         if (x >= 224 && x < 314) { pressed_ = Pressed::scene_button; pressed_index_ = 2; return true; }
     }
+    // Investment icon grid in the interior view: 4 columns x 2 rows of 54x30 cells starting at (3,153).
     if (!panorama_ && y >= 153 && y <= 211 && x >= 3 && x <= 217) {
         const int col = (x - 3) / 54, row = (y - 153) / 30;
         const int choice = row * 4 + col;
@@ -1445,6 +1613,7 @@ bool StadiumScreen::pointer_down(int x, int y, bool right) {
         }
         return false;
     }
+    // Seat block rows: 24 px tall starting at y=22; blocks under construction cannot be selected.
     if (!panorama_ && x >= 219 && x <= 319 && y >= 22 && y <= 213) {
         const int slot = (y - 22) / 24;
         if (slot >= 0 && slot < 8 && state_.blocks[size_t(slot)].construction_weeks == 0) {
@@ -1456,6 +1625,9 @@ bool StadiumScreen::pointer_down(int x, int y, bool right) {
     return false;
 }
 
+// Handles pointer movement. Without a pressed control it updates the hover highlight (investment icon, seat
+// block row or panorama object). With a pressed control it cancels the press when the pointer leaves it,
+// and drags the calculator window. Returns true if something visible changed.
 bool StadiumScreen::pointer_move(int x, int y) {
     if (calculator_source_waiting()) return false;
     if (pressed_ == Pressed::none) {
@@ -1486,6 +1658,7 @@ bool StadiumScreen::pointer_move(int x, int y) {
         pressed_x_ = x; pressed_y_ = y;
         return true;
     }
+    // Is the pointer still inside the pressed control? These rectangles must match the ones in pointer_down.
     bool inside = false;
     switch (pressed_) {
     case Pressed::scene_button:
@@ -1499,12 +1672,14 @@ bool StadiumScreen::pointer_move(int x, int y) {
         inside = x >= 5 + pressed_index_ * 60 && x < 5 + (pressed_index_ + 1) * 60 && y >= 74 && y <= 103; break;
     case Pressed::build: inside = x >= 7 && x <= 76 && y >= 136 && y <= 145; break;
     case Pressed::cancel: inside = x >= 107 && x <= 176 && y >= 136 && y <= 145; break;
+    // Yes/No buttons of the tip dialog
     case Pressed::tip_yes: inside = x >= 62 && x <= 137 && y >= 166 && y <= 176; break;
     case Pressed::tip_no: inside = x >= 175 && x <= 250 && y >= 166 && y <= 176; break;
     case Pressed::periphery_item: inside = panorama_ && future_information_ &&
         periphery_object_at(x, y) == pressed_index_; break;
     case Pressed::periphery_yes: inside = periphery_dialog_ && periphery_dialog_->hit_test(x, y) == GameEndTaxDialog::Button::yes; break;
     case Pressed::periphery_no: inside = periphery_dialog_ && periphery_dialog_->hit_test(x, y) == GameEndTaxDialog::Button::no; break;
+    // bottom-left corner area
     case Pressed::close: inside = x < 50 && y > 218; break;
     case Pressed::block_row: inside = !panorama_ && x >= 219 && x <= 319 && y >= 22 && y <= 213 &&
         (y - 22) / 24 == pressed_index_; break;
@@ -1541,6 +1716,8 @@ bool StadiumScreen::pointer_move(int x, int y) {
     return false;
 }
 
+// Handles a mouse button release. If the pointer is released inside the control that was pressed, the matching
+// request is created, stored as pending and returned. Local actions (view switches, calculator input) return {}.
 StadiumRequest StadiumScreen::release(int x, int y, bool right) {
     if (pending_) return {};
     if (calculator_source_waiting()) return {};
@@ -1578,12 +1755,14 @@ StadiumRequest StadiumScreen::release(int x, int y, bool right) {
             y >= block_calculator_y_ + exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2 + size_t(index + 15)) && y <= block_calculator_y_ + exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2 + size_t(index + 15)) + 14) ||
         (pressed == Pressed::block_calculator_drag);
     if (!released_inside || down_x < 0 || down_y < 0) return {};
+    // Stores the request as pending (blocks further input until acknowledge or reject_action) and returns it.
     const auto emit = [this](StadiumRequest result) { pending_ = result; return result; };
     if (pressed == Pressed::data_control) {
         if (index < 6) return emit(request(StadiumRequestKind::toggle_data_curve, index));
         if (index < 8) return emit(request(StadiumRequestKind::toggle_data_scale, index - 6));
         return emit(request(StadiumRequestKind::set_data_ticket_price, index - 8 + 10));
     }
+    // Scene buttons: 0 toggles panorama/interior, 1 toggles future information (both purely local), 2 requests the data page.
     if (pressed == Pressed::scene_button) {
         if (index == 0) { panorama_ = !panorama_; future_information_ = false; periphery_hover_ = -1; hover_investment_ = hover_block_ = -1; return {}; }
         if (index == 1) { future_information_ = !future_information_; periphery_hover_ = -1; hover_investment_ = hover_block_ = -1; return {}; }
@@ -1608,6 +1787,8 @@ StadiumRequest StadiumScreen::release(int x, int y, bool right) {
     }
     if (pressed == Pressed::cancel && state_.selected_investment)
         return emit(request(StadiumRequestKind::cancel_investment, int(*state_.selected_investment)));
+    // Answer to the construction tip dialog. For blocks the editor request is used; for investments the price
+    // is the tip price on Yes and the option's base price on No.
     if (pressed == Pressed::tip_yes || pressed == Pressed::tip_no) {
         if (state_.block_expansion) {
             auto result = block_request(StadiumRequestKind::expansion_answer_tip);
@@ -1634,6 +1815,7 @@ StadiumRequest StadiumScreen::release(int x, int y, bool right) {
         result.block_slot = index;
         return emit(std::move(result));
     }
+    // Opens the calculator initialised with the quote's new places and resets all calculator state.
     if (pressed == Pressed::block_amount && state_.block_expansion) {
         block_calculator_open_ = true;
         block_calculator_value_ = state_.block_expansion->quote.new_places;
@@ -1647,6 +1829,7 @@ StadiumRequest StadiumScreen::release(int x, int y, bool right) {
         block_calculator_edited_ = false;
         return {};
     }
+    // Toggles the seats (bit 1) or roof (bit 2) feature of the editor.
     if (pressed == Pressed::block_seats || pressed == Pressed::block_roof) {
         if (!state_.block_expansion) return {};
         const uint8_t bit = pressed == Pressed::block_seats ? 1 : 2;
@@ -1660,6 +1843,7 @@ StadiumRequest StadiumScreen::release(int x, int y, bool right) {
         return emit(block_request(StadiumRequestKind::expansion_cancel));
     if (pressed == Pressed::block_calculator_key)
         return activate_block_calculator_key(index);
+    // A preset button copies its value into the calculator (indices 0..5: current + n thousand, 6: current, 7: maximum).
     if (pressed == Pressed::block_calculator_preset && state_.block_expansion) {
         const auto& quote = state_.block_expansion->quote;
         const uint32_t current = uint32_t(quote.current_capacity_thousands) * 1000;
@@ -1673,11 +1857,14 @@ StadiumRequest StadiumScreen::release(int x, int y, bool right) {
     return {};
 }
 
+// Convenience: a press immediately followed by a release at the same position.
 StadiumRequest StadiumScreen::click(int x, int y, bool right) {
     if (!pointer_down(x, y, right)) return {};
     return release(x, y, right);
 }
 
+// Handles a key press. Data page: ESC closes it. Calculator: Enter accepts, Backspace deletes, Space clears,
+// digits are typed (each starts a short key-press wait). Scene: ESC closes the stadium (not during dialogs).
 StadiumRequest StadiumScreen::key(std::string_view key) {
     if (pending_ || calculator_source_waiting() || pressed_ != Pressed::none) return {};
     if (state_.data) {
@@ -1714,6 +1901,8 @@ StadiumRequest StadiumScreen::key(std::string_view key) {
     return {};
 }
 
+// Called when the shared process timer runs out. Answers pending questions with No, closes the calculator
+// or editor, or closes the stadium.
 StadiumRequest StadiumScreen::process_timer_expired() {
     if (pending_ || calculator_source_waiting() || pressed_ != Pressed::none) return {};
     //PresentManagerDialog forces button1 (No) after the shared process clock expires.
@@ -1742,6 +1931,8 @@ StadiumRequest StadiumScreen::process_timer_expired() {
     return key("ESC"); // existing scene/data close owners
 }
 
+// Answers an open question with No when the timer expires: periphery quote -> decline, block tip -> refuse tip,
+// investment tip -> answer without the tip (base price). Returns {} if no such question is open.
 StadiumRequest StadiumScreen::expire_construction_tip() {
     if (pending_) return {};
     // The existing deadline entry also owns the flags1 periphery question:
@@ -1776,6 +1967,10 @@ StadiumRequest StadiumScreen::expire_construction_tip() {
     return r;
 }
 
+// Applies the engine's answer to the pending request. The answer must carry the same identity (manager, club,
+// scope) and exactly the next sequence and revision; otherwise the stale or forged answer is rejected with
+// FormatError. Then the new state is validated per request kind (what the engine must have changed and what
+// it must not have touched). Only after all checks are the dialogs rebuilt and the new state adopted.
 void StadiumScreen::acknowledge(StadiumState updated) {
     if (!pending_) throw FormatError("stadium: acknowledgement without a pending request");
     const auto& req = *pending_;
@@ -1798,6 +1993,7 @@ void StadiumScreen::acknowledge(StadiumState updated) {
                req.scope != state_.scope || req.sequence != state_.sequence) {
         throw FormatError("stadium: acknowledgement scope or sequence mismatch");
     }
+    // Field contract: block requests carry only block fields, other requests none of them; only tip answers may accept a tip.
     const bool block_action = block_request_kind(req.kind);
     if ((!block_action && (req.block_slot != -1 || req.block_total_places != 0 ||
                            req.block_features != 0 || req.expected_block_quote)) ||
@@ -1811,6 +2007,7 @@ void StadiumScreen::acknowledge(StadiumState updated) {
         !same_block_compensation_context(state_, updated))
         throw FormatError("stadium: immutable Source compensation context changed");
 
+    // Block requests must refer to the editor quote that is currently shown (expected quote, slot, owner).
     const StadiumBlockExpansionEditor* old_editor = state_.block_expansion
         ? &*state_.block_expansion : nullptr;
     if (req.kind == StadiumRequestKind::expansion_select) {
@@ -1829,6 +2026,7 @@ void StadiumScreen::acknowledge(StadiumState updated) {
               req.block_features != old_editor->desired_features)))
             throw FormatError("stadium: block request does not match the accepted editor quote");
     }
+    // Only data page requests may change the data page; they must also leave no other modal open.
     const bool data_action = req.kind == StadiumRequestKind::open_data ||
         req.kind == StadiumRequestKind::close_data || req.kind == StadiumRequestKind::toggle_data_curve ||
         req.kind == StadiumRequestKind::toggle_data_scale || req.kind == StadiumRequestKind::set_data_ticket_price;
@@ -1836,6 +2034,7 @@ void StadiumScreen::acknowledge(StadiumState updated) {
         (data_action && (!updated.opened || updated.selected_investment || updated.quoted_object ||
                         updated.block_expansion || updated.construction_tip_dialog)))
         throw FormatError("stadium: acknowledgement changed independent data modal context");
+    // Per-kind validation of the new state against the old state and the request.
     bool valid = true;
     switch (req.kind) {
     case StadiumRequestKind::open: valid = updated.opened && !updated.data; break;
@@ -1867,6 +2066,7 @@ void StadiumScreen::acknowledge(StadiumState updated) {
         valid = valid && expected == *updated.data;
         break;
     }
+    // request kinds that are never accepted as an engine answer
     case StadiumRequestKind::select_block:
     case StadiumRequestKind::prepare_block_offer:
     case StadiumRequestKind::decline_block_offer:
@@ -1952,6 +2152,8 @@ void StadiumScreen::acknowledge(StadiumState updated) {
             !updated.selected_investment && !updated.quoted_object &&
             same_block_overviews(state_.blocks, updated.blocks) && updated.balance == state_.balance;
         break;
+    // Confirm: a zero price builds directly; otherwise the engine must open an offer question (6..14 percent
+    // surcharge on the base price) with unchanged quote.
     case StadiumRequestKind::expansion_confirm: {
         if (!old_editor) { valid = false; break; }
         if (old_editor->quote.base_price == 0) {
@@ -1980,6 +2182,9 @@ void StadiumScreen::acknowledge(StadiumState updated) {
             same_block_overviews(state_.blocks, updated.blocks) && updated.balance == state_.balance;
         break;
     }
+    // Answer to the offer question: the block row must either be unchanged or show the construction the answer
+    // implies (weeks in the allowed range for the chosen offer, capacity, pending flags), with balance, season
+    // tickets and ticket compensation updated accordingly.
     case StadiumRequestKind::expansion_answer_tip: {
         if (!old_editor || !old_editor->offer || !state_.construction_tip_dialog) { valid = false; break; }
         valid = old_editor->offer->decision == StandBlockOfferDecision::Pending &&
@@ -2009,6 +2214,7 @@ void StadiumScreen::acknowledge(StadiumState updated) {
             const bool offer_arithmetic_ok = !req.accept_tip ||
                 uint64_t(old_editor->quote.base_price) * uint32_t(100 + offer.percent) <=
                     uint64_t(std::numeric_limits<int32_t>::max());
+            // with the tip accepted, construction time lies between base_weeks minus half and base_weeks minus an eighth
             const uint8_t shortest = uint8_t(old_editor->quote.base_weeks -
                 (old_editor->quote.base_weeks >> 1));
             const uint8_t longest = uint8_t(old_editor->quote.base_weeks -
@@ -2064,11 +2270,13 @@ void StadiumScreen::acknowledge(StadiumState updated) {
     if (acknowledged_close) close_requested_ = true;
 }
 
+// Called when the engine refuses the pending request: drops it and shows the reason as feedback text.
 void StadiumScreen::reject_action(std::string reason) {
     if (!pending_ || reason.empty()) throw FormatError("stadium: rejection requires pending request and reason");
     pending_.reset(); pressed_ = Pressed::none; pressed_index_ = -1; feedback_ = std::move(reason);
 }
 
+// State dump: the StadiumState JSON extended with the screen's pending request, view flags and calculator state.
 std::string StadiumScreen::state_json() const {
     auto result = stadium_state_json(state_); result.pop_back();
     return result + ",\"pending_action\":" + (pending_ ? stadium_request_json(*pending_) : "null") +
@@ -2093,6 +2301,7 @@ std::string StadiumScreen::state_json() const {
         ",\"feedback\":" + (feedback_.empty() ? "null" : json_quote(feedback_)) + '}';
 }
 
+// True while a mouse button is held on a Yes/No button of one of the questions.
 bool StadiumScreen::construction_tip_held() const {
     // Both PresentManagerDialog questions retain their physical button until release.
     return pressed_ == Pressed::tip_yes || pressed_ == Pressed::tip_no ||

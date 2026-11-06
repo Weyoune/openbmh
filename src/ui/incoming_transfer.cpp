@@ -19,18 +19,23 @@
 
 namespace bmh::ui {
 namespace {
+// Addresses of the three possible screen titles (generic, player purchase, player loan), the text pointer table base
+// and the byte size of one manager record.
 constexpr uint32_t kTitleText = ::bmh::layout::TitleText;
 constexpr uint32_t kPurchaseTitleText = ::bmh::layout::PurchaseTitleText;
 constexpr uint32_t kLoanTitleText = ::bmh::layout::LoanTitleText;
 constexpr uint32_t kTextBase = ::bmh::layout::TextPointerTable;
 constexpr size_t kManagerRecord = 0xb0c;
 
+// Returns the TEXTD string for a text-table address; throws if the address is not a table entry.
 std::string_view text_at(const TextDb& texts, uint32_t address) {
     if (address < kTextBase || (address - kTextBase) % 4 != 0)
         throw FormatError("incoming transfer: invalid original text address");
     return texts[(address - kTextBase) / 4];
 }
 
+// Copies a block from a source image to the target; throws on invalid bounds.
+// Pixels equal to `transparent_index` (if >= 0) are skipped.
 void copy_region(Image& target, const Image& source, int sx, int sy, int x, int y,
                  int width, int height, int transparent_index = -1) {
     if (sx < 0 || sy < 0 || x < 0 || y < 0 || width < 0 || height < 0 ||
@@ -43,6 +48,8 @@ void copy_region(Image& target, const Image& source, int sx, int sy, int x, int 
     }
 }
 
+// Formats a number right-aligned in `width` characters ('%' padding, as the original font expects);
+// with `grouping` it adds thousands separators and compensates with leading spaces so columns line up.
 std::string source_number(uint32_t value, int width, bool grouping = true) {
     std::string digits = std::to_string(value);
     const int actual = int(digits.size());
@@ -58,18 +65,21 @@ std::string source_number(uint32_t value, int width, bool grouping = true) {
     return digits;
 }
 
+// Amount converted with the currency numerator/denominator (if the denominator is non-zero) and suffixed with ' EU'.
 std::string source_money(uint32_t value, int width, uint32_t numerator, uint32_t denominator) {
     if (denominator != 0)
         value = uint32_t((uint64_t(value) * uint64_t(numerator)) / uint64_t(denominator));
     return source_number(value, width, true) + " EU";
 }
 
+// Badge sprite selector of a club (low 9 bits of its 16-bit entry), or -1 if the club is out of range.
 int team_badge(const GameState& game, int team) {
     if (team < 0 || team >= 168 || size_t(team) * 2 + 2 > game.club_heap_78.size()) return -1;
     return (int(game.club_heap_78[size_t(team) * 2]) |
             int(game.club_heap_78[size_t(team) * 2 + 1]) << 8) & 0x1ff;
 }
 
+// Badge selector of the club managed by the given manager slot, or -1 if unavailable.
 int manager_badge(const GameState& game, int manager) {
     if (manager < 0 || size_t(manager) >= game.manager_teams.size() ||
         size_t(manager) * kManagerRecord + 0x223 > game.manager_records.size()) return -1;
@@ -78,17 +88,22 @@ int manager_badge(const GameState& game, int manager) {
     return team_badge(game, team);
 }
 
+// Seller club token with the high flag bits removed (low 12 bits); negative values are returned unchanged.
 int source_seller_team_token(const IncomingTransferDecisionState& state) {
     const int token = state.seller_team_token >= 0 ? state.seller_team_token : state.seller;
     return token >= 0 ? (token & 0x0fff) : token;
 }
 
+// True if the seller token uses the neutral fallback badge instead of a club badge.
 bool source_neutral_seller_token(int token) {
     return original_badge_fallback(token);
 }
 } // namespace
 
 namespace {
+// Shared builder of the decision view: validates the context (list entry 0..39, or 0..43 for the editor that also
+// serves poach rows; 40..43 only for the pending-offer variant), fills player, seller, quote, currency and viewer data,
+// and checks every bid slot. Throws FormatError on any inconsistency.
 IncomingTransferDecisionState incoming_transfer_decision_from_game_impl(
     const GameState& game, const IncomingTransferDecisionView& view, bool pending_offer_source) {
     // the outgoing offer editor also runs on the special rows 40..43 when poaching
@@ -119,6 +134,7 @@ IncomingTransferDecisionState incoming_transfer_decision_from_game_impl(
     out.seller_name = (view.seller == 0x0fff || view.seller == kNoTeam) ? std::string() : game.club_name(view.seller);
     // ClubName2 derives this label from the seller team token. A club is
     // named directly; the player-pool token resolves to the original adviser.
+    // Negotiator label: the seller club, or a default adviser text when the player has no seller club (pool token).
     out.negotiator_name = (view.seller == 0x0fff || view.seller == kNoTeam)
         ? (game.texts ? (*game.texts)[925] : "SPIELERBERATER")
         : out.seller_name;
@@ -151,6 +167,7 @@ IncomingTransferDecisionState incoming_transfer_decision_from_game_impl(
         out.manager_portrait = game.manager_records[size_t(manager) * kManagerRecord + 0x221];
         // The KB31 panel uses its static manager artwork and does not draw
         // this portrait. Source notices can use portrait 12..14 as well.
+        // Portraits 12..14 are valid only for the pending-offer and editor variants.
         if (out.manager_portrait > ((pending_offer_source || out.source_outgoing_editor_context) ? 14 : 11))
             throw FormatError("incoming transfer: invalid viewer portrait");
         out.notice_badge_fallback=source_badge_fallback(pending_offer_source?pending_team:game.manager_teams[size_t(manager)]);
@@ -159,6 +176,7 @@ IncomingTransferDecisionState incoming_transfer_decision_from_game_impl(
     for (int i = 0; i < 4; ++i) {
         auto& offer = out.offers[size_t(i)];
         if (offer.present) {
+            // Special buyer slot (manager 4) allowed only for the pending-offer variant in bid slot 0.
             const bool spare_buyer = pending_offer_source && i == 0 && offer.buyer_manager == 4 &&
                 pending_offer_spare_buyer(game, view.list_entry - 40, offer.buyer);
             if (offer.bid_index != i || offer.buyer < 0 || size_t(offer.buyer) >= game.club_ids.size() ||
@@ -182,11 +200,14 @@ IncomingTransferDecisionState incoming_transfer_decision_from_game_impl(
 }
 } // namespace
 
+// Builds the decision view for an ordinary listing (not the pending-offer variant).
 IncomingTransferDecisionState incoming_transfer_decision_from_game(
     const GameState& game, const IncomingTransferDecisionView& view) {
     return incoming_transfer_decision_from_game_impl(game, view, false);
 }
 
+// Builds the decision view for the pending-offer variant: only the special list entries 40..43 are accepted and they must
+// hold exactly one bid (slot 0). Copies the offer list into a decision view and defers to the shared builder.
 IncomingTransferDecisionState incoming_transfer_pending_decision_from_game(
     const GameState& game, const TransferOfferListView& source) {
     if (!source.valid || source.list_entry < 40 || source.list_entry >= 44 ||
@@ -213,6 +234,7 @@ IncomingTransferDecisionState incoming_transfer_pending_decision_from_game(
     // DispatchClubPlayerPendingOffers owns pending-action notices through PendingOfferHooks::notice.
     // Its Source continuation redraws the chooser after SDLFlushEvents3, so this
     // special adapter must not create the generic retry overlay a second time.
+    // No generic notice here: the caller shows the pending-action notices itself (see the comment above).
     view.notice_text_address = 0;
     for (size_t i = 0; i < view.offers.size(); ++i) {
         const auto& from = source.offers[i];
@@ -234,6 +256,7 @@ IncomingTransferDecisionState incoming_transfer_pending_decision_from_game(
     return incoming_transfer_decision_from_game_impl(game, view, true);
 }
 
+// Serialises the decision view (player, seller, quote, bid slots) as JSON for diagnostics and tests.
 std::string incoming_transfer_decision_json(const IncomingTransferDecisionState& state) {
     std::ostringstream out;
     out << "{\"screen\":\"incoming_transfer_decision\",\"pending_offer_source\":"
@@ -283,6 +306,8 @@ std::string incoming_transfer_decision_json(const IncomingTransferDecisionState&
     return out.str();
 }
 
+// Loads fonts and images, validates the view (list entry range, assets, preferred bid present, only bid 0 for the
+// pending variant) and loads the buyer-side and seller-side badge images. A notice text from the state is shown first.
 IncomingTransferScreen::IncomingTransferScreen(const std::filesystem::path& data,
                                                IncomingTransferDecisionState state,
                                                bool gradient_text)
@@ -312,6 +337,7 @@ IncomingTransferScreen::IncomingTransferScreen(const std::filesystem::path& data
     // SourceBadgeFallback chooses the neutral fallback from the raw team token before
     // indexing ClubBadgeSelectors. A real selector can itself be 90..137 and must still
     // load its W atlas, so do not classify seller art by selector value.
+    // Seller badge: neutral fallback tiles come from the widget image; real club badges from the per-club image file.
     seller_badge_atlas_ = source_neutral_seller_token(source_seller_team_token(state_)) ||
         state_.seller_badge_sprite < 0 ? widgets_ :
         load_vga(asset_path(data / "W", std::to_string(state_.seller_badge_sprite >> 3) + ".VGA"));
@@ -322,11 +348,14 @@ IncomingTransferScreen::IncomingTransferScreen(const std::filesystem::path& data
     }
 }
 
+// Draws text at a baseline (convenience wrapper around draw_top).
 void IncomingTransferScreen::draw_body(Image& out, int x, int baseline, std::string_view text,
                                        uint8_t color) const {
     draw_top(out, x, baseline - body_.baseline, text, color);
 }
 
+// Draws body-font text with its top at y; clipped texts are skipped. With gradient text on (mode 2) the glyph pixels
+// take a per-row colour from the executable table instead of the plain colour.
 void IncomingTransferScreen::draw_top(Image& out, int x, int y, std::string_view text,
                                       uint8_t color) const {
     if (text.empty()) return;
@@ -344,6 +373,7 @@ void IncomingTransferScreen::draw_top(Image& out, int x, int y, std::string_view
                 gradient < 32 ? exe_.u8(::bmh::layout::Advertising_Text_RuntimeField + uint32_t(gradient * 6 + std::min(yy, 5))) : color;
 }
 
+// Draws text with the larger heading font at a baseline.
 void IncomingTransferScreen::draw_heading(Image& out, int x, int baseline, std::string_view text,
                                           uint8_t color) const {
     const int top = baseline - heading_.baseline;
@@ -351,8 +381,11 @@ void IncomingTransferScreen::draw_heading(Image& out, int x, int baseline, std::
     heading_.draw(out, x, top, text, color);
 }
 
+// Renders the screen at time 0 (no outcome animation progress).
 Image IncomingTransferScreen::render() const { return render_at_elapsed(0); }
 
+// Starts the passive outcome display: row_count bid rows are resolved one after another, the row accepted_bid_index
+// (or none, -1) is accepted; outcome_delay_disabled == 0 means the blinking delay is used, otherwise rows resolve at once.
 void IncomingTransferScreen::begin_outcome(int row_count, int accepted_bid_index, uint8_t outcome_delay_disabled) {
     if (row_count < 0 || row_count > int(state_.offers.size()) || accepted_bid_index < -1 ||
         accepted_bid_index >= row_count ||
@@ -364,6 +397,7 @@ void IncomingTransferScreen::begin_outcome(int row_count, int accepted_bid_index
     outcome_dismissed_ = false;
 }
 
+// Total duration of the outcome animation: 8 phases per resolved row, up to and including the accepted row.
 uint64_t IncomingTransferScreen::outcome_duration_ms() const {
     if (outcome_row_count_ < 0) return 0;
     const int rows = outcome_accepted_bid_index_ >= 0
@@ -371,6 +405,9 @@ uint64_t IncomingTransferScreen::outcome_duration_ms() const {
     return uint64_t(rows) * 8u * (outcome_speed_setting_ == 0 ? outcome_phase_ms : 0u);
 }
 
+// Outcome animation state at a given time. Offer state machine: rows are resolved in order; each row shows a blinking
+// question mark for 8 phases (colour alternates every phase), then the row becomes rejected (NEIN) or, if it is the
+// accepted bid, accepted (OK) and the sequence stops. `complete` is set once the full duration has elapsed.
 IncomingTransferOutcomeFrame IncomingTransferScreen::outcome_frame_at(uint64_t elapsed_ms) const {
     IncomingTransferOutcomeFrame frame;
     if (outcome_row_count_ < 0 || outcome_dismissed_) return frame;
@@ -400,6 +437,10 @@ IncomingTransferOutcomeFrame IncomingTransferScreen::outcome_frame_at(uint64_t e
     return frame;
 }
 
+// Renders the whole screen at the given outcome time. Layout: background, the negotiation panel (320x206) at y=0x13,
+// title, player line (baseline 25), quote line (baseline 32), seller/buyer headings (baselines 39 and 46), the seller badge,
+// the asking fee and salary (baseline 123), and four bid rows (two text lines each, 0x11 pixels apart from baseline 0x95).
+// Outcome marks are drawn at x=0xb2 and notices on top. In confirmation mode only the saved backdrop and the notice are drawn.
 Image IncomingTransferScreen::render_at_elapsed(uint64_t elapsed_ms) const {
     if (confirmation_mode_) {
         Image out = *confirmation_backdrop_;
@@ -415,6 +456,7 @@ Image IncomingTransferScreen::render_at_elapsed(uint64_t elapsed_ms) const {
     const auto title = original_to_utf8(text_at(texts_, title_address));
     sprite_font_.draw(out, SpriteFont::centered_title_x(sprite_font_.text_width(title)), 13, title, 5);
     sprite_font_.draw(out, 5, 235, original_to_utf8(state_.player_name), 5);
+    // Draws text centred between two x positions.
     auto centered = [&](int left, int right, int baseline, std::string_view text, uint8_t color) {
         const int width = body_.text_width(text);
         draw_body(out, left + (right - left) / 2 - width / 2, baseline, text, color);
@@ -430,6 +472,7 @@ Image IncomingTransferScreen::render_at_elapsed(uint64_t elapsed_ms) const {
     centered(0, 319, 25, detail, 0x6a);
 
     // DrawnFirstBy(..., 0x40): draw the flat shadow two pixels right/down.
+    // Draws text with a flat dark shadow offset by 2 pixels right and down.
     auto shadow_text = [&](int x, int baseline, std::string_view text, uint8_t color) {
         if (x + 2 + body_.text_width(text) <= out.width && baseline + 2 < out.height)
             body_.draw(out, x + 2, baseline + 2 - body_.baseline, text, 0x40);
@@ -441,6 +484,8 @@ Image IncomingTransferScreen::render_at_elapsed(uint64_t elapsed_ms) const {
     shadow_text(170, 46, state_.player_name, 0x5f);
     const bool source_neutral_badge =
         source_neutral_seller_token(source_seller_team_token(state_));
+    // Neutral badge: a 40x40 bevelled frame (light top/left, dark bottom/right) with a neutral tile inside; otherwise the
+    // seller club's own 38x38 badge is cut from its image.
     if (source_neutral_badge) {
         // SourceBadgeFallback passes seller|0x8000. These Source token families route
         // through FormatError(type 14): frame first, then the neutral KB0 tile.
@@ -457,6 +502,7 @@ Image IncomingTransferScreen::render_at_elapsed(uint64_t elapsed_ms) const {
 
     // OpenTransferEditor's seller view uses the single quoted line at baseline 32;
     // the separate "Angebot" strings are only drawn when param_3 == -1.
+    // Quote line: quoted fee, monthly salary and number of years in one text built from several table entries.
     std::string quote = std::string(text_at(texts_, ::bmh::layout::IncomingTransfer_RenderAtElapsed_TextPointer12)) +
         source_money(state_.quoted_fee, 1, state_.currency_numerator, state_.currency_denominator) +
         std::string(text_at(texts_, ::bmh::layout::IncomingTransfer_RenderAtElapsed_TextPointer13)) +
@@ -480,6 +526,8 @@ Image IncomingTransferScreen::render_at_elapsed(uint64_t elapsed_ms) const {
             draw_body(out, 4, 0x99 + int(i) * 0x11, text_at(texts_, ::bmh::layout::IncomingTransfer_RenderAtElapsed_TextPointer9), 0x67);
             continue;
         }
+        // Contract length in whole years, rounded up from months. The first line shows buyer and years, the second fee and salary;
+        // loan offers use a different colour.
         const int years = (int(offer.contract_months) - 1) / 12 + 1;
         const uint8_t offer_color = offer.loan ? 0x69 : 0x6c;
         const std::string first = state_.buyer_names[i] + exe_.cstring(::bmh::layout::Fltd_Layout_TextPointer2) +
@@ -515,6 +563,7 @@ Image IncomingTransferScreen::render_at_elapsed(uint64_t elapsed_ms) const {
     return out;
 }
 
+// Switches to confirmation mode: shows the given text as a notice over a saved backdrop (320x240).
 void IncomingTransferScreen::show_confirmation(uint32_t original_text_address, const Image& backdrop) {
     if (backdrop.width != 320 || backdrop.height != 240 || state_.viewer_manager < 0 ||
         state_.manager_portrait < 0 || state_.badge_sprite < 0)
@@ -527,16 +576,19 @@ void IncomingTransferScreen::show_confirmation(uint32_t original_text_address, c
     confirmation_backdrop_ = backdrop;
 }
 
+// Closes an ordinary notice; confirmation notices are closed by their button instead. Returns true if one was closed.
 bool IncomingTransferScreen::dismiss_notice() {
     if (confirmation_mode_ || !notice_active_) return false;
     notice_active_ = false;
     return true;
 }
 
+// Remembers which mouse button went down (bit 1 left, bit 2 right); a click counts on release.
 void IncomingTransferScreen::pointer_down(bool right) {
     pointer_buttons_ |= right ? 2 : 1;
 }
 
+// Mouse release: if the matching button was pressed, handles it as a click and returns its result.
 std::optional<int> IncomingTransferScreen::pointer_up(int x, int y, bool right, uint64_t elapsed_ms) {
     const uint8_t button = right ? 2 : 1;
     if (!(pointer_buttons_ & button)) return std::nullopt;
@@ -544,6 +596,10 @@ std::optional<int> IncomingTransferScreen::pointer_up(int x, int y, bool right, 
     return click(x, y, right, elapsed_ms);
 }
 
+// Handles a click and returns the decision when one is made: the chosen bid slot 0..3, or -1 for right click (back).
+// Order: confirmation button, outcome dismissal (right click once the animation is complete), notice dismissal,
+// then the bid area (x 4..190, y from 0x8f, rows 0x11 pixels high). Empty slots, unsupported transactions
+// (except in the pending variant) and clicks after an answer are ignored.
 std::optional<int> IncomingTransferScreen::click(int x, int y, bool right, uint64_t elapsed_ms) {
     if (confirmation_mode_) {
         if (!right && x >= 95 && x <= 220 && y >= 166 && y <= 176)
@@ -573,6 +629,7 @@ std::optional<int> IncomingTransferScreen::click(int x, int y, bool right, uint6
     return answer_;
 }
 
+// Keyboard: any key closes a notice; Esc answers -1 (back). Ignored during confirmation and outcome display.
 std::optional<int> IncomingTransferScreen::key(std::string_view name) {
     if (confirmation_mode_ || outcome_row_count_ >= 0) return std::nullopt;
     if (notice_active_) { dismiss_notice(); return std::nullopt; }
@@ -581,6 +638,7 @@ std::optional<int> IncomingTransferScreen::key(std::string_view name) {
     return std::nullopt;
 }
 
+// State as JSON for tests: the decision JSON plus answer, notice, outcome and confirmation fields when active.
 std::string IncomingTransferScreen::state_json() const {
     auto json = incoming_transfer_decision_json(state_);
     if (answer_) {
@@ -607,6 +665,7 @@ std::string IncomingTransferScreen::state_json() const {
     return json;
 }
 
+// Draws the manager notice dialog (manager name, portrait, club badge and the notice text) over the screen.
 void IncomingTransferScreen::draw_notice(Image& out) const {
     if (state_.viewer_manager < 0 || state_.manager_portrait < 0 || state_.badge_sprite < 0) return;
     TaxDialogProjection notice;

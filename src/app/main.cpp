@@ -91,6 +91,8 @@ namespace fs = std::filesystem;
 using namespace bmh;
 
 // Why the game cannot start: a message box, and the same text on stderr.
+// Reports a fatal startup problem: prints it to stderr and shows it in a message box.
+// Called for failures before or while the window is being set up.
 static void show_start_error(const std::string& text) {
     std::fprintf(stderr, "%s\n", text.c_str());
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "OpenBMH", text.c_str(), nullptr);
@@ -98,6 +100,9 @@ static void show_start_error(const std::string& text) {
 
 // Reattach the native editor when an in-game filename field takes focus. Cocoa
 // owns a field-editor responder in addition to SDL's TEXTINPUT enable flag.
+// Moves the platform text-input rectangle over the save-file name field (logical canvas
+// coordinates 106,209 to 262,219 converted to window pixels) and restarts text input.
+// Called when an in-game filename field gains focus.
 static void focus_filename_input(SDL_Renderer* renderer) {
     int left, top, right, bottom;
     SDL_RenderLogicalToWindow(renderer, 106, 209, &left, &top);
@@ -112,6 +117,7 @@ static void focus_filename_input(SDL_Renderer* renderer) {
 // The game is a Windows GUI program (no console window on double-click). Started from a
 // console, it writes --version, --help and start errors there (kernel32 AttachConsole).
 extern "C" __declspec(dllimport) int __stdcall AttachConsole(unsigned long process_id);
+// Windows only: reconnects stdout/stderr to the parent console when they are not valid streams.
 static void attach_parent_console() {
     // (an output redirected to a file or pipe stays there; a GUI program without one has no
     //  valid stream, fileno < 0)
@@ -126,6 +132,12 @@ static void attach_parent_console() {
 static void attach_parent_console() {}
 #endif
 
+// =====================================================================================
+// Startup and option parsing
+// =====================================================================================
+// Program entry. Order of work: parse the command line, find and validate the game data,
+// start the optional debug log, then build the window/renderer/audio and the presenter
+// lambdas, and finally run the main event loop.
 int main(int argc, char** argv) {
     attach_parent_console();
     const std::vector<std::string> args = launch::utf8_arguments(argc, argv);  // (file names beyond the code page)
@@ -134,11 +146,16 @@ int main(int argc, char** argv) {
     bool muted = false, music_enabled = true, debug_mode = false;
     int live_frame_ms = 0;
     bool live_frame_ms_explicit = false;
+    // Optional environment default for the pause per live-match frame; --live-frame-ms below
+    // may override it.
     if (const char* configured = std::getenv("BMH_LIVE_FRAME_MS")) {
         live_frame_ms = std::clamp(std::atoi(configured), 0, 1000);
         live_frame_ms_explicit = true;
     }
     float volume = 1.0F;
+    // Option loop (index 0 is the program name). Options that take a value only match when
+    // another argument follows ("value"); a first plain argument that does not start with
+    // "--" is taken as the game location unless --data already set it.
     for (size_t i = 1; i < args.size(); ++i) {
         const auto is = [&](const char* name) { return args[i] == name; };
         const bool value = i + 1 < args.size();
@@ -172,6 +189,7 @@ int main(int argc, char** argv) {
             data = launch::path_from_utf8(args[i]);
         }
     }
+    // Start the video session now; a failure is reported to the user and ends the program.
     std::optional<app::VideoSession> video;
     try { video.emplace(); }
     catch (const std::exception& error) { show_start_error(error.what()); return 1; }
@@ -201,6 +219,8 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
+    // Validate the chosen game data; the resolved directory (possibly an unpacked cache copy)
+    // replaces `data` from here on.
     bool english_game = false;  // (the window title marks the English version as experimental)
     {
         const launch::ResolvedGame game = launch::resolve_game(data, launch::default_cache_directory());
@@ -220,6 +240,11 @@ int main(int argc, char** argv) {
         SDL_version linked; SDL_GetVersion(&linked);
         app::debug::log("SDL " + std::to_string(linked.major) + "." + std::to_string(linked.minor) + "." + std::to_string(linked.patch) + ", platform " + SDL_GetPlatform());
     }
+    // =====================================================================================
+    // Window, renderer, audio and shared UI state
+    // =====================================================================================
+    // Everything below lives inside this try block; an exception thrown during setup or the
+    // main loop ends in the catch handler at the end of main.
     try {
         const Palette palette = load_palette(ui::asset_path(data, "M3PC.COL"));
         ui::StartupFlow flow(data, save_directory);
@@ -234,12 +259,17 @@ int main(int argc, char** argv) {
         SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
         const std::string window_title = std::string("OpenBMH ") + bmh::kOpenBmhVersion +
                                   (english_game ? " - Football Limited (experimental)" : "");
+        // 960x720 initial window = 3 times the 320x240 game canvas; resizable and high-DPI aware.
         SDL_Window* window = SDL_CreateWindow(window_title.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 960, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
         if (!window) throw FormatError(SDL_GetError());
+        // Prefer a vsynced renderer, fall back to the software renderer.
         SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
         if (!renderer) renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
         if (!renderer) throw FormatError(SDL_GetError());
+        // The game always draws a 320x240 canvas; SDL scales it to the window and maps mouse
+        // coordinates back to these logical units.
         SDL_RenderSetLogicalSize(renderer, 320, 240);
+        // Streaming texture that holds the current canvas as ARGB (filled from `pixels`).
         SDL_Texture* texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 320, 240);
         if (!texture) throw FormatError(SDL_GetError());
         app::PitchPointer pitch_pointer;
@@ -278,11 +308,13 @@ int main(int argc, char** argv) {
         app::OriginalMouseSound mouse_sound(playback);
         const auto season_texts = load_textd(ui::asset_path(data, "TEXTD.BLK"));
         const auto process_clock_origin = std::chrono::steady_clock::now();
+        // Seconds since this process started; the time source for the process timer.
         const auto process_source_seconds = [&] {
             return uint64_t(std::chrono::duration_cast<std::chrono::seconds>(
                 std::chrono::steady_clock::now()-process_clock_origin).count());
         };
         ui::ProcessTimer process_timer;
+        // Identifies which session/manager/day a process timer belongs to.
         struct ProcessTimerOwner {
             uint64_t session;
             int manager;
@@ -291,6 +323,7 @@ int main(int argc, char** argv) {
         };
         std::optional<ProcessTimerOwner> process_timer_owner;
         std::optional<ui::ProcessTimer::Sample> process_timer_frame;
+        // Returns the image with the process timer bar painted on it while the timer runs.
         const auto process_timer_image = [&](Image image) {
             if (!process_timer.paused() && process_timer_frame)
                 ui::ProcessTimer::paint(image, *process_timer_frame, season_exe);
@@ -298,6 +331,9 @@ int main(int argc, char** argv) {
         };
         // Sample writes only y0. Nested synchronous presenters poll the
         // same Desk-owned clock without re-entering Session/Flow dispatch.
+        // Samples the process timer. When the bar changed and update_texture is set, only the
+        // top pixel row of the texture is refreshed (and presented if `present`). Returns true
+        // once the timer has expired.
         const auto poll_process_timer = [&](bool update_texture, bool present) {
             const auto sample = process_timer.sample(process_source_seconds());
             const bool changed_bar = sample && !sample->expired &&
@@ -318,7 +354,10 @@ int main(int argc, char** argv) {
             }
             return sample && sample->expired;
         };
+        // `running` ends every loop below; `dirty` requests a redraw of the flow screen.
         bool running = true, dirty = true;
+        // Remembers the current left mouse press (position, time, screen, source tick, revision)
+        // so the matching release can be judged against it later.
         struct Press {
             int x, y;
             uint32_t time;
@@ -328,6 +367,7 @@ int main(int argc, char** argv) {
         };
         std::optional<Press> press;
         std::optional<std::string> right_press_screen;
+        // Converts the engine's transfer offer list into the UI's IncomingTransferDecisionView.
         auto transfer_view = [](const GameState& state, const TransferOfferListView& offers, int viewer_manager) {
             ui::IncomingTransferDecisionView view;
             view.valid = offers.valid;
@@ -367,6 +407,8 @@ int main(int argc, char** argv) {
             return view;
         };
         std::optional<Image> season_backdrop;
+        // Paints a 320x240 indexed image through the palette into the texture and presents it.
+        // Also sets the window title and remembers the image as the backdrop for later dialogs.
         auto present_season = [&](const Image& image, const char* title,
                                   const Palette* palette_override = nullptr) {
             SDL_SetWindowTitle(window, title);
@@ -379,6 +421,7 @@ int main(int argc, char** argv) {
             SDL_RenderCopy(renderer, texture, nullptr, nullptr);
             SDL_RenderPresent(renderer);
         };
+        // Plays the highscore point animation of the desk, one rendered frame per step, if active.
         const auto present_desk_record_points = [&] {
             if(!flow.desk_records_points_active())return;
             while(flow.advance_desk_records_point())
@@ -387,6 +430,10 @@ int main(int argc, char** argv) {
                 present_season(flow.render(),"OpenBMH - highscore");
             dirty=false;
         };
+        // Modal contracts screen shown when a player's contract expires. Runs its own event loop
+        // and applies the player's contract actions to a staged copy of the game state.
+        // Returns 1 if the expired player was renewed, 0 if not, -2 on quit or error (the staged
+        // state and random generator are then restored).
         auto contract_expiry_presenter = [&](GameState& staged, WatcomRandom& random,
                                                int manager, int expired_row) -> int {
             const GameState before = staged;
@@ -398,6 +445,7 @@ int main(int argc, char** argv) {
                 ui::ContractsScreen screen(data, std::move(initial));
                 bool renewed_expired_player = false;
                 bool dirty_contracts = true;
+                // Modal sub-loop: polls events itself instead of returning to the main loop.
                 while (running) {
                     if (dirty_contracts) {
                         present_season(screen.render(), "OpenBMH - contracts");
@@ -413,6 +461,7 @@ int main(int argc, char** argv) {
                             random = random_before;
                             return -2;
                         }
+                        // Clicks act on button release.
                         if (event.type == SDL_MOUSEBUTTONUP &&
                             (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT)) {
                             changed |= screen.click(event.button.x, event.button.y,
@@ -425,11 +474,15 @@ int main(int argc, char** argv) {
                             if (event.key.keysym.sym == SDLK_ESCAPE) changed |= screen.key("ESC");
                             else if (event.key.keysym.sym == SDLK_BACKSPACE) changed |= screen.key("BACKSPACE");
                         }
+                        // The screen asks for an engine action (quote, offer, bonuses, insurance); it is validated
+                        // and executed on the staged state, then acknowledged to the screen. Any exception rolls
+                        // the staged state back.
                         if (const ui::ContractRequest* pending = screen.pending()) {
                             const ui::ContractRequest request = *pending;
                             const auto old_game = staged;
                             const auto old_random = random;
                             try {
+                                // Reject requests that do not belong to the current club or row range.
                                 if (request.manager_slot != manager || request.runtime_club != staged.manager_teams.at(size_t(manager)) ||
                                     request.row < 0 || request.row >= 24)
                                     throw FormatError("Vertragsaktion gehört nicht zum aktuellen Verein");
@@ -444,6 +497,7 @@ int main(int argc, char** argv) {
                                     if (request.term_column >= 4 || request.quote_id != screen.state().quote_id ||
                                         request.row != screen.state().quote_row || !screen.state().demands ||
                                         request.demand != (*screen.state().demands)[request.term_column] ||
+                                        // Stale quote, wrong row or implausibly high salary: refuse.
                                         request.monthly_salary > 200000)
                                         throw FormatError("Vertragsangebot ist nicht mehr aktuell");
                                     const bool accepted = contract_offer(staged, manager, request.row,
@@ -485,6 +539,7 @@ int main(int argc, char** argv) {
                         if (renewed_expired_player && !screen.result_page_open()) return 1;
                         dirty_contracts |= changed;
                     }
+                    // Keep audio streaming while idle, then yield the CPU briefly.
                     if (playback.needs_pump()) playback.pump(audio_error);
                     SDL_Delay(10);
                 }
@@ -497,11 +552,14 @@ int main(int argc, char** argv) {
                 return -2;
             }
         };
+        // Reads the plain-background and text-gradient switches for the end-of-season dialogs.
         auto game_end_options = [&](const GameState& state) {
             return ui::GameEndRenderOptions{
                 state.memory.has(::bmh::layout::PlainBackground) && state.memory.u8(::bmh::layout::PlainBackground) != 0,
                 (!state.memory.has(::bmh::layout::TextGradientDisabled) || state.memory.u8(::bmh::layout::TextGradientDisabled) == 0) && season_exe.u8(::bmh::layout::TextGradientMode) == 2};
         };
+        // Blocks until a fresh left or right mouse press (pending mouse events are flushed first)
+        // or quit.
         auto wait_season_ack = [&] {
             // Source SDLFlushEvents2/SDLFlushEvents flush pending mouse events, then wait for
             // a new left/right press. Physical keyboard ESC is not event8.
@@ -516,6 +574,7 @@ int main(int argc, char** argv) {
                 SDL_Delay(10);
             }
         };
+        // Same acknowledgement wait as above, used by the Sportschau screens.
         auto wait_sportschau_ack = [&] {
             // Source SDLFlushEvents2 flushes pending mouse input, then accepts fresh
             // left/right input. Keyboard Escape is not an Original ACK here.
@@ -530,6 +589,7 @@ int main(int argc, char** argv) {
                 SDL_Delay(10);
             }
         };
+        // Waits `ticks` units of 20 ms; only a window close request interrupts it.
         auto source_tick_wait = [&](unsigned ticks) {
             for (unsigned i = 0; running && i < ticks; ++i) {
                 SDL_Delay(20); // Source timer unit used by the traced intro path.
@@ -539,6 +599,8 @@ int main(int argc, char** argv) {
                     running = false; // platform close is the only intro-loop escape
             }
         };
+        // Waits `count` original-display refresh periods using the high-resolution counter so
+        // the pacing is the same on 60/120/144 Hz monitors; only a close request interrupts it.
         auto wait_source_retraces = [&](unsigned count) {
             // Keep the VGA cadence on 60/120/144-Hz host displays alike.
             constexpr auto refresh_hz = ui::kOriginalRefreshHz;
@@ -555,7 +617,9 @@ int main(int argc, char** argv) {
                 }
             }
         };
+        // --- Sportschau (results show) presenters: the engine calls these hooks synchronously. ---
         SportschauPresentationHooks sportschau_presenter;
+        // Plays the Sportschau intro animation frames with fanfare, then waits for a click.
         sportschau_presenter.intro = [&](const GameState&, const SportschauIntroView&) {
             if (!running) return;
             // PaletteOverride installs KB132's embedded palette; SportschauIntro restores the
@@ -580,6 +644,7 @@ int main(int argc, char** argv) {
                            "OpenBMH - sportschau_intro_ack", intro_colors);
             wait_sportschau_ack();
         };
+        // Builds the render options (panel background, gradient text) for Sportschau screens.
         const auto sportschau_context = [&](const GameState& state) {
             ui::SportschauReportContext context;
             context.solid_panel_background = state.memory.has(::bmh::layout::SolidPanelBackground) && state.memory.u8(::bmh::layout::SolidPanelBackground) != 0;
@@ -587,12 +652,14 @@ int main(int argc, char** argv) {
                                     season_exe.u8(::bmh::layout::TextGradientMode) == 2;
             return context;
         };
+        // Shows the matchday intro screen for a fixed time; a left click skips it.
         sportschau_presenter.kickoff = [&](const GameState&, const MatchdayIntroView& view) {
             if (!running) return;
             present_season(matchday_intro.render(view), "OpenBMH - matchday_intro",
                 matchday_intro.palette_override() ? &*matchday_intro.palette_override() : nullptr);
             // SDLGetTicks reads BIOS ticks at BDA46c (PIT1193182 /65536 Hz),
             // unlike the separate 20ms units of DecodeTaxAnimationScript2. Source waits36 ticks.
+            // 36 ticks of the DOS BIOS timer (1193182 Hz / 65536) converted to milliseconds.
             constexpr Uint32 duration = (36ull * 65536 * 1000 + 1193181) / 1193182;
             const Uint32 start = SDL_GetTicks();
             SDL_FlushEvents(SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP);
@@ -610,6 +677,8 @@ int main(int argc, char** argv) {
         };
         std::optional<ui::SportschauMatchReport> sportschau_replay_screen;
         size_t sportschau_step_index = 0;
+        // Shows one step of the report replay (log entries growing minute by minute).
+        // Returns true when the replay should stop (quit) or be skipped by a left click.
         sportschau_presenter.replay.step = [&](const GameState& state,
                 const SportschauFixtureView& fixture, const SportschauReportStep& step) {
             if (!running) return true;
@@ -621,6 +690,7 @@ int main(int argc, char** argv) {
             if (!sportschau_replay_screen) throw FormatError("sportschau: missing report owner");
             bool skip = false;
             SDL_Event input;
+            // Only minute pauses accept input; other steps just look for a close request.
             if (step.minute_wait) {
                 while (quit_confirmation.poll(&input)) {
                     if (input.type == SDL_QUIT) running = false;
@@ -640,6 +710,8 @@ int main(int argc, char** argv) {
             if (step.chance_wait) source_tick_wait(50);
             return skip;
         };
+        // Plays one highlight (header, optional set piece, shot animation) of the replay, using
+        // the memory-driven delays, then restores the report screen.
         sportschau_presenter.replay.scene = [&](const GameState& state,
                 const SportschauFixtureView& fixture, const SportschauSceneView& scene) {
             if (!running) return;
@@ -654,6 +726,7 @@ int main(int argc, char** argv) {
             const auto colors = live_screen.shot_palette(palette, scene.shot, scene.groups, state);
             const std::string id = std::to_string(fixture.group) + "_" + std::to_string(fixture.fixture) +
                 "_" + std::to_string(scene.report_step.visible_log_entries);
+            // Waits a configured number of ticks read from the game memory row (small values halved).
             const auto delay = [&](int row) {
                 const uint32_t address = ::bmh::layout::Main_FormatError_ExecutableFieldUnsigned + uint32_t(row * 9);
                 const int raw = state.memory.has(address) ? state.memory.u8(address) : 0;
@@ -691,6 +764,7 @@ int main(int argc, char** argv) {
             present_season(sportschau_replay_screen->render_report(restored),
                 ("OpenBMH - sportschau_scene_restored_" + id).c_str());
         };
+        // Shows the full match report of a fixture and waits for acknowledgement.
         sportschau_presenter.fixture = [&](const GameState& state, const SportschauFixtureView& fixture) {
             if (!running) return;
             ui::SportschauMatchReport screen(data, fixture, sportschau_context(state));
@@ -698,6 +772,7 @@ int main(int argc, char** argv) {
             wait_sportschau_ack();
             sportschau_replay_screen.reset();
         };
+        // Shows the competition winner screen.
         sportschau_presenter.winner = [&](const GameState& state, const CompetitionWinnerView& view) {
             if (!running) return;
             const auto& colors = competition_winner.palette_override(view.title);
@@ -706,18 +781,22 @@ int main(int argc, char** argv) {
                  std::to_string(view.team)).c_str(), colors ? &*colors : nullptr);
             wait_sportschau_ack(); // SDLFlushEvents2 waits for a mouse press; ESC is ignored.
         };
+        // Shows the team-of-the-matchday (eleven) screen.
         sportschau_presenter.awards = [&](const GameState& state, const SportschauAwardsView& view) {
             if (!running) return;
             present_season(sportschau_eleven.render(view, sportschau_context(state).gradient_text),
                 ("OpenBMH - sportschau_eleven_" + std::to_string(view.group)).c_str());
             wait_sportschau_ack();
         };
+        // Shows the team information screen.
         sportschau_presenter.team_info = [&](const GameState& state, const SportschauTeamInfoView& view) {
             if (!running) return;
             present_season(sportschau_team_info.render(view, sportschau_context(state).gradient_text),
                 ("OpenBMH - sportschau_teaminfo_" + std::to_string(view.group)).c_str());
             wait_sportschau_ack();
         };
+        // Modal dialog for the season tax event (question, notice or outcome). Returns true if the
+        // player answered Yes. A button counts only when pressed and released on the same button.
         auto show_tax = [&](const GameState& state, const SeasonTaxEvent& event) -> bool {
             if (!running) return false;
             const size_t base = size_t(event.manager_slot) * 0xb0c;
@@ -741,6 +820,7 @@ int main(int argc, char** argv) {
                 ? "OpenBMH - season_tax_question" : event.kind == SeasonTaxEventKind::notice
                 ? "OpenBMH - season_tax_notice" : "OpenBMH - season_tax_outcome");
             auto pressed = ui::GameEndTaxDialog::Button::none;
+            // Modal sub-loop (own event polling).
             while (running) {
                 SDL_Event input;
                 while (quit_confirmation.poll(&input)) {
@@ -768,6 +848,7 @@ int main(int argc, char** argv) {
             }
             return false;
         };
+        // Hooks for the season tax events: question via show_tax, notices and the animation below.
         SeasonTaxHooks tax_presenter;
         tax_presenter.choose = show_tax;
         tax_presenter.observe = [&](const GameState& state, const SeasonTaxEvent& event) {
@@ -792,6 +873,7 @@ int main(int argc, char** argv) {
                 season_backdrop = animation.drawing_frame();
             }
         };
+        // Waits without consuming gameplay input; only a quit request is handled.
         auto wait_promotion_time = [&](Uint32 milliseconds) {
             const auto start = SDL_GetTicks();
             while (running && Uint32(SDL_GetTicks() - start) < milliseconds) {
@@ -803,6 +885,8 @@ int main(int argc, char** argv) {
                 if (running) SDL_Delay(10);
             }
         };
+        // Presents the promotion/relegation table animation (39 steps) unless the manager's
+        // animation-skip flag is set.
         SeasonPromotionHook promotion_presenter = [&](const GameState& state, const SeasonPromotionEvent& event) {
             if (!running) return;
             auto view = ui::season_promotion_from_game(state, event, season_exe, season_texts);
@@ -819,6 +903,9 @@ int main(int argc, char** argv) {
             for (int step = 1; running && step <= 38; ++step) show_step(step);
             if (running) wait_promotion_time(50 * 20);
         };
+        // Shows a yes/no/acknowledge dialog over a backdrop and runs a modal loop until answered.
+        // Questions are bound to the process timer (expiry answers No); timed notices close
+        // after 70*3*20 ms. Returns `unsupported` when the program is quitting.
         auto present_pending_dialog = [&](const GameState& state, ui::TaxDialogProjection view,
                                           const Image& backdrop, const char* title,
                                           std::optional<ui::GameEndRenderOptions> effective_options = {}) -> PendingOfferAnswer {
@@ -896,6 +983,7 @@ int main(int argc, char** argv) {
             }
             return PendingOfferAnswer::unsupported;
         };
+        // Asks whether a loaned player should be returned. Returns 1 yes, 0 no, -1 cancelled.
         auto loan_return_presenter = [&](GameState& state, WatcomRandom&, int manager,
                                          const std::string& question) -> int {
             if (!running) return -1;
@@ -907,6 +995,7 @@ int main(int argc, char** argv) {
             if (answer == PendingOfferAnswer::no) return 0;
             return -1;
         };
+        // Builds the hooks that present pending transfer/contract offers over the given backdrop.
         auto make_pending_offer_hooks = [&](Image backdrop) {
             auto pending_backdrop = std::make_shared<Image>(std::move(backdrop));
             PendingOfferHooks hooks;
@@ -915,6 +1004,7 @@ int main(int argc, char** argv) {
                     *pending_backdrop, question.kind == PendingOfferQuestionKind::salary_demand
                         ? "OpenBMH - pending_offer_salary_question" : "OpenBMH - pending_offer_severance_question");
             };
+            // Lets the player pick one of the incoming transfer bids (modal; reacts to mouse press).
             hooks.select_transfer = [&, pending_backdrop](const GameState& staged, const TransferOfferListView& offers) {
                 ui::IncomingTransferScreen screen(data,
                     ui::pending_offer_transfer_decision_from_game(staged, offers),
@@ -945,8 +1035,10 @@ int main(int argc, char** argv) {
                     *pending_backdrop, "OpenBMH - pending_offer_notice") == PendingOfferAnswer::unsupported)
                     throw std::runtime_error("pending offer presenter stopped");
             };
+            // Shows a program-error screen and waits for a left or right press; throws on quit.
             hooks.program_error = [&, pending_backdrop](const GameState& staged, uint16_t code) {
                 ui::ProgramErrorScreen screen(data,code,game_end_options(staged));
+                // The modal loop owns the input now: drop any press recorded by the main loop.
                 press.reset();
                 SDL_FlushEvents(SDL_MOUSEMOTION,SDL_MOUSEBUTTONUP);
                 present_season(screen.render(),"OpenBMH - program_error");
@@ -967,6 +1059,7 @@ int main(int argc, char** argv) {
             };
             return hooks;
         };
+        // Builds the hooks for transfer-market sales to a human buyer (only notices are shown).
         auto make_market_sale_hooks = [&](Image backdrop) {
             auto market_backdrop = std::make_shared<Image>(std::move(backdrop));
             HumanBuyerSaleHooks hooks;
@@ -979,12 +1072,17 @@ int main(int argc, char** argv) {
             };
             return hooks;
         };
+        // Forward declarations: the club, player and statistics presenters call each other, so
+        // they are assigned further below.
         std::function<bool(app::ClubModalServices&, int)> present_club_information;
         std::function<std::optional<bool>(app::ClubModalServices&,const ClubPlayerDetailSelection&,const Image&)> present_player_detail;
+        // Modal offer editor for a returned loan player. Returns -1 if unsupported or quitting,
+        // 0 if cancelled, 1 once the offer was submitted/closed.
         auto loan_return_offer_presenter = [&](GameState& staged, GameRandom& game_random,
                 WatcomRandom& watcom_random, app::ClubModalServices& services,
                 int manager, int source_slot, int list_entry,
                 const HumanBuyerSaleHooks& sale_hooks) -> int {
+            // Only valid for manager slots 0..3 and list entries 40..43; anything else is unsupported.
             if (!running || manager < 0 || manager >= 4 || list_entry < 40 || list_entry >= 44 ||
                 source_slot != 2928 + list_entry || !staged.memory.has(::bmh::layout::EditorList + uint32_t(list_entry) * 0x58 + 0x57))
                 return -1;
@@ -1022,6 +1120,7 @@ int main(int argc, char** argv) {
                     if (event.type == SDL_MOUSEMOTION) continue;
                     if (event.type == SDL_MOUSEBUTTONDOWN) {
                         action = screen.click(event.button.x, event.button.y,
+                            // clicks > 1 tells the screen it is a double click.
                             event.button.button == SDL_BUTTON_RIGHT, event.button.clicks > 1);
                     } else if (event.type == SDL_KEYDOWN) {
                         const char* name = SDL_GetKeyName(event.key.keysym.sym);
@@ -1084,6 +1183,7 @@ int main(int argc, char** argv) {
                         draw();
                     }
                 }
+                // Keep audio streaming while idle, then yield the CPU briefly.
                 if (playback.needs_pump()) playback.pump(audio_error);
                 SDL_Delay(10);
             }
@@ -1096,14 +1196,18 @@ int main(int argc, char** argv) {
         std::function<void(app::ClubModalServices&, int, const Image&)> present_club_statistics;
         bool poach_selection_active=false;
         std::optional<ClubPlayerDetailSelection> poach_card_selection;
+        // Modal club information screen for `team`. Returns true when it was left normally (or
+        // the process timer expired), false when the program is quitting.
         present_club_information = [&](app::ClubModalServices& services, int team) -> bool {
             if (!running) return false;
             //ClubInfoFromGame owns the opening DOWN and consumes its paired UP inside
             // this synchronous loop. The parent must not retain a held press
             // after that UP has already been consumed by the child.
+            // The child loop consumes the matching release itself.
             press.reset();
             ui::ClubInfoView selected_view = ui::ClubInfoView::data_a;
             std::unique_ptr<ui::ClubInfoScreen> club_screen;
+            // Rebuilds the club screen from the current game state.
             const auto redraw = [&] {
                 std::string error;
                 ClubInfoEntry snapshot;
@@ -1115,6 +1219,7 @@ int main(int argc, char** argv) {
                 projection.view = selected_view;
                 club_screen = std::make_unique<ui::ClubInfoScreen>(data, std::move(projection));
             };
+            // Presents the club screen; the window title encodes the view state.
             const auto show = [&] {
                 auto title = "OpenBMH - cup_club_info_" + std::to_string(team) + "_" +
                              std::to_string(int(selected_view)) + "_category_" +
@@ -1127,6 +1232,7 @@ int main(int argc, char** argv) {
             };
             redraw(); show();
             SDL_FlushEvents(SDL_MOUSEMOTION, SDL_MOUSEBUTTONUP);
+            // True when the process timer ran out and no button is currently held down.
             const auto deadline_expired = [&] {
                 return !club_screen->pressed_button() && poll_process_timer(true, true);
             };
@@ -1191,12 +1297,15 @@ int main(int argc, char** argv) {
             }
             return false;
         };
+        // Opens the player detail card for a row chosen in the club list. The runtime input mode
+        // byte is switched for the card and restored afterwards (RAII helper below).
         present_club_player = [&](app::ClubModalServices& services, const ui::ClubInfoRequest& selected, const Image& parent_image) {
             if (!running) return false;
             const ClubPlayerDetailSelection selection{selected.runtime_team, selected.player_id,
                 selected.rendered_row, selected.physical_row, selected.human_loan_index};
             const uint8_t prior_mode = services.runtime_byte(::bmh::layout::CareerSession_DispatchPoachUi_ExecutableField);
             const uint8_t input_mode = club_player_detail_input_mode(prior_mode);
+            // Restores the saved runtime byte when the card is left, including by exception.
             struct PlayerInputModeRestore {
                 app::ClubModalServices& services;
                 uint8_t prior;
@@ -1206,11 +1315,14 @@ int main(int argc, char** argv) {
             if(!present_player_detail)throw FormatError("generic player presenter unavailable");
             return present_player_detail(services,selection,parent_image).value_or(false);
         };
+        // Modal player detail card. Returns the card's close-parent flag, or std::nullopt when
+        // the program is quitting.
         present_player_detail = [&](app::ClubModalServices& services,const ClubPlayerDetailSelection& selection,const Image& parent_image) -> std::optional<bool> {
             if(!running)return std::nullopt;
             press.reset(); //ClubPlayerDetailFromGame now owns physical hold/release through its own Source wait.
             const uint8_t input_mode=services.runtime_byte(::bmh::layout::CareerSession_DispatchPoachUi_ExecutableField);
             size_t rebuild_count = 0;
+            // Asks the engine to redraw the player's data and projects it for the card.
             const auto rebuild = [&] {
                 std::string error;
                 auto redraw = services.redraw_player(selection);
@@ -1218,6 +1330,7 @@ int main(int argc, char** argv) {
                 return ui::club_player_detail_from_game(services.state(), std::move(redraw), season_exe);
             };
             ui::ClubPlayerDetailScreen card(data, rebuild(), parent_image);
+            // Presents the card; the window title encodes selection and statistics state.
             const auto show = [&] {
                 const auto title = "OpenBMH - cup_player_detail_" + std::to_string(selection.runtime_team) +
                     "_" + std::to_string(selection.player_id) + (card.in_statistics() ? "_player_statistics_" : "_card_") +
@@ -1225,6 +1338,8 @@ int main(int argc, char** argv) {
                     "_rebuild_" + std::to_string(rebuild_count);
                 present_season(card.render(), title.c_str());
             };
+            // Waits until the left button is up, but only if the engine recorded a long hold before
+            // the card opened.
             const auto wait_prior_left_release = [&] {
                 if (input_mode == 0) return;
                 // Source waits only for an already set CareerSession_InitializeClubModalRuntime_ExecutableField (>25 held ticks),
@@ -1242,12 +1357,15 @@ int main(int argc, char** argv) {
                 services.set_runtime_byte(::bmh::layout::CareerSession_InitializeClubModalRuntime_ExecutableField, 0); // Source consumes the owned hold flag.
             };
             show(); wait_prior_left_release();
+            // Source tick at which a left button hold began (for the card's hold shortcut).
             std::optional<uint64_t> held_left_since;
             SDL_PumpEvents();
             // ClubPlayerDetailFromGame consumes the opening DOWN when bbcde!=0. Only its
             // selection mode retains that inherited DOWN as a hold candidate.
             if (input_mode == 0 && (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_LMASK))
                 held_left_since = ui::pointer_hold_source_ticks(SDL_GetTicks64());
+            // Executes a request coming from the card. A returned value means the card is left
+            // (true/false = close the parent screens too).
             const auto apply_request = [&](ui::ClubPlayerDetailRequest request) -> std::optional<bool> {
                 switch (request.kind) {
                 case ui::ClubPlayerDetailRequestKind::none: return std::nullopt;
@@ -1293,6 +1411,7 @@ int main(int argc, char** argv) {
                 }
                 return std::nullopt;
             };
+            // Applies the process-timer deadline to the card unless a mouse release is still awaited.
             const auto expire_card = [&]() -> std::optional<bool> {
                 if (card.source_mouse_wait_release_pending()) return std::nullopt;
                 if (poll_process_timer(true, true) && card.process_timer_expired())
@@ -1328,6 +1447,8 @@ int main(int argc, char** argv) {
                     if (!running) return std::nullopt;
                     if (changed && request.kind == ui::ClubPlayerDetailRequestKind::none) show();
                 }
+                // While the button is held, report the elapsed source ticks to the card; forget the hold
+                // when the physical button is up.
                 if (held_left_since) {
                     SDL_PumpEvents();
                     if (!(SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_LMASK)) held_left_since.reset();
@@ -1339,16 +1460,19 @@ int main(int argc, char** argv) {
             }
             return std::nullopt;
         };
+        // Modal team statistics screen with a mode toggle; leaves on close, right press or timer.
         present_club_statistics = [&](app::ClubModalServices& services, int team, const Image& parent_frame) {
             if (!running) return;
             auto mode = ui::TeamStatisticsMode::combined;
             std::unique_ptr<ui::TeamStatisticsScreen> statistics;
+            // Rebuilds the statistics screen for the current mode.
             const auto rebuild = [&] {
                 auto projection = ui::team_statistics_from_game(services.state(), team, mode,
                                                                  season_exe, season_texts);
                 statistics = std::make_unique<ui::TeamStatisticsScreen>(data,
                     std::move(projection), parent_frame);
             };
+            // Presents the statistics screen; the window title encodes team, mode and pressed button.
             const auto show = [&] {
                 auto title = "OpenBMH - cup_team_statistics_" + std::to_string(team) +
                     "_mode_" + std::to_string(int(mode));
@@ -1358,6 +1482,7 @@ int main(int argc, char** argv) {
             };
             rebuild(); show();
             SDL_FlushEvents(SDL_MOUSEMOTION, SDL_MOUSEBUTTONUP);
+            // True when the process timer ran out and no button is currently held down.
             const auto deadline_expired = [&] {
                 return !statistics->pressed_button() && poll_process_timer(true, true);
             };
@@ -1367,6 +1492,7 @@ int main(int argc, char** argv) {
                 while (quit_confirmation.poll(&input)) {
                     if (input.type == SDL_QUIT) { running = false; return; }
                     if (deadline_expired()) return;
+                    // A right press leaves at once without waiting for its release.
                     if (input.type == SDL_MOUSEBUTTONDOWN && input.button.button == SDL_BUTTON_RIGHT)
                         return; // ExpireQuestion right DOWN: do not wait for release.
                     if (input.type == SDL_MOUSEMOTION) {
@@ -1389,6 +1515,9 @@ int main(int argc, char** argv) {
                 SDL_Delay(10);
             }
         };
+        // Selector the engine calls while the player chooses a player to poach: shows league table
+        // pages, the range dialog, club info and player cards in nested modal loops. Returns the
+        // chosen player, or std::nullopt when closed or the process timer expired.
         app::CareerSession::PoachPlayerSelector poach_player_selector =
             [&](app::CareerSession& staged,app::ClubModalServices&,int manager,
                 uint64_t& selection_revision,const Image& transfer_backdrop)
@@ -1398,6 +1527,7 @@ int main(int argc, char** argv) {
             std::string error;
             auto page=staged.current_league_table_dispatch(error);
             if(!page)throw FormatError(error);
+            // Local variant of present_season that throws if an SDL render call fails.
             const auto present=[&](const Image& frame,const std::string& title) {
                 SDL_SetWindowTitle(window,title.c_str());season_backdrop=frame;
                 const auto painted=process_timer_image(frame);
@@ -1408,12 +1538,14 @@ int main(int argc, char** argv) {
                 SDL_RenderPresent(renderer);
             };
             std::unique_ptr<ui::LeagueTableScreen> table;
+            // Rebuilds the league table screen from the current engine page.
             const auto rebuild=[&] {
                 auto tables=ui::league_tables_from_game(staged.state(),manager);
                 tables[size_t(page->identity.league)]=page->page;
                 table=std::make_unique<ui::LeagueTableScreen>(data,std::move(tables),page->identity.league,
                     ui::LeagueTableScreen::FamilyMode{page->identity,1});
             };
+            // Presents the table; a freshly forecast page is acknowledged to the engine once shown.
             const auto show_table=[&] {
                 present(table->render(),"OpenBMH - poach_table_"+std::to_string(page->identity.league));
                 if(page->phase==Phase::forecast_pending_present) {
@@ -1425,6 +1557,8 @@ int main(int argc, char** argv) {
                     rebuild(); // Retain forecast pixels, refresh only the stale-request token.
                 }
             };
+            // Modal table range dialog. Digit, ENTER, BACKSPACE and SPACE keys are queued and fed to
+            // the dialog only while it is ready for input; returns its accept/cancel outcome.
             const auto run_range=[&](Image backdrop,ui::TableRangeDialogProfile profile)
                 -> ui::TableRangeDialogOutcome {
                 ui::LeagueTableRangeDialog dialog(data,std::move(backdrop),std::move(profile));
@@ -1476,6 +1610,7 @@ int main(int argc, char** argv) {
                         if(dialog.key(key))show();
                         if(outcome)break;
                     }
+                    // Feed the dialog whole 20 ms source units elapsed since the last anchor.
                     const Uint32 now=SDL_GetTicks(),units=Uint32(now-clock_anchor)/20;
                     if(units) {
                         clock_anchor+=units*20;
@@ -1489,6 +1624,8 @@ int main(int argc, char** argv) {
             rebuild();show_table();
             poach_selection_active=true;poach_card_selection.reset();
             struct ResetSelection { bool& active;~ResetSelection(){active=false;} } reset{poach_selection_active};
+            // When the process timer runs out and no table action or release is pending, closes the
+            // selection as if the close control had been used. Returns true if it did.
             const auto deadline_expired=[&] {
                 if(table->pending_family_action() || table->source_mouse_wait_release_pending() ||
                    !poll_process_timer(true,true))return false;
@@ -1570,6 +1707,8 @@ int main(int argc, char** argv) {
         // skipped reveal still presents every overview; a normal reveal ACK or
         // the right press leaving an overview does not skip subsequent groups.
         bool group_reveal_skipped = false;
+        // Presents a cup draw: the reveal animation (draw phase) or the overview of a round.
+        // In the overview a left click on a club opens its club info, a right click leaves.
         SeasonCupDrawHook cup_draw_presenter = [&](const GameState& state, const SeasonCupDrawEvent& event) {
             if (!running) return;
             if (event.phase == SeasonCupDrawPhase::draw) {
@@ -1585,6 +1724,7 @@ int main(int argc, char** argv) {
             if (!view.source_eligible) return;
             ui::CupDrawScreen screen(data, std::move(view));
             bool first_draw_frame = true;
+            // Presents the current draw frame; the first frame or flagged steps flush queued mouse events.
             const auto show_draw = [&] {
                 const auto title = "OpenBMH - cup_draw_" + std::to_string(screen.revealed_count());
                 present_season(screen.render(), title.c_str());
@@ -1664,6 +1804,9 @@ int main(int argc, char** argv) {
                 SDL_Delay(10);
             }
         };
+        // End-of-game highscore presentation: an interactive calculator when the signature is 0,
+        // otherwise the table is updated on disk and shown when `display` is set; ends with the
+        // final screen.
         auto show_highscore = [&](const GameState& state, bool display) {
             if (!running) return;
             const auto options = game_end_options(state);
@@ -1742,15 +1885,25 @@ int main(int argc, char** argv) {
         };
         std::optional<Uint64> timed_notice_presented_at;
         std::optional<Uint8> timed_notice_release;
+        // =====================================================================================
+        // Handling FlowResults (requests from the UI flow)
+        // =====================================================================================
+        // Called by the main loop for every ui::FlowResult. It handles quitting and the process
+        // timer, then passes the request to app::serve_flow_request() together with the
+        // presenter lambdas defined inside, which the engine may call back synchronously.
         auto handle = [&](const ui::FlowResult& r) {
             pitch_pointer.show({}, renderer);
+            // A quit request must be confirmed by the player; otherwise the desk reports it as cancelled.
             if (r.request == ui::FlowRequest::end_session && !quit_confirmation.confirm()) {
                 flow.reject_desk_action(english_game ? "Quit cancelled." : "Beenden abgebrochen.");
                 dirty = true;
                 return;
             }
+            // Play the sounds the desk queued during this action.
             if (const auto* desk = flow.desktop())
                 for (const auto id : desk->take_sound_ids()) app::original_audio_command(playback, id);
+            // Process timer: kickoff and quitting stop it; opening the menus 10, 11, 19 and 29
+            // (save/load, settings, new manager) pauses it.
             if (r.request == ui::FlowRequest::kickoff || r.request == ui::FlowRequest::end_session) {
                 // DeskDate clears CareerSession_DispatchStrengths_ExecutableField2 before returning to the match caller.
                 process_timer.stop(); process_timer_owner.reset(); process_timer_frame.reset();
@@ -1760,6 +1913,7 @@ int main(int argc, char** argv) {
                 // ApplySettingsFile suspends save/load, settings and new-manager waits.
                 process_timer.pause(process_source_seconds()); process_timer_frame.reset();
             }
+            // Confirmed quit: end the program at once, without advancing the calendar or saving.
             if (r.request == ui::FlowRequest::end_session) {
                 // DeskDate's confirmed socket exit tears down the running
                 // session without a calendar turn, RNG draw, or implicit save.
@@ -1771,12 +1925,15 @@ int main(int argc, char** argv) {
             bool live_skipped = false;
             uint64_t live_overview_sequence = 0;
             std::optional<Image> outcome_backdrop;
+            // Live-match intervention: opens the lineup/pitch screen for the clicked team and runs it
+            // until closed. Returns true if the intervention was completed successfully.
             auto present_live_lineup = [&](int minute, MatchEngine& engine, std::vector<MatchGroup>& groups,
                     GameState& state, uint64_t& live_revision, int selected_team, int selected_opponent,
                     const app::LiveLineupDispatcher& dispatch, const app::LiveTacticsDispatcher& dispatch_tactic,
                     const app::LivePitchDispatcher& dispatch_pitch,
                     const app::LiveInterventionScopeDispatcher& dispatch_scope,
                     bool live_skipped, bool event_origin) -> bool {
+                // Shows the engine's notice about a refused substitution as a dialog over the pitch.
                 const auto show_live_substitution_notice = [&](const app::LiveSubstitutionResult& result,
                         const Image& backdrop, const char* parent_title) {
                     if (result.status != app::LiveSubstitutionStatus::source_notice) return;
@@ -1793,6 +1950,8 @@ int main(int argc, char** argv) {
                 };
                 bool completed = false;
                 const int selected_manager = selected_team >= 0 ? state.manager_of(selected_team) : -1;
+                // Only for a human-managed team, and only when started from a match event or while the
+                // match is not being skipped past its first two minutes.
                 if ((event_origin || (!live_skipped && minute > 2)) && selected_team >= 0 && selected_manager >= 0) {
                     bool scope_started = false, scope_finished = false;
                     std::string scope_error;
@@ -1815,12 +1974,15 @@ int main(int argc, char** argv) {
                         // pitch page and strand its navigation request after return.
                         ui::PitchScreen screen(data, std::move(live_lineup),
                             ui::pitch_extras_from_game(state, season_exe, live_revision, selected_opponent));
+                        // Window title depends on which page (bit 8 of the display word) is showing.
                         const auto live_title = [&] {
                             return (screen.extras().native_display_word & 8)
                                 ? "OpenBMH - live_pitch" : "OpenBMH - live_lineup";
                         };
                         SDL_SetWindowTitle(window, live_title());
                         bool closed = false;
+                        // Executes a request from the pitch screen: player info card or a substitution/order
+                        // change through the engine, then refreshes or reports the result on the screen.
                         const auto apply_live_pitch = [&](const ui::PitchRequest& action) {
                             if (action.kind == ui::PitchRequestKind::none) return;
                             pitch_pointer.show({}, renderer);
@@ -1861,7 +2023,10 @@ int main(int argc, char** argv) {
                             }
                             SDL_SetWindowTitle(window, live_title());
                         };
+                        // left_held/right_held pair a release with its press. left_release_consumed is set when the
+                        // screen already acted on the press, so the release must not act a second time.
                         bool left_held = false, left_release_consumed = false, right_held = false;
+                        // Modal sub-loop: draws the pitch every pass and polls events itself.
                         while (running && !closed) {
                             pitch_pointer.show(screen.pointer_cursor(palette), renderer);
                             const Image image = screen.render();
@@ -1881,6 +2046,7 @@ int main(int argc, char** argv) {
                                 if (modal.type == SDL_MOUSEBUTTONDOWN && modal.button.button == SDL_BUTTON_LEFT) {
                                     left_held = true;
                                     const auto action = screen.pointer_down(modal.button.x, modal.button.y);
+                                    // Release barrier: remember whether this press already triggered its action.
                                     left_release_consumed = screen.take_source_down_release_barrier();
                                     // Native page/order controls act on DOWN. ACK before
                                     // polling another event; their UP cannot toggle twice.
@@ -1910,6 +2076,7 @@ int main(int argc, char** argv) {
                             }
                             if (!redrawn && !closed) SDL_Delay(8);
                         }
+                        // Leaving: quitting aborts the live intervention, otherwise it is finished normally.
                         if (!running) {
                             dispatch_scope(app::LiveInterventionBoundary::abort, 2, selected_manager,
                                 selected_team, scope_error);
@@ -1937,24 +2104,30 @@ int main(int argc, char** argv) {
                 }
                 return completed;
             };
+            // Callback type through which the overview screen asks the engine for its actions.
             using RunningOverviewDispatcher = std::function<std::optional<app::CareerSession::LiveOverviewDispatch>(
                 const app::CareerSession::LiveOverviewAction&, std::string&,
                 const app::TransferOfferTeamInfoPresenter&)>;
+            // Presents the overview shown while the matchday is running (league table, other games,
+            // statistics) in its own loop, driven by the engine's overview dispatcher.
             const auto present_running_overview = [&](std::optional<app::CareerSession::LiveOverviewProjection> projection,
                     const GameState& state, uint64_t& live_revision,
                     const RunningOverviewDispatcher& dispatch_overview,
                     const PhaseResultRequest* phase_result) {
                 const int manager = projection->owner.manager_slot;
                 std::unique_ptr<ui::LeagueTableScreen> table_screen;
+                // Only one of table/pairings/strengths/cup screen exists at a time, matching projection->kind.
                 std::unique_ptr<ui::LeaguePairingsScreen> pairings_screen;
                 std::unique_ptr<ui::StrengthsScreen> strengths_screen;
                 std::unique_ptr<ui::OtherGamesScreen> cup_screen;
                 const auto overview_clock_start = std::chrono::steady_clock::now();
+                // Seconds since the overview opened, converted to source units for the pairings screen.
                 const auto overview_source_seconds = [&] {
                     const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
                         std::chrono::steady_clock::now() - overview_clock_start).count();
                     return ui::league_pairings_source_seconds(uint64_t(milliseconds));
                 };
+                // Creates the screen that matches the current projection kind (throws if its data is missing).
                 const auto rebuild_screen = [&] {
                     table_screen.reset(); pairings_screen.reset(); strengths_screen.reset(); cup_screen.reset();
                     if (projection->kind == app::CareerSession::LiveOverviewKind::league_table &&
@@ -1982,6 +2155,8 @@ int main(int argc, char** argv) {
                         throw FormatError("live overview: Source presenter projection is missing");
                     }
                 };
+                // Window title of the overview; inside a phase result it also carries the phase end minute
+                // and group index.
                 const auto overview_title = [&]() -> std::string {
                     if (phase_result) {
                         const std::string prefix = "OpenBMH - phase_";
@@ -2006,6 +2181,7 @@ int main(int argc, char** argv) {
                     }
                     return "OpenBMH - live_overview";
                 };
+                // Draws the active overview screen and presents it.
                 const auto render_overview = [&] {
                     const Image image = table_screen ? table_screen->render()
                         : pairings_screen ? pairings_screen->render()
@@ -2023,13 +2199,18 @@ int main(int argc, char** argv) {
                 rebuild_screen();
                 render_overview();
                 bool closed = false;
+                // The mouse press currently held; once the overview is closed its release is still
+                // swallowed here so it does not reach whatever is shown next.
                 std::optional<SDL_MouseButtonEvent> down;
+                // Modal table range dialog (same key queueing as the poach table version): returns its
+                // accept/cancel outcome.
                 const auto run_table_range = [&](const Image& backdrop,
                         ui::TableRangeDialogProfile profile) -> ui::TableRangeDialogOutcome {
                     ui::LeagueTableRangeDialog dialog(data, backdrop, std::move(profile));
                     std::deque<std::string> keys;
                     Uint32 clock_anchor = SDL_GetTicks();
                     std::optional<ui::TableRangeDialogOutcome> outcome;
+                    // Presents the range dialog and lets it report an outcome and restart its tick clock.
                     const auto show_dialog = [&] {
                         const Image image = dialog.render();
                         SDL_SetWindowTitle(window, "OpenBMH - live_table_range");
@@ -2088,6 +2269,8 @@ int main(int argc, char** argv) {
                     if (!outcome) throw FormatError("live table range presenter stopped");
                     return *outcome;
                 };
+                // Sends an action of the overview to the engine and applies the answer: close, switch to
+                // another overview kind, or run the range dialog and send its result back (recursive).
                 std::function<void(const app::CareerSession::LiveOverviewAction&)> dispatch_action;
                 dispatch_action = [&](const app::CareerSession::LiveOverviewAction& action) {
                     const Image previous_table = table_screen ? table_screen->render() : Image{};
@@ -2141,7 +2324,10 @@ int main(int argc, char** argv) {
                         dispatch_action(app::CareerSession::LiveOverviewAction{ack});
                     }
                 };
+                // Drop stale key releases left over from the match.
                 SDL_FlushEvent(SDL_KEYUP);
+                // Modal sub-loop. After closing it keeps polling until the held button's release has
+                // arrived, so that release is not seen by the caller.
                 while (running && (!closed || down)) {
                     SDL_Event input;
                     bool redrawn = false;
@@ -2179,6 +2365,7 @@ int main(int argc, char** argv) {
                             else cup_screen->release(input.button.x, input.button.y);
                         }
 
+                        // Whichever screen exists reports a pending request through its own accessor.
                         std::optional<app::CareerSession::LiveOverviewAction> action;
                         if (table_screen && table_screen->pending_family_action())
                             action = *table_screen->pending_family_action();
@@ -2195,6 +2382,7 @@ int main(int argc, char** argv) {
                     }
                     if (!running || (closed && !down)) break;
                     if (closed) { SDL_Delay(8); continue; }
+                    // The pairings screen has a timer in source seconds that may raise a request by itself.
                     if (pairings_screen && pairings_screen->tick_source_seconds(overview_source_seconds())) {
                         if (pairings_screen->pending())
                             dispatch_action(app::CareerSession::LiveOverviewAction{*pairings_screen->pending()});
@@ -2205,14 +2393,22 @@ int main(int argc, char** argv) {
                 }
                 return running && closed;
             };
+            // State used by the live-match presenters below.
             ui::LiveScoreReveal live_score_reveal;
             std::optional<ui::LiveChanceProjection> live_chance_context;
             std::unique_ptr<ui::RealityFieldScreen> reality_field;
             ui::RealityReporterLayoutState reality_layout;
             Image reality_pristine, reality_surface;
             Palette reality_colors;
+            // Hand the flow result to the controller. The arguments after the audio ones are the
+            // presenter callbacks the engine may call synchronously (live frame, incoming transfers,
+            // transfer decisions, season checkpoints, tax, highscore, promotion, cup draw, offers,
+            // club/player screens, notices, poaching, contracts, ...). The returned message is
+            // printed to stderr by the caller; "career_complete" ends the program.
             const std::string message = app::serve_flow_request(flow, r, session, data, save_directory, seed, revision,
                 playback, audio_session, music_enabled,
+                // Callback per simulated match minute: shows the live matchday frame (unless skipped)
+                // and waits frame_delay ms, taken from --live-frame-ms or from the game's own speed setting.
                 [&](int minute, const std::vector<MatchGroup>& groups, const GameState& state) {
                     if (!running) return;
                     bool live_frame_shown = false;
@@ -2234,6 +2430,8 @@ int main(int argc, char** argv) {
                     if (live_frame_shown && !live_skipped && frame_delay > 0)
                         SDL_Delay(Uint32(frame_delay));
                 },
+                // Callback for an incoming transfer offer: modal decision screen. Returns the chosen bid
+                // index, or -1 for decline, nothing to choose or quit.
                 [&](const GameState& state, const TransferOfferListView& offers) -> int {
                     if (!running) return -1;
                     auto view = transfer_view(state, offers, offers.seller_manager);
@@ -2247,6 +2445,7 @@ int main(int argc, char** argv) {
                     // Only this modal's input is dispatched; desk actions and saves
                     // cannot run against a partially processed calendar day.
                     while (running) {
+                        // The introductory notice disappears after 4260 ms or on any key.
                         if (offer_screen.notice_active() && SDL_GetTicks() - notice_started >= 4260)
                             offer_dirty |= offer_screen.dismiss_notice();
                         if (!offer_screen.notice_active() && offers.offer_count == 0) return -1;
@@ -2286,6 +2485,8 @@ int main(int argc, char** argv) {
                     }
                     return -1;
                 },
+                // Callback that presents a transfer decision already settled by the engine: last-week
+                // dialog, confirmation, or the animated evaluation of the bids. Clicks cannot change it.
                 [&](const GameState& state, const TransferDecisionEvent& decision) {
                     if (!running) return;
                     if (decision.kind == TransferDecisionEventKind::last_week) {
@@ -2347,6 +2548,8 @@ int main(int argc, char** argv) {
                         SDL_Delay(10);
                     }
                 },
+                // Callback at season-transition checkpoints; only the one for the German entrants does
+                // anything: it shows the entrant screens, each closed by a mouse release.
                 [&](const char* checkpoint, const GameState& state) {
                     if (!running || std::strcmp(checkpoint, "the German entrants (CompetitionWinnerScreen)") != 0) return;
                     // SeasonEntrantsFromGame / CompetitionWinnerScreen: show the three owned Original
@@ -2375,7 +2578,10 @@ int main(int argc, char** argv) {
                             if (!dismissed) SDL_Delay(10);
                         }
                     }
+                // Further callbacks: tax, highscore, promotion and cup draw presenters (defined above).
                 }, tax_presenter, show_highscore, promotion_presenter, cup_draw_presenter,
+                // Pending-offer hooks exist only for kickoff; market sale hooks for kickoff and for
+                // transfer market / outgoing transfer submenu actions.
                 r.request == ui::FlowRequest::kickoff
                     ? make_pending_offer_hooks(flow.render()) : PendingOfferHooks{},
                 app::PendingOfferEntryPolicy::normal_interactive,
@@ -2384,12 +2590,15 @@ int main(int argc, char** argv) {
                      std::holds_alternative<ui::OutgoingTransferRequest>(r.submenu_action))
                    )) ? make_market_sale_hooks(flow.render()) : HumanBuyerSaleHooks{},
                 app::HumanBuyerMarketEntryPolicy::normal_interactive,
+                // Callback: club information screen (true if the program is still running).
                 [&](app::ClubModalServices& services,int team,const Image&) {
                     return present_club_information(services,team) && running;
+                // Next callback: player detail card.
                 }, [&](app::ClubModalServices& services,const ClubPlayerDetailSelection& selection,const Image& parent) {
                     // Direct1b556 already owns persistent bbcde=1. The shared
                     //ClubPlayerDetailFromGame presenter never restores a temporary club mode here.
                     return present_player_detail(services,selection,parent).has_value() && running;
+                // Next callback: stadium construction payment notice, shown over the investment detail.
                 }, [&](const GameState& staged, const ConstructionNotice& notice) {
                     if (!flow.stadium()) throw std::runtime_error("construction notice has no stadium owner");
                     // The Original payment notices restore the investment detail,
@@ -2406,6 +2615,7 @@ int main(int argc, char** argv) {
                         ? "OpenBMH - stadium_funds_notice" : "OpenBMH - stadium_sponsor_notice";
                     if (present_pending_dialog(staged, view, backdrop, title, effective_options) == PendingOfferAnswer::unsupported)
                         throw std::runtime_error("construction notice presenter stopped");
+                // Next callback: season ticket compensation notice.
                 }, [&](const GameState& staged, const SeasonTicketCompensationNotice& notice) {
                     if (!flow.stadium()) throw std::runtime_error("compensation notice has no stadium owner");
                     const Image backdrop = flow.stadium()->construction_notice_backdrop();
@@ -2417,6 +2627,8 @@ int main(int argc, char** argv) {
                             ui::GameEndRenderOptions{owner.plain_background, owner.gradient_text}) == PendingOfferAnswer::unsupported)
                         throw std::runtime_error("compensation notice presenter stopped");
                 }, sportschau_presenter,
+                // Callback: advertising contract renewal. A question gives renew/decline; a sponsor's
+                // refusal is a notice that gives acknowledged; anything else aborts.
                 [&](const GameState& staged, const AdvertisingRenewal& renewal, const Image& backdrop)
                     -> app::CareerSession::AdvertisingRenewalPresentation {
                     if (!running) return app::CareerSession::AdvertisingRenewalPresentation::abort;
@@ -2437,12 +2649,15 @@ int main(int argc, char** argv) {
                     }
                     return app::CareerSession::AdvertisingRenewalPresentation::abort;
                 }, poach_player_selector,
+                // Callback: shows the poaching attempt's notices one after another.
                 [&](const GameState& staged,const PoachStart& attempt,const Image& backdrop) {
                     for(const auto& message:attempt.messages)
                         if(present_pending_dialog(staged,ui::poach_notice_from_game(staged,attempt,message),backdrop,
                             "OpenBMH - poach_notice")==PendingOfferAnswer::unsupported)
                             throw FormatError("poach: notice presenter stopped");
                 }, contract_expiry_presenter,
+                // Callback: national friendly question. Returns yes/no, or std::nullopt when unsupported
+                // or the program is quitting.
                 [&](const GameState& staged,ui::TaxDialogProjection view,const Image& backdrop)
                     ->std::optional<bool> {
                     if(!running)return {};
@@ -2454,7 +2669,16 @@ int main(int argc, char** argv) {
                     press.reset();
                     if(answer==PendingOfferAnswer::unsupported)return {};
                     return answer==PendingOfferAnswer::yes;
+                // The loan-return presenters (defined above), then the live match observer.
                 }, loan_return_presenter, loan_return_offer_presenter,
+                // =====================================================================================
+                // Live match observer
+                // =====================================================================================
+                // Called by the engine once per simulated minute of a live match. Besides pausing, it is
+                // where the player interacts: ESC or window close skips the live display, P pauses, the
+                // keys for overview/table/settings open their modal screens (key letters come from the
+                // game executable), clicks on the top strip open an overview or the settings, and clicks
+                // on the scoreboard rows open the lineup (left) or tactics (right) of that team.
                 [&](int minute, MatchEngine& engine, std::vector<MatchGroup>& groups,
                     GameState& state, uint64_t& live_revision,
                     const app::LiveLineupDispatcher& dispatch,
@@ -2463,6 +2687,7 @@ int main(int argc, char** argv) {
                     const app::LiveInterventionScopeDispatcher& dispatch_scope) {
                     if (!running) return;
                     bool quit = false;
+                    // Shows the engine's notice about a refused substitution as a dialog.
                     const auto show_live_substitution_notice = [&](const app::LiveSubstitutionResult& result,
                             const Image& backdrop, const char* parent_title) {
                         if (result.status != app::LiveSubstitutionStatus::source_notice) return;
@@ -2480,6 +2705,10 @@ int main(int argc, char** argv) {
                         SDL_FlushEvents(SDL_MOUSEMOTION, SDL_MOUSEBUTTONUP);
                         SDL_SetWindowTitle(window, parent_title);
                     };
+                    // Opens the tactics screen for the team on the clicked scoreboard row (side 0 = home,
+                    // row positions come from the game executable, 32 pixels tall, at most 4 rows). Only for
+                    // human-managed teams, after minute 2 and when the display is not skipped. The
+                    // intervention scope is begun first and finished or aborted afterwards.
                     const auto open_live_tactics = [&](int side, int y) {
                         const auto frame = ui::live_matchday_frame(minute, groups, state);
                         int selected_team = -1;
@@ -2506,6 +2735,7 @@ int main(int argc, char** argv) {
                                 ui::tactics_from_game(tactics_game, season_exe, live_revision));
                             SDL_SetWindowTitle(window, "OpenBMH - live_tactics");
                             bool closed = false;
+                            // A click counts only when the release matches the press (same button and position).
                             std::optional<SDL_MouseButtonEvent> tactics_down;
                             bool source_completed = false;
                             while (running && !closed) {
@@ -2545,6 +2775,8 @@ int main(int argc, char** argv) {
                                 }
                                 if (!redrawn && !closed) SDL_Delay(8);
                             }
+                            // Closing through the screen's own close control finishes the intervention; leaving any
+                            // other way (or quitting) aborts it.
                             if (scope_active && source_completed) {
                                 if (!dispatch_scope(app::LiveInterventionBoundary::finish, 8,
                                         selected_manager, selected_team, scope_error)) {
@@ -2566,8 +2798,11 @@ int main(int argc, char** argv) {
                             std::fprintf(stderr, "live tactics: %s\n", e.what());
                         }
                     };
+                    // The pause key is stored in the executable; pausing is only offered when it is P.
                     const uint8_t source_pause_key = season_exe.u8(::bmh::layout::Main_Screen_RuntimeField);
                     const bool source_pause_is_p = source_pause_key == 'p' || source_pause_key == 'P';
+                    // Shows the current live frame as paused and waits until P is pressed again (key repeats
+                    // ignored) or the program quits.
                     const auto pause_live_match = [&] {
                         if (!source_pause_is_p) return;
                         const auto frame = ui::live_matchday_frame(minute, groups, state);
@@ -2598,6 +2833,7 @@ int main(int argc, char** argv) {
                         }
                         if (running) SDL_SetWindowTitle(window, "OpenBMH - live_matchday");
                     };
+                    // Redraws the live matchday frame after a modal screen has closed.
                     const auto restore_live_frame = [&] {
                         if (!running) return;
                         const Image image = live_screen.render(ui::live_matchday_frame(minute, groups, state));
@@ -2609,6 +2845,9 @@ int main(int argc, char** argv) {
                         SDL_RenderCopy(renderer, texture, nullptr, nullptr);
                         SDL_RenderPresent(renderer);
                     };
+                    // Opens the overview selected by key_slot through the session and runs it via
+                    // present_running_overview. The sequence counter numbers the overviews opened in this
+                    // match; the overview is taken from the first live group.
                     const auto show_live_overview = [&](int key_slot) {
                         if (!running || live_skipped || live_overview_sequence == UINT64_MAX) return;
                         const int manager = state.memory.has(::bmh::layout::ActiveManager) ? state.memory.u8(::bmh::layout::ActiveManager) : -1;
@@ -2645,6 +2884,8 @@ int main(int argc, char** argv) {
                             }, nullptr);
                         if (running && closed) restore_live_frame();
                     };
+                    // Modal settings screen inside a live match. `trigger` is the mouse press that opened it,
+                    // so that its release can be matched. Every change is dispatched to the session.
                     const auto show_live_settings = [&](std::optional<SDL_MouseButtonEvent> trigger = std::nullopt) {
                         if (!running || live_skipped || !state.memory.has(::bmh::layout::ActiveManager)) return;
                         const int manager = state.memory.u8(::bmh::layout::ActiveManager);
@@ -2664,6 +2905,7 @@ int main(int argc, char** argv) {
                         app::original_audio_command(playback, 1); // SavePathInDirectory before the live settings modal.
                         ui::SettingsScreen screen(data, projection->state);
                         std::unique_ptr<ui::SettingsReadmeScreen> readme;
+                        // Draws the settings screen, or its readme viewer when that is open.
                         const auto render_settings = [&] {
                             const Image image = readme ? readme->render() : screen.render();
                             SDL_SetWindowTitle(window, readme ? "OpenBMH - settings_readme" : "OpenBMH - live_settings");
@@ -2675,6 +2917,8 @@ int main(int argc, char** argv) {
                             SDL_RenderPresent(renderer);
                         };
                         render_settings();
+                        // Modal save/load screen for settings files opened from the settings screen; the result is
+                        // dispatched to the session and the settings screen is shown again afterwards.
                         const auto show_settings_file = [&] {
                             const auto* pending = screen.pending_file();
                             if (!pending) return;
@@ -2685,6 +2929,7 @@ int main(int argc, char** argv) {
                                 menu_request.manager_slot, live_revision, screen.render(),
                                 !state.memory.has(::bmh::layout::PlainBackground) || state.memory.u8(::bmh::layout::PlainBackground) == 0,
                                 ui::SaveLoadFileKind::settings, menu_request.origin_item_id);
+                            // Draws the settings file screen.
                             const auto render_file = [&] {
                                 const Image image = file_screen.render();
                                 SDL_SetWindowTitle(window, "OpenBMH - live_settings_file");
@@ -2696,6 +2941,7 @@ int main(int argc, char** argv) {
                                 SDL_RenderPresent(renderer);
                             };
                             render_file();
+                            // Give the filename field the native text input focus.
                             focus_filename_input(renderer);
                             bool finished = false;
                             while (running && !finished) {
@@ -2706,10 +2952,12 @@ int main(int argc, char** argv) {
                                     if (file_input.type == SDL_MOUSEBUTTONUP &&
                                         (file_input.button.button == SDL_BUTTON_LEFT ||
                                          file_input.button.button == SDL_BUTTON_RIGHT)) {
+                                        // clicks >= 2 reports a double click.
                                         file_changed |= file_screen.click(file_input.button.x,
                                             file_input.button.y,
                                             file_input.button.button == SDL_BUTTON_RIGHT,
                                             file_input.button.clicks >= 2);
+                                    // Only keys the file screen understands are forwarded; Ctrl/Cmd+A means select all.
                                     } else if (file_input.type == SDL_KEYDOWN && !file_input.key.repeat) {
                                         std::string_view key;
                                         switch (file_input.key.keysym.sym) {
@@ -2756,6 +3004,9 @@ int main(int argc, char** argv) {
                             }
                             if (running) render_settings();
                         };
+                        // settings_down tracks the held press so its release is matched. readme_release_barrier is
+                        // set when the readme was closed by a press: that press's release must not act on the
+                        // settings screen.
                         bool closed = false;
                         bool readme_release_barrier = false;
                         std::optional<SDL_MouseButtonEvent> settings_down = trigger;
@@ -2788,6 +3039,8 @@ int main(int argc, char** argv) {
                                            (input.button.button == SDL_BUTTON_LEFT ||
                                             input.button.button == SDL_BUTTON_RIGHT)) {
                                     settings_down = input.button;
+                                    // The footer buttons (x 1..54, y 188..223) act on the matching release; other controls
+                                    // act on the press itself.
                                     const bool footer_button = input.button.button == SDL_BUTTON_LEFT &&
                                         input.button.x >= 1 && input.button.x < 55 &&
                                         input.button.y >= 188 && input.button.y < 224;
@@ -2873,8 +3126,11 @@ int main(int argc, char** argv) {
                         if (running && closed) app::original_match_audio_command(playback, state, 3);
                         if (running && closed) restore_live_frame();
                     };
+                    // True at the first minute of a phase (1, then 21 indoors or 46/91/106 outdoors); the
+                    // pause and overview keys and strip clicks are ignored then.
                     const bool source_phase_start = minute == 1 ||
                         (state.indoor ? minute == 21 : (minute == 46 || minute == 91 || minute == 106));
+                    // Poll this minute's events directly (the live display is its own input loop).
                     SDL_Event event;
                     while (quit_confirmation.poll(&event)) {
                         if (event.type == SDL_QUIT) { quit = true; live_skipped = true; }
@@ -2892,6 +3148,7 @@ int main(int argc, char** argv) {
                         else if (!source_phase_start && event.type == SDL_KEYDOWN && !event.key.repeat &&
                                  season_exe.u8(::bmh::layout::Main_FileScreen_RuntimeField3) == 's' && event.key.keysym.sym == SDLK_s)
                             show_live_settings();
+                        // Press on the top strip (x 0..63, y 50..64) opens an overview or the settings.
                         else if (event.type == SDL_MOUSEBUTTONDOWN &&
                                  (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT) &&
                                  event.button.x >= 0 && event.button.x <= 63 &&
@@ -2915,6 +3172,7 @@ int main(int argc, char** argv) {
                                 }
                             }
                         }
+                        // Press on a scoreboard side: right = tactics, left = lineup of the clicked row's team.
                         else if (const auto side = app::live_matchday_board_side(event, minute, state.indoor)) {
                             if (event.button.button == SDL_BUTTON_RIGHT) {
                                 open_live_tactics(*side, event.button.y);
@@ -2942,6 +3200,8 @@ int main(int argc, char** argv) {
                         }
                     }
                     if (quit) running = false;
+                // Next callback: environment/settings notice dialog. Returns false when the program is
+                // quitting or the dialog could not be shown.
                 }, [&](const GameState& staged, ui::TaxDialogProjection view, const Image& backdrop) {
                     if (!running) return false;
                     const bool settings_notice = flow.in_settings() && flow.pending_settings();
@@ -2954,6 +3214,8 @@ int main(int argc, char** argv) {
                         SDL_FlushEvents(SDL_MOUSEMOTION, SDL_MOUSEBUTTONUP);
                     }
                     return shown;
+                // Next callback: a lineup change forced by a live match event; runs the same lineup
+                // screen as the click on the scoreboard. It must complete unless the program quits.
                 }, [&](const LiveMatchEvent& event, MatchEngine& engine,
                        std::vector<MatchGroup>& groups, GameState& state, uint64_t& live_revision,
                        const app::LiveLineupDispatcher& dispatch,
@@ -2967,11 +3229,22 @@ int main(int argc, char** argv) {
                     if (!running) return; // SDL_QUIT aborts the Source scope without failing the event.
                     if (!completed)
                         throw FormatError("The Source event line-up did not complete.");
+                // =====================================================================================
+                // Live match animation callbacks
+                // =====================================================================================
+                // The following callbacks each show one kind of match event (ball movement, chance, shot,
+                // set piece, booking, penalty shootout, reality mode) and then pause. The pause is
+                // --live-frame-ms when given, otherwise a value saved in the game memory: values below 6
+                // are halved and each unit is 20 ms. Only a window close request is consumed here; other
+                // input stays queued for the per-minute observer.
+                //
+                // Callback: ball movement frames of one displacement.
                 }, [&](const LiveBallEvent& event, const std::vector<MatchGroup>& groups,
                        const GameState& state) {
                     if (!running || live_skipped) return;
                     const auto frame = live_score_reveal.project(ui::live_matchday_frame(event.minute, groups, state));
                     if (frame.matches.empty()) return;
+                    // Local helper: paints an image with the normal palette and presents it.
                     const auto present = [&](const Image& image) {
                         for (size_t i = 0; i < pixels.size(); ++i) pixels[i] = palette.argb[image.pixels[i]];
                         SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
@@ -2980,6 +3253,7 @@ int main(int argc, char** argv) {
                         SDL_RenderPresent(renderer);
                     };
                     const int count = ui::LiveMatchdayScreen::ball_frame_count(event.displacement);
+                    // Converts the saved pause number at the given row into milliseconds.
                     const auto source_delay = [&](int pause) {
                         const uint32_t address = ::bmh::layout::Main_FormatError_ExecutableFieldUnsigned + uint32_t(pause * 9);
                         const int saved = state.memory.has(address) ? state.memory.u8(address) : 0;
@@ -3013,6 +3287,7 @@ int main(int argc, char** argv) {
                         SDL_SetWindowTitle(window, "OpenBMH - live_matchday");
                         present(live_screen.render(frame));
                     }
+                // Next callback: a scoring chance, shown as a preview and again as its result.
                 }, [&](const LiveChanceEvent& event, const std::vector<MatchGroup>& groups,
                        const GameState& state) {
                     if (!running || live_skipped) return;
@@ -3040,6 +3315,7 @@ int main(int argc, char** argv) {
                         live_chance_context.reset();
                         return;
                     }
+                    // Pause row: 12 for the preview, 1 after a goal, otherwise 2.
                     const int pause = event.stage == LiveChanceStage::preview ? 12 : (event.goal ? 1 : 2);
                     const uint32_t address = ::bmh::layout::Main_FormatError_ExecutableFieldUnsigned + uint32_t(pause * 9);
                     const int saved = state.memory.has(address) ? state.memory.u8(address) : 0;
@@ -3047,6 +3323,8 @@ int main(int argc, char** argv) {
                         (saved < 6 ? saved / 2 : saved) * 20;
                     if (delay > 0) SDL_Delay(Uint32(delay));
                     if (event.stage == LiveChanceStage::result) live_chance_context.reset();
+                // Next callback: shot animation, drawn with the shot's own palette. After the frames it
+                // either waits for a click or applies the saved pause.
                 }, [&](const LiveShotEvent& event, const std::vector<MatchGroup>& groups,
                        const GameState& state) {
                     if (!running || live_skipped) return;
@@ -3105,6 +3383,7 @@ int main(int argc, char** argv) {
                         const int delay = live_frame_ms_explicit ? live_frame_ms : (saved < 6 ? saved / 2 : saved) * 20;
                         if (delay > 0) SDL_Delay(Uint32(delay));
                     }
+                // Next callback: set piece animation frames (first frame held 40 retraces at 70 Hz).
                 }, [&](const LiveSetPieceEvent& event, const std::vector<MatchGroup>& groups,
                        const GameState& state) {
                     if (!running || live_skipped) return;
@@ -3132,6 +3411,7 @@ int main(int argc, char** argv) {
                         if (delay>0) SDL_Delay(Uint32(delay));
                     }
                     if (running && !live_frame_ms_explicit) SDL_Delay(200); // LiveMatchdayFrame
+                // Next callback: booking/injury box; pause row 3 for kind 0, otherwise 4.
                 }, [&](const LiveBookingEvent& event, const std::vector<MatchGroup>& groups,
                        const GameState& state) {
                     if (!running || live_skipped) return;
@@ -3158,6 +3438,8 @@ int main(int argc, char** argv) {
                     if (delay>0) SDL_Delay(Uint32(delay));
                     // EventImpl clears the box after its pause; no Source click wait here.
                     SDL_SetWindowTitle(window,"OpenBMH - live_matchday");present(live_screen.render(frame));
+                // Next callback: penalty shootout step; the saved pause is repeated 4 times for the
+                // preview and twice for the result.
                 }, [&](const LiveShootoutEvent& event, const std::vector<MatchGroup>& groups,
                        const GameState& state) {
                     if (!running || live_skipped) return;
@@ -3179,6 +3461,9 @@ int main(int argc, char** argv) {
                     const int saved=state.memory.has(::bmh::layout::Main_FormatError_RuntimeField6)?state.memory.u8(::bmh::layout::Main_FormatError_RuntimeField6):0;
                     const int delay=live_frame_ms_explicit?live_frame_ms:(saved<6?saved/2:saved)*20;
                     for (int i=0;i<repeats && running;++i) if (delay>0) SDL_Delay(Uint32(delay));
+                // Next callback: reality mode (running commentary with a moving field). Stages: begin
+                // (builds the screens), one call per round, settling and end. Returns true when the
+                // player ended it with ESC or a right press, or when the program quits.
                 }, [&](const LiveRealityEvent& event, const std::vector<MatchGroup>& groups,
                        const GameState& state) -> bool {
                     if (!running || live_skipped) return false;
@@ -3227,6 +3512,7 @@ int main(int argc, char** argv) {
                         size_t index=0;
                         for (const auto& motion:event.tick.motion->frames) {
                             auto backdrop=reality_pristine;
+                            // Keep the first 129 rows of the current surface on the fresh backdrop.
                             std::copy_n(reality_surface.pixels.begin(),320*129,backdrop.pixels.begin());
                             reality_surface=reality_field->render(motion,backdrop);
                             present(reality_surface,reality_colors,"OpenBMH - live_reality_round_"+
@@ -3237,6 +3523,7 @@ int main(int argc, char** argv) {
                     } else {
                         present(reality_surface,reality_colors,"OpenBMH - live_reality_report_"+round_identity);
                     }
+                    // Only ESC or a right press is taken from the queue as the exit; other input stays.
                     SDL_PumpEvents();SDL_Event input;
                     if (quit_confirmation.peep(&input,1,SDL_GETEVENT,SDL_QUIT,SDL_QUIT)>0) {running=false;return true;}
                     // Consume only the Source exit for this scene. Other input remains
@@ -3250,6 +3537,8 @@ int main(int argc, char** argv) {
                         quit_confirmation.peep(&input,1,SDL_GETEVENT,SDL_MOUSEBUTTONDOWN,SDL_MOUSEBUTTONDOWN);return true;
                     }
                     return false;
+                // Next callback: results viewer at the end of a match phase; throws if it was stopped
+                // before being acknowledged.
                 }, [&](const PhaseResultRequest& request, const std::vector<MatchGroup>& groups,
                        const GameState& state) {
                     if (!running) throw FormatError("phase results: presentation stopped");
@@ -3264,9 +3553,12 @@ int main(int argc, char** argv) {
                         }, &request);
                     if (!closed) throw FormatError("phase results: viewer stopped before Source ACK");
                 }, true);
+                // In -debug mode every request and its outcome is logged.
                 if (app::debug::enabled()) app::debug::log("request " + std::to_string(int(r.request)) + (message.empty() ? std::string(" ok") : " -> " + message));
+            // The controller reports the end of the career by this message: leave the main loop.
             if (message == "career_complete") { running = false; return; }
             if (!message.empty()) std::fprintf(stderr, "engine: %s\n", message.c_str());
+            // Autosave problems are reported but do not stop the game.
             if (session) {
                 const auto autosave_error = session->take_autosave_error();
                 if (!autosave_error.empty()) std::fprintf(stderr, "autosave: %s\n", autosave_error.c_str());
@@ -3286,9 +3578,11 @@ int main(int argc, char** argv) {
                     dirty = true;
                 }
             }
+            // Forget the presentation time once no timed notice is open.
             if(!flow.timed_notice_open())timed_notice_presented_at.reset();
             SDL_SetWindowTitle(window, ("OpenBMH - " + flow.screen_name()).c_str());
         };
+        // Flashes the formation-saved feedback image, then shows the restored screen.
         const auto present_formation_save_feedback = [&] {
             for (bool restored : {false, true}) {
                 const auto feedback = flow.pitch_formation_save_feedback(restored);
@@ -3302,6 +3596,8 @@ int main(int argc, char** argv) {
                 if (!restored) SDL_Delay(ui::PitchScreen::formation_save_flash_ms);
             }
         };
+        // Called every loop pass. If the left button has been held long enough on the pitch
+        // screen at the position where it was pressed, triggers the hold action once.
         const auto service_pitch_hold = [&] {
             if (!press || press->pitch_hold_attempted || !flow.in_pitch() ||
                 press->screen != flow.screen_name() || press->revision != revision) return;
@@ -3318,11 +3614,14 @@ int main(int argc, char** argv) {
             handle(held);
         };
         const auto pairings_clock_start = std::chrono::steady_clock::now();
+        // Seconds since the loop started in the pairings screen's source units.
         const auto pairings_source_seconds = [&] {
             const auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - pairings_clock_start).count();
             return ui::league_pairings_source_seconds(uint64_t(milliseconds));
         };
+        // Milliseconds since the same clock started; the base for the table, balance and
+        // calculator timers below.
         const auto balance_source_milliseconds = [&] {
             return uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now()-pairings_clock_start).count());
@@ -3330,9 +3629,11 @@ int main(int argc, char** argv) {
         // DecodeTaxAnimationScript2 multiplies its argument by 20 before host timer's
         // millisecond conversion. This is the host unit scale, not a claim
         // of parity with the Original DOS clock's quantization.
+        // Elapsed time in 20 ms source units.
         const auto family_table_source_units = [&] {
             return balance_source_milliseconds() / 20;
         };
+        // Tells the flow the table frame has reached the screen; it may answer with a request.
         const auto mark_family_table_presented = [&] {
             const auto acknowledged = flow.in_toto_calculator()
                 ? flow.after_toto_present(family_table_source_units())
@@ -3340,6 +3641,7 @@ int main(int argc, char** argv) {
             if (acknowledged.request != ui::FlowRequest::none) handle(acknowledged);
             else dirty |= acknowledged.changed;
         };
+        // Redraws the league table or toto screen when dirty, then marks it as presented.
         const auto present_family_table_redraw = [&] {
             if ((!flow.in_family_table() && flow.screen_name() != "toto") || !dirty) return;
             const auto image = process_timer_image(flow.render());
@@ -3351,6 +3653,8 @@ int main(int argc, char** argv) {
             dirty = false;
             mark_family_table_presented();
         };
+        // A key typed for the table range dialog or toto calculator, tagged with its owner so
+        // that keys for a screen that has since changed are dropped.
         struct TableRangeKey {
             std::string key;
             ui::StrengthsIdentity identity;
@@ -3358,6 +3662,8 @@ int main(int argc, char** argv) {
             uint64_t toto_revision = 0;
         };
         std::deque<TableRangeKey> table_range_keys;
+        // Collects typed digits, ENTER, BACKSPACE and SPACE for those screens. Returns true when
+        // the event belongs to them (unsupported keys are swallowed too).
         const auto queue_table_range_event = [&](const SDL_Event& event) {
             if (!flow.in_toto_calculator() &&
                 (!flow.in_family_table_range_dialog() || !flow.league_family_identity())) return false;
@@ -3381,6 +3687,8 @@ int main(int argc, char** argv) {
             // been established for this modal. Unsupported keys stay owned.
             return true;
         };
+        // Called every loop pass while a table or toto screen is open: advances its timers,
+        // redraws, and feeds queued keys whenever the screen is ready for input.
         const auto service_family_table = [&] {
             if (!flow.in_family_table() && flow.screen_name() != "toto") { table_range_keys.clear(); return; }
             const auto tick = flow.in_toto_calculator()
@@ -3403,8 +3711,10 @@ int main(int argc, char** argv) {
                 }
             }
         };
+        // Which balance screen state was last presented (to avoid redrawing identical frames).
         std::optional<ui::BalanceIdentity> presented_balance;
         bool presented_balance_notice=false;
+        // Presents the balance screen only when its identity or notice state changed.
         const auto present_balance_redraw = [&] {
             if (!flow.in_balance()) { presented_balance.reset();presented_balance_notice=false; return; }
             const auto identity=flow.balance()->state().identity;
@@ -3417,6 +3727,7 @@ int main(int argc, char** argv) {
             flow.mark_balance_presented_source_milliseconds(balance_source_milliseconds());
             presented_balance=identity;presented_balance_notice=notice;dirty=false;
         };
+        // Called every loop pass: advances the balance screen's millisecond timer.
         const auto service_balance_timer = [&] {
             present_balance_redraw();
             const auto tick=flow.tick_balance_source_milliseconds(balance_source_milliseconds());
@@ -3426,21 +3737,26 @@ int main(int argc, char** argv) {
         // KB6 waits start after the pressed/final calculator image reaches SDL.
         // Keep a matching physical UP until the four-tick press is over; N's
         // last calculator frame stays visible through its fifty-tick wait.
+        // Pending release of a button pressed on the stadium calculator.
         struct CalculatorRelease {
             SDL_MouseButtonEvent button;
             uint64_t scope = 0, sequence = 0;
         };
         std::optional<CalculatorRelease> calculator_release;
         std::optional<uint64_t> calculator_tick_anchor;
+        // A calculator key tagged with the owner state it was typed for.
         struct CalculatorKey {
             std::string key;
             uint64_t revision = 0, scope = 0, sequence = 0;
         };
         std::deque<CalculatorKey> calculator_keys;
+        // Queues a key for the current stadium calculator owner.
         const auto queue_calculator_key = [&](std::string key) {
             const auto& owner = flow.stadium()->state();
             calculator_keys.push_back({std::move(key), owner.revision, owner.scope, owner.sequence});
         };
+        // Collects typed digits, ENTER, BACKSPACE and SPACE for the stadium calculator; returns
+        // true when the event is consumed.
         const auto queue_calculator_event = [&](const SDL_Event& event) {
             if (event.type == SDL_TEXTINPUT) {
                 const std::string_view text(event.text.text);
@@ -3458,6 +3774,7 @@ int main(int argc, char** argv) {
             // Digits arrive separately through SDL_TEXTINPUT.
             return true;
         };
+        // Starts the calculator's wait clock once its frame has reached the screen.
         const auto mark_stadium_calculator_presented = [&] {
             if (!flow.in_stadium() || !flow.stadium()->calculator_source_waiting()) {
                 calculator_tick_anchor.reset();
@@ -3466,6 +3783,8 @@ int main(int argc, char** argv) {
             flow.mark_stadium_calculator_presented();
             if (!calculator_tick_anchor) calculator_tick_anchor = balance_source_milliseconds();
         };
+        // Called every loop pass while the stadium screen is open: converts elapsed time into
+        // source ticks for the calculator's waits and feeds queued keys.
         const auto service_stadium_calculator = [&] {
             if (!flow.in_stadium()) {
                 calculator_release.reset(); calculator_tick_anchor.reset();
@@ -3492,6 +3811,8 @@ int main(int argc, char** argv) {
             }
             if (!flow.stadium()->calculator_source_waiting()) {
                 calculator_tick_anchor.reset();
+                // The remembered release is delivered only if the calculator owner is unchanged and still
+                // waits for the key release.
                 if (calculator_release) {
                     const auto release = *calculator_release;
                     calculator_release.reset();
@@ -3513,7 +3834,9 @@ int main(int argc, char** argv) {
                     handle(flow.send_key(input.key));
             }
         };
+        // Which pairings page was last presented (to avoid redrawing identical frames).
         std::optional<ui::LeaguePairingsIdentity> presented_pairings;
+        // Presents the league pairings screen when its page identity changed.
         const auto present_pairings_redraw = [&] {
             if (!flow.in_league_pairings()) { presented_pairings.reset(); return; }
             const auto identity = flow.league_pairings()->state().identity;
@@ -3528,6 +3851,7 @@ int main(int argc, char** argv) {
             presented_pairings = identity;
             dirty = false;
         };
+        // Called every loop pass: advances the pairings screen's second timer.
         const auto service_pairings_timer = [&] {
             present_pairings_redraw();
             const auto tick = flow.tick_league_pairings_source_seconds(pairings_source_seconds());
@@ -3539,8 +3863,12 @@ int main(int argc, char** argv) {
         };
         //PresentManagerDialog presents its question before polling2de66. Bind the actual
         //freshly drawn frame, never an old texture or a preceding modal ACK.
+        // Frame identities: each tuple names the owner state (session, manager, scope, sequence,
+        // revision, ...) of a modal question that was actually drawn. A process-timer deadline
+        // is applied only to a frame that has been presented, never to a stale one.
         using StadiumQuestionFrame = std::array<uint64_t,5>;
         std::optional<StadiumQuestionFrame> presented_stadium_question;
+        // Identity of the stadium tip/quote question currently open, if any.
         const auto stadium_question_frame = [&]() -> std::optional<StadiumQuestionFrame> {
             if (!session || !flow.in_stadium()) return {};
             const auto& question=flow.stadium()->state();
@@ -3548,7 +3876,10 @@ int main(int argc, char** argv) {
             const auto& state=flow.stadium()->state();
             return StadiumQuestionFrame{session->session_id(),uint64_t(state.manager_slot),state.scope,state.sequence,state.revision};
         };
+        // Records the current stadium question frame as presented.
         const auto mark_stadium_question_presented = [&] { presented_stadium_question=stadium_question_frame(); };
+        // If the presented stadium question has expired, hands the expiry to the flow. Returns
+        // true when it did.
         const auto service_stadium_deadline = [&] {
             const auto owner=stadium_question_frame();
             if (!owner || owner!=presented_stadium_question) return false;
@@ -3558,12 +3889,14 @@ int main(int argc, char** argv) {
             handle(expired);
             return true;
         };
+        // Same check from the idle path, but not while the question's button is being held.
         const auto service_idle_stadium_deadline = [&] {
             // OriginalMouseSound/Sample can synthesize event8 on expiry, including idle.
             // ExpireQuestion's held-button helper must return before57ef7 answers.
             if (flow.in_stadium() && !flow.stadium()->construction_tip_held())
                 service_stadium_deadline();
         };
+        // Same idea for the national friendly picker.
         using NationalPickerFrame = std::pair<uint64_t,ui::NationalFriendlyUiOwner>;
         std::optional<NationalPickerFrame> presented_national_picker;
         const auto national_picker_frame = [&]() -> std::optional<NationalPickerFrame> {
@@ -3573,6 +3906,7 @@ int main(int argc, char** argv) {
         const auto mark_national_picker_presented = [&] { presented_national_picker=national_picker_frame(); };
         using FriendlyPickerFrame = std::array<uint64_t,5>;
         std::optional<FriendlyPickerFrame> presented_friendly_picker;
+        // Identity of the friendly opponent picker currently open, if any.
         const auto friendly_picker_frame = [&]() -> std::optional<FriendlyPickerFrame> {
             const auto* picker=flow.friendly_opponent_picker();
             if (!session || !picker || !flow.desktop()) return {};
@@ -3581,6 +3915,7 @@ int main(int argc, char** argv) {
                 uint64_t(desk.runtime_club),desk.revision,uint64_t(picker->selected_league())};
         };
         const auto mark_friendly_picker_presented = [&] { presented_friendly_picker=friendly_picker_frame(); };
+        // Same idea for the friendly match calendar.
         using FriendlyCalendarFrame = std::array<uint64_t,5>;
         std::optional<FriendlyCalendarFrame> presented_friendly_calendar;
         const auto friendly_calendar_frame = [&]() -> std::optional<FriendlyCalendarFrame> {
@@ -3590,6 +3925,7 @@ int main(int argc, char** argv) {
                 uint64_t(quote.runtime_team),quote.revision,quote.request_id};
         };
         const auto mark_friendly_calendar_presented = [&] { presented_friendly_calendar=friendly_calendar_frame(); };
+        // Same idea for the friendly match question.
         using FriendlyQuestionFrame = std::array<uint64_t,8>;
         std::optional<FriendlyQuestionFrame> presented_friendly_question;
         const auto friendly_question_frame = [&]() -> std::optional<FriendlyQuestionFrame> {
@@ -3602,6 +3938,8 @@ int main(int argc, char** argv) {
                 uint64_t(question->active_question()->source_manager_flags)};
         };
         const auto mark_friendly_question_presented = [&] { presented_friendly_question=friendly_question_frame(); };
+        // If the presented friendly question has expired, hands the expiry to the flow. Returns
+        // true when it did.
         const auto service_friendly_question_deadline = [&] {
             const auto owner=friendly_question_frame();
             if(!owner||owner!=presented_friendly_question||!poll_process_timer(false,false))return false;
@@ -3609,6 +3947,10 @@ int main(int argc, char** argv) {
             if(expired.request==ui::FlowRequest::none&&!expired.changed)return false;
             handle(expired);return true;
         };
+        // Called every loop pass and before each event. On the desktop it starts or resumes the
+        // process timer for the current session/manager/day and polls it. It does nothing until
+        // the modal frames above have been presented and while a button is held. On expiry the
+        // flow is told with the current logical mouse position.
         const auto service_process_timer = [&] {
             // SDLFlushEvents3's notice owns its wait. Keep the desk clock polling,
             // but hand its outer expiry back only after this notice restores.
@@ -3660,6 +4002,9 @@ int main(int argc, char** argv) {
                 if (expired.request != ui::FlowRequest::none || expired.changed) handle(expired);
             }
         };
+        // =====================================================================================
+        // Opening screen
+        // =====================================================================================
         // OpenBMH deviates from the original: display the repository-owned title
         // at its native resolution until a complete left/right click, without loading balls.
         {
@@ -3667,6 +4012,8 @@ int main(int argc, char** argv) {
             title_screen.present();
             bool opening_confirmed = false;
             std::optional<Uint8> opening_press;
+            // Only a complete click confirms: press and release of the same button. Losing focus
+            // forgets the press; expose and resize events redraw the title picture.
             while (running && !opening_confirmed) {
                 SDL_Event opening_event;
                 while (quit_confirmation.poll(&opening_event)) {
@@ -3696,13 +4043,28 @@ int main(int argc, char** argv) {
         SDL_FlushEvents(SDL_MOUSEMOTION, SDL_MOUSEBUTTONUP);
         season_backdrop.reset();
         dirty = true;
+        // Text input stays on for the whole session so SDL_TEXTINPUT events arrive.
         SDL_StartTextInput();
+        // filename_input_active: the save/load filename field already has focus.
+        // setup_button_down: [0] left, [1] right button pressed while on the setup screen.
         bool filename_input_active = false;
         std::array<bool, 2> setup_button_down{};
+        // =====================================================================================
+        // Main event loop
+        // =====================================================================================
+        // Each pass: keep the filename field focused on the save/load screen, expire timed
+        // notices, service the timers, then drain the SDL event queue through
+        // quit_confirmation.poll(). SDL_QUIT ends the loop. Mouse down, up and motion, text and
+        // key events are translated into StartupFlow calls (pointer_down, click or hold,
+        // move_action, text, send_key); every FlowResult is passed to handle(), which serves
+        // the request. After the queue is empty the loop services holds and timers again, plays
+        // queued sounds, pumps audio, redraws the 320x240 canvas if dirty, presents it and
+        // sleeps 10 ms.
         while (running) {
             const bool filename_open = flow.screen_name() == "save_load";
             if (filename_open && !filename_input_active) focus_filename_input(renderer);
             filename_input_active = filename_open;
+            // A timed notice closes by itself after 70*3*20 ms.
             if(timed_notice_presented_at && flow.timed_notice_open() &&
                SDL_GetTicks64()-*timed_notice_presented_at>=70*3*20)
                 handle(flow.expire_timed_notice());
@@ -3714,6 +4076,7 @@ int main(int argc, char** argv) {
                     running = false;
                     break;
                 }
+                // Losing focus forgets the pressed setup buttons; regaining it restores text input.
                 if (e.type == SDL_WINDOWEVENT) {
                     if (e.window.event == SDL_WINDOWEVENT_FOCUS_LOST) setup_button_down.fill(false);
                     if (e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED) {
@@ -3733,6 +4096,7 @@ int main(int argc, char** argv) {
                         if (flow.screen_name() == "setup" && !owned) continue;
                     }
                 }
+                // Swallow the release of the press that dismissed a timed notice.
                 if(e.type==SDL_MOUSEBUTTONUP&&timed_notice_release&&e.button.button==*timed_notice_release) {
                     timed_notice_release.reset();continue;
                 }
@@ -3743,6 +4107,7 @@ int main(int argc, char** argv) {
                     timed_notice_release=e.button.button;press.reset();
                     handle(flow.expire_timed_notice());continue;
                 }
+                // Keyboard input is ignored while a timed notice is open.
                 if(flow.timed_notice_open()&&(e.type==SDL_KEYDOWN||e.type==SDL_TEXTINPUT))continue;
                 // InLeaguePairings handles a changed league selector before5147b's
                 // timer. Preserve that precedence without moving other inputs.
@@ -3765,10 +4130,13 @@ int main(int argc, char** argv) {
                 service_family_table();
                 service_stadium_calculator();
                 service_idle_stadium_deadline();
+                // Keys for the table range dialog or toto calculator are queued, not dispatched at once.
                 if (queue_table_range_event(e)) {
                     service_family_table();
                     continue;
                 }
+                // While the stadium calculator is in a timed wait, its keys are queued and its release
+                // is remembered; no other input is processed (release barrier).
                 if (flow.in_stadium() && flow.stadium()->calculator_source_waiting()) {
                     // DecodeTaxAnimationScript2 delays without consuming keyboard input. Retain
                     // FIFO keys for this accepted calculator owner, including
@@ -3783,19 +4151,24 @@ int main(int argc, char** argv) {
                     // completes. SDL_QUIT was serviced above this barrier.
                     continue;
                 }
+                // The open calculator owns all keyboard input.
                 if (flow.in_stadium() && flow.stadium()->calculator_open() && queue_calculator_event(e)) {
                     service_stadium_calculator();
                     continue;
                 }
+                // ESC asks to quit (after confirmation) unless it is a close key in a menu or view.
                 if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE &&
                     !flow.in_preparation_menu() && !flow.in_results_view() && !flow.in_readonly_view() &&
                     quit_confirmation.confirm())
                     running = false;
+                // Remember the left press so its release can be judged as a click or a 2 second hold.
                 if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT)
                     press = Press{e.button.x, e.button.y, SDL_GetTicks(), flow.screen_name(),
                                   ui::pointer_hold_source_ticks(SDL_GetTicks64()), revision};
+                // Remember where the right press began, to detect releases without a matching press.
                 if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_RIGHT)
                     right_press_screen = flow.screen_name();
+                // Screens that react to the press itself get pointer_down() now.
                 if(!selector_consumed&&e.type==SDL_MOUSEBUTTONDOWN&&(flow.desktop()||flow.in_balance()||flow.in_desk_records()||flow.in_achievements()||flow.in_indoor_standings()||flow.in_reschedule_calendar()||flow.in_league_pairings()||flow.in_family_table()||flow.in_toto_calculator()||flow.in_stadium()||flow.in_environment()||flow.in_strengths()||flow.in_top_scorers()||flow.in_opportunities()||flow.in_statistics_menu()||flow.in_statistics_page()||flow.in_analytics()||flow.in_other_games()||flow.in_pitch()||flow.in_settings())&&
                     (e.button.button==SDL_BUTTON_LEFT||e.button.button==SDL_BUTTON_RIGHT)) {
                     handle(flow.pointer_down(e.button.x,e.button.y,e.button.button==SDL_BUTTON_RIGHT));
@@ -3805,6 +4178,8 @@ int main(int argc, char** argv) {
                         // copy must succeed before their Present starts a wait
                         // or commits a staged forecast random stream.
                         present_family_table_redraw();
+                    // Screens with held controls are redrawn at once, so the pressed state is visible before
+                    // the release arrives.
                     } else if(flow.in_balance()||flow.in_desk_records()||flow.in_achievements()||flow.in_indoor_standings()||flow.in_reschedule_calendar()||flow.in_league_pairings()||flow.in_stadium()||flow.in_environment()||flow.in_strengths()||flow.in_top_scorers()||flow.in_opportunities()||flow.in_statistics_menu()||flow.in_statistics_page()||flow.in_analytics()||flow.in_other_games()||flow.in_pitch()||flow.in_settings()||flow.friendly_question_screen()) {
                         //48529/ExpireQuestion/67e80 present the held control before waiting
                         //for its release. The existing UP ownership remains intact.
@@ -3846,6 +4221,8 @@ int main(int argc, char** argv) {
                     SDL_RenderPresent(renderer);
                     dirty = false;
                 }
+                // Mouse release. Order: an expired question that owns this release, then right-button
+                // releases whose press was consumed elsewhere (orphaned releases), then click or hold.
                 if (e.type == SDL_MOUSEBUTTONUP && (e.button.button == SDL_BUTTON_LEFT || e.button.button == SDL_BUTTON_RIGHT)) {
                     if(e.button.button==SDL_BUTTON_LEFT&&service_friendly_question_deadline()) {
                         press.reset();continue; // The expired question owns this UP, not its returned calendar/desk.
@@ -3860,6 +4237,7 @@ int main(int argc, char** argv) {
                         // ClubInfoFromGame consumes the right press and clears CareerSession_BeginFriendlyOpponentTable_ExecutableField2
                         // before returning. Its release is not another Source8
                         // cancel event in the parent OpenTransferEditor input loop.
+                        // owned: the right press began on this same screen.
                         const bool owned = right_press_screen && *right_press_screen == flow.screen_name();
                         const bool source_wait_release = flow.source_mouse_wait_release_pending();
                         // Menu6's right DOWN closes1e06b immediately. Its real
@@ -3879,9 +4257,12 @@ int main(int argc, char** argv) {
                         }
                         if (!owned) { flow.consume_orphaned_pitch_release(); continue; }
                     }
+                    // A left release is a hold (2000 ms or more, same position, same screen) only on screens
+                    // that support it; everywhere else it is a click.
                     const bool held = e.button.button == SDL_BUTTON_LEFT && !flow.in_pitch() && !flow.friendly_question_screen() && !flow.friendly_question_release_pending() && !flow.in_family_table() && !flow.in_balance() && !flow.in_desk_records() && !flow.in_achievements() && !flow.in_indoor_standings() && !flow.in_reschedule_calendar() && !flow.in_top_scorers() && !flow.in_opportunities() && !flow.in_statistics_menu() && !flow.in_statistics_page() && !flow.in_analytics() && !flow.in_other_games() && press && e.button.x == press->x && e.button.y == press->y &&
                                       press->screen == flow.screen_name() && SDL_GetTicks() - press->time >= 2000;
                     const auto released = held ? flow.hold(e.button.x, e.button.y, 2000)
+                        // clicks >= 2 reports a double click.
                         : flow.click(e.button.x, e.button.y, e.button.button == SDL_BUTTON_RIGHT, e.button.clicks >= 2);
                     present_formation_save_feedback();
                     // JA of the manager confirmation is shown pushed in briefly before the
@@ -3894,6 +4275,7 @@ int main(int argc, char** argv) {
                     present_desk_record_points();
                     press.reset();
                 }
+                // Moving away from the pressed position cancels the hold candidate.
                 if (e.type == SDL_MOUSEMOTION) {
                     if (press && (e.motion.x != press->x || e.motion.y != press->y)) press.reset();
                     const auto moved = flow.move_action(e.motion.x, e.motion.y);
@@ -3903,6 +4285,7 @@ int main(int argc, char** argv) {
                     // keyboard/mouse event, even when both are already queued.
                     present_family_table_redraw();
                 }
+                // Typed characters go to the flow; a FormatError only produces a message.
                 if (e.type == SDL_TEXTINPUT) {
                     try {
                         dirty |= flow.text(e.text.text);
@@ -3911,11 +4294,14 @@ int main(int argc, char** argv) {
                         std::fprintf(stderr, "input: %s\n", err.what());
                     }
                 }
+                // Ctrl/Cmd+A selects all in the filename field.
                 if (e.type == SDL_KEYDOWN && flow.screen_name() == "save_load" &&
                     e.key.keysym.sym == SDLK_a && (e.key.keysym.mod & (KMOD_CTRL | KMOD_GUI))) {
                     handle(flow.send_key("SELECT_ALL"));
                     continue;
                 }
+                // Only keys the current screen type uses are forwarded to the flow (by name); on the
+                // desktop the letters A-Z are shortcuts.
                 if (e.type == SDL_KEYDOWN && (e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_BACKSPACE ||
                                               (flow.screen_name() == "save_load" && (e.key.keysym.sym == SDLK_UP ||
                                                e.key.keysym.sym == SDLK_DOWN || e.key.keysym.sym == SDLK_PAGEUP || e.key.keysym.sym == SDLK_PAGEDOWN)) ||
@@ -3940,6 +4326,7 @@ int main(int argc, char** argv) {
                 }
                 if (!running) break;
             }
+            // Queue drained: service holds, timers and sounds, then draw.
             if (!running) break;
             service_pitch_hold();
             if (!running) break;
@@ -3951,11 +4338,14 @@ int main(int argc, char** argv) {
             service_idle_stadium_deadline();
             if (const auto* desk = flow.desktop())
                 for (const auto id : desk->take_sound_ids()) app::original_audio_command(playback, id);
+            // Keep the audio options in step with the game's settings.
             if (session) playback.set_original_options(app::original_audio_options(session->state(), music_enabled));
             if (playback.needs_pump()) {
                 playback.pump(audio_error);
                 if (!audio_error.empty()) std::fprintf(stderr, "audio: %s\n", audio_error.c_str());
             }
+            // Present the frame. Tables redraw through their own path so that their acknowledgement
+            // is tied to a freshly drawn frame.
             if (flow.in_family_table()) {
                 // Family ACKs belong to a freshly rendered, successfully
                 // copied image. Do not ACK an old texture at the routine
@@ -3980,6 +4370,7 @@ int main(int argc, char** argv) {
                         throw std::runtime_error(std::string("Source modal texture: ") + SDL_GetError());
                     dirty = false;
                 }
+                // Update the custom pitch cursor, then present the canvas texture.
                 pitch_pointer.show(flow.pitch_pointer_cursor(palette), renderer);
                 const int cleared = SDL_RenderClear(renderer);
                 const int copied = SDL_RenderCopy(renderer, texture, nullptr, nullptr);
@@ -4002,8 +4393,13 @@ int main(int argc, char** argv) {
                     presented_balance=identity;presented_balance_notice=notice;
                 }
             }
+            // Limit the loop to roughly 100 passes per second.
             SDL_Delay(10);
         }
+        // =====================================================================================
+        // Shutdown
+        // =====================================================================================
+        // Stop text input, release the SDL objects, detach the mouse sound and close audio.
         SDL_StopTextInput();
         pitch_pointer.clear();
         SDL_DestroyTexture(texture);
@@ -4012,6 +4408,7 @@ int main(int argc, char** argv) {
         mouse_sound.detach(); // Remove event producers before closing the audio device.
         playback.shutdown();
         return 0;
+    // Any exception from setup or the main loop is printed and ends with exit code 1.
     } catch (const std::exception& e) {
         std::fprintf(stderr, "error: %s\n", e.what());
         return 1;
