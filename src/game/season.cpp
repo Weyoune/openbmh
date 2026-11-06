@@ -647,59 +647,64 @@ namespace {
 
 }  // namespace
 
-// OpenBMH deviates from the original: retains the enhanced academy player-generation strength bands with monthly youth budgets.
-// The middle youth budget enables the existing enhanced academy recruitment.
-// Old lump-sum contracts remain eligible after their saved season payment.
-// Player search, strength bands, age and board setup retain the shared rules.
+// Youth academy of the Diamond 3.7 programme. The middle monthly youth budget enables it; old lump-sum
+// contracts remain eligible after their saved season payment (environment_academy_active). The strength
+// of the new player is the club's youth-team strength setting (the club's own youth average in game mode 1);
+// the academy is skipped when the squad's youth average lies more than 25 above that setting. Up to two
+// rounds are tried; a round needs W(0, 3) == 0 of the game generator and then looks, from the last squad
+// slot down, for an old enough player of a computer club (age above W(t, t + 3), t from 15 down to 0), whose
+// identity is reused for a freshly generated player (level +-10 %) who joins the academy squad.
 bool youth_academy_player(GameState& g, int m, GameRandom& game, WatcomRandom& rand, MinuteReport& report) {
     const int team = g.manager_teams.at(size_t(m));
-    const int league = club_league(team);
     if (!environment_academy_active(g, m)) return false;
     if (squad_count(g, team, 3) > 0x16) return false;
-    const auto budget = g.memory.u32(::bmh::layout::Spending + uint32_t(m) * 0x24 + kYouthAcademy * 4);
-    if (budget <= uint32_t(kEnvironmentStep[kYouthAcademy] * 6) &&
-        g.memory.u8(::bmh::layout::CareerDuration) != 1 &&
-        int(g.memory.u8(::bmh::layout::EnvironmentYouthTeams + uint32_t(m) * 0x24 + 2)) <
-            team_average(g, team, 0xf3).value - 25)
-        return false;
+    int level = g.memory.u8(::bmh::layout::EnvironmentYouthTeams + uint32_t(m) * 0x24 + 2);
+    const int average = team_average(g, team, 0xf3).value;
+    if (g.memory.u8(::bmh::layout::GameMode) == 1) level = average;
+    if (average - 0x19 > level) return false;
     const SquadRange own = squad_range(team);
-    if (game.range(0, 0) != 0) return false;
-    for (int t = 0xf;; --t) {
-        for (int s = 0x86f; s >= 0; --s) {
-            const int club = s / 24;
-            if (g.manager_of(slot_team(s)) >= 0) {
-                s -= 0x17;  // the whole squad of a human manager
-                continue;
+    bool added = false;
+    int t = 0xf;
+    for (int round = 0; round < 2; ++round) {
+        if (game.range(0, 3) != 0) continue;
+        bool found = false;
+        for (;;) {
+            for (int s = 0x86f; s >= 0 && !found; --s) {
+                const int club = s / 24;
+                if (g.manager_of(slot_team(s)) >= 0) {
+                    s -= 0x17;  // the whole squad of a human manager
+                    continue;
+                }
+                const int player = g.squad_slots.at(size_t(s)) & 0xfff;
+                if (player == 0xfff) continue;
+                bool loan = false;  // BoughtEntry
+                for (int k = 0; k < 200 && !loan; k++) {
+                    const uint32_t e = g.memory.u32(::bmh::layout::Career_RemoveJoinLoans_RuntimeField + uint32_t(k) * 4);
+                    loan = e != 0 && int(e & 0xfff) == player;
+                }
+                if (loan) continue;
+                const int age = int((g.players.at(size_t(player)).w364 >> 21) & 0x1f);
+                if (age <= game.range(t, t + 3)) continue;  // only a player older than the roll is recycled
+                if (!remove_from_seller(g, club, player, report)) return false;
+                generate_player(g, player, level | 0x1000, game, rand);
+                // PendingOfferAnswer(manager, player | 0xf000, -1, squad start)
+                int slot = -1;
+                for (size_t q = own.first; q < own.first + 24 && slot < 0; q++)
+                    if (g.squad_slots.at(q) == 0xfff) slot = int(q);
+                if (slot < 0) return false;  // (the original shows PendingOffer_FormatError_ExecutableField)
+                g.squad_slots.at(size_t(slot)) = uint16_t(player);
+                new_board_entry(g, m, slot - int(own.first), slot, rand);
+                g.tactics.at(size_t(m) * 0x840 + size_t(slot - int(own.first)) * 0x58 + 0xd) = 0x69;
+                uint32_t& w = g.players.at(size_t(player)).w364;
+                w = (w & 0xff00ffffu) | uint32_t(uint8_t(rand.range(0, 4) << 5)) << 16;
+                found = true;
             }
-            const int player = g.squad_slots.at(size_t(s)) & 0xfff;
-            if (player == 0xfff) continue;
-            bool loan = false;  // BoughtEntry
-            for (int k = 0; k < 200 && !loan; k++) {
-                const uint32_t e = g.memory.u32(::bmh::layout::Career_RemoveJoinLoans_RuntimeField + uint32_t(k) * 4);
-                loan = e != 0 && int(e & 0xfff) == player;
-            }
-            if (loan) continue;
-            const int age = int((g.players.at(size_t(player)).w364 >> 21) & 0x1f);
-            if (age > game.range(t, t + 3)) continue;
-            if (!remove_from_seller(g, club, player, report)) return false;
-            static const int kLevel[4][2] = {{0x4f, 0x5f}, {0x45, 0x55}, {0x31, 0x44}, {0x1d, 0x30}};
-            const int band = league == 0 ? 0 : league == 1 ? 1 : league < 4 ? 2 : 3;
-            const int level = game.range(kLevel[band][0], kLevel[band][1]);
-            generate_player(g, player, level | 0x3000, game, rand);
-            // PendingOfferAnswer(manager, player | 0xf000, -1, squad start)
-            int slot = -1;
-            for (size_t q = own.first; q < own.first + 24 && slot < 0; q++)
-                if (g.squad_slots.at(q) == 0xfff) slot = int(q);
-            if (slot < 0) return false;  // (the original shows PendingOffer_FormatError_ExecutableField)
-            g.squad_slots.at(size_t(slot)) = uint16_t(player);
-            new_board_entry(g, m, slot - int(own.first), slot, rand);
-            g.tactics.at(size_t(m) * 0x840 + size_t(slot - int(own.first)) * 0x58 + 0xd) = 0x69;
-            uint32_t& w = g.players.at(size_t(player)).w364;
-            w = (w & 0xff00ffffu) | uint32_t(uint8_t(rand.range(0, 4) << 5)) << 16;
-            return true;
+            if (found || t == 0) break;
+            --t;
         }
-        if (t == 0) return false;
+        if (found) added = true;
     }
+    return added;
 }
 
 namespace {
@@ -723,7 +728,6 @@ void season_accounts(GameState& g, int m, GameRandom& game, WatcomRandom& rand, 
     const SquadRange range = squad_range(team);
     for (size_t s = 0; s < 24; s++)
         if (g.squad_slots.at(range.first + s) != 0x0FFF) season_bonus(g, m, int(s), uint8_t(pos), true);
-    // OpenBMH deviates from the original: retains the enhanced academy player-generation strength bands with monthly youth budgets.
     // Academy recruitment is posted after the youth season has settled.
     if (youth_academy_player(g, m, game, rand, report)) post_text(g, m, text_id(::bmh::layout::Season_SeasonAccounts_TextPointer));
     if (report.unsupported) return;
@@ -1192,7 +1196,8 @@ void season_players(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteRe
                 }
                 Player& p = g.players.at(size_t(player));
                 bool leaves = false;
-                if (s < 0xb70 && (p.w35c >> 27) == 0x1f) {
+                // Diamond 3.7: out for his career means both the injury type and the duration are 0x1f.
+                if (s < 0xb70 && (p.w35c >> 27) == 0x1f && ((p.w364 >> 16) & 0x1f) == 0x1f) {
                     // out for his career
                     bool gone = true;
                     if (owner != -1) {
@@ -1244,9 +1249,9 @@ void season_players(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteRe
                     // a year older
                     p.w368 &= 0xf8003fffu;
                     int age = int16_t(((p.w364 >> 21) & 0x1f) + 1);
-                    // OpenBMH deviates from the original: includes transfer-market
-                    // players in retirement so the five-bit age cannot wrap to 16.
-                    if (rand.range(0x10, 0x16) < age && owner == -1) {
+                    // (Diamond 3.7 also includes the transfer-market players, so the five-bit age cannot wrap to 16.)
+                    // Diamond 3.7: slots up to 0xbff (clubs and the transfer pool), not the national pool.
+                    if (s < 0xc00 && rand.range(0x10, 0x16) < age && owner == -1) {
                         if (count != 0xff) count = uint8_t(squad_count(g, team, 2) + loans[team]);
                         if (count > 0xd) {
                             count--;

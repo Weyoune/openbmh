@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #pragma once
-// OpenBMH deviates from the original: retains the enhanced academy player-generation strength bands with monthly youth budgets.
 // From one season to the next (BMH.exe V2.24 + supported rule profile patch).
 //
 // On 1 July the "Weiter" loop (DailyInterest) ends the season: CareerSession_RuntimeError_RuntimeField4 = 1, the season
@@ -94,10 +93,8 @@ void answer_offers(GameState& g, int manager, bool accept, WatcomRandom& rand, M
 // offer slots (transfer list entries 0x28..0x2b, OfferSlots) are freed.
 void free_offer_slots(GameState& g);
 
-// OpenBMH deviates from the original: retains the enhanced academy player-generation strength bands with monthly youth budgets.
-// Annual recruitment with an active middle youth budget (or a paid legacy
-// academy contract), provided the squad has room. Shared player strength bands
-// remain in effect; see season.cpp.
+// Annual recruitment of the Diamond 3.7 academy: needs an active middle youth budget (or a paid legacy
+// academy contract) and room in the squad; the new player's strength is the youth-team strength setting; see season.cpp.
 bool youth_academy_player(GameState& g, int m, GameRandom& game, WatcomRandom& rand, MinuteReport& report);
 
 // ClubBalance(0): every club's mood (TeamMorale, W(20, 30)) and flags (*TeamFlags): a random
