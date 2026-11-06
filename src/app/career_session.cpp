@@ -64,6 +64,8 @@
 
 namespace bmh::app {
 namespace {
+// Process-wide counter that hands every CareerSession a unique id (see session_id_ in the
+// constructor); the turn driver stores that id to recognise which session it belongs to.
 std::atomic<uint64_t> next_session_id{1};
 
 constexpr uint32_t kSavedCalendar = ::bmh::layout::CompetitionCalendar;
@@ -72,6 +74,8 @@ constexpr uint8_t kBlockSeat = 1;
 constexpr uint8_t kBlockRoof = 2;
 constexpr uint8_t kBlockFeatures = kBlockSeat | kBlockRoof;
 
+// True for the stadium requests that belong to the block-expansion dialog (select, total,
+// feature toggle, cancel, confirm, answer tip).
 bool is_block_expansion_action(ui::StadiumRequestKind kind) {
     return kind == ui::StadiumRequestKind::expansion_select ||
         kind == ui::StadiumRequestKind::expansion_set_total ||
@@ -81,6 +85,9 @@ bool is_block_expansion_action(ui::StadiumRequestKind kind) {
         kind == ui::StadiumRequestKind::expansion_answer_tip;
 }
 
+// Fills every rank with 1 and returns 0 unless the first league's round counter is in the
+// range [2, matchdays of league 0); inside that range it returns 9 for team ids >= 138 and 0
+// for all other teams.
 int national_opportunities_rank(const GameState& game,int team,std::array<uint8_t,24>& ranks) {
     ranks.fill(1);
     const int rounds=game.league_rounds.empty()?0:int8_t(game.league_rounds.at(0));
@@ -88,17 +95,22 @@ int national_opportunities_rank(const GameState& game,int team,std::array<uint8_
     return team>=138?9:0;
 }
 
+// Reads one byte of the executable's data at 'address': from the game's memory image when the
+// address is mapped there, else from the runtime override map, else from the loaded EXE.
 uint8_t source_runtime_byte(const GameState& state,const std::map<uint32_t,uint8_t>& runtime,
                             const LeImage& exe,uint32_t address) {
     if(state.memory.has(address))return state.memory.u8(address);
     const auto found=runtime.find(address);return found==runtime.end()?exe.u8(address):found->second;
 }
+// Writes one byte to the memory image when the address is mapped there, otherwise into the
+// runtime override map (the EXE image itself is never modified).
 void source_runtime_set_byte(GameState& state,std::map<uint32_t,uint8_t>& runtime,
                              uint32_t address,uint8_t value) {
     if(state.memory.has(address))state.memory.set8(address,value);
     else runtime[address]=value;
 }
 
+// Little-endian 32-bit read built from four source_runtime_byte reads.
 uint32_t source_runtime_u32(const GameState& state,const std::map<uint32_t,uint8_t>& runtime,
                              const LeImage& exe,uint32_t address) {
     return uint32_t(source_runtime_byte(state,runtime,exe,address)) |
@@ -107,6 +119,8 @@ uint32_t source_runtime_u32(const GameState& state,const std::map<uint32_t,uint8
         uint32_t(source_runtime_byte(state,runtime,exe,address+3))<<24;
 }
 
+// Copies the executable's presentation switches (decorated background, solid panel, text
+// gradient, cached backdrop) onto the balance page state.
 void apply_balance_source_style(ui::BalanceState& page,const GameState& state,
                                 const std::map<uint32_t,uint8_t>& runtime,const LeImage& exe) {
     page.decorated=source_runtime_byte(state,runtime,exe,::bmh::layout::PlainBackground)==0;
@@ -116,11 +130,19 @@ void apply_balance_source_style(ui::BalanceState& page,const GameState& state,
     page.cached_backdrop=source_runtime_u32(state,runtime,exe,::bmh::layout::CareerSession_ApplyBalanceSourceStyle_ExecutableField)!=0;
 }
 
+// Little-endian 32-bit read from a saved match-group descriptor (throws via at() when short).
 uint32_t saved_group_u32(const Bytes& bytes, size_t offset) {
     return uint32_t(bytes.at(offset)) | (uint32_t(bytes.at(offset + 1)) << 8) |
            (uint32_t(bytes.at(offset + 2)) << 16) | (uint32_t(bytes.at(offset + 3)) << 24);
 }
 
+// Turn-cursor restore helpers (this and the next three functions plus restore_saved_turn_cursor).
+// They rebuild the in-memory MatchGroup of a day that was saved in the middle of the desk loop,
+// from the saved descriptors, fixtures and results. They never draw random numbers and never
+// replay event preparation; any inconsistency throws std::runtime_error, which the caller turns
+// into an "unsupported continuation" message or a load failure.
+// League group: validates the descriptor (size, type 0, league id, fixture count) and copies
+// the round's fixtures and results; per-match runtime arrays start empty.
 void initialize_saved_match_group(MatchGroup& group, const GameState& state, size_t index,
                                   int league) {
     group.desc = group_descriptor(state, index);
@@ -152,6 +174,9 @@ void initialize_saved_match_group(MatchGroup& group, const GameState& state, siz
     group.spectators.assign(fixtures.size(), 0);
 }
 
+// Cup group: checks the saved descriptor against the cup stage entry (stage, team count,
+// match count), then rebuilds the fixture list (group stage: verified against regenerated
+// fixtures; knockout: taken from the stage team list) and binds the result arrays of both legs.
 void initialize_saved_cup_group(MatchGroup& group, const GameState& state, size_t index,
                                 int cup_id, int entry_index) {
     const StaticMemory& mem = state.memory;
@@ -284,6 +309,8 @@ void initialize_saved_cup_group(MatchGroup& group, const GameState& state, size_
     group.spectators.assign(size_t(group.matches()), 0);
 }
 
+// Follows the chain of stage entries of a cup and returns the first stage whose round counter
+// has not reached its round count; -1 when the cup is unknown or finished.
 int current_cup_stage(const StaticMemory& mem, int cup_id) {
     int entry = find_cup(mem, cup_id);
     if (entry < 0) return -1;
@@ -297,6 +324,9 @@ int current_cup_stage(const StaticMemory& mem, int cup_id) {
     return -1;
 }
 
+// Replay group (cup type 9): rebuilds the replay day from the postponed-match records of 'day',
+// checks each against the league schedule and result marker, and recreates the two transient
+// replay buffers that are not part of a save.
 void initialize_saved_replay_group(MatchGroup& group, GameState& state, size_t index,
                                    int entry_index, int day) {
     constexpr uint32_t kPostponed = ::bmh::layout::Postponed;
@@ -375,6 +405,11 @@ void initialize_saved_replay_group(MatchGroup& group, GameState& state, size_t i
     group.spectators.assign(replay_fixtures.size(), 0);
 }
 
+// Re-establishes the turn driver after loading a save that was written mid-day: validates the
+// saved desk position / active manager / manager order, handles the season-end desk, compares
+// the calendar entry with the saved competition flags, rebuilds the league and cup groups and
+// starts the driver. Competitions that cannot be resumed safely set 'unsupported_continuation'
+// (a player-visible text) instead of throwing; broken save data throws.
 void restore_saved_turn_cursor(TurnDriver& driver, GameState& state, const Database& db,
                                uint64_t session_id, uint64_t revision,
                                std::string& unsupported_continuation) {
@@ -542,6 +577,9 @@ void restore_saved_turn_cursor(TurnDriver& driver, GameState& state, const Datab
 
 // The league structure of the loaded game (schedule.hpp): sizes LeagueSizes (German
 // 18 18 18 18 18 12 12 12 12, English 20 20 20 20 10 12 12 12 12) and calendar groups.
+// Installs the league structure and text/rule tables of the loaded game version from the
+// executable image into the global schedule, message, career, environment, badge and calendar
+// tables, so the same engine runs German and English data.
 static void install_league_sizes(const LeImage& exe) {
     uint8_t sizes[kLeagueCount];
     for (int l = 0; l < kLeagueCount; ++l) sizes[l] = exe.u8(::bmh::layout::LeagueSizes + uint32_t(l));
@@ -569,6 +607,10 @@ static void install_league_sizes(const LeImage& exe) {
     install_calendar_rules(exe);
 }
 
+// Constructor for a new career: loads the executable, database, texts and start data from the
+// data directory, installs the league tables and rule data, sets up the turn driver flags from
+// the executable, builds the start state and runs the career start up to the first dialog.
+// Throws std::runtime_error when the start state is rejected.
 CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_seed)
     : data_directory_(data), exe_(load_le(ui::asset_path(data, "BMH.exe"))),
       db_(load_database(ui::asset_path(data, "M3D.MAN"))),
@@ -595,6 +637,10 @@ CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_
         throw std::runtime_error("career start: " + report.reason);
 }
 
+// Constructor for a loaded career: same data/engine setup as the new-career constructor, then
+// reads the native .FBM save, rebuilds the GameState, rebinds the competition pointers, lets a
+// national coach take the national team over again, restores the random seed and the saved turn
+// cursor (a mid-day save). A non-native save or inconsistent data throws.
 CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_seed,
                              const std::filesystem::path& save_path)
     : data_directory_(data), exe_(load_le(ui::asset_path(data, "BMH.exe"))), db_(load_database(ui::asset_path(data, "M3D.MAN"))),
@@ -632,8 +678,12 @@ CareerSession::CareerSession(const std::filesystem::path& data, uint32_t watcom_
     capture_source_desk_callargs();
 }
 
+// Maps a master-database club index to the runtime team slot, or -1 when it is not found.
+// The overload below does the lookup in a given state: clubs travel with their name offset when
+// the league tables reshuffle, so the slot is found by matching that offset.
 int CareerSession::runtime_club(int master) const { return runtime_club(g_, master); }
 
+// Same lookup inside the given state (see above); -1 when no club carries the master entry name offset.
 int CareerSession::runtime_club(const GameState& state, int master) const {
     // ClubsChangePlaces moves a club together with its name: the club whose name offset is the
     // master entry's is the one the manager chose
@@ -643,8 +693,11 @@ int CareerSession::runtime_club(const GameState& state, int master) const {
     return -1;
 }
 
+// Club-selection context (runtime slot to master club order) of the live state at 'revision'.
 ui::SelectionContext CareerSession::selection_context(uint64_t revision) const { return selection_context_for(g_, revision); }
 
+// Same for an arbitrary state (e.g. the join draft); a club whose name offset matches no master
+// entry keeps its own index.
 ui::SelectionContext CareerSession::selection_context_for(const GameState& state, uint64_t revision) const {
     ui::SelectionContext c;
     c.revision = revision;
@@ -661,6 +714,8 @@ ui::SelectionContext CareerSession::selection_context_for(const GameState& state
     return c;
 }
 
+// Lists the managers already in the game (slot, club, name, start league, portrait) as the
+// choices a joining player has to avoid; throws FormatError when a manager team is invalid.
 std::vector<ui::ManagerChoice> CareerSession::manager_choices(uint64_t revision) const {
     const auto context = selection_context(revision);
     std::vector<ui::ManagerChoice> choices;
@@ -680,6 +735,16 @@ std::vector<ui::ManagerChoice> CareerSession::manager_choices(uint64_t revision)
     return choices;
 }
 
+// Manager join (add a human manager to a running career) follows a draft pattern: begin copies
+// the state/random generators into manager_join_, confirm_manager_join adds one manager to the
+// draft (restoring the draft on failure) and commit_manager_join swaps the draft into the live
+// state only if the live career is byte-identical to what the draft started from.
+// The members of the setup/club-information family below refuse to run while another modal
+// owner is open (balance draft, strengths, top scorers, stadium block expansion, other games)
+// and then report the error text "strengths_active".
+// Begin: needs the menu-29 desk request of the current revision on the current manager's desk
+// (not the national team), options that only grow the manager count (max 4) and keep all other
+// options; returns false with 'error' set on any mismatch.
 bool CareerSession::begin_manager_join(const ui::DeskRequest& origin, const ui::SetupOptions& options,
                                       uint64_t revision, std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
@@ -718,15 +783,20 @@ bool CareerSession::begin_manager_join(const ui::DeskRequest& origin, const ui::
     } catch (const std::exception& e) { error = e.what(); return false; }
 }
 
+// Selection context of the join draft; throws FormatError when no join is in progress.
 ui::SelectionContext CareerSession::manager_join_context() const {
     if (!manager_join_) throw FormatError("join: no draft");
     return selection_context_for(manager_join_->state, manager_join_->context_revision);
 }
 
+// True when the draft holds one choice per requested manager.
 bool CareerSession::manager_join_complete() const {
     return manager_join_ && manager_join_->choices.size() == size_t(manager_join_->options.managers);
 }
 
+// Validates one choice (next slot, current roster revision, name, league, strength, portrait,
+// club known and not already taken) and adds it to the draft. On failure the draft is rolled
+// back to its copy from before the call and false is returned with 'error'.
 bool CareerSession::confirm_manager_join(const ui::ManagerChoice& choice, std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
         top_scorers_owner_ || top_scorers_dispatch_active_ || stadium_.block_expansion || other_games_owner_ || other_games_dispatch_active_) { error = "strengths_active"; return false; }
@@ -759,6 +829,10 @@ bool CareerSession::confirm_manager_join(const ui::ManagerChoice& choice, std::s
     } catch (const std::exception& e) { manager_join_ = std::move(before); error = e.what(); return false; }
 }
 
+// Commit: requires a complete draft whose origin revision is the current one and whose live
+// state and random counters are unchanged since begin. On success the draft replaces the live
+// state, the revision advances by one and the new desktop/preparation projections are returned;
+// on any failure the checkpoint is restored, the revision is left unchanged and false is returned.
 bool CareerSession::commit_manager_join(ui::CareerInitializationResult& result, uint64_t& revision,
                                        std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
@@ -795,6 +869,8 @@ bool CareerSession::commit_manager_join(ui::CareerInitializationResult& result, 
     }
 }
 
+// Writes the setup-dialog options into the game memory and prunes the calendar (no league game /
+// no World Cup game) as the original setup screen does at the start of a new game.
 void CareerSession::apply_options(const ui::SetupOptions& o) {
     // SetupScreen2 takes the four numbers over when the options dialog is left
     StaticMemory& mem = g_.memory;
@@ -830,6 +906,9 @@ void CareerSession::apply_options(const ui::SetupOptions& o) {
     options_applied_ = true;
 }
 
+// New-career manager entry: refuses while a modal owner is open, checks the chosen league is
+// visible for human management, applies the options on the first call and adds the manager in
+// the next free slot. Returns false with 'error' on failure.
 bool CareerSession::confirm_manager(const ui::SetupOptions& options, const ui::ManagerChoice& choice, std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
         top_scorers_owner_ || top_scorers_dispatch_active_ || stadium_.block_expansion || other_games_owner_ || other_games_dispatch_active_) { error = "strengths_active"; return false; }
@@ -864,6 +943,11 @@ bool CareerSession::confirm_manager(const ui::SetupOptions& options, const ui::M
     return true;
 }
 
+// Club-information modal family (enter, change category, player redraw, national action,
+// pending offers): each member refuses to run while another modal owner is open and clears
+// 'error' first. The ones that change state work on copies and assign them back only after
+// success.
+// Enter: opens the club info entry for 'team'; nullopt plus 'error' on an invalid team.
 std::optional<ClubInfoEntry> CareerSession::enter_club_information(int team, std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
         top_scorers_owner_ || top_scorers_dispatch_active_ || stadium_.block_expansion || other_games_owner_ || other_games_dispatch_active_) { error = "strengths_active"; return std::nullopt; }
@@ -872,6 +956,7 @@ std::optional<ClubInfoEntry> CareerSession::enter_club_information(int team, std
     catch (const std::invalid_argument& e) { error = e.what(); return std::nullopt; }
 }
 
+// Switches the club info category for 'team'; nullopt plus 'error' when it is invalid.
 std::optional<uint8_t> CareerSession::change_club_information_category(int team, int requested,
                                                                     std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
@@ -881,6 +966,7 @@ std::optional<uint8_t> CareerSession::change_club_information_category(int team,
     catch (const std::invalid_argument& e) { error = e.what(); return std::nullopt; }
 }
 
+// Redraws a player detail card; random generators advance only if the redraw succeeded.
 std::optional<ClubPlayerDetailRedraw> CareerSession::redraw_club_player_detail(
     const ClubPlayerDetailSelection& selection, std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
@@ -899,6 +985,8 @@ std::optional<ClubPlayerDetailRedraw> CareerSession::redraw_club_player_detail(
     }
 }
 
+// Applies the national-team add/remove action of a player card on a staged copy; the copy is
+// committed only when the engine reports no reason. Returns whether the action was applied.
 std::optional<bool> CareerSession::dispatch_club_player_national_action(
     const ClubPlayerDetailSelection& selection, std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
@@ -919,6 +1007,10 @@ std::optional<bool> CareerSession::dispatch_club_player_national_action(
     }
 }
 
+// Processes the pending transfer offers of a player card. Rejects a stale revision or a nested
+// pending-offer/market dispatch, works on copies and commits them when at least one offer was
+// processed. The revision is bumped here unless a calendar advance is active: then the outer
+// driver publishes the revision when it returns.
 std::optional<PendingOfferResult> CareerSession::dispatch_club_player_pending_offers(
     const ClubPlayerDetailSelection& selection, uint64_t expected_revision,
     const PendingOfferHooks& hooks, uint64_t& revision, std::string& error) {
@@ -958,6 +1050,8 @@ std::optional<PendingOfferResult> CareerSession::dispatch_club_player_pending_of
     }
 }
 
+// Seeds the process-only byte map used by the club modals with their start values from the
+// executable; these values are never written to a save.
 void CareerSession::initialize_club_modal_runtime() {
     // Setup clears the boot-only dialog mode before either creating or loading
     // a career. This process flag is deliberately absent from native saves.
@@ -969,12 +1063,15 @@ void CareerSession::initialize_club_modal_runtime() {
         club_modal_runtime_.emplace(address,exe_.u8(address));
 }
 
+// Collects the executable bytes and rating tables the Sportschau screen reads.
 SportschauSourceOptions CareerSession::sportschau_source_options() const {
     return {source_runtime_byte(g_, club_modal_runtime_, exe_, ::bmh::layout::CareerSession_SportschauSourceOptions_ExecutableField),
             source_runtime_byte(g_, club_modal_runtime_, exe_, ::bmh::layout::CareerSession_DispatchTransferOffer_ExecutableField2), exe_.u16(::bmh::layout::TeamsWithSquads),
             sportschau_rating_tables(exe_)};
 }
 
+// Builds the service callbacks of the club modal on a given (staged) state, generators and
+// runtime byte map, so the modal can run on a copy and be committed or dropped by the caller.
 ClubModalServices CareerSession::staged_club_modal_services(GameState& state,
     GameRandom& game,WatcomRandom& rand,std::map<uint32_t,uint8_t>& runtime) {
     ClubModalServices services;
@@ -1015,6 +1112,8 @@ ClubModalServices CareerSession::staged_club_modal_services(GameState& state,
     return services;
 }
 
+// Same services bound to the live state (non-transactional); pending offers go through
+// dispatch_club_player_pending_offers. Throws when another modal owner is open.
 ClubModalServices CareerSession::live_club_modal_services(uint64_t& revision) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
         top_scorers_owner_ || top_scorers_dispatch_active_ || stadium_.block_expansion || other_games_owner_ || other_games_dispatch_active_) throw FormatError("strengths_active");
@@ -1031,6 +1130,9 @@ ClubModalServices CareerSession::live_club_modal_services(uint64_t& revision) {
 }
 
 namespace {
+// Writes the process scratch bytes (league, group, date pieces, strength sums) that the
+// original leaves behind after drawing the pairings page, so later reads see the same values.
+// Bytes go to the memory image when mapped there, else to the runtime map.
 void pairings_runtime_draw(GameState& g,std::map<uint32_t,uint8_t>& runtime,
     const ui::LeaguePairingsState& page,const LeImage& exe) {
     const auto put=[&](uint32_t at,uint8_t v) {
@@ -1071,6 +1173,8 @@ void pairings_runtime_draw(GameState& g,std::map<uint32_t,uint8_t>& runtime,
     if(computer_tip)put(tip_preference,uint8_t(g.memory.u8(tip_preference)&0xef));
 }
 
+// True when 'team' belongs to one of the human managers or to the national team record of a
+// national coach; throws FormatError when the manager count is missing or invalid.
 bool other_games_source_manager_owned(const GameState& g,int team) {
     if(team<0||!g.memory.has(::bmh::layout::ManagerCount))
         throw FormatError("other games: missing Source manager count for club detail redraw");
@@ -1087,6 +1191,9 @@ bool other_games_source_manager_owned(const GameState& g,int team) {
     return false;
 }
 
+// Replays the side effects of drawing the other-games page: five ordered team-average
+// calculations per displayed club (some of which draw random numbers) and the scratch bytes
+// they leave.
 void other_games_source_redraw_effects(GameState& g,WatcomRandom& rand,
     std::map<uint32_t,uint8_t>& runtime,const OtherGamesProjection& projection,
     const LeImage& exe) {
@@ -1115,6 +1222,8 @@ void other_games_source_redraw_effects(GameState& g,WatcomRandom& rand,
     }
 }
 
+// True when two other-games checkpoints agree on state, random generators, runtime bytes,
+// selection and owner identity, i.e. nothing observable changed in between.
 bool same_other_games_live_baseline(const CareerSession::OtherGamesCheckpoint& before,
                                     const CareerSession::OtherGamesCheckpoint& after) {
     if(save_stream(before.state)!=save_stream(after.state)||
@@ -1140,6 +1249,8 @@ bool same_other_games_live_baseline(const CareerSession::OtherGamesCheckpoint& b
         a.page.projection.display_mode==b.page.projection.display_mode;
 }
 
+// Compares the runtime-only fields of two states (callbacks by target type); used to check the
+// strengths view left the game unchanged.
 bool same_strengths_runtime_state(const GameState& a,const GameState& b) {
     const auto same_callback=[](const auto& lhs,const auto& rhs) {
         return bool(lhs)==bool(rhs)&&(!lhs||lhs.target_type()==rhs.target_type());
@@ -1160,8 +1271,11 @@ bool same_strengths_runtime_state(const GameState& a,const GameState& b) {
         same_callback(a.transfer_decision_observer,b.transfer_decision_observer);
 }
 
+// Reinterprets the low byte of 'value' as a signed byte.
 int8_t source_byte(int value) { return static_cast<int8_t>(uint8_t(value)); }
 
+// Builds the "first-end" round range label of the league table from a text template, patching
+// the two two-digit numbers in the German or English layout.
 std::string source_table_range_label(const TextDb& texts,int first,int end) {
     // DE50860 patches offsets 4/7 of its nine-byte TEXTD82 buffer. EN1e83f
     // patches 0/3 of the full " 0-34 only" string instead (the final y is live).
@@ -1178,6 +1292,8 @@ std::string source_table_range_label(const TextDb& texts,int first,int end) {
     return raw;
 }
 
+// Clamps the table end round to the played round when it is out of range, ensures end > first
+// and refreshes the retained range label; throws FormatError when the league is unknown.
 void source_table_normalize_range(CareerSession::LeagueFamilyOwner::TableOwner& table,
                                  const GameState& game,int league,const TextDb& texts) {
     if(league<0||league>=int(game.league_rounds.size()))
@@ -1194,6 +1310,8 @@ void source_table_normalize_range(CareerSession::LeagueFamilyOwner::TableOwner& 
         texts,source_byte(table.first_round),source_byte(table.end_round));
 }
 
+// True when a league-family identity still describes the live game: same active manager, club,
+// club identity, date, default league and the stored settings/display-mode words.
 bool source_table_identity_is_live(const GameState& game,const ui::StrengthsIdentity& id) {
     if(id.manager<0||id.manager>3||id.league<0||id.league>=bmh::kLeagueCount||
        !game.memory.has(::bmh::layout::ActiveManager)||game.memory.u8(::bmh::layout::ActiveManager)!=id.manager||
@@ -1211,6 +1329,8 @@ bool source_table_identity_is_live(const GameState& game,const ui::StrengthsIden
         game.memory.u16(family)==id.expected_family_word;
 }
 
+// True when a table request carries no stray fields (no target child, team, row or dialog reply;
+// league id only if the selector variant is allowed) and the expected control index.
 bool canonical_table_envelope(const ui::LeagueFamilyRequest& request,int control_index=-1,
                               bool allow_selector_league=false) {
     return request.target_child==0&&request.runtime_team==-1&&request.expected_club_identity==-1&&
@@ -1219,11 +1339,14 @@ bool canonical_table_envelope(const ui::LeagueFamilyRequest& request,int control
         !request.table_dialog_reply;
 }
 
+// Sets the table aggregation flag bits from the clear bits 4 and 2 of the display-mode word.
 void source_table_apply_entry_flags(CareerSession::LeagueFamilyOwner::TableOwner& table,uint16_t word) {
     if((word&4)==0)table.aggregation_flags=uint8_t(table.aggregation_flags|1);
     if((word&2)==0)table.aggregation_flags=uint8_t(table.aggregation_flags|2);
 }
 
+// Packs a table owner's round range, flags, display word and optional accepted engine table
+// (or forecast marker) into the projection context used to render the league table page.
 ui::LeagueTableProjectionContext source_table_context(
     const CareerSession::LeagueFamilyOwner::TableOwner& table,uint16_t display_word,
     std::optional<bmh::LeagueTable> accepted={},bool forecast=false) {
@@ -1237,6 +1360,15 @@ ui::LeagueTableProjectionContext source_table_context(
 }
 }
 
+// League family (table / pairings / strengths and the friendly opponent table): these three
+// child screens are linked under one LeagueFamilyOwner carrying a family id. Pattern: each
+// entry or transition validates the identity (revision, active manager slot, club, date) and
+// the neighbouring child owners, snapshots the native save stream, random seeds and runtime
+// bytes into the owner, and every close/suspend compares the live state with that snapshot so
+// a stale or tampered request is rejected with an error text and nothing is changed.
+// Child numbers: 1 = Table, 2 = Pairings, 3 = Strengths.
+// Builds the identity (manager, club, date, default league, settings words) needed to open the
+// strengths screen for the active manager; returns an empty optional when anything is missing.
 std::optional<ui::StrengthsRequest> CareerSession::strengths_open_request(uint64_t revision) const {
     if(!g_.memory.has(::bmh::layout::ActiveManager))return {};
     const int manager=g_.memory.u8(::bmh::layout::ActiveManager);
@@ -1255,6 +1387,11 @@ std::optional<ui::StrengthsRequest> CareerSession::strengths_open_request(uint64
     return request;
 }
 
+// Opens the family at 'child' for the identity: checks no family/TeamInfo is active, the
+// revision matches, the identity belongs to the active manager and club of today (or to the
+// live overview owner), and that Pairings/Strengths entries have a matching child owner.
+// Allocates a family id, snapshots the state into a LeagueFamilyOwner and, for the table, builds
+// the page. Returns the bound identity, or an empty optional with 'error'.
 std::optional<ui::StrengthsIdentity> CareerSession::begin_league_family(
     ui::StrengthsIdentity identity,uint8_t child,uint64_t revision,std::string& error) {
     error.clear();
@@ -1310,6 +1447,9 @@ std::optional<ui::StrengthsIdentity> CareerSession::begin_league_family(
     return identity;
 }
 
+// Opens the table used to pick a friendly-match opponent (child 1 with friendly_opponent set).
+// Needs the strengths request of the active manager and no other child owner; the table
+// display word is initialised for that picker. Any failure restores the family checkpoint.
 std::optional<ui::StrengthsIdentity> CareerSession::begin_friendly_opponent_table(
         uint64_t revision,std::string& error) {
     error.clear();
@@ -1341,6 +1481,9 @@ std::optional<ui::StrengthsIdentity> CareerSession::begin_friendly_opponent_tabl
     }
 }
 
+// Checks a select_opponent request against the owned table (identity, revision, row, club
+// identity key) and returns the runtime team of the chosen row, or an empty optional with 'error'.
+// Does not change state.
 std::optional<int> CareerSession::resolve_friendly_table_opponent(
         const ui::LeagueFamilyRequest& request,uint64_t revision,std::string& error) const {
     error.clear();
@@ -1371,6 +1514,9 @@ std::optional<int> CareerSession::resolve_friendly_table_opponent(
     return normal.runtime_team_id;
 }
 
+// The player picked their own club in the opponent table: restores the normal-mode bit of the
+// display word, advances the family sequence and keeps the picker open. Empty optional on a
+// stale or different-club request.
 std::optional<ui::StrengthsIdentity> CareerSession::acknowledge_friendly_own_club(
         const ui::LeagueFamilyRequest& request,uint64_t revision,std::string& error) {
     const auto team=resolve_friendly_table_opponent(request,revision,error);
@@ -1388,6 +1534,9 @@ std::optional<ui::StrengthsIdentity> CareerSession::acknowledge_friendly_own_clu
     return next;
 }
 
+// Leaves the opponent table: validates a select_opponent (not the own club) or close request,
+// restores the display word, validates the new preparation projection and drops the family
+// owner while advancing the revision. Failure restores the checkpoint and returns empty.
 std::optional<ui::PreparationState> CareerSession::finish_friendly_opponent_table(
         const ui::LeagueFamilyRequest& request,uint64_t& revision,std::string& error) {
     error.clear();
@@ -1424,6 +1573,10 @@ std::optional<ui::PreparationState> CareerSession::finish_friendly_opponent_tabl
     }
 }
 
+// Moves the family from one child screen to another: the request, owner and 'next' identity must
+// agree (same family id, manager, club, day; sequence increased by one; revision at most one
+// ahead). Replaces the owner with a fresh snapshot, building the table page when the target is
+// the table. Returns false with 'error' when the transition is stale or mismatched.
 bool CareerSession::advance_league_family(const ui::LeagueFamilyRequest& request,
     ui::StrengthsIdentity next,uint8_t target,uint64_t revision,std::string& error) {
     error.clear();
@@ -1464,6 +1617,9 @@ bool CareerSession::advance_league_family(const ui::LeagueFamilyRequest& request
     league_family_owner_=std::move(owner);return true;
 }
 
+// True when the identity (its source_param2 holds the match minute) belongs to the currently
+// open live overview: same manager, team, minute and day, and for a phase-result viewer the
+// same match group.
 bool CareerSession::live_source_identity(const ui::StrengthsIdentity& id) const {
     return live_overview_owner_ &&
         live_overview_owner_->kind != LiveOverviewKind::cup_other_games &&
@@ -1477,6 +1633,11 @@ bool CareerSession::live_source_identity(const ui::StrengthsIdentity& id) const 
           live_overview_owner_->request.group_index == int(phase_result_request_->group_index)));
 }
 
+// Final close of the family: the long condition re-verifies identity, child owner and that the
+// live state, random generators and runtime bytes still equal the owner's snapshot. On success
+// it commits staged Pairings changes (if any), draws the random stir unless a phase-result
+// viewer owns that draw, resets the child owners and bumps the revision. Returns the new
+// preparation projection, or an empty optional with 'error' and no change.
 std::optional<ui::PreparationState> CareerSession::close_league_family(
     const ui::LeagueFamilyRequest& request,uint64_t& revision,std::string& error) {
     error.clear();const auto& id=request.identity;
@@ -1535,6 +1696,8 @@ std::optional<ui::PreparationState> CareerSession::close_league_family(
     } catch(const std::exception& e) {error=e.what();return {};}
 }
 
+// Leaves the Strengths child towards Table or Pairings without a full close: checks the owner
+// snapshot is unchanged, then drops the strengths owner. False with 'error' when stale.
 bool CareerSession::suspend_strengths_for_family(const ui::LeagueFamilyRequest& request,
     uint64_t revision,std::string& error) {
     error.clear();const auto& id=request.identity;
@@ -1550,6 +1713,9 @@ bool CareerSession::suspend_strengths_for_family(const ui::LeagueFamilyRequest& 
     strengths_owner_.reset();return true;
 }
 
+// Leaves the Pairings child towards Table or Strengths: after the same snapshot checks it
+// commits only the staged page/redraw changes of the draft and drops the draft. False with
+// 'error' when stale or the return word is missing.
 bool CareerSession::suspend_pairings_for_family(const ui::LeagueFamilyRequest& request,
     uint64_t revision,std::string& error) {
     error.clear();const auto& id=request.identity;
@@ -1578,6 +1744,9 @@ bool CareerSession::suspend_pairings_for_family(const ui::LeagueFamilyRequest& r
     league_pairings_draft_.reset();return true;
 }
 
+// Prepares the manager mode word and runtime bytes before a child screen is entered, after
+// validating the identity and that no other child owner or dispatch is active. False with
+// 'error' otherwise.
 bool CareerSession::prepare_league_family_child(const ui::StrengthsIdentity& id,uint8_t child,
     uint64_t revision,std::string& error) {
     error.clear();
@@ -1616,6 +1785,10 @@ bool CareerSession::prepare_league_family_child(const ui::StrengthsIdentity& id,
     return true;
 }
 
+// Installs (or clears) the turn driver hook that fires at the end of a match phase. The wrapper
+// records the current request in phase_result_request_ for the duration of the call, only
+// accepts the driver's own groups and state, and requires that any viewer is closed again before
+// the engine continues.
 void CareerSession::set_phase_results(decltype(TurnDriver::phase_results) hook) {
     if (!hook) { turn_driver_.phase_results = {}; return; }
     turn_driver_.phase_results = [this, hook=std::move(hook)](const PhaseResultRequest& request,
@@ -1624,6 +1797,7 @@ void CareerSession::set_phase_results(decltype(TurnDriver::phase_results) hook) 
             request.group_index >= groups.size())
             throw FormatError("phase results: invalid synchronous Source boundary");
         phase_result_request_ = &request;
+        // Clears the borrowed request pointer when the hook returns or throws.
         struct Reset { const PhaseResultRequest*& request; ~Reset() { request = nullptr; } } reset{phase_result_request_};
         hook(request, groups, state);
         if (live_overview_owner_ && live_overview_owner_->phase_result)
@@ -1631,6 +1805,13 @@ void CareerSession::set_phase_results(decltype(TurnDriver::phase_results) hook) 
     };
 }
 
+// Live overview group (phase-result viewer, live league table / pairings opened from a running
+// match): only valid inside a calendar advance (calendar_advance_active_) with the driver
+// waiting at a phase boundary. Pattern: open -> dispatch -> acknowledge; the owner snapshots the
+// state and random counters when it opens and the close must find them unchanged.
+// Opens the viewer at a phase boundary: copies the current group results into a staged state
+// (no simulation, no random draws) and opens the overview on it; on failure the previous state
+// is kept. Returns an empty optional with 'error' when no request is pending or a viewer is open.
 std::optional<CareerSession::LiveOverviewProjection> CareerSession::open_phase_results(
     uint64_t& revision, const Image& underlay, std::string& error) {
     error.clear();
@@ -1669,6 +1850,8 @@ std::optional<CareerSession::LiveOverviewProjection> CareerSession::open_phase_r
     } catch (const std::exception& e) { error = e.what(); return {}; }
 }
 
+// Forwards a viewer action while the phase-result owner of the pending request is open; empty
+// optional with 'error' if the viewer is missing or belongs to another group.
 std::optional<CareerSession::LiveOverviewDispatch> CareerSession::dispatch_phase_results(
     const LiveOverviewAction& action, uint64_t& revision, std::string& error,
     const TransferOfferTeamInfoPresenter& team_info) {
@@ -1680,12 +1863,18 @@ std::optional<CareerSession::LiveOverviewDispatch> CareerSession::dispatch_phase
     return dispatch_live_overview(action, context, revision, error, team_info);
 }
 
+// Opens the overview from a key press during a running match (not a phase-result viewer).
 std::optional<CareerSession::LiveOverviewProjection> CareerSession::open_live_overview(
     const LiveOverviewRequest& request, MatchEngine& engine, uint64_t& revision,
     const Image& underlay, std::string& error) {
     return open_running_overview(request, engine, revision, underlay, error, false);
 }
 
+// Shared opener. The long guard requires an active calendar advance, no other modal owner or
+// dispatch, a request that matches the driver's groups, the live state objects and the active
+// manager (revision and scope included). key_slot 0 opens the league table, 1 the league
+// pairings. Returns an empty optional with 'error' when the request is stale, nested or
+// unauthenticated.
 std::optional<CareerSession::LiveOverviewProjection> CareerSession::open_running_overview(
     const LiveOverviewRequest& request, MatchEngine& engine, uint64_t& revision,
     const Image& underlay, std::string& error, bool phase_result) {
@@ -1724,6 +1913,8 @@ std::optional<CareerSession::LiveOverviewProjection> CareerSession::open_running
     }
 
 
+    // Scope guard: turns calendar_advance_active_ off while the family screens run and restores the
+    // previous value on exit, so nested family code does not treat itself as inside the advance.
     struct LiveBoundaryFamilyScope {
         bool& active;
         bool previous;
@@ -1799,6 +1990,9 @@ std::optional<CareerSession::LiveOverviewProjection> CareerSession::open_running
                 result.pairings = std::move(page);
             }
         } else {
+            // Cup descriptor (not a league): the overview becomes an other-games detail page bound to the
+            // active cup entry, found by trying linked-page ordinals until the cup entry and competition
+            // id match. Anything else throws and is rolled back by the catch block below.
             if (request.key_slot != 0 && request.key_slot != 1)
                 throw FormatError("live overview: invalid cup overview key slot");
             const int entry_index = cup_entry_index(competition);
@@ -1862,6 +2056,8 @@ std::optional<CareerSession::LiveOverviewProjection> CareerSession::open_running
         live.kind=result.kind;
         live.original_native=save_stream(g_); live.original_rand_seed=rand_.seed(); live.original_game_seed=game_.seed();
         live.original_rand_calls=rand_.calls(); live.original_game_calls=game_.calls();
+        // Commit point: the owner now holds its final kind, family identity and revision; the scope
+        // counter and the revision are advanced only here, after every child owner was opened.
         live_overview_owner_->kind=live.kind;
         live_overview_owner_->family_identity=live.family_identity;
         live_overview_owner_->request.revision=next_revision;
@@ -1869,6 +2065,8 @@ std::optional<CareerSession::LiveOverviewProjection> CareerSession::open_running
         revision=next_revision;
         return result;
     } catch(const std::exception& e) {
+        // Failure path: restore the family, pairings and other-games checkpoints, drop the overview
+        // owner and put the scope counter back, so a failed open leaves no trace.
         restore_league_family_checkpoint(family_checkpoint);
         restore_league_pairings_checkpoint(pairings_checkpoint);
         restore_other_games_checkpoint(other_checkpoint);
@@ -1879,6 +2077,13 @@ std::optional<CareerSession::LiveOverviewProjection> CareerSession::open_running
     }
 }
 
+// League table dispatch group (controls, range dialog, forecast acknowledgement, league
+// selector, team info). Pattern: validate the request envelope, identity, owner and that the
+// live state still equals the owner snapshot; take a checkpoint; apply the change to the
+// table owner; refresh the snapshot and identity (sequence + 1, revision + 1); on any failure
+// restore the checkpoint and the old revision and return an empty optional with 'error'.
+// Projects the table page (or the pending range dialog profile) of the owned table child;
+// read-only. Empty optional with 'error' when no table owner exists or the state drifted.
 std::optional<CareerSession::LeagueTableDispatch> CareerSession::current_league_table_dispatch(
     std::string& error) const {
     error.clear();
@@ -1922,6 +2127,8 @@ std::optional<CareerSession::LeagueTableDispatch> CareerSession::current_league_
     } catch(const std::exception& e) {error=e.what();return {};}
 }
 
+// Applies one of the table's ten controls (index 0-9) to the owned table. Requires a ready
+// table, a canonical request envelope and an unchanged snapshot; revision advances by one.
 std::optional<CareerSession::LeagueTableDispatch> CareerSession::dispatch_league_table_control(
     const ui::LeagueFamilyRequest& request,uint64_t& revision,std::string& error) {
     error.clear();const auto& id=request.identity;
@@ -1952,6 +2159,10 @@ std::optional<CareerSession::LeagueTableDispatch> CareerSession::dispatch_league
             const auto context=source_table_context(table,word,std::move(engine),forecast);
             table.page=ui::league_table_from_game(g_,id.manager,league,context);
         };
+        // Controls 0-2 set the aggregation flags and mode bits, 3 computes a forecast table (shown
+        // after the present acknowledgement), 4-6 toggle display bits (at least one stays set), 7
+        // toggles the normal mode, 8 resets the round range to the whole season and 9 starts the
+        // two-step range dialog.
         switch(request.control_index) {
         case 0: table.aggregation_flags=7;word=uint16_t((word&0x0ff0)|1);break;
         case 1: table.aggregation_flags=1;word=uint16_t((word&0x0ff0)|2);break;
@@ -2022,6 +2233,9 @@ std::optional<CareerSession::LeagueTableDispatch> CareerSession::dispatch_league
 }
 
 
+// Handles the answer of the range dialog (control 9): start value first, then end value.
+// Accept stores the value, cancel restores the previous range; positions and bounds of the
+// reply are validated. The table returns to ready after the second step or a cancel.
 std::optional<CareerSession::LeagueTableDispatch> CareerSession::dispatch_league_table_range_reply(
     const ui::LeagueFamilyRequest& request,uint64_t& revision,std::string& error) {
     error.clear();const auto& id=request.identity;
@@ -2090,6 +2304,8 @@ std::optional<CareerSession::LeagueTableDispatch> CareerSession::dispatch_league
     } catch(const std::exception& e) {restore_league_family_checkpoint(checkpoint);revision=old_revision;error=e.what();return {};}
 }
 
+// The forecast page has been shown: adopts the random generator state computed with the
+// forecast, returns the table to ready and rebuilds the normal page.
 std::optional<CareerSession::LeagueTableDispatch> CareerSession::acknowledge_league_forecast_present(
     const ui::LeagueFamilyRequest& request,uint64_t& revision,std::string& error) {
     error.clear();const auto& id=request.identity;
@@ -2134,6 +2350,9 @@ std::optional<CareerSession::LeagueTableDispatch> CareerSession::acknowledge_lea
     } catch(const std::exception& e) {restore_league_family_checkpoint(checkpoint);revision=old_revision;error=e.what();return {};}
 }
 
+// Switches the table to another league (map click) or toggles the league group, after
+// checking the target is listed in the bound league map. Works on staged copies of the state,
+// runtime bytes and owner and commits them only on success; returns false with 'error' otherwise.
 bool CareerSession::select_league_family_page(const ui::LeagueFamilyRequest& request,
     uint64_t revision,std::string& error) {
     error.clear();const auto& id=request.identity;
@@ -2209,6 +2428,10 @@ bool CareerSession::select_league_family_page(const ui::LeagueFamilyRequest& req
     }
 }
 
+// Opens the club information of a table row through the injected presenter, on a staged copy.
+// Checks the visible row identity and that the presenter left the live family untouched;
+// then either keeps the poach selection (card returned) or redraws the table and publishes the
+// copy. Returns the refreshed identity, or an empty optional with 'error' (state restored).
 std::optional<ui::StrengthsIdentity> CareerSession::dispatch_family_table_team_info(
     const ui::LeagueFamilyRequest& request,uint64_t& revision,std::string& error,
     const TransferOfferTeamInfoPresenter& presenter,
@@ -2269,6 +2492,7 @@ std::optional<ui::StrengthsIdentity> CareerSession::dispatch_family_table_team_i
             ++entry_calls;return enter(team);
         };
         league_family_teaminfo_active_=true;
+        // Marks the family as inside TeamInfo while the presenter runs; cleared on every exit.
         struct Reset { bool& active;~Reset(){active=false;} } reset{league_family_teaminfo_active_};
         const bool accepted=presenter(services,selected_team,backdrop);
         const auto after=league_family_checkpoint();
@@ -2335,6 +2559,9 @@ std::optional<ui::StrengthsIdentity> CareerSession::dispatch_family_table_team_i
     } catch(const std::exception& e) {restore_league_family_checkpoint(checkpoint);revision=old_revision;error=e.what();return {};}
 }
 
+// After a child screen acknowledged its page, re-binds the family owner to the child's new
+// identity (same family id and sequence, revision at most one ahead) and refreshes its snapshot.
+// False with 'error' when the identity or child owner is stale.
 bool CareerSession::refresh_family_after_child(const ui::StrengthsIdentity& prior,uint8_t child,
     ui::StrengthsIdentity next,uint64_t revision,std::string& error) {
     error.clear();
@@ -2366,6 +2593,17 @@ bool CareerSession::refresh_family_after_child(const ui::StrengthsIdentity& prio
     league_family_owner_->runtime=club_modal_runtime_;return true;
 }
 
+// Strengths / top scorers / opportunities / other games group: modal desk pages that follow
+// open -> dispatch -> acknowledge. Each open_* validates the desk request (menu kind, revision,
+// active manager slot, desk stage, no other modal owner) and stores an owner that snapshots the
+// native stream and the random counters; each dispatch_* refuses a stale identity or a changed
+// snapshot, applies one action on a copy, bumps revision and sequence and returns the new page
+// plus the desktop projection. Failures return an empty optional with 'error' and change nothing.
+// National-coach desk identity: while a national coach manages the national team the manager's
+// team is the national slot (kNoTeam or 0x165); the club identity key is then taken from the
+// spare manager record 4 (offset 0x290) instead of the club table.
+// Strengths dispatch: one entry point for open, control, league select, group toggle, team info
+// and close of the strengths page (also used as a child of the league family).
 std::optional<CareerSession::StrengthsDispatch> CareerSession::dispatch_strengths(
     const ui::StrengthsRequest& request,uint64_t& revision,std::string& error,
     const TransferOfferTeamInfoPresenter& team_info,bool family_transition) {
@@ -2424,6 +2662,7 @@ std::optional<CareerSession::StrengthsDispatch> CareerSession::dispatch_strength
         error="strengths: TeamInfo presenter unavailable";return {};
     }
     strengths_dispatch_active_=true;
+    // Re-entrancy flag: set while this dispatch runs (callbacks may re-enter), cleared on every exit.
     struct Reset { bool& active; ~Reset(){active=false;} } reset{strengths_dispatch_active_};
     try {
         StrengthsDispatch result;
@@ -2572,6 +2811,9 @@ std::optional<CareerSession::StrengthsDispatch> CareerSession::dispatch_strength
     } catch(const std::exception& e) {error=e.what();return {};}
 }
 
+// Opens the top scorers page (desk menu 20) for the active manager; refuses while the process
+// timer context is active. For a national coach the club identity comes from the spare record.
+// Returns the first page (goals, league scope) or an empty optional with 'error'.
 std::optional<ui::TopScorersState> CareerSession::open_top_scorers(
     const ui::DeskRequest& request, uint64_t revision, const Image& underlay, std::string& error) {
     error.clear();
@@ -2653,6 +2895,8 @@ std::optional<ui::TopScorersState> CareerSession::open_top_scorers(
     }
 }
 
+// Applies one top scorers action: close, metric cycle (goals -> assists -> scorer -> goals) or
+// scope toggle. Rejects a stale, replayed or modified owner; commits the new page on success.
 std::optional<CareerSession::TopScorersDispatch> CareerSession::dispatch_top_scorers(
     const ui::TopScorersRequest& request, uint64_t& revision, std::string& error) {
     error.clear();
@@ -2742,6 +2986,9 @@ std::optional<CareerSession::TopScorersDispatch> CareerSession::dispatch_top_sco
     }
 }
 
+// Statistics menu (desk menu 23): flips the manager's statistics preference flags. Needs the open
+// menu owner request of the current revision and the expected current flag byte; allows exactly
+// one metric bit (below 0x40) or the pair 0xc0 to change. Returns false with 'error' otherwise.
 bool CareerSession::apply_statistics_preference(const ui::DeskRequest& owner, int manager_slot,
                                                 uint8_t expected_flags, uint8_t target_flags,
                                                 uint64_t& revision, std::string& error) {
@@ -2773,6 +3020,9 @@ bool CareerSession::apply_statistics_preference(const ui::DeskRequest& owner, in
     return true;
 }
 
+// Opens the opportunities page (desk menu 23) for the active manager. 'national_source_case'
+// selects the national-team variant (team 0x165, league 0, identity supplied by the caller as
+// 'stable_identity'). Needs the 320x240 desktop underlay. Empty optional with 'error' on failure.
 std::optional<ui::OpportunitiesState> CareerSession::open_opportunities(
     const ui::DeskRequest& request,uint64_t revision,const Image& underlay,std::string& error,
     bool national_source_case,int stable_identity) {
@@ -2809,6 +3059,8 @@ std::optional<ui::OpportunitiesState> CareerSession::open_opportunities(
     } catch(const std::exception& e){error=e.what();return {};}
 }
 
+// Closes the opportunities page or selects one of its modes (1, 2, 4 or 8) and recomputes the
+// rank table; stale or modified owners are rejected.
 std::optional<CareerSession::OpportunitiesDispatch> CareerSession::dispatch_opportunities(
     const ui::OpportunitiesRequest& request,uint64_t& revision,std::string& error) {
     error.clear();
@@ -2856,6 +3108,10 @@ std::optional<CareerSession::OpportunitiesDispatch> CareerSession::dispatch_oppo
     } catch(const std::exception& e){error=e.what();return {};}
 }
 
+// Opens the other-games overview (desk menu 5): validates the desk request and runs the entry
+// changes on a staged copy (season-dependent selector byte, selector 12 insertion or removal),
+// then builds the page for the remembered competition. The copy replaces the live state only
+// once the page and owner exist. Empty optional with 'error' on failure.
 std::optional<ui::OtherGamesState> CareerSession::open_other_games(
     const ui::DeskRequest& request, uint64_t& revision, const Image& underlay, std::string& error) {
     error.clear();
@@ -2971,6 +3227,8 @@ std::optional<ui::OtherGamesState> CareerSession::open_other_games(
     }
 }
 
+// Applies one action of the other-games overview against the owner snapshot (a team info
+// presenter may be supplied); empty optional with 'error' when the request or owner is stale.
 std::optional<CareerSession::OtherGamesDispatch> CareerSession::dispatch_other_games(
     const ui::OtherGamesRequest& request, uint64_t& revision, std::string& error,
     const TransferOfferTeamInfoPresenter& team_info) {
@@ -3017,6 +3275,9 @@ std::optional<CareerSession::OtherGamesDispatch> CareerSession::dispatch_other_g
         if (stable_team < 0 || stable_team >= 138 || size_t(stable_team) >= g_.club_ids.size() ||
             int(g_.club_ids[size_t(stable_team)]) != id.club_identity)
             throw FormatError("other games: stable club identity changed");
+        // Team info branch: the presenter runs against a staged copy (state, both random generators,
+        // runtime bytes) and the live session must come back unchanged; only then is the staged copy
+        // committed together with the redrawn page and the owner snapshot is refreshed.
         if (request.action == ui::OtherGamesAction::team_info) {
             if (request.value < 0 || current.projection.unfinished_predecessor ||
                 !current.projection.fixtures_available)
@@ -3143,6 +3404,8 @@ std::optional<CareerSession::OtherGamesDispatch> CareerSession::dispatch_other_g
             int local_cursor = other_games_owner_->participant_offset;
             auto mode = other_games_owner_->display_mode;
             bool source_new_selection = false;
+            // Page navigation actions (selector, linked page, previous/next round, display toggle): each is
+            // validated against what the current page offers, then the page is rebuilt on a staged copy.
             switch (request.action) {
             case ui::OtherGamesAction::select_competition: {
                 if (current.projection.display_mode != OtherGamesDisplayMode::detail || request.value < 0 ||
@@ -3253,6 +3516,12 @@ std::optional<CareerSession::OtherGamesDispatch> CareerSession::dispatch_other_g
     }
 }
 
+// Balance plan group (desk menu 28): the plan is edited in a draft (BalanceDraft) that holds a
+// copy of the state, random generators and runtime bytes. Pattern: open -> edit actions on the
+// draft -> close; closing may stage a warning that needs a confirmation, and only the final
+// close or confirmation moves the draft into the live state and bumps the revision.
+// Opens the balance plan for the active manager's club; empty optional with 'error' on a stale,
+// nested or unsupported opening (any other modal owner or dispatch counts as nested).
 std::optional<ui::BalanceState> CareerSession::open_balance_plan(
     const ui::DeskRequest& request,uint64_t revision,const Image& underlay,std::string& error) {
     error.clear();
@@ -3298,6 +3567,10 @@ std::optional<ui::BalanceState> CareerSession::open_balance_plan(
     } catch(const std::exception& e) {error=e.what();return {};}
 }
 
+// Applies one balance action to a copy of the draft: edit a row, cycle the view, take actual
+// values, close, or confirm a staged warning close. Rejects a stale identity or a live state
+// that differs from the draft's origin. Only a closing action commits the draft and bumps the
+// revision; a staged warning keeps the draft open. Empty optional with 'error' on failure.
 std::optional<CareerSession::BalanceDispatch> CareerSession::dispatch_balance_plan(
     const ui::BalanceRequest& request,uint64_t& revision,std::string& error) {
     error.clear();
@@ -3415,6 +3688,11 @@ std::optional<CareerSession::BalanceDispatch> CareerSession::dispatch_balance_pl
     } catch(const std::exception& e) {error=e.what();return {};}
 }
 
+// League pairings group (desk menu 1): like the balance plan it works on a draft copy
+// (LeaguePairingsDraft) that remembers the active match groups and referee profiles of the turn
+// driver, so a draft is only valid while those are unchanged.
+// Opens the pairings page for the manager; empty optional with 'error' on a stale, nested or
+// unsupported opening.
 std::optional<ui::LeaguePairingsState> CareerSession::open_league_pairings(
     const ui::DeskRequest& request,uint64_t revision,std::string& error) {
     error.clear();
@@ -3443,6 +3721,9 @@ std::optional<ui::LeaguePairingsState> CareerSession::open_league_pairings(
     } catch(const std::exception& e) {error=e.what();return std::nullopt;}
 }
 
+// Refuses to continue while the original's process timer is running (not implemented), then asks
+// the pairings source for the active-match packet of the running groups and records the active
+// group and phase in the owner. Returns the packet, or nothing when no match group is active.
 std::optional<LeaguePairingsActivePacket> CareerSession::validate_normal_pairings_group(
     const GameState& state,LeaguePairingsOwner& owner,
     const std::map<uint32_t,uint8_t>& runtime) const {
@@ -3462,12 +3743,18 @@ std::optional<LeaguePairingsActivePacket> CareerSession::validate_normal_pairing
     return packet;
 }
 
+// Applies one pairings event (page change, computer tip, team info, close) to a copy of the
+// draft. The live state must still equal the draft's origin (live_matches below). On close the
+// draft is committed and the revision advances; otherwise a new page is returned and the draft
+// refreshed. Empty optional with 'error' when stale, nested or a presenter stops.
 std::optional<CareerSession::LeaguePairingsDispatch> CareerSession::dispatch_league_pairings(
     const ui::LeaguePairingsRequest& request,uint64_t& revision,std::string& error,
     const TransferOfferTeamInfoPresenter& team_info) {
     if (league_family_teaminfo_active_ || balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
         top_scorers_owner_ || top_scorers_dispatch_active_ || stadium_.block_expansion || other_games_owner_ || other_games_dispatch_active_) { error = "strengths_active"; return std::nullopt; }
     error.clear();
+    // True while the live state, random counters, runtime bytes, match groups and referee profiles
+    // still equal what the draft started from.
     const auto live_matches=[&] {
         if(!league_pairings_draft_)return false;
         const auto& d=*league_pairings_draft_;
@@ -3545,6 +3832,9 @@ std::optional<CareerSession::LeaguePairingsDispatch> CareerSession::dispatch_lea
 }
 
 namespace {
+// Transfer editor / market group (helpers first). Projects the engine's transfer offer editor
+// owner into the UI state: the quote fields, calculator profiles and, unless the editor is
+// closed, the incoming-offer decision panel read from the four offer rows of the market list.
 ui::OutgoingTransferEditorState transfer_offer_projection(const GameState& game,
     const TransferOfferEditorState& owner, uint64_t revision, bool gradient) {
     ui::OutgoingTransferEditorState out;
@@ -3593,11 +3883,13 @@ ui::OutgoingTransferEditorState transfer_offer_projection(const GameState& game,
 }
 }
 
+// Public wrapper so other code (loan return offers) can reuse the editor projection.
 ui::OutgoingTransferEditorState loan_return_offer_editor_projection(
     const GameState& game, const TransferOfferEditorState& owner, uint64_t revision, bool gradient) {
     return transfer_offer_projection(game, owner, revision, gradient);
 }
 
+// Maps a UI field edit onto the engine's transfer offer editor edit and returns the new owner.
 TransferOfferEditorState edit_transfer_offer_from_ui(GameState& game,
     const TransferOfferEditorState& owner, const ui::OutgoingTransferRequest& request,
     GameRandom& game_random, WatcomRandom& watcom_random) {
@@ -3606,6 +3898,14 @@ TransferOfferEditorState edit_transfer_offer_from_ui(GameState& game,
         game_random, watcom_random);
 }
 
+// Transfer market request family (open offer, poach, editor events, quote preview, market
+// actions): each entry validates the request revision, the active manager slot and the manager's
+// club, refuses nested modals (market_dispatch_active_ and the other owners), works on copies of
+// the state and both random generators and commits them only on success. The revision is
+// advanced only where something observable changed. Failures return an empty optional and an
+// error text.
+// Opens the buyer's offer editor for a marked market row after checking the row identity
+// against the market list in memory; the editor owner and its revision are stored on success.
 std::optional<CareerSession::TransferOfferEditorDispatch> CareerSession::open_transfer_offer(
     const ui::TransferMarketRequest& request, uint64_t& revision, std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
@@ -3661,6 +3961,9 @@ std::optional<CareerSession::TransferOfferEditorDispatch> CareerSession::open_tr
     } catch (const std::exception& e) { error = e.what(); return std::nullopt; }
 }
 
+// Starts a poaching attempt for a squad slot: the attempt draws random numbers, so the revision
+// advances whenever the result is not invalid; a ready attempt also opens the offer editor on
+// the special poach row and remembers the attempt in poach_.
 std::optional<CareerSession::PoachDispatch> CareerSession::open_poach(
     int manager_slot, int squad_slot, uint64_t& revision, std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
@@ -3702,6 +4005,9 @@ std::optional<CareerSession::PoachDispatch> CareerSession::open_poach(
     } catch (const std::exception& e) { error = e.what(); return std::nullopt; }
 }
 
+// Closes the table opened only to choose a poach target: needs an unchanged table owner, then
+// restores the display word and drops the family owner without a family close. False with
+// 'error' if stale.
 bool CareerSession::close_poach_table_selection(const ui::LeagueFamilyRequest& request,std::string& error) {
     error.clear();
     if(!poach_table_selection_ || request.kind!=ui::LeagueFamilyRequestKind::close || request.from_child!=1 ||
@@ -3722,6 +4028,11 @@ bool CareerSession::close_poach_table_selection(const ui::LeagueFamilyRequest& r
     league_family_owner_.reset();return true;
 }
 
+// Poach flow driven by UI callbacks: checks the request is a pristine open_poach request of the
+// current revision (320x240 backdrop, nothing else open), then reports attempts-used or
+// transfer-ban notices, or lets the player pick a squad player in a table on a cloned session
+// and opens the poach from that choice. The UI acknowledges through 'accept'; any failure,
+// including a session changed by the acknowledgement, restores the checkpoint and revision.
 bool CareerSession::dispatch_poach_ui(const ui::TransferMarketRequest& request,
     const Image& backdrop, const PoachPlayerSelector& select, const PoachUiAccept& accept,
     uint64_t& revision, std::string& error) {
@@ -3829,6 +4140,10 @@ bool CareerSession::dispatch_poach_ui(const ui::TransferMarketRequest& request,
     }
 }
 
+// Applies one editor event (field quote change, submit, cancel, team info, player info) to the
+// open offer editor: identity and quote must match the owner and the posted row must equal the
+// single field change. Runs on copies; the revision rises only if state, runtime bytes or a
+// random generator actually changed. A closing editor ends a poach attempt and clears the owner.
 std::optional<CareerSession::TransferOfferEditorDispatch> CareerSession::dispatch_transfer_offer(
     const ui::OutgoingTransferRequest& request, const HumanBuyerSaleHooks& presenters,
     uint64_t& revision, std::string& error,
@@ -3950,6 +4265,9 @@ std::optional<CareerSession::TransferOfferEditorDispatch> CareerSession::dispatc
     } catch (const std::exception& e) { error = e.what(); return std::nullopt; }
 }
 
+// Quotes a purchase, lender snapshot or squad row preview (the listing identity is re-checked)
+// using a copy of the W random stream; the stream and revision are updated only if the quote
+// and its projection both succeed.
 std::optional<CareerSession::TransferMarketPreviewDispatch> CareerSession::preview_transfer_market(
     const ui::TransferMarketRequest& request, uint64_t& revision, std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
@@ -4023,6 +4341,10 @@ std::optional<CareerSession::TransferMarketPreviewDispatch> CareerSession::previ
     }
 }
 
+// Direct market actions of a human manager: review offers, submit a bid, list a player. Needs
+// a request of the current revision for the active manager's club; loans and marked batches are
+// not accepted here. The allocator gate comes from the turn driver, never from the presenter.
+// The staged copy is committed (revision plus one) only if something changed.
 std::optional<TransferActionResult> CareerSession::dispatch_transfer_market(
     const ui::TransferMarketRequest& request, const HumanBuyerSaleHooks& presenters,
     uint64_t& revision, std::string& error,
@@ -4157,9 +4479,14 @@ std::optional<TransferActionResult> CareerSession::dispatch_transfer_market(
     }
 }
 
+// Finishes the career setup after all managers are chosen: refuses while a modal owner is open
+// and runs the season setup and first steps with calendar_advance_active_ set (restored by
+// AdvanceReset). Returns false with 'error' (the engine's reason) on failure.
 bool CareerSession::finish(ui::CareerInitializationResult& result, std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
         top_scorers_owner_ || top_scorers_dispatch_active_ || stadium_.block_expansion || other_games_owner_ || other_games_dispatch_active_) { error = "strengths_active"; return false; }
+    // calendar_advance_active_ marks the span in which the calendar is being advanced; it is set for
+    // the whole setup/turn and restored by the scope guard below, so nested entries are safe.
     const bool previous_advance = calendar_advance_active_;
     calendar_advance_active_ = true;
     struct AdvanceReset { bool& active; bool previous; ~AdvanceReset() { active = previous; } }
@@ -4202,6 +4529,13 @@ bool CareerSession::finish(ui::CareerInitializationResult& result, std::string& 
     return true;
 }
 
+// Turn driver entry (advance_turn): the player presses "Weiter" at a desk. Stages of the driver
+// that count as a desk are MatchdayDesks and SeasonEndDesk; while the day is played the claimed
+// turn is marked Failed until it completes. Every refusal below (open modal owner, completed
+// career, saved turn that cannot be continued, stale revision or manager slot, exhausted
+// cursor) returns a Failed result with the reason and leaves the state untouched.
+// Order of work: resolve the manager's pending offers on staged copies (all or nothing), then
+// advance the driver to the next desk, then publish the new revision and the results view.
 TurnAdvanceResult CareerSession::dispatch_kickoff(const ui::DeskRequest& request, uint64_t& revision,
                                                    std::string& error) {
     error.clear();
@@ -4256,6 +4590,7 @@ TurnAdvanceResult CareerSession::dispatch_kickoff(const ui::DeskRequest& request
         result.reason = error;
         return result;
     }
+    // Builds the result that keeps the player at the current desk (revision unchanged) with 'reason'.
     const auto remain_at_desk = [&](TurnDeskKind kind, std::string reason) {
         if (reason.empty()) reason = "post-desk pending presenter stopped";
         error = std::move(reason);
@@ -4275,6 +4610,8 @@ TurnAdvanceResult CareerSession::dispatch_kickoff(const ui::DeskRequest& request
     // Pending decisions and their cursor checks must complete together or
     // restore the previous desk. Once simulation starts, its terminal failure
     // cursor must stay claimed: external presentation cannot be rolled back.
+    // Transaction around the pending-offer decisions: if the function returns before the driver
+    // claims the turn, the destructor restores the checkpoint taken at entry (state, revision).
     struct KickoffTransaction {
         CareerSession& session;
         uint64_t& revision;
@@ -4288,10 +4625,14 @@ TurnAdvanceResult CareerSession::dispatch_kickoff(const ui::DeskRequest& request
         }
         ~KickoffTransaction() { restore(); }
     } transaction{*this, revision, advertising_session_checkpoint(revision)};
+    // Rolls the transaction back, then stays at the desk with 'reason'.
     const auto stop_at_desk = [&](TurnDeskKind kind, std::string reason) {
         transaction.restore();
         return remain_at_desk(kind, std::move(reason));
     };
+    // calendar_advance_active_ marks the span in which the turn driver plays the day; live overviews
+    // and live settings need it, desk modals refuse to open while it is set. The scope guard
+    // (AdvanceReset) restores the previous value on every exit.
     const bool previous_advance = calendar_advance_active_;
     calendar_advance_active_ = true;
     struct AdvanceReset { bool& active; bool previous; ~AdvanceReset() { active = previous; } }
@@ -4371,6 +4712,8 @@ TurnAdvanceResult CareerSession::dispatch_kickoff(const ui::DeskRequest& request
     // Keep the checkpoint from before the complete pending decision batch so a
     // missing decision owner cannot commit its Native cursor cleanup or leave
     // an expired player partially advanced.
+    // Kept so a contract-expiry or loan stop during the month change can still undo the already
+    // resolved pending decisions; the transaction itself is released just below.
     std::optional<AdvertisingSessionCheckpoint> contract_expiry_checkpoint = transaction.before;
     transaction.before.reset(); // claim the completed decision batch before simulation callbacks
     turn_driver_.reality_rules = &exe_;
@@ -4409,6 +4752,10 @@ TurnAdvanceResult CareerSession::dispatch_kickoff(const ui::DeskRequest& request
 }
 
 
+// Mailbox actions on one of the 40 entries for the active manager: keep toggle or delete. The
+// request must carry the current revision, the active manager slot and the expected entry bytes
+// (stale entries are refused); the manager's bit in the recipient or kept word is flipped and the
+// revision advances. Returns false with a player-visible German text in 'error' otherwise.
 bool CareerSession::dispatch_mailbox(const ui::MailboxActionRequest& request, uint64_t& revision,
                                      std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
@@ -4470,6 +4817,8 @@ bool CareerSession::dispatch_mailbox(const ui::MailboxActionRequest& request, ui
     return true;
 }
 
+// Returns the mailbox page when the active human manager still has the notification bit set,
+// nothing otherwise (no change of state).
 std::optional<ui::MailboxState> CareerSession::pending_mailbox_notification(uint64_t revision) const {
     if (!g_.memory.has(::bmh::layout::ActiveManager)) return std::nullopt;
     const int manager = int(g_.memory.u8(::bmh::layout::ActiveManager));
@@ -4480,6 +4829,8 @@ std::optional<ui::MailboxState> CareerSession::pending_mailbox_notification(uint
     return ui::mailbox_state_from_game(g_, manager, revision);
 }
 
+// Acknowledges closing the mailbox for the active manager: clears only that manager's
+// notification bit (kept outside the saved data, so the revision is not advanced).
 bool CareerSession::acknowledge_mailbox_close(const ui::MailboxCloseRequest& request,
                                                uint64_t revision, std::string& error) {
     if (!g_.memory.has(::bmh::layout::ActiveManager) || request.manager_slot < 0 || request.manager_slot >= 4 ||
@@ -4499,6 +4850,12 @@ bool CareerSession::acknowledge_mailbox_close(const ui::MailboxCloseRequest& req
     return true;
 }
 
+// Settings group (desk settings, live settings, settings files). The options grid has 20 rows x 9
+// columns stored as 180 bytes: columns 0-6 are two-state switches, 7 and 8 numeric steppers.
+// Write of one cell: refuses while a scoped settings owner is open unless called by it, checks
+// the active manager, revision and that the posted raw block still equals the saved one, then
+// applies the allowed edit (locks and original limits respected) and bumps the revision.
+// Returns false with a player-visible German text in 'error' otherwise.
 bool CareerSession::dispatch_settings(const ui::SettingsWriteRequest& request, uint64_t& revision,
                                       std::string& error) {
     if ((live_settings_owner_ && !live_settings_dispatch_active_) ||
@@ -4625,6 +4982,10 @@ bool CareerSession::dispatch_settings(const ui::SettingsWriteRequest& request, u
     return true;
 }
 
+// Opens the settings page from a running match (the 'S' request): only inside a calendar advance
+// with the engine bound to this session, the manager at the active desk and no other modal
+// owner. Works on a staged copy of the state and runtime bytes, commits it together with the new
+// owner and revision on success; empty optional with 'error' on failure.
 std::optional<CareerSession::LiveSettingsProjection> CareerSession::open_live_settings(
     const LiveSettingsRequest& request,MatchEngine& engine,uint64_t& revision,std::string& error) {
     error.clear();
@@ -4692,6 +5053,9 @@ std::optional<CareerSession::LiveSettingsProjection> CareerSession::open_live_se
     }
 }
 
+// Applies one action of the open live settings page (cell write or settings file request). The
+// owner snapshot, engine view, match groups and random counters must be unchanged since the
+// last page; failures return an empty optional with 'error' and roll the write back.
 std::optional<CareerSession::LiveSettingsDispatch> CareerSession::dispatch_live_settings(
     const LiveSettingsAction& action,MatchEngine& engine,uint64_t& revision,std::string& error) {
     error.clear();
@@ -4715,6 +5079,8 @@ std::optional<CareerSession::LiveSettingsDispatch> CareerSession::dispatch_live_
             error="live settings: active Source match list changed";return {};
         }
     const auto current=*live_settings_owner_;
+    // Scope guard: calendar_advance_active_ is off while the nested settings code runs and is
+    // restored on exit.
     struct LiveSettingsBoundaryScope {
         bool& active;bool previous;
         explicit LiveSettingsBoundaryScope(bool& value):active(value),previous(value){active=false;}
@@ -4780,6 +5146,9 @@ std::optional<CareerSession::LiveSettingsDispatch> CareerSession::dispatch_live_
             live_settings_owner_=std::move(updated);++revision;
             return result;
         }
+        // Close: the owner, sequence and revision must match. The live-scene flag and a few runtime
+        // latches are derived from the settings switches, then the owner is dropped and the revision
+        // advances.
         const auto& close=std::get<LiveSettingsCloseRequest>(action);
         if(close.owner!=current.request||close.owner.sequence!=current.request.sequence||close.owner.revision!=revision)
             throw FormatError("live settings: stale or mismatched Source close");
@@ -4812,6 +5181,10 @@ std::optional<CareerSession::LiveSettingsDispatch> CareerSession::dispatch_live_
     }
 }
 
+// Desk settings group (menu 19) shares the cell write and file code with the live settings but
+// keeps its own owner (desk_settings_owner_). Pattern: open on a staged copy -> write / file /
+// close actions that must find the owner snapshot unchanged -> close.
+// Captures state, runtime bytes, owner and scope counter so the UI flow can roll back.
 CareerSession::DeskSettingsCheckpoint CareerSession::desk_settings_checkpoint(uint64_t revision) const {
     return {g_,club_modal_runtime_,desk_settings_owner_ ?
         std::optional<DeskSettingsOwner>(desk_settings_owner_->owner) : std::nullopt,
@@ -4819,6 +5192,10 @@ CareerSession::DeskSettingsCheckpoint CareerSession::desk_settings_checkpoint(ui
         next_desk_settings_scope_,revision};
 }
 
+// Loads or saves the 180-byte settings block as a .ein file on a staged state (const: it never
+// touches the live state). Validates owner fields, extension, symlink and size; save refuses an
+// existing file without the overwrite flag. Returns false with a short error code in 'error';
+// 'loaded' tells whether a load changed the staged state.
 bool CareerSession::apply_settings_file(const ui::SaveLoadRequest& request,int manager_slot,int origin_item_id,
                                        GameState& staged,bool& loaded,std::string& error) const {
     constexpr size_t kBytes=180;
@@ -4869,6 +5246,8 @@ bool CareerSession::apply_settings_file(const ui::SaveLoadRequest& request,int m
     error.clear();return true;
 }
 
+// Restores a desk settings checkpoint: state, runtime bytes, owner (with a fresh snapshot),
+// scope counter and revision.
 void CareerSession::restore_desk_settings_checkpoint(DeskSettingsCheckpoint checkpoint,uint64_t& revision) {
     g_=std::move(checkpoint.state);club_modal_runtime_=std::move(checkpoint.runtime);
     desk_settings_owner_.reset();
@@ -4882,6 +5261,10 @@ void CareerSession::restore_desk_settings_checkpoint(DeskSettingsCheckpoint chec
     next_desk_settings_scope_=checkpoint.next_scope;revision=checkpoint.revision;
 }
 
+// Opens the desk settings page from menu item 19: the request must name an enabled menu-19 item
+// of the current revision for the active manager and no other owner, dispatch or calendar advance
+// may be active. Works on a staged copy that is committed with the owner on success; empty
+// optional with 'error' otherwise.
 std::optional<CareerSession::DeskSettingsProjection> CareerSession::open_desk_settings(
     const ui::DeskRequest& request,uint64_t& revision,std::string& error) {
     error.clear();
@@ -4936,6 +5319,9 @@ std::optional<CareerSession::DeskSettingsProjection> CareerSession::open_desk_se
     } catch(const std::exception& e) {error=e.what();return {};}
 }
 
+// Applies a cell write, a settings file request or the close of the desk settings page. The
+// owner snapshot, random counters and active manager must be unchanged. A failed write is rolled
+// back and the revision restored.
 std::optional<CareerSession::DeskSettingsDispatch> CareerSession::dispatch_desk_settings(
     const DeskSettingsAction& action,uint64_t& revision,std::string& error) {
     error.clear();
@@ -4994,6 +5380,9 @@ std::optional<CareerSession::DeskSettingsDispatch> CareerSession::dispatch_desk_
             g_=std::move(staged);desk_settings_owner_=std::move(updated);++revision;
             return result;
         }
+        // Close: validates owner and revision. When the stepper at row 7 column 7 changed, the 32-bit
+        // runtime counter after it is reset (new value 0) or shifted by 60 per step; the live-scene
+        // flag and other latches are derived from the switches and the owner is dropped.
         const auto& close=std::get<DeskSettingsClose>(action);
         if(close.owner!=current.owner||close.owner.revision!=revision)
             throw FormatError("desk settings: stale close request");
@@ -5029,6 +5418,13 @@ std::optional<CareerSession::DeskSettingsDispatch> CareerSession::dispatch_desk_
     }
 }
 
+// Advertising group: renewal check/answer, offers and spending. Pattern: the UI sends an
+// AdvertisingRequest with request id (must increase), revision, manager slot and club; the
+// session validates against the active manager, applies the change on the live state inside a
+// checkpoint (apply_advertising rolls everything back if validation, the action or the
+// acknowledgement fails) and bumps the revision.
+// Simple renewal check for the active manager; the revision is bumped unless the contract has
+// not expired. Returns nothing with a German 'error' text if stale or invalid.
 std::optional<AdvertisingRenewal> CareerSession::check_advertising_renewal(int manager_slot, int display_slot,
                                                                          uint64_t& revision, std::string& error) {
     error.clear();
@@ -5050,6 +5446,8 @@ std::optional<AdvertisingRenewal> CareerSession::check_advertising_renewal(int m
     return renewal;
 }
 
+// Answers an offered renewal (renew or decline) for the active manager and bumps the revision;
+// false with a German 'error' text if the request is stale.
 bool CareerSession::answer_advertising_renewal(int manager_slot, int contract_slot, bool renew, uint64_t& revision,
                                                std::string& error) {
     error.clear();
@@ -5069,6 +5467,9 @@ bool CareerSession::answer_advertising_renewal(int manager_slot, int contract_sl
 
 
 
+// Copies nearly the whole session (state, random generators, turn driver, every modal owner,
+// dispatch flags, scope counters, runtime bytes and the given revision) for rollback and for the
+// "nothing changed" comparison below. Also used outside advertising, e.g. around the kickoff.
 CareerSession::AdvertisingSessionCheckpoint CareerSession::advertising_session_checkpoint(uint64_t revision) const {
     AdvertisingSessionCheckpoint c;
     c.state=g_; c.game=game_; c.rand=rand_; c.driver=turn_driver_;
@@ -5098,6 +5499,8 @@ CareerSession::AdvertisingSessionCheckpoint CareerSession::advertising_session_c
     return c;
 }
 
+// Puts back everything advertising_session_checkpoint captured (the caller restores the
+// revision itself).
 void CareerSession::restore_advertising_session_checkpoint(AdvertisingSessionCheckpoint c) {
     g_=std::move(c.state); game_=c.game; rand_=c.rand; turn_driver_=std::move(c.driver);
     source_desk_callargs_=std::move(c.desk_callargs); saved_turn_error_=std::move(c.saved_turn_error);
@@ -5124,6 +5527,9 @@ void CareerSession::restore_advertising_session_checkpoint(AdvertisingSessionChe
     last_advertising_request_id_=c.last_request_id; manager_join_=std::move(c.manager_join);
 }
 
+// True when the live session equals the checkpoint in saved state, random counters, turn driver
+// stage, owners, flags, scope counters and revision; used to detect a callback that changed the
+// session behind the engine's back.
 bool CareerSession::advertising_session_unchanged(const AdvertisingSessionCheckpoint& c,
                                                   uint64_t revision) const {
     const auto byte_same=[&](uint32_t at) {
@@ -5160,6 +5566,11 @@ bool CareerSession::advertising_session_unchanged(const AdvertisingSessionCheckp
         last_contract_request_id_==c.last_contract_request_id && transfer_offer_revision_==c.transfer_offer_revision;
 }
 
+// Renewal question with a UI presenter. Refuses a competing owner or dispatch (competing_owner)
+// and a stale request (increasing request id, active manager, club, revision, contract bytes).
+// The presenter runs on a staged copy; the session is always restored after it, and only the
+// staged result of the confirmed answer becomes live (revision plus one). Returns nothing with a
+// German 'error' text on failure.
 std::optional<AdvertisingRenewal> CareerSession::dispatch_advertising_renewal(
     const ui::AdvertisingRequest& request, uint64_t& revision, std::string& error,
     const AdvertisingRenewalPresenter& presenter) {
@@ -5259,6 +5670,9 @@ std::optional<AdvertisingRenewal> CareerSession::dispatch_advertising_renewal(
     }
 }
 
+// Entry point for advertising requests: runs the renewal or the offer/spending dispatch and then
+// the acknowledgement callback; any failure or exception restores the advertising checkpoint and
+// the old revision (exceptions are rethrown).
 bool CareerSession::apply_advertising(const ui::AdvertisingRequest& request, uint64_t& revision,
     std::string& error, const AdvertisingAcknowledge& acknowledge,
     const AdvertisingRenewalPresenter& presenter) {
@@ -5288,6 +5702,8 @@ bool CareerSession::apply_advertising(const ui::AdvertisingRequest& request, uin
     }
 }
 
+// Builds an accept_offer request from the page the player saw and applies it; false with 'error'
+// if the displayed offer no longer exists.
 bool CareerSession::accept_advertising_selection(const ui::AdvertisingState& observed,
     int display_slot, int raw_offer, uint64_t request_id, uint64_t& revision, std::string& error) {
     if (display_slot < 0 || display_slot >= int(observed.offers.size())) {
@@ -5314,6 +5730,8 @@ bool CareerSession::accept_advertising_selection(const ui::AdvertisingState& obs
     return apply_advertising(request, revision, error);
 }
 
+// Builds a set_spending request for budget slots 16-18 from the observed page and applies it;
+// the observed amount and delivery weeks are sent as the expected values.
 bool CareerSession::set_advertising_budget(const ui::AdvertisingState& observed, int target_slot,
     uint32_t amount, uint64_t request_id, uint64_t& revision, std::string& error,
     AdvertisingSpendingResult& result) {
@@ -5336,6 +5754,10 @@ bool CareerSession::set_advertising_budget(const ui::AdvertisingState& observed,
         [&](const AdvertisingActionResult& applied) { result = applied.spending; });
 }
 
+// Validates an offer or spending request (no modal owner open, active manager and club, current
+// revision, a request id greater than the last one) and applies it to the live state. The
+// renewal kind is refused here; it goes through dispatch_advertising_renewal. False with a
+// German 'error' text otherwise.
 bool CareerSession::dispatch_advertising(const ui::AdvertisingRequest& request, uint64_t& revision,
                                           std::string& error, AdvertisingSpendingResult* spending_result) {
     if (advertising_renewal_dispatch_active_) { error = "advertising_renewal_active"; return false; }
@@ -5391,10 +5813,18 @@ bool CareerSession::dispatch_advertising(const ui::AdvertisingRequest& request, 
     return true;
 }
 
+// Contract group (negotiation at the desk). Flow: request_demands creates a quote (contract_quote_)
+// that binds the follow-up requests (offer, bonuses, insurance) by quote id, row and player;
+// each follow-up must carry a higher request id and the quote's revision. State changes happen on
+// staged copies and are committed together with the revision bump.
+// Validates request id (must increase), revision, active manager and club (not the national team)
+// and the squad row against the player id; rejects with a German 'error' text and returns false.
+// On success it fills 'result' (quote id, demands, accepted flag and original feedback text).
 bool CareerSession::dispatch_contract(const ui::ContractRequest& request, uint64_t& revision,
                                       ui::ContractActionResult& result, std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
         top_scorers_owner_ || top_scorers_dispatch_active_ || stadium_.block_expansion || other_games_owner_ || other_games_dispatch_active_) { error = "strengths_active"; return false; }
+    // Sets the player-visible error text and returns false.
     const auto reject = [&](std::string message) { error = std::move(message); return false; };
     const auto original_text = [&](uint32_t address) {
         return ui::original_to_utf8(texts_[(address - ::bmh::layout::TextPointerTable) / 4]);
@@ -5526,6 +5956,10 @@ bool CareerSession::dispatch_contract(const ui::ContractRequest& request, uint64
     return true;
 }
 
+// Common check for desk setting changes (ticket price, automation): no modal owner open, career
+// not complete, optionally the desk phase (no calendar advance or pending dispatch), and the
+// identity must match the active manager, revision, club and stable club identity. Sets a short
+// error code and returns false otherwise.
 bool CareerSession::validate_desk_setting_owner(const DeskSettingIdentity& identity, uint64_t revision,
                                                  std::string& error, bool require_desk_phase) const {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
@@ -5557,6 +5991,10 @@ bool CareerSession::validate_desk_setting_owner(const DeskSettingIdentity& ident
     return true;
 }
 
+// Writes one desk setting for 'manager': the ticket price (admission 8-25, not for the national
+// team) or automation option 'index' (0 = saved formation 0-8 limited to the saved formation
+// mask, 1-3 flags, 4 training automation not for the national team). Sets 'error' on a rejected
+// value; does not bump the revision (the caller does).
 bool CareerSession::apply_desk_setting(int manager, bool price, int index, int value, std::string& error) {
     const size_t rec = size_t(manager) * 0xb0c;
     const bool national = g_.manager_teams[size_t(manager)] == kNoTeam;
@@ -5588,6 +6026,7 @@ bool CareerSession::apply_desk_setting(int manager, bool price, int index, int v
     return true;
 }
 
+// Validates the owner and the price range (8-25) and applies the ticket price; revision plus one.
 bool CareerSession::dispatch_ticket_price(const TicketPriceRequest& request, uint64_t& revision,
                                           std::string& error) {
     if (!validate_desk_setting_owner(request.identity, revision, error)) return false;
@@ -5597,6 +6036,8 @@ bool CareerSession::dispatch_ticket_price(const TicketPriceRequest& request, uin
     return true;
 }
 
+// Validates the owner and applies one automation switch (formation automation needs a formation
+// 1-8 exactly when enabled); revision plus one.
 bool CareerSession::dispatch_automation(const AutomationRequest& request, uint64_t& revision,
                                        std::string& error) {
     if (!validate_desk_setting_owner(request.identity, revision, error)) return false;
@@ -5615,6 +6056,9 @@ bool CareerSession::dispatch_automation(const AutomationRequest& request, uint64
     return true;
 }
 
+// Desk widget click (ticket price or automation option): the request must belong to a visible,
+// enabled desk item of the matching kind; the new value is derived here (formation automation
+// cycles to the next available formation, flags toggle) and applied; revision plus one.
 bool CareerSession::dispatch_desk_widget(const ui::DeskRequest& request, uint64_t& revision,
                                          std::string& error) {
     const int active = g_.memory.has(::bmh::layout::ActiveManager) ? int(g_.memory.u8(::bmh::layout::ActiveManager)) : -1;
@@ -5659,6 +6103,12 @@ bool CareerSession::dispatch_desk_widget(const ui::DeskRequest& request, uint64_
     return true;
 }
 
+// Desk layout editing (move an item, open or close a quick-bar drawer, send items to or
+// restore them from a folder or bin). The desk is 54 item records of 16 bytes per manager. The
+// request carries the layout before and after; this function checks that "before" equals the live
+// bytes, recomputes the expected "after" for the operation itself, requires an exact match, and
+// verifies the resulting desktop projection before committing (revision plus one). Any
+// mismatch returns false with a short error code and changes nothing.
 bool CareerSession::dispatch_desktop_layout(const ui::DeskRequest& request, uint64_t& revision,
                                            std::string& error) {
     constexpr size_t kItems=54, kStride=16, kBytes=kItems*kStride;
@@ -5696,6 +6146,9 @@ bool CareerSession::dispatch_desktop_layout(const ui::DeskRequest& request, uint
         request.layout_operation==ui::DeskLayoutOperation::restore_folder_child)&&!source_drag_enabled) {
         error="source_desk_drag_disabled";return false;
     }
+    // Each case rebuilds 'expected' (the layout bytes after the operation) from the live layout:
+    // bounds and optional grid snapping for moves, linked list chain edits (offsets +5/+6) for
+    // drawers, folders and the bin.
     switch(request.layout_operation) {
     case ui::DeskLayoutOperation::move_item: {
         if(request.layout_target_item!=-1 || expected[at+12]==72) { error="invalid_desk_layout_move_target"; return false; }
@@ -5867,6 +6320,9 @@ bool CareerSession::dispatch_desktop_layout(const ui::DeskRequest& request, uint
     g_=std::move(staged); ++revision; error.clear(); return true;
 }
 
+// Sets one tactic option (index 0-7, value within the executable's limit) for the active
+// manager; touches only the manager record option bytes, never the tactics board or random
+// generators. False with a German 'error' text when stale or invalid; revision plus one.
 bool CareerSession::dispatch_tactics(const ui::TacticsRequest& request, uint64_t& revision,
                                     std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
@@ -5904,6 +6360,9 @@ bool CareerSession::dispatch_tactics(const ui::TacticsRequest& request, uint64_t
     return true;
 }
 
+// Lineup requests of the active manager (refused during a calendar advance or pending offer
+// dispatch). prepare_lineup builds the lineup entry on a staged copy and accepts it only when
+// the first eleven squad rows form a valid authoritative lineup.
 bool CareerSession::dispatch_lineup(const ui::LineupRequest& request, uint64_t& revision,
                                     std::string& error) {
     if (calendar_advance_active_ || pending_offer_dispatch_active_) {
@@ -5967,6 +6426,11 @@ bool CareerSession::dispatch_lineup(const ui::LineupRequest& request, uint64_t& 
         ++revision;
         return true;
     }
+    // Swap path: only allowed after prepare_lineup for the same manager and club. The two rows must
+    // still hold the slots and players the UI saw; injured players and the foreign-player rule are
+    // refused until their dialogs exist. The swap exchanges squad slots (keeping the role bits with
+    // the row) and tactic board entries, re-syncs the card row ids and switches the manager's
+    // formation automation off.
     if (request.kind != ui::LineupRequestKind::swap_players ||
         lineup_entry_manager_ != active || lineup_entry_club_ != request.runtime_club ||
         request.first_row < 0 || request.second_row < 0 || request.first_row == request.second_row ||
@@ -6021,6 +6485,12 @@ bool CareerSession::dispatch_lineup(const ui::LineupRequest& request, uint64_t& 
     return true;
 }
 
+// Live overview dispatch (pattern open -> dispatch -> acknowledge): applies one action of the
+// overview opened by open_running_overview. Requires an active calendar advance, the owner of the
+// current revision and an engine that is still bound to this session with unchanged match groups
+// and referees. The action variant selects the child: league family navigation or control,
+// strengths, pairings or the cup other-games page. Close actions end the owner and return a
+// preparation projection; a failure returns an empty optional with 'error'.
 std::optional<CareerSession::LiveOverviewDispatch> CareerSession::dispatch_live_overview(
     const LiveOverviewAction& action, MatchEngine& engine, uint64_t& revision, std::string& error,
     const TransferOfferTeamInfoPresenter& team_info) {
@@ -6044,6 +6514,7 @@ std::optional<CareerSession::LiveOverviewDispatch> CareerSession::dispatch_live_
             error="live overview: active Source match group changed";return {};
         }
     const auto live= *live_overview_owner_;
+    // Scope guard: calendar_advance_active_ is off while the family code runs and is restored on exit.
     struct LiveBoundaryFamilyScope {
         bool& active; bool previous;
         explicit LiveBoundaryFamilyScope(bool& value) : active(value), previous(value) { active=false; }
@@ -6181,6 +6652,8 @@ std::optional<CareerSession::LiveOverviewDispatch> CareerSession::dispatch_live_
                 navigation.kind=ui::LeagueFamilyRequestKind::navigate;
                 navigation.from_child=3;
                 navigation.target_child=strengths->kind==ui::StrengthsAction::table?1:2;
+                // The opposite guard: sets calendar_advance_active_ for the nested table/pairings navigation,
+                // which expects to run inside the advance, and restores the value afterwards.
                 struct RestoreObserverScope { bool& flag; bool previous; explicit RestoreObserverScope(bool& f):flag(f),previous(f){flag=true;} ~RestoreObserverScope(){flag=previous;} } observer_scope(calendar_advance_active_);
                 return dispatch_live_overview(LiveOverviewAction{navigation},engine,revision,error,team_info);
             }
@@ -6243,6 +6716,13 @@ std::optional<CareerSession::LiveOverviewDispatch> CareerSession::dispatch_live_
     }
 }
 
+// Live intervention group (lineup changes during a running match). Pattern: begin stores a
+// LiveInterventionCheckpoint (state, match groups, both random generators, revision), the
+// substitution requests work against it, finish rerates the team and bumps the revision, abort
+// puts everything back.
+// Begin: only after minute 2, source mode 2 or 8, for a human manager whose team plays in the
+// current match. Mode 2 also runs the lineup entry preparation. Returns false with a German
+// 'error' text and no open intervention otherwise.
 bool CareerSession::begin_live_intervention(int minute, int source_mode, int manager, int team,
         MatchEngine& engine, uint64_t& revision, std::string& error) {
     error.clear();
@@ -6290,6 +6770,10 @@ bool CareerSession::begin_live_intervention(int minute, int source_mode, int man
     return true;
 }
 
+// Begin for an automatic intervention caused by a match event (kind 1 or 2): the event must match
+// the engine's current group, match, side and teams, the manager must have the automatic
+// option on, and the affected player must show the expected status. Opens the lineup entry like
+// mode 2; false with 'error' otherwise.
 bool CareerSession::begin_live_event_intervention(const LiveMatchEvent& event, MatchEngine& engine,
         uint64_t& revision, std::string& error) {
     error.clear();
@@ -6351,6 +6835,9 @@ bool CareerSession::begin_live_event_intervention(const LiveMatchEvent& event, M
     return true;
 }
 
+// Ends an event intervention: the open checkpoint must belong to exactly this event and the
+// engine groups must be unchanged. Only consumes the owner and bumps the revision (the rerate
+// belongs to the event itself).
 bool CareerSession::finish_live_event_intervention(const LiveMatchEvent& event, MatchEngine& engine,
         uint64_t& revision, std::string& error) {
     error.clear();
@@ -6391,6 +6878,9 @@ bool CareerSession::finish_live_event_intervention(const LiveMatchEvent& event, 
     return true;
 }
 
+// Ends a normal intervention: rerates the team on a staged engine copy; on success the staged
+// state, groups and generators replace the live ones and the revision advances, on a rerate
+// failure or exhausted revision the checkpoint is restored. False with a German 'error' text.
 bool CareerSession::finish_live_intervention(int minute, int source_mode, int manager, int team,
         MatchEngine& engine, uint64_t& revision, std::string& error) {
     error.clear();
@@ -6448,6 +6938,8 @@ bool CareerSession::finish_live_intervention(int minute, int source_mode, int ma
     return true;
 }
 
+// Abandons the matching open intervention and restores state, groups, random generators and the
+// revision from its checkpoint. Does nothing if no matching intervention is open.
 void CareerSession::abort_live_intervention(int minute, int source_mode, int manager, int team,
         MatchEngine& engine, uint64_t& revision) {
     if (!live_intervention_ || live_intervention_->minute != minute ||
@@ -6469,6 +6961,10 @@ void CareerSession::abort_live_intervention(int minute, int source_mode, int man
     live_intervention_.reset();
 }
 
+// Applies one swap of the open live intervention (mode 2 only): checks owner, revision, manager,
+// team and that the rows still hold the shown slots and players, whether it is a same-zone
+// exchange or a field/bench substitution, and the injury status of both players (some notices
+// are reported as "source_notice" codes in 'error'). False with 'error' on any failure.
 bool CareerSession::dispatch_live_substitution(const ui::LineupRequest& request, int minute,
         int source_mode, MatchEngine& engine, uint64_t& revision, std::string& error) {
     error.clear();
@@ -6653,6 +7149,8 @@ bool CareerSession::dispatch_live_substitution(const ui::LineupRequest& request,
     return true;
 }
 
+// Wraps dispatch_live_substitution: applied, a "source_notice" status carrying the original
+// notice address parsed from the error text, or rejected with the error text.
 LiveSubstitutionResult CareerSession::dispatch_live_substitution_result(
         const ui::LineupRequest& request, int minute, int source_mode,
         MatchEngine& engine, uint64_t& revision) {
@@ -6670,6 +7168,10 @@ LiveSubstitutionResult CareerSession::dispatch_live_substitution_result(
     return {LiveSubstitutionStatus::rejected, 0, request.manager_slot, std::move(error)};
 }
 
+// Sets one tactic option during the open live intervention (source mode 8, after minute 2): the
+// intervention owner, revision, manager, team and current match must match, the value must be in
+// range and available. Only the manager record bytes change; revision plus one and the open
+// intervention's current revision follows. False with a German 'error' text otherwise.
 bool CareerSession::dispatch_live_tactic(const ui::TacticsRequest& request, int minute,
         int source_mode, MatchEngine& engine, uint64_t& revision, std::string& error) {
     error.clear();
@@ -6734,6 +7236,11 @@ bool CareerSession::dispatch_live_tactic(const ui::TacticsRequest& request, int 
     return true;
 }
 
+// Pitch (lineup screen) group: all pitch actions (swap, move player, weights, formations,
+// set piece editor and takers, player orders, marking, page switches). A swap is forwarded to
+// dispatch_lineup. Everything else is checked against the display word, the saved set piece
+// signature and the expected old values in the request, applied on a staged copy of the state
+// and committed with a revision bump. False with a German 'error' text or a short code otherwise.
 bool CareerSession::dispatch_pitch(const ui::PitchRequest& request, uint64_t& revision,
                                     std::string& error) {
     if (request.kind == ui::PitchRequestKind::swap_players) {
@@ -6783,12 +7290,15 @@ bool CareerSession::dispatch_pitch(const ui::PitchRequest& request, uint64_t& re
     // is sufficient authority there; ordinary automation/ticket settings remain
     // desk-only. Keep all nested desk mutations blocked while allowing this Source
     // line-up window before the first desk has been created.
+    // True when the request belongs to the open live lineup intervention (same manager, team and
+    // revision); such requests are authorised by that owner instead of by the desk phase.
     const bool live_context = live_intervention_ && live_intervention_->source_mode == 2 &&
         request.manager_slot == live_intervention_->manager &&
         request.runtime_club == live_intervention_->team &&
         request.revision == live_intervention_->current_revision && request.revision == revision;
     const bool desk_phase = turn_driver_.stage == TurnDriver::Stage::MatchdayDesks ||
         turn_driver_.stage == TurnDriver::Stage::SeasonEndDesk;
+    // True during the very first lineup window before the first desk exists (driver stage Empty).
     const bool initial_lineup_phase = turn_driver_.stage == TurnDriver::Stage::Empty &&
         lineup_entry_manager_ == request.manager_slot && lineup_entry_club_ == request.runtime_club;
     if (!desk_phase && !initial_lineup_phase && !live_context) { error = "desk_setting_unavailable"; return false; }
@@ -7055,6 +7565,9 @@ bool CareerSession::dispatch_pitch(const ui::PitchRequest& request, uint64_t& re
     return true;
 }
 
+// Pitch request during a live intervention: needs the matching open intervention (mode 2) and
+// current revision. Formation and weight controls exist only in the initial preparation and are
+// refused here; the rest goes to dispatch_pitch.
 bool CareerSession::dispatch_live_pitch(const ui::PitchRequest& request, int minute, int source_mode,
         MatchEngine& engine, uint64_t& revision, std::string& error) {
     if (!live_intervention_ || live_intervention_->minute != minute ||
@@ -7087,6 +7600,8 @@ bool CareerSession::dispatch_live_pitch(const ui::PitchRequest& request, int min
     return dispatch_pitch(request, revision, error);
 }
 
+// Result-style wrapper: swaps return the substitution result (with source notices), other pitch
+// actions return applied or rejected with the error text.
 LiveSubstitutionResult CareerSession::dispatch_live_pitch_result(const ui::PitchRequest& request,
         int minute, int source_mode, MatchEngine& engine, uint64_t& revision) {
     if (request.kind == ui::PitchRequestKind::swap_players) {
@@ -7105,6 +7620,7 @@ LiveSubstitutionResult CareerSession::dispatch_live_pitch_result(const ui::Pitch
         0, request.manager_slot, std::move(error)};
 }
 
+// Desk-time swap only; any other pitch kind is refused.
 bool CareerSession::dispatch_pitch_swap(const ui::PitchRequest& request, uint64_t& revision,
                                         std::string& error) {
     if (request.kind != ui::PitchRequestKind::swap_players) {
@@ -7114,10 +7630,14 @@ bool CareerSession::dispatch_pitch_swap(const ui::PitchRequest& request, uint64_
     return dispatch_pitch(request, revision, error);
 }
 
+// Preparation (match day) projection of the live state at 'revision'; read-only.
 ui::PreparationState CareerSession::preparation_projection(uint64_t revision) const {
     return preparation_projection(g_, revision);
 }
 
+// Returns the opponent team of the manager's prepared lineup entry (from the captured desk call
+// arguments, confirmed against the desk projection), or nothing when the manager is not the
+// active prepared one, the day has no ordinary opponent or any check fails. Read-only.
 std::optional<int> CareerSession::prepared_lineup_opponent(int manager_slot, int runtime_club,
                                                             uint64_t revision) const {
     if (turn_driver_.stage != TurnDriver::Stage::MatchdayDesks || g_.indoor ||
@@ -7200,6 +7720,11 @@ std::optional<int> CareerSession::prepared_lineup_opponent(int manager_slot, int
     return current_pair ? std::optional<int>(opponent) : std::nullopt;
 }
 
+// Builds the preparation projection of 'state' and layers the session-owned extras on top: the
+// desktop, the lineup "entry prepared" flag and pitch extras, the bank notices and the stadium
+// page including its open dialogs (construction tip, periphery quote, block expansion editor)
+// when the stadium owner belongs to this exact manager, club and revision. Read-only.
+// Throws FormatError when the manager's league cannot be found.
 ui::PreparationState CareerSession::preparation_projection(const GameState& state, uint64_t revision) const {
     auto result = ui::preparation_from_game(state, exe_, revision);
     result.desktop = desktop_projection(state, revision);
@@ -7318,6 +7843,12 @@ ui::PreparationState CareerSession::preparation_projection(const GameState& stat
     return result;
 }
 
+// Training group: one request changes the types, areas, automation byte or one player's
+// intensity or focus of the active manager. The request carries the desired result; it is
+// validated against the current projection (stale manager, plan limits, expected values), applied
+// on a staged copy and committed with revision plus one. Manual edits clear the matching
+// assistant flag and never draw random numbers; initialize and enabling automation run the
+// automatic training. Returns false with a short error code in 'error' otherwise.
 bool CareerSession::dispatch_training(const ui::TrainingRequest& request, uint64_t& revision,
                                       std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
@@ -7487,6 +8018,10 @@ bool CareerSession::dispatch_training(const ui::TrainingRequest& request, uint64
     }
 }
 
+// Captures, for every manager slot, the competition id and opponent shown at the desk today
+// (defaults 33/34, or 32 at season end; no opponent). Only done while the driver is at a desk
+// stage; the values are kept in source_desk_callargs_ and later used to authenticate lineup
+// and pitch requests.
 void CareerSession::capture_source_desk_callargs() {
     source_desk_callargs_.clear();
     const auto stage = turn_driver_.stage;
@@ -7520,10 +8055,14 @@ void CareerSession::capture_source_desk_callargs() {
     }
 }
 
+// Desk projection of the live state at 'revision'; read-only.
 ui::DeskState CareerSession::desktop_projection(uint64_t revision) const {
     return desktop_projection(g_, revision);
 }
 
+// Desk projection of 'state'. Only at a desk stage (matchday or season end) are the next
+// competition and opponent filled in from the captured call arguments; otherwise they stay
+// unknown.
 ui::DeskState CareerSession::desktop_projection(const GameState& state, uint64_t revision) const {
     std::optional<int> source_default;
     if (turn_driver_.stage == TurnDriver::Stage::SeasonEndDesk) {
@@ -7545,6 +8084,10 @@ ui::DeskState CareerSession::desktop_projection(const GameState& state, uint64_t
     return ui::desk_from_game(state, exe_, revision, &turn_driver_.groups, source_default, callargs);
 }
 
+// Saving group. Autosave: set once the directory is known; the driver then calls
+// write_desk_autosave at each desk. Manual save (save_game) validates the target and writes on a
+// staged copy of the random generator. Both go through make_savegame / write_savegame (.FBM
+// container). Changing the autosave directory during an active turn throws FormatError.
 void CareerSession::configure_autosave_directory(const std::filesystem::path& directory) {
     if (autosave_directory_ && *autosave_directory_ == directory) return;
     if (calendar_advance_active_) throw FormatError("autosave directory change during active turn");
@@ -7554,10 +8097,14 @@ void CareerSession::configure_autosave_directory(const std::filesystem::path& di
     };
 }
 
+// Returns and clears the last autosave error text.
 std::string CareerSession::take_autosave_error() {
     return std::exchange(autosave_error_, {});
 }
 
+// Writes the desk autosave under the original file name to a temporary file in the autosave
+// directory and renames it over the target; the random generator advances only on success.
+// Failures are stored in autosave_error_ (never thrown) and the temporary file is removed.
 void CareerSession::write_desk_autosave(const GameState& state, WatcomRandom& random) {
     std::filesystem::path temporary;
     try {
@@ -7593,6 +8140,10 @@ void CareerSession::write_desk_autosave(const GameState& state, WatcomRandom& ra
     }
 }
 
+// Manual save of the active manager's game to a .fbm path. Refused while a modal owner, editor
+// or pending decision is open or the career is complete; rejects symlink targets, a missing
+// directory and an existing file without 'overwrite'. The random generator advances only if the
+// write succeeded. Returns false with a short error code in 'error' otherwise.
 bool CareerSession::save_game(const std::filesystem::path& path, int manager_slot, bool overwrite, std::string& error) {
     if (advertising_renewal_dispatch_active_) { error="save_blocked_during_advertising_renewal"; return false; }
     if(balance_draft_||balance_dispatch_active_||strengths_owner_||strengths_dispatch_active_||
@@ -7629,6 +8180,10 @@ bool CareerSession::save_game(const std::filesystem::path& path, int manager_slo
     }
 }
 
+// Loads or saves the 0x360-byte menu layout (.men file) of the active manager. Needs the desk
+// item handle (record 53), no active flow and a payload whose link chain is valid. A load is
+// checked by projecting the desktop on a staged copy before it is committed (revision plus one);
+// a save refuses symlinks and existing files without overwrite. Short error codes in 'error'.
 bool CareerSession::dispatch_menu_layout(const ui::SaveLoadRequest& request, uint64_t& revision,
                                          std::string& error) {
     constexpr uint32_t kLayouts = ::bmh::layout::Desktops;
@@ -7752,6 +8307,11 @@ bool CareerSession::dispatch_menu_layout(const ui::SaveLoadRequest& request, uin
     return true;
 }
 
+// Training camp group: set_focus changes the four focus bytes of the active manager (an unchanged
+// or invalid focus is refused); book books a resort for the week after checking the focus the UI
+// saw, the weekly/visit limits and the funds (the booking draws random numbers). Refused while a
+// modal owner is open or when the manager slot, club or revision is stale; revision plus one on
+// success, short error codes in 'error' otherwise.
 bool CareerSession::dispatch_training_camp(const ui::TrainingCampRequest& request, uint64_t& revision,
                                           std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
@@ -7807,6 +8367,11 @@ bool CareerSession::dispatch_training_camp(const ui::TrainingCampRequest& reques
     return false;
 }
 
+// Bank group: deposit moves, share and fund trades, stock tips and bank credit. Needs the active
+// manager, club and current revision and no modal owner open. Every branch validates amounts and
+// counts against the manager record and the stock/fund blocks, then applies the change to the
+// live state and bumps the revision once. The notices of the last property purchase or credit
+// refund are kept for the next projection. Returns false with a short error code otherwise.
 bool CareerSession::dispatch_bank(const ui::BankRequest& request, uint64_t& revision, std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
         top_scorers_owner_ || top_scorers_dispatch_active_ || stadium_.block_expansion || other_games_owner_ || other_games_dispatch_active_) { error = "strengths_active"; return false; }
@@ -7940,6 +8505,8 @@ bool CareerSession::dispatch_bank(const ui::BankRequest& request, uint64_t& revi
     return true;
 }
 
+// True when a construction tip dialog is open and the process timer (when running) has no time
+// left; read-only.
 bool CareerSession::stadium_tip_deadline_expired() const {
     if (!stadium_.opened || (!stadium_.tip &&
         (!stadium_.block_expansion || !stadium_.block_expansion->tip))) return false;
@@ -7956,6 +8523,14 @@ bool CareerSession::stadium_tip_deadline_expired() const {
     return word(::bmh::layout::CareerSession_DispatchStrengths_ExecutableField2) != 0 && int32_t(word(::bmh::layout::CareerSession_FormatError_ExecutableField2)) < 1;
 }
 
+// Stadium group: an owner (stadium_) is opened with a scope id and every later request must echo
+// scope and sequence, the manager, club, stable club identity, game mode and revision. All
+// actions (data page, periphery quote/build, block expansion editor with its tip, investments)
+// run inside the apply lambda below; on failure the stadium checkpoint is restored, on success
+// revision, sequence and the owner's revision advance. Exceptions restore the checkpoint and
+// the revision and are rethrown. Short error codes in 'error' otherwise.
+// Older periphery callers send no scope envelope; a compatibility step fills it in for their four
+// original operations only.
 bool CareerSession::dispatch_stadium(const ui::StadiumRequest& supplied_request, uint64_t& revision, std::string& error,
                                     const ConstructionNoticeHook& notice_presenter,
                                     const SeasonTicketCompensationNoticeHook& compensation_presenter) {
@@ -8012,6 +8587,8 @@ bool CareerSession::dispatch_stadium(const ui::StadiumRequest& supplied_request,
     auto before = stadium_checkpoint();
     const uint64_t before_revision = revision;
     try {
+        // Performs the validated stadium action and returns true on success; 'invalid' records the
+        // reason and returns false.
         const auto apply = [&]() -> bool {
             const auto invalid = [&error](const char* reason) { error = reason; return false; };
             const auto plain = [&request](int object = -1) {
@@ -8311,6 +8888,8 @@ bool CareerSession::dispatch_stadium(const ui::StadiumRequest& supplied_request,
     }
 }
 
+// Submits a pools coupon for the active manager; only valid when the coupon has eleven matches.
+// Revision plus one; false with a short error code otherwise.
 bool CareerSession::dispatch_toto(const ui::TotoRequest& request, uint64_t& revision, std::string& error) {
     if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
         top_scorers_owner_ || top_scorers_dispatch_active_ || stadium_.block_expansion || other_games_owner_ || other_games_dispatch_active_) { error = "strengths_active"; return false; }
@@ -8332,12 +8911,17 @@ bool CareerSession::dispatch_toto(const ui::TotoRequest& request, uint64_t& revi
 
 namespace bmh::app {
 
+// Group: presenter hooks. Returns the hooks with the allocator gate taken from the turn driver,
+// so presenters can never decide it.
 PendingOfferHooks CareerSession::pending_hooks_for_dispatch(PendingOfferHooks hooks) const {
     // Presenters own answers and notice delivery, never allocator provenance.
     hooks.human_buyer_allocator_gate = turn_driver_.transfer_allocator_context;
     return hooks;
 }
 
+// Resets the three screen hooks (contract expiry, loan return, loan return offer) to empty. An
+// expiring contract without an installed presenter then stops the month change instead of being
+// decided automatically.
 void CareerSession::install_default_hooks() {
     // InstallDefaultHooks pauses at the Original contracts screen when a term expires.
     // Never synthesize a two-year renewal here: callers must install the real
@@ -8347,6 +8931,8 @@ void CareerSession::install_default_hooks() {
     g_.loan_return_offer_screen = {};
 }
 
+// Installs (or with an empty presenter removes) the contract expiry hook, keeping the other two
+// screen hooks.
 void CareerSession::set_contract_expiry_presenter(ContractExpiryPresenter presenter) {
     // Clear any previously installed presenter before replacing it. The only
     // fallback is an explicit unsupported expiry, never a synthesized decision.
@@ -8362,6 +8948,7 @@ void CareerSession::set_contract_expiry_presenter(ContractExpiryPresenter presen
     };
 }
 
+// Installs (or removes) the loan return question hook, keeping the other two screen hooks.
 void CareerSession::set_loan_return_presenter(LoanReturnPresenter presenter) {
     auto contract_hook = std::move(g_.contract_screen);
     auto loan_offer_hook = std::move(g_.loan_return_offer_screen);
@@ -8376,6 +8963,9 @@ void CareerSession::set_loan_return_presenter(LoanReturnPresenter presenter) {
     };
 }
 
+// Installs (or removes) the loan return offer hook; the hook runs the presenter against staged
+// club modal services with the allocator gate taken from the turn driver, and the staged runtime
+// bytes are kept only when the presenter's result is not negative.
 void CareerSession::set_loan_return_offer_presenter(LoanReturnOfferPresenter presenter,
                                                     HumanBuyerSaleHooks sale_hooks) {
     auto contract_hook = std::move(g_.contract_screen);

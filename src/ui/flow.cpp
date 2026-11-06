@@ -10,15 +10,21 @@
 #include <set>
 
 namespace bmh::ui {
+// Pointer motion without a button. Returns changed=true when a screen needs a redraw; only the
+// transfer market can raise a request from a plain move. The chain below runs from the screens that sit on
+// top of the others down to the setup screens, and the first screen that exists owns the pointer.
 FlowResult StartupFlow::move_action(int x, int y) {
+    // The indoor standings page (and its pending release barrier) ignores motion completely.
     if (indoor_standings_ || indoor_standings_release_barrier_) return {};
     if(world_cup_statistics_)return {world_cup_statistics_->move(x,y)};
     if(achievements_)return {achievements_->move(x,y)};
+    // A league-family request is waiting for the session: input stays blocked until it is acknowledged or rejected.
     if(family_table_dispatch_pending_)return {};
     if(family_table_range_dialog_) {
         const bool changed=family_table_range_dialog_->move(x,y);
         return {changed};
     }
+    // Screens below either forward motion to their own hover handling or ignore it (return {}, no redraw).
     if(other_games_)return {other_games_->move(x,y)};
     if(balance_)return {balance_->move(x,y)};
     if(top_scorers_)return {top_scorers_->move(x,y)};
@@ -43,7 +49,10 @@ FlowResult StartupFlow::move_action(int x, int y) {
             return finish_preparation_input(request, true);
         return {before != transfer_market_->state_json()};
     }
+    // The desktop only reacts when it is the visible screen, i.e. no submenu is open above it.
     if (desktop_ && screen_name() == "desktop") return {desktop_->pointer_move(x,y)};
+    // Remaining screens as one conditional chain: manager join, contracts (unless a player card covers them),
+    // read-only views and results (no hover), preparation sub-menus, and finally the setup / manager screens.
     const bool changed = joining_
         ? manager_ && !join_options_pending_ && !join_choice_pending_ && manager_->move(x, y)
         : contracts_ && !player_card_ ? contracts_->move(x, y)
@@ -57,7 +66,10 @@ FlowResult StartupFlow::move_action(int x, int y) {
 }
 
 
+// File-local validators: they throw FormatError when an engine projection does not match what the flow confirmed.
 namespace {
+// Checks the initial manager list from the engine against the confirmed choices: count, unique club and
+// portrait, slot mapping, identity of every slot and of the active manager.
 void validate_confirmed_manager_projection(const std::vector<ManagerChoice>& choices,
                                            const std::vector<InitializedManager>& managers,
                                            const DeskState& desk) {
@@ -90,6 +102,9 @@ void validate_confirmed_manager_projection(const std::vector<ManagerChoice>& cho
         desk.league != active.start_league)
         throw FormatError("career attachment: active manager identity does not match confirmed choice");
 }
+// Checks a DeskState returned by the engine against the confirmed roster and the runtime team mapping.
+// allow_turn_handoff is true for the advance_turn handoff, where the national-team coach takeover and
+// handback may legitimately swap the visible manager roster.
 void validate_confirmed_desk(const std::vector<ManagerChoice>& choices,
                              const std::vector<int>& runtime_teams,
                              const std::vector<DeskManagerIdentity>& previous,
@@ -169,6 +184,8 @@ void validate_confirmed_desk(const std::vector<ManagerChoice>& choices,
 }
 }
 
+// Opens the join-manager dialog of a running career. Valid only at the idle desktop whose pending request is
+// the open_menu request for menu 29, with a roster that matches the engine; otherwise it throws.
 void StartupFlow::show_manager_join(std::vector<ManagerChoice> existing, SelectionContext context) {
     if (!desktop_ || !engine_attached_ || joining_ || in_preparation_menu() || in_readonly_view() || matchday_results_ ||
         !desktop_->pending() || desktop_->pending()->kind != DeskRequestKind::open_menu ||
@@ -189,6 +206,8 @@ void StartupFlow::show_manager_join(std::vector<ManagerChoice> existing, Selecti
     manager_.reset(); joining_=true; join_options_pending_=join_choice_pending_=false;
 }
 
+// Called by the session after it accepted a join_options or join_manager request: builds the next manager
+// screen from a newer engine context. A stale or unexpected context throws.
 void StartupFlow::resume_manager_join(SelectionContext context) {
     if (!joining_ || (!join_options_pending_ && !join_choice_pending_) ||
         context.revision < join_context_revision_ ||
@@ -200,6 +219,8 @@ void StartupFlow::resume_manager_join(SelectionContext context) {
     join_options_pending_=join_choice_pending_=false;
 }
 
+// Session accepts the join: the new desk projection must belong to the pending origin request (revision + 1,
+// same options, same existing managers). On success the desktop is replaced and the join state is cleared.
 void StartupFlow::acknowledge_manager_join(CareerInitializationResult result) {
     if (!joining_ || (!join_options_pending_ && !join_choice_pending_) || !desktop_ ||
         !desktop_->pending() || *desktop_->pending() != join_origin_ ||
@@ -227,6 +248,8 @@ void StartupFlow::acknowledge_manager_join(CareerInitializationResult result) {
     joining_=join_options_pending_=join_choice_pending_=false;
 }
 
+// Session rejects or cancels the join. An empty reason only closes the local menu; otherwise the desktop
+// shows the rejection. The join state is always cleared.
 void StartupFlow::reject_manager_join(std::string reason) {
     if (!joining_) return;
     if (reason.empty()) desktop_->resolve_local_menu();
@@ -235,13 +258,17 @@ void StartupFlow::reject_manager_join(std::string reason) {
     joining_=join_options_pending_=join_choice_pending_=false;
 }
 
+// Feedback image of the pitch screen after a formation save; empty when no pitch screen is open.
 std::optional<Image> StartupFlow::pitch_formation_save_feedback(bool restored)const{
     return pitch_?pitch_->formation_save_feedback(restored):std::nullopt;
 }
 
+// Left button held on the pitch screen: saves the formation template when the hold is long enough and the
+// pointer is inside the template area. Ignored while a release barrier or the player card is active.
 FlowResult StartupFlow::pitch_held_left(int x,int y,uint64_t source_ticks){
     if(!pointer_source_hold_ready(source_ticks)||!pitch_||player_card_||
        pitch_release_barrier_||pitch_hold_release_barrier_||
+       // Only the area x 240..319, y 112..207 reacts to a hold.
        x<240||x>=320||y<112||y>=208)return {};
     const auto before=pitch_->state_json();const auto request=pitch_->save_formation(x,y);
     PreparationRequest action;
@@ -254,11 +281,16 @@ FlowResult StartupFlow::pitch_held_left(int x,int y,uint64_t source_ticks){
     return finish_preparation_input(std::move(action),before!=pitch_->state_json());
 }
 
+// Button release after a hold of the given length (0..60000 ms). One-shot barriers swallow the release first;
+// the screens that act on the release position get it next; a short hold, or one outside the pitch template
+// area, is an ordinary click(); a hold of 2000 ms or more there saves the formation.
 FlowResult StartupFlow::hold(int x,int y,int milliseconds){
     if(milliseconds<0||milliseconds>60000)throw FormatError("hold duration must be 0..60000 ms");
+    // Release barriers: an earlier action already consumed this button, so its release is dropped once.
     if(pitch_hold_release_barrier_){pitch_hold_release_barrier_=false;return {};}
     if(pitch_release_barrier_){pitch_release_barrier_=false;return {};}
     if(balance_release_barrier_){balance_release_barrier_=false;return {};}
+    // These screens decide on the release position, so a hold is delivered as their release.
     if(other_games_)return finish_other_games_input(other_games_->release(x,y));
     if(balance_)return finish_balance_input(balance_->release(x,y));
     if(top_scorers_)return finish_top_scorers_input(top_scorers_->release(x,y));
@@ -271,34 +303,53 @@ FlowResult StartupFlow::hold(int x,int y,int milliseconds){
     return finish_preparation_input(std::move(action),before!=state_json());
 }
 
+// Mouse button release (UP), optionally right button or double click. The chain below is ordered as follows:
+// 1. one-shot release barriers, which swallow the UP that belongs to an action already handled on DOWN;
+// 2. overlays and modal pages (indoor standings, records, achievements, readme, range dialog), which own the
+//    pointer while they exist;
+// 3. statistics pages, checked before their parent statistics menu and falling through to it on release;
+// 4. per-screen controllers (stadium, environment, join, contracts, friendly, calendar, tables, ...);
+// 5. preparation sub-menus, then the desktop, then the setup and manager screens.
+// Ownership rule: each screen holds at most one pending request. While one is pending the screen receives no
+// further input; the session must call the matching acknowledge or reject method to unblock it.
 FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
+    // The UP of a hold-saved formation is dropped once; the right button is not affected by the barrier.
     if(pitch_hold_release_barrier_&&!right){pitch_hold_release_barrier_=false;return {};}
+    // Same for the UP that closed a friendly-match question.
     if(friendly_question_release_barrier_&&!right) {
         friendly_question_release_barrier_=false;return {};
     }
+    // Barrier eats the UP that opened the indoor standings; afterwards the page ignores release (next line).
     if (indoor_standings_release_barrier_) {
         indoor_standings_release_barrier_ = false;
         return {};
     }
     if (indoor_standings_) return {};
+    // Records page: the opening UP is consumed first, later releases go to the page itself.
     if(desk_records_release_barrier_){desk_records_release_barrier_=false;return {};}
     if(desk_records_)return {desk_records_->pointer_up(x,y,right)};
+    // Request pending for the league-family table: blocked until acknowledge or reject.
     if(family_table_dispatch_pending_)return {};
     if (reschedule_release_barrier_) { reschedule_release_barrier_ = false; return {}; }
     if(achievements_release_barrier_){achievements_release_barrier_=false;return {};}
+    // The achievements page does nothing on release.
     if(achievements_)return {};
     if (settings_readme_release_barrier_) {
         settings_readme_release_barrier_ = false;
         return {};
     }
+    // Original-wait viewer: the readme screen closes on a mouse DOWN, so a release does nothing here.
     if (settings_readme_) return {}; // Mouse UP is consumed by the viewer's wait.
+    // Barrier for the UP that follows a settings action; also tells the settings screen it was consumed.
     if (settings_release_barrier_) {
         settings_release_barrier_ = false;
         if (settings_) settings_->consume_release();
         return {};
     }
+    // The modal nation question already consumed the original click UP (see acknowledge_national_friendly_modal_release).
     if(national_friendly_release_barrier_){national_friendly_release_barrier_=false;return {};}
     if(pitch_release_barrier_){pitch_release_barrier_=false;return {};}
+    // Range dialog of the family table owns the pointer; a right release is passed to it as well.
     if(family_table_range_dialog_) {
         const bool changed=family_table_range_dialog_->pointer_up(x,y,right);
         // A consumed release ends drag ownership; it does not start a new
@@ -307,9 +358,12 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
     }
     if(family_table_release_barrier_){family_table_release_barrier_=false;return {};}
     if(balance_release_barrier_){balance_release_barrier_=false;return {};}
+    // Pages that act on release; most of them ignore the right button.
     if(other_games_)return right?FlowResult{}:finish_other_games_input(other_games_->release(x,y));
+    // The national friendly picker reuses the world-cup page; releases go to the parent statistics menu if present.
     if(world_cup_statistics_&&national_friendly_picker_)
         return statistics_menu_&&!right ? finish_statistics_menu_input(statistics_menu_->release(x,y)) : FlowResult{};
+    // All-time table: a close or table request becomes a statistics-page action; otherwise the release falls through to the parent menu.
     if(alltime_table_) {
         const bool changed=alltime_table_->release(x,y);
         if(const auto& request=alltime_table_->pending();request) {
@@ -325,11 +379,13 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
         return statistics_menu_ && !right ? finish_statistics_menu_input(statistics_menu_->release(x,y)) : FlowResult{};
     if(balance_)return right?FlowResult{}:finish_balance_input(balance_->release(x,y));
     if(top_scorers_)return right?FlowResult{}:finish_top_scorers_input(top_scorers_->release(x,y));
+    // Analytics: with a pending request input is blocked; otherwise releases go to the parent statistics menu.
     if(analytics_) {
         if(analytics_->pending())return {};
         if(statistics_menu_)return right?FlowResult{}:finish_statistics_menu_input(statistics_menu_->release(x,y));
         return {};
     }
+    // Statistics sub-pages below: each handles its own release first and falls back to the parent statistics menu.
     if(statistics_rankings_) {
         if(statistics_rankings_->release(x,y))return finish_statistics_rankings_input(true);
         if(statistics_menu_)return right?FlowResult{}:finish_statistics_menu_input(statistics_menu_->release(x,y));
@@ -350,6 +406,7 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
     }
     if(statistics_menu_)return right?FlowResult{}:finish_statistics_menu_input(statistics_menu_->release(x,y));
     if(strengths_)return right?FlowResult{}:finish_strengths_input(strengths_->release(x,y));
+    // Stadium is checked here as well as in the preparation chain, because its release must restore pressed buttons.
     if (stadium_) {
         const auto request = stadium_->release(x,y,right);
         PreparationRequest action;
@@ -368,6 +425,8 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
     }
     // Familyclose is Source event8 on DOWN; an orphan UP has no action.
     if(league_pairings_)return right?FlowResult{}:finish_league_pairings_input(league_pairings_->release(x,y));
+    // Join dialog: setup screen first, then the manager screen. While a join_options or join_manager request is
+    // pending all input is blocked until acknowledge_manager_join or reject_manager_join.
     if (joining_) {
         if (join_options_pending_ || join_choice_pending_) return {};
         if (!manager_) {
@@ -387,6 +446,8 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
         result.desk_action = join_origin_; result.join_manager = join_choices_.back();
         return result;
     }
+    // Contracts get input only when no player card covers them. close, pending contract request and a
+    // player-info request (opens the card over the contracts picture) are checked in this order.
     if (contracts_ && !player_card_) {
         const bool changed = contracts_->click(x, y, right);
         if (contracts_->close_requested()) { contracts_.reset(); return {true, FlowRequest::contracts_closed}; }
@@ -404,6 +465,7 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
         }
         return {changed};
     }
+    // Friendly match: a request is stored in pending_friendly_action_ and sent out as friendly_action; the session answers with acknowledge_friendly_* or reject_friendly_action.
     if (friendly_match_) {
         const auto before = state_json();
         auto request = friendly_match_->click(x, y, right);
@@ -420,6 +482,7 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
         }
         return {before != state_json()};
     }
+    // Calendar: a pending reschedule is returned as reschedule_action, otherwise it is a read-only view.
     if (calendar_) {
         const bool changed = calendar_->click(x,y,right);
         if (calendar_->pending_reschedule()) {
@@ -429,6 +492,7 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
         }
         return finish_readonly_input(changed);
     }
+    // League table: right button acts as ESC; a pending family request is returned before the generic read-only handling.
     if (league_table_) {
         const bool changed = right ? league_table_->key("ESC") : league_table_->click(x, y);
         if(const auto* family=pending_league_family_action()) {
@@ -438,6 +502,7 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
         return finish_readonly_input(changed);
     }
     if (mailbox_) return finish_readonly_input(mailbox_->click(x, y, right));
+    // A file dialog opened from settings takes the input below instead of the settings parent.
     if (settings_ && !save_load_) return finish_settings_input(settings_->click(x, y, right));
     if (advertising_) return finish_readonly_input(right ? advertising_->key("ESC") : advertising_->click(x, y));
     if (matchday_results_) {
@@ -453,8 +518,11 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
         const bool changed = save_load_->click(x, y, right, double_click);
         return finish_file_input(changed || before != state_json());
     }
+    // Preparation sub-menus: at most one is the active screen; the first existing one receives the click and any
+    // request it returns is converted by finish_preparation_input. A player card is checked first because it covers its parent.
     if (in_preparation_menu()) {
         const auto before = state_json();
+        // The player card can switch to its statistics page; that is reported as submenu_opened or submenu_closed.
         const bool statistics_before = player_card_ && player_card_->in_statistics();
         PreparationRequest action;
         if (player_card_) player_card_->click(x, y, right);
@@ -474,6 +542,7 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
             result.request = player_card_->in_statistics() ? FlowRequest::submenu_opened : FlowRequest::submenu_closed;
         return result;
     }
+    // Idle desktop: its pending request is routed through route_desk.
     if (desktop_) {
         const auto before = desktop_->state_json();
         auto result = route_desk(desktop_->pointer_up(x, y, right));
@@ -481,6 +550,7 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
         return result;
     }
     if (pending_ || awaiting_context_) return {}; // One request, then wait for an engine adapter.
+    // Setup screen: load game opens the file dialog, new game starts the manager selection.
     if (!manager_) {
         auto r = setup_.click(x, y, right);
         if (r.request == SetupRequest::load_game) {
@@ -493,6 +563,7 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
         }
         return {r.changed, FlowRequest::none};
     }
+    // Manager selection: when a manager is accepted, the last one raises new_career, earlier ones wait for the next club context.
     bool changed = manager_->click(x, y, right);
     if (manager_->view() != ManagerView::accepted) return {changed, FlowRequest::none};
     confirmed_.push_back(manager_->choice());
@@ -504,6 +575,7 @@ FlowResult StartupFlow::click(int x, int y, bool right, bool double_click) {
     return {true, FlowRequest::manager_confirmed};
 }
 
+// Key input (ESC and other key names). Same top-down order as click(); several pages deliberately ignore the keyboard because the original has no key mapping for them.
 FlowResult StartupFlow::send_key(std::string_view value) {
     if (indoor_standings_ || indoor_standings_release_barrier_) return {};
     if(achievements_)return {}; // AchievementsFromGame waits for its Source mouse event.
@@ -601,6 +673,7 @@ FlowResult StartupFlow::send_key(std::string_view value) {
     return {manager_ && !pending_ && !awaiting_context_ && manager_->key(value)};
 }
 
+// Text input for the screens with an editable field. Returns true when something changed. Order is the same as in click().
 bool StartupFlow::text(std::string_view value) {
     if(desk_records_)return desk_records_->text_input(value);
     if(family_table_dispatch_pending_)return false;
@@ -616,11 +689,13 @@ bool StartupFlow::text(std::string_view value) {
     if (advertising_) return advertising_->text(value);
     // A retained Settings parent must not block its active file dialog.
     if (save_load_) return save_load_->text(value);
+    // Read-only pages, results and the friendly-match screen have no text field.
     if (matchday_results_ || in_readonly_view() || friendly_match_) return false;
     return bank_ ? bank_->text(value) : toto_ ? toto_->text(value) : outgoing_transfer_ ? outgoing_transfer_->text(value) : transfer_market_ ? transfer_market_->text(value) :
         stadium_ ? stadium_->text(value) : !desktop_ && manager_ && !pending_ && !awaiting_context_ && manager_->text(value);
 }
 
+// Turns the state of the save/load dialog into a FlowResult: close, a pending file request (settings file or game file), or just a redraw.
 FlowResult StartupFlow::finish_file_input(bool changed) {
     if (save_load_->close_requested()) {
         const bool settings_file = save_load_->file_kind() == SaveLoadFileKind::settings;
@@ -638,6 +713,8 @@ FlowResult StartupFlow::finish_file_input(bool changed) {
     return {changed};
 }
 
+// Turns the state of the settings screen into a FlowResult. Order: readme request, close request, file request
+// (opens the file dialog locally), then a pending settings write for the session.
 FlowResult StartupFlow::finish_settings_input(bool changed) {
     if (!settings_) return {changed};
     if (settings_->readme_requested()) {
@@ -669,6 +746,7 @@ FlowResult StartupFlow::finish_settings_input(bool changed) {
     return {changed};
 }
 
+// Loads a reference save directly into a fresh flow (no engine attached); throws if any screen already exists.
 void StartupFlow::load_reference(const std::filesystem::path& save, std::optional<bool> indoor) {
     if (manager_ || desktop_) throw FormatError("reference load requires a fresh startup flow");
     auto state = std::make_unique<PreparationState>(load_preparation_reference(save, load_le(asset_path(data_, "BMH.exe"))));
@@ -677,6 +755,7 @@ void StartupFlow::load_reference(const std::filesystem::path& save, std::optiona
     desktop_ = std::move(desktop); preparation_ = std::move(state);
 }
 
+// Session accepts the pending new_career request with the engine's first desk projection; validates it against the confirmed setup and shows the desktop.
 void StartupFlow::attach_initialized_career(CareerInitializationResult result) {
     if (!pending_ || desktop_) throw FormatError("career attachment requires a pending new-career request");
     validate_desk_profile(pending_->options);
@@ -690,6 +769,8 @@ void StartupFlow::attach_initialized_career(CareerInitializationResult result) {
     confirmed_runtime_teams_ = runtime_teams;
 }
 
+// Session accepts a desk request with the new engine projection. Only valid at the desktop without submenus;
+// the preparation context is dropped so a fresh one must be attached.
 void StartupFlow::acknowledge_desk(DeskState state) {
     if (!desktop_ || !engine_attached_ || in_preparation_menu() || in_readonly_view() || state.source != "engine_projection")
         throw FormatError("desk acknowledgement requires an attached engine projection");
@@ -702,6 +783,7 @@ void StartupFlow::acknowledge_desk(DeskState state) {
     preparation_.reset(); // Require a fresh same-revision context after any desk command.
 }
 
+// Opens the mailbox automatically when the desk has a mailbox notification pending; requires the idle active club desk.
 void StartupFlow::show_notified_mailbox(MailboxState state) {
     if (!desktop_ || !engine_attached_ || desktop_->pending() || in_preparation_menu() ||
         in_readonly_view() || matchday_results_ || !desktop_->state().mailbox_notification_pending ||
@@ -712,6 +794,7 @@ void StartupFlow::show_notified_mailbox(MailboxState state) {
         original_to_utf8(desktop_->state().manager_name), desktop_->render());
 }
 
+// Session accepts the pending mailbox close: the desk may only lose its notification flag, everything else must be unchanged.
 void StartupFlow::acknowledge_mailbox_close(const MailboxCloseRequest& request, DeskState desk,
                                              PreparationState preparation) {
     if (!mailbox_ || !pending_mailbox_close_ || *pending_mailbox_close_ != request || !desktop_ ||
@@ -734,6 +817,7 @@ void StartupFlow::acknowledge_mailbox_close(const MailboxCloseRequest& request, 
     pending_mailbox_close_.reset();
 }
 
+// Session rejects the pending mailbox close; the mailbox stays open and shows the reason.
 void StartupFlow::reject_mailbox_close(std::string reason) {
     if (!pending_mailbox_close_ || !mailbox_) throw FormatError("mailbox: no pending close to reject");
     pending_mailbox_close_.reset();
@@ -741,6 +825,7 @@ void StartupFlow::reject_mailbox_close(std::string reason) {
     mailbox_->reject(std::move(reason));
 }
 
+// Resolves the local achievements menu request of the desk (menu 4), which has no engine side effect.
 void StartupFlow::acknowledge_desk_notice(const DeskRequest& owner) {
     if(!desktop_||!desktop_->pending()||*desktop_->pending()!=owner||
        owner.kind!=DeskRequestKind::open_menu||owner.menu_kind!=4)
@@ -748,11 +833,13 @@ void StartupFlow::acknowledge_desk_notice(const DeskRequest& owner) {
     desktop_->resolve_local_menu();
 }
 
+// Session rejects the pending desk request; the desktop shows the reason.
 void StartupFlow::reject_desk_action(std::string reason) {
     if (!desktop_) throw FormatError("no desktop action context");
     desktop_->reject_action(std::move(reason));
 }
 
+// Session answers a pending quote request; returns false if none is pending or the screen refuses it.
 bool StartupFlow::acknowledge_friendly_quote(FriendlyQuoteProjection quote) {
     if (!friendly_match_ || !pending_friendly_action_ ||
         pending_friendly_action_->kind != FriendlyRequestKind::quote ||
@@ -761,6 +848,7 @@ bool StartupFlow::acknowledge_friendly_quote(FriendlyQuoteProjection quote) {
     return true;
 }
 
+// Answers a pending booking request that was not accepted; the dialog stays open.
 bool StartupFlow::acknowledge_friendly_booking(FriendlyBookingAck ack) {
     if (!friendly_match_ || !pending_friendly_action_ ||
         pending_friendly_action_->kind != FriendlyRequestKind::book || ack.accepted ||
@@ -769,6 +857,7 @@ bool StartupFlow::acknowledge_friendly_booking(FriendlyBookingAck ack) {
     return true;
 }
 
+// Answers an accepted booking: validates the new desk and preparation (revision + 1) and leaves the friendly screen. Returns false without changes on a mismatch.
 bool StartupFlow::acknowledge_friendly_booking(FriendlyBookingAck ack, DeskState desk,
                                                PreparationState preparation) {
     if (!friendly_match_ || !pending_friendly_action_ ||
@@ -798,6 +887,7 @@ bool StartupFlow::acknowledge_friendly_booking(FriendlyBookingAck ack, DeskState
     return true;
 }
 
+// Session rejects the pending friendly request; the screen shows the reason and the request is cleared.
 void StartupFlow::reject_friendly_action(std::string reason) {
     if (!friendly_match_ || !pending_friendly_action_ || reason.empty())
         throw FormatError("friendly match rejection requires a pending request");
@@ -805,6 +895,7 @@ void StartupFlow::reject_friendly_action(std::string reason) {
     pending_friendly_action_.reset();
 }
 
+// Session confirms a game save requested through the file dialog; the new desk must be a later revision of the same manager slot.
 void StartupFlow::acknowledge_saved_game(DeskState desk, PreparationState preparation) {
     if (!save_load_ || !save_load_->pending() || save_load_->pending()->file_kind != SaveLoadFileKind::game ||
         save_load_->pending()->action != SaveLoadAction::save ||
@@ -830,11 +921,13 @@ void StartupFlow::acknowledge_saved_game(DeskState desk, PreparationState prepar
     desktop_ = std::move(next_desktop); preparation_ = std::move(next_preparation);
 }
 
+// Session rejects the pending file request; the dialog shows the reason.
 void StartupFlow::reject_file_action(std::string reason) {
     if (!save_load_) throw FormatError("save/load: no file dialog");
     save_load_->reject(std::move(reason));
 }
 
+// Session confirms a menu-layout file operation. Only the menu items and shortcuts may differ from the old desk.
 void StartupFlow::acknowledge_menu_layout(DeskState desk, PreparationState preparation) {
     if (!save_load_ || !save_load_->pending() ||
         save_load_->pending()->file_kind != SaveLoadFileKind::menu_layout ||
@@ -884,6 +977,7 @@ void StartupFlow::acknowledge_menu_layout(DeskState desk, PreparationState prepa
     desktop_ = std::move(next_desktop); preparation_ = std::move(next_preparation);
 }
 
+// Session confirms a loaded game: replaces desktop and preparation, and clears any setup or manager-selection state.
 void StartupFlow::attach_loaded_game(DeskState desk, PreparationState preparation) {
     if (!save_load_ || !save_load_->pending() || save_load_->pending()->action != SaveLoadAction::load ||
         save_load_->pending()->file_kind != SaveLoadFileKind::game ||
@@ -904,6 +998,7 @@ void StartupFlow::attach_loaded_game(DeskState desk, PreparationState preparatio
     engine_attached_ = true;
 }
 
+// Session answers a manager_confirmed request with a newer club-order context so the next manager can be chosen.
 bool StartupFlow::resume_manager_selection(SelectionContext context) {
     if (!awaiting_context_ || context.revision <= roster_revision_ || context.club_order.empty())
         throw FormatError("manager selection: expected a newer engine/reference club-order context");
@@ -914,6 +1009,7 @@ bool StartupFlow::resume_manager_selection(SelectionContext context) {
     return true;
 }
 
+// Name of the visible screen. The order mirrors the input chains: overlays and pages first, then submenus, desktop, setup.
 std::string StartupFlow::screen_name() const {
     if (indoor_standings_) return "indoor_standings";
     if(achievements_)return "achievements";
@@ -940,6 +1036,8 @@ std::string StartupFlow::screen_name() const {
     if (friendly_table_active_) return "friendly_match";
     return player_card_ ? (player_card_->in_statistics() ? "player_statistics" : "player_card") : contracts_ ? "contracts" : friendly_match_ ? "friendly_match" : league_table_ ? "league_table" : mailbox_ ? "mailbox" : save_load_ ? "save_load" : settings_ ? "settings" : advertising_ ? "advertising" : environment_ ? "environment" : matchday_results_ ? "matchday_results" : player_card_ ? (player_card_->in_statistics() ? "player_statistics" : "player_card") : pitch_ ? "pitch" : lineup_ ? "lineup" : training_ ? "training" : training_camp_ ? "training_camp" : bank_ ? "bank" : stadium_ ? "stadium" : toto_ ? "toto" : transfer_market_ ? "transfer_market" : tactics_ ? "tactics" : desktop_ ? "desktop" : pending_ ? "career_pending" : awaiting_context_ ? "manager_pending" : manager_ ? manager_->screen_name() : "setup";
 }
+// JSON description of the visible screen for tests and tools. Same screen priority as screen_name(); many
+// screens append the engine_attached flag and the desktop context.
 std::string StartupFlow::state_json() const {
     if (indoor_standings_) return indoor_standings_->state_json();
     if(achievements_)return "{\"screen\":\"achievements\",\"manager\":"+

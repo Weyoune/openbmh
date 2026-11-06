@@ -59,9 +59,15 @@ struct CareerInitializationResult {
     std::vector<InitializedManager> managers;
     PreparationState preparation;
 };
+// Kind of request a FlowResult carries. none means nothing for the session to do; every other value names
+// the FlowResult field that holds the typed payload (desk_action, file_action, contract_action, ...).
 enum class FlowRequest { none, load_game, manager_confirmed, new_career, kickoff, desk_action, end_session, submenu_opened, submenu_closed, contracts_closed, submenu_action, file_action, results_closed, mailbox_action, mailbox_closed, settings_action, settings_close, settings_file_action, friendly_action, national_friendly_selected, contract_action, advertising_action, environment_action, join_options, join_manager, join_cancel, league_pairings_action, strengths_action, top_scorers_action, balance_action, other_games_action, league_family_action, opportunities_action, statistics_menu_action, statistics_rankings_action, analytics_action, statistics_page_action, reschedule_action };
+// What a statistics sub-page asked for: close it, change the all-time table, or change the world-cup page.
 enum class StatisticsPageActionKind : uint8_t { close, alltime, world_cup };
+// Request raised by a statistics sub-page: the desk request that owns it, the page number and the selection.
 struct StatisticsPageAction { DeskRequest owner{}; int page=-1; StatisticsPageActionKind kind=StatisticsPageActionKind::close; int nation=-1; bool relative=false; bool operator==(const StatisticsPageAction&) const = default; };
+// Outcome of one input event. changed means the screen needs a redraw; request tells the session which payload
+// field is valid. The session performs the action and then calls the matching acknowledge or reject method.
 struct FlowResult {
     bool changed = false;
     FlowRequest request = FlowRequest::none;
@@ -93,18 +99,25 @@ struct FlowResult {
     RescheduleAction reschedule_action{};
 };
 
+// Screen controller. Each open screen is owned by one unique_ptr member below; input goes to the topmost one.
+// Ownership rule: a screen holds at most one pending request and takes no more input until the session calls
+// the matching acknowledge or reject method.
 class StartupFlow {
 public:
     explicit StartupFlow(const std::filesystem::path& data, std::filesystem::path save_directory = {})
         : data_(data), save_directory_(save_directory.empty() ? data : std::move(save_directory)), setup_(data) {}
+    // Mouse button release (UP) with optional right button and double click; the main dispatch chain, see flow.cpp.
     FlowResult click(int x, int y, bool right = false, bool double_click = false);
+    // Mouse button press (DOWN) entry point; click() handles the matching release.
     FlowResult pointer_down(int x,int y,bool right=false);
+    // Timer expiry event together with the current pointer position.
     FlowResult process_timer_expired(int pointer_x = 0, int pointer_y = 0);
     bool timed_notice_open() const;
     FlowResult expire_timed_notice();
     // The synchronous SDL question presenter consumes the original nation-click UP.
     // Call only after that modal has returned; right-DOWN close keeps its barrier.
     void acknowledge_national_friendly_modal_release() { national_friendly_release_barrier_=false; }
+    // Ends the stadium tip display after its time ran out.
     FlowResult expire_stadium_tip();
     bool in_stadium() const { return bool(stadium_); }
     bool in_pitch() const { return bool(pitch_); }
@@ -112,17 +125,25 @@ public:
         return pitch_ && screen_name() == "pitch" ? pitch_->pointer_cursor(palette) : std::nullopt;
     }
     std::optional<Image> pitch_formation_save_feedback(bool restored) const;
+    // Left button held on the pitch screen (formation template save); source_ticks is the source-clock hold time.
     FlowResult pitch_held_left(int x, int y, uint64_t source_ticks);
+    // Drops the pitch release barrier when the matching release will never arrive.
     void consume_orphaned_pitch_release(){pitch_release_barrier_=false;}
     const StadiumScreen* stadium() const { return stadium_.get(); }
     const TotoScreen* toto() const { return toto_.get(); }
+    // Button release after a hold of the given length in milliseconds.
     FlowResult hold(int x, int y, int milliseconds);
+    // Pointer motion; the bool move() below only reports whether a redraw is needed.
     FlowResult move_action(int x, int y);
     bool move(int x, int y) { return move_action(x, y).changed; }
+    // Text input for screens with an editable field; returns true when something changed.
     bool text(std::string_view value);
     bool key(std::string_view value) { return send_key(value).changed; }
+    // Key input; the bool key() above only reports whether a redraw is needed.
     FlowResult send_key(std::string_view value);
+    // Session answers manager_confirmed with a newer club-order context so the next manager can be chosen.
     bool resume_manager_selection(SelectionContext context);
+    // Join-manager dialog of a running career: show, resume, acknowledge or reject (join_* requests).
     void show_manager_join(std::vector<ManagerChoice> existing, SelectionContext context);
     void resume_manager_join(SelectionContext context);
     void acknowledge_manager_join(CareerInitializationResult result);
@@ -130,20 +151,27 @@ public:
     const DeskRequest* join_origin() const { return joining_ ? &join_origin_ : nullptr; }
     const SetupOptions* pending_join_options() const { return join_options_pending_ ? &join_setup_->options() : nullptr; }
     const ManagerChoice* pending_join_manager() const { return join_choice_pending_ ? &join_choices_.back() : nullptr; }
+    // Draws the currently visible screen.
     Image render() const;
+    // Loads a reference save into a fresh flow without an engine.
     void load_reference(const std::filesystem::path& save, std::optional<bool> indoor = std::nullopt);
+    // Session accepts the pending new_career request with the engine's first desk projection.
     void attach_initialized_career(CareerInitializationResult result);
+    // Session accepts or rejects a desk request (desk_action) with the new engine projection or a reason.
     void acknowledge_desk(DeskState state);
     void reject_desk_action(std::string reason);
     void acknowledge_desk_notice(const DeskRequest& owner);
     void acknowledge_saved_game(DeskState desk, PreparationState preparation);
     // Complete an authenticated menu-layout operation while preserving the active career.
     void acknowledge_menu_layout(DeskState desk, PreparationState preparation);
+    // Session answers or rejects a file dialog request (file_action).
     void reject_file_action(std::string reason);
+    // Session confirms a loaded game and replaces desktop and preparation state.
     void attach_loaded_game(DeskState desk, PreparationState preparation);
     const SaveLoadRequest* pending_file() const {
         return save_load_ && save_load_->pending() ? &*save_load_->pending() : nullptr;
     }
+    // Stores the context the preparation sub-menus (lineup, training, bank, ...) are opened from.
     void attach_preparation_context(PreparationState state);
     void show_matchday_results(MatchdayResults results);
     bool in_results_view() const { return bool(matchday_results_); }
@@ -197,6 +225,8 @@ public:
     const LeagueFamilyRequest* pending_pairings_family_action() const {
         return league_pairings_&&league_pairings_->pending_family_action()?&*league_pairings_->pending_family_action():nullptr;
     }
+    // From here on the screens follow one naming pattern: show_X opens a screen, pending_X exposes its single pending
+    // request, acknowledge_X applies the session's accepted result, reject_X shows the reason, close_X leaves it.
     void show_mailbox(MailboxState state);
     // Source's MailboxRecipientMask popup is consumed after the native desk draw, without a
     // synthetic DeskRequest. The app polls the Session latch only at an idle desk.
@@ -350,6 +380,7 @@ public:
     void acknowledge_reschedule(CalendarState state, DeskRequest owner, DeskState desktop,
                                 PreparationState preparation);
     void reject_reschedule();
+    // True while a screen that waits for a mouse event in the original still holds a release barrier.
     bool source_mouse_wait_release_pending() const {
         return indoor_standings_release_barrier_ || reschedule_release_barrier_ || achievements_release_barrier_ || desk_records_release_barrier_;
     }
@@ -399,6 +430,7 @@ public:
     void acknowledge_contract_bonuses(ContractsState state, DeskState desk, PreparationState preparation);
     void acknowledge_contract_insurance(ContractsState state, DeskState desk, PreparationState preparation);
     void reject_contract_action(std::string reason);
+    // True while any read-only or list page is open; text() ignores them.
     bool in_readonly_view() const { return bool(desk_records_ || achievements_ || indoor_standings_ || other_games_ || strengths_ || top_scorers_ || opportunities_ || statistics_menu_ || statistics_rankings_ || analytics_ || minute_statistics_ || transfer_history_ || league_pairings_ || calendar_ || league_table_ || mailbox_ || settings_ || advertising_ || alltime_table_ || world_cup_statistics_ || finance_totals_ || series_records_); }
     void acknowledge_preparation(PreparationState state, std::string transfer_notice = {});
     void reject_preparation_action(std::string reason);
@@ -407,15 +439,19 @@ public:
     bool matches_pending_lineup(const LineupRequest&) const;
     bool matches_pending_pitch(const PitchRequest&) const;
     bool matches_pending_stadium(const StadiumRequest&) const;
+    // True while any preparation sub-menu is open; they are dispatched together in click and send_key.
     bool in_preparation_menu() const { return bool(other_games_ || balance_ || player_card_ || pitch_ || lineup_ || training_ || training_camp_ || bank_ || stadium_ || environment_ || toto_ || transfer_market_ || tactics_ || save_load_ || friendly_match_ || contracts_); }
     bool file_info_press(int x, int y) { return save_load_ && save_load_->info_press(x, y); }
     const DesktopScreen* desktop() const { return desktop_.get(); }
+    // Name of the visible screen.
     std::string screen_name() const;
+    // JSON description of the visible screen for tests and tools.
     std::string state_json() const;
     const SetupOptions& options() const { return setup_.options(); }
     const NewCareerRequest* pending_career() const { return pending_.get(); }
     const ManagerChoice* pending_manager() const { return awaiting_context_ ? &confirmed_.back() : nullptr; }
 private:
+    // The finish_*_input helpers turn the state of one screen after an input into a FlowResult (close, pending request or redraw).
     FlowResult finish_statistics_rankings_input(bool changed);
     FlowResult finish_analytics_input(bool changed);
     bool joining_ = false, join_options_pending_ = false, join_choice_pending_ = false;
@@ -434,6 +470,8 @@ private:
     std::unique_ptr<MatchdayResultsScreen> matchday_results_;
     std::unique_ptr<CalendarScreen> calendar_;
     std::unique_ptr<IndoorStandingsScreen> indoor_standings_;
+    // Release barriers, here and further below: a one-shot flag set when an action already consumed the button,
+    // so the matching release is swallowed once by click() or hold().
     bool indoor_standings_release_barrier_ = false;
     std::unique_ptr<StrengthsScreen> strengths_;
     std::unique_ptr<TopScorersScreen> top_scorers_;
@@ -505,6 +543,7 @@ private:
     std::unique_ptr<PitchScreen> pitch_;
     bool pitch_entry_pending_ = false;
     std::unique_ptr<PlayerCardScreen> player_card_;
+    // Converts a desk request raised by the desktop into a FlowResult for the session.
     FlowResult route_desk(DeskRequest);
     FlowResult finish_preparation_input(PreparationRequest, bool changed);
     FlowResult finish_file_input(bool changed);
@@ -517,6 +556,7 @@ private:
     FlowResult finish_statistics_menu_input(bool changed);
     FlowResult finish_balance_input(bool changed);
     FlowResult finish_other_games_input(bool changed);
+    // True once an engine projection has been accepted; reported in state_json.
     bool engine_attached_ = false;
     bool balance_release_barrier_ = false;
     bool achievements_release_barrier_ = false;
