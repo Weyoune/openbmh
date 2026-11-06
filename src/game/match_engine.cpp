@@ -398,20 +398,24 @@ void MatchEngine::rerate(MatchGroup& g, int m, int s, MinuteReport& report) {
 
 namespace {
 
+// Rules of the Diamond 3.7 programme: the injury, booking and red-card chances, the type tables and durations below and the
+// doctor's cut are the values of version 3.7 (an older Diamond build used other numbers).
 // OpenBMH deviates from the original: supports designated set-piece takers, the enhanced injury tables, and the extended suspension fields.
 // Injury type tables of InjurePlayer3 (supported rule profile patch): WatcomRandom(0, 999) is mapped to an
 // injury type by the first threshold it does not exceed; beyond the last one the type is
 // 30. Match injuries use the second table (types 6-30, the light types 0-5 of the first
 // table only happen elsewhere, e.g. in training).
 constexpr uint16_t kInjuryThresholdsOther[30] = {
-    0x01f, 0x03f, 0x05f, 0x07f, 0x09f, 0x0bf, 0x0f1, 0x122, 0x153, 0x184, 0x1b5, 0x1e6, 0x217, 0x248, 0x279,
-    0x2aa, 0x2db, 0x30c, 0x33d, 0x36e, 0x37e, 0x38e, 0x39e, 0x3ae, 0x3be, 0x3c9, 0x3d4, 0x3da, 0x3e0, 0x3e6};
-constexpr uint16_t kInjuryThresholdsMatch[24] = {
-    0x03c, 0x079, 0x0b6, 0x0f3, 0x130, 0x16d, 0x1aa, 0x1e7, 0x224, 0x260, 0x29c, 0x2d8,
-    0x315, 0x351, 0x365, 0x379, 0x38d, 0x3a1, 0x3b5, 0x3c3, 0x3d1, 0x3d8, 0x3df, 0x3e6};
+    35, 71, 107, 154, 201, 248, 295, 342, 390, 426, 473, 518, 563, 610, 657,
+    704, 751, 787, 834, 881, 897, 908, 924, 937, 953, 969, 977, 984, 989, 994};
+// Match injuries are the types 3-30 (the first table's types 0-2 cause no absence and only happen
+// elsewhere, e.g. in training): 27 thresholds, beyond the last one the type is 30.
+constexpr uint16_t kInjuryThresholdsMatch[27] = {
+    52, 105, 158, 211, 264, 317, 356, 409, 458, 507, 560, 613, 666, 719,
+    758, 811, 864, 882, 895, 913, 928, 946, 964, 973, 981, 987, 993};
 // Injury duration (matchdays) by type, table at layout field. Types 0-2 cause no absence.
-constexpr uint8_t kInjuryDuration[31] = {1, 1, 1, 2, 2, 2, 2, 3, 2, 3, 2, 2, 2, 2, 3, 4,
-                                         2, 3, 2, 3, 6, 8, 6, 8, 10, 12, 16, 20, 24, 28, 30};
+constexpr uint8_t kInjuryDuration[31] = {1, 1, 1, 1, 2, 2, 2, 3, 2, 3, 1, 1, 2, 2, 3, 4,
+                                         2, 1, 2, 3, 6, 8, 6, 10, 8, 10, 14, 16, 20, 22, 24};
 // Event log codes by event kind (MatchEngineRuntimeField8): yellow, red, injury. A second yellow card
 // is logged as red - 1 = 4.
 constexpr uint8_t kEventLogCode[3] = {3, 5, 6};
@@ -439,16 +443,16 @@ int injure_player(GameState& g, int slot, int type, bool match, int manager, Wat
     const int roll = rand.range(0, 999);
     type = 30;
     if (match) {
-        for (int i = 0; i < 24; i++)
-            if (roll <= kInjuryThresholdsMatch[i]) { type = i + 6; break; }
+        for (int i = 0; i < 27; i++)
+            if (roll <= kInjuryThresholdsMatch[i]) { type = i + 3; break; }
     } else {
         for (int i = 0; i < 30; i++)
             if (roll <= kInjuryThresholdsOther[i]) { type = i; break; }
     }
     int duration = type > 2 ? kInjuryDuration[type] : 0;
     // w35c bits 27-31 remember the last injury type + 1: a player injured before is out
-    // 1/8 longer (match injuries only).
-    if (match && (p.w35c >> 27) != 0) duration = uint8_t(duration + (duration >> 3));
+    // 1/4 longer (match injuries only).
+    if (match && (p.w35c >> 27) != 0) duration = uint8_t(duration + (duration >> 2));
     if (manager >= 0) {
         // layout field: a player insured on the tactics board (slot byte 0x43, bits 6-7 the
         // cover) earns base pay * (50 + 50 * cover) / 100 per week while out (SquadRange2);
@@ -466,17 +470,18 @@ int injure_player(GameState& g, int slot, int type, bool match, int manager, Wat
     }
     if (manager >= 0 && duration != 0) {
         // A human manager's club doctor (record +0x8ae) shortens the absence by
-        // duration * (doctor / 100 - 5) / 16, at most 1 matchday for types 3-19, up to 5 for
-        // the heavy ones (Int16T4); a poor doctor makes it longer.
+        // duration * (doctor / 100 - 5) / 8; a poor doctor makes it longer. The cut is limited
+        // only for the heavy injuries: types 20-25 by 4 matchdays, types 26-27 by 6, types 28-30
+        // by 8; lighter types have no limit (the duration is cut to 0 at the lowest).
         const int doctor = int16_t(g.manager_records.at(size_t(manager) * 0xB0C + 0x8ae) |
                                    g.manager_records.at(size_t(manager) * 0xB0C + 0x8af) << 8);
-        // (the / 16 is Watcom's SAR/SHL/SBB idiom at 00054453: (x + 7) >> 4 for negative
-        //  x, so a poor doctor lengthens by one matchday from x = -8 on)
+        // (the / 8 is Watcom's SAR/SHL/SBB idiom: (x + 7) >> 3 for negative x)
         const int x = duration * (doctor / 100 - 5);
-        int cut = (x + (x < 0 ? 7 : 0)) >> 4;
-        int cap = type >= 3 ? 1 : 0;
-        if (type >= 0x14) cap = ((type - 0x10) >> 2) + 1 + (type >= 0x1a ? 1 : 0);
-        if (cut > cap) cut = cap;
+        int cut = (x + (x < 0 ? 7 : 0)) >> 3;
+        if (type >= 0x14 && type <= 0x1e) {
+            const int cap = type >= 0x1c ? 8 : type >= 0x1a ? 6 : 4;
+            if (cut > cap) cut = cap;
+        }
         duration = uint8_t(duration - cut);
     }
     duration = std::clamp(int(int8_t(duration)), 0, 30);  // Int8T
@@ -493,8 +498,8 @@ bool MatchEngine::injure(int slot, bool match, int manager, MinuteReport& report
 
 // EventImpl(-1, 0, side): a foul by `side` in match m. After the referee and team rolls
 // the event is one of
-//   kind 2  injury (1 in 39): a random line-up player is injured and substituted,
-//   kind 1  straight red card (1 in 28 of the bookings), banned for 1-4 matches,
+//   kind 2  injury (1 in 31): a random line-up player is injured and substituted,
+//   kind 1  straight red card (1 in 34 of the bookings), banned for 1-4 matches,
 //   kind 0  yellow card; a second yellow in the same match turns into a red card (ban 1).
 // The ordinary minute loop ignores the return byte. Its draw order, immediate
 // substitutions and synchronous presenters remain the Source mode0 path.
@@ -538,14 +543,14 @@ ForcedMatchEvent MatchEngine::event_impl(MatchGroup& g, int m, int s, int minute
     int kind = 0;       // local_70: 0 yellow, 1 red, 2 injury
     int card_delta = 0;  // added to the team's card counters
     int ban = 0;        // local_80: matches banned for a red card (0 = no red card)
-    if (!forced && rand.range(0, 38) == 0) {
+    if (!forced && rand.range(0, 30) == 0) {
         kind = 2;
         rand.range(10, 30);  // local_7c: passed to InjurePlayer but overwritten there
     } else {
-        if (rand.range(0, 2) == 0) return result;  // no booking after all
+        if (rand.range(0, 3) == 0) return result;  // no booking after all
         // local_5c = the team's card counters DeskRecords_Teams_RuntimeField (low byte yellow, high byte red;
         // red cards only counted in competitions 0 and 10)
-        if (rand.range(0, 27) == 0) {
+        if (rand.range(0, 33) == 0) {
             kind = 1;
             ban = rand.range(1, 4);
             if (g.desc.at(0) == 0 || g.desc.at(0) == 10) card_delta = 0x100;

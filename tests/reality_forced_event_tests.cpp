@@ -19,13 +19,13 @@ MatchGroup fixture() {
     g.records={70,70,90,90,90,90,80,60,3,70,70,90,90,90,90,80,60,3};return g;
 }
 // Source prefix oracle: strict referee still draws W(0,1); mode1 starts with
-// W(0,2), then red/duration. Fixed slots skip W(0,11), but keeper rejection
+// W(0,3) (Diamond 3.7), then red (1 in 34)/duration. Fixed slots skip W(0,11), but keeper rejection
 // repeats the balance/keeper rolls on the same player (legacy routine).
 struct Prefix { int kind=-1,ban=0;bool change=false,second=false; };
 Prefix prefix(WatcomRandom& w,bool keeper,bool booked,bool active) {
     Prefix out;if(w.range(0,1))return out;
-    if(!w.range(0,2))return out;
-    const bool red=w.range(0,27)==0;
+    if(!w.range(0,3))return out;
+    const bool red=w.range(0,33)==0;
     int ban=red?w.range(1,4):0;
     if(!active)return out;
     for(int tries=0;;++tries) {
