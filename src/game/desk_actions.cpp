@@ -619,7 +619,7 @@ TransferActionResult submit_transfer_bid_impl(GameState& g, const TransferBidReq
         out.status = TransferActionStatus::blocked_by_board;
         return out;
     }
-    const uint32_t fee_base = (g.memory.u32(entry + 0x2c) / 10000) * 0x30d4;
+    const uint32_t fee_base = (g.memory.u32(entry + 0x2c) / 10000) * 10000;  // Diamond 3.7: base 10000 per 10000 of value (12500 before)
     const uint32_t salary_base = ((uint32_t((request.contract_years - 1) * 20 + 100) * g.memory.u32(entry + 0x30)) / 10000) * 100;
     if (fee_base == 0 || salary_base == 0) {
         out.status = TransferActionStatus::offer_too_low;
@@ -941,11 +941,11 @@ TransferActionResult submit_transfer_bid_source_impl(GameState& g, const Transfe
     bool dfb_fee = false;
     if (uint32_t(rand.range(92, request.poach ? 98 : 150)) >= fee_pct) {
         if (request.poach) {
-            // The club refuses; as the player agreed, the DFB sets the fee to 188 % of his
-            // market value (AddToSquad with 0xbc) and the buyer may pay it (PresentManagerDialog).
+            // The club refuses; as the player agreed, the DFB sets the fee to 150 % of his
+            // market value (AddToSquad with 0x96, Diamond 3.7; 188 % = 0xbc before) and the buyer may pay it (PresentManagerDialog).
             uint32_t fee = 0, salary = 0;
             const bool loan = (g.memory.u8(list + 0x34 + uint32_t(bid_slot)) & 0x80) != 0;
-            market_value(g, request.source_slot, loan ? 1 : 0, 0xbc, fee, salary, 1, 0, rand);
+            market_value(g, request.source_slot, loan ? 1 : 0, 0x96, fee, salary, 1, 0, rand);
             g.memory.set32(list + 0x1c + uint32_t(bid_slot) * 4, fee);
             const std::string question = message_text(g, ::bmh::layout::DeskActions_Unsupported_TextPointer4) + format_amount(g, std::bit_cast<int32_t>(fee)) +
                                          message_text(g, ::bmh::layout::DeskActions_Unsupported_TextPointer5);
@@ -1234,7 +1234,7 @@ void editor_project(const GameState& g,TransferOfferEditorState& state) {
     } else {state.years=1;state.term=0;state.fee=0;state.salary=0;state.bonuses.fill(0);}
     // RateTransferBidSource: explicit byte years and Source32 unsigned products.
     const uint8_t year_index=state.editable?uint8_t((int(state.term&127)-1)/12):uint8_t(1);
-    state.asking_fee=(g.memory.u32(list+0x2c)/10000u)*12500u;
+    state.asking_fee=(g.memory.u32(list+0x2c)/10000u)*10000u;
     if(state.editable&&(state.term&128))state.asking_fee>>=2;
     state.asking_salary=((uint32_t(year_index)*20u+100u)*g.memory.u32(list+0x30)/10000u)*100u;
     state.money_profiles[0]=editor_profile(0,state.asking_fee*2u|0x40000000u,0xffffffffu,10000,0,state.asking_fee,::bmh::layout::DeskActions_EditorProject_RuntimeField);
@@ -1600,7 +1600,7 @@ namespace bmh {
 namespace {
 
 // StadiumPriceTable: base price of the 14 periphery objects.
-constexpr int32_t kPeripheryPrice[14] = {2500000, 1700000, 2200000, 1000000, 1100000, 1500000, 280000,
+constexpr int32_t kPeripheryPrice[14] = {2200000, 1700000, 2000000, 1000000, 1100000, 1800000, 280000,
                                          280000,  280000,  280000,  350000,  350000,  350000,  350000};
 // CareerSession_DispatchStadium_RuntimeField2[object * 5]: construction time in days.
 constexpr uint8_t kPeripheryDays[14] = {45, 30, 28, 40, 30, 20, 6, 6, 6, 6, 5, 5, 5, 5};

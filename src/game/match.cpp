@@ -136,12 +136,13 @@ void rate_side(GameState& g, const MatchSetup& m, int side, int previous6, Watco
     // (the original lets two cheat codes, CareerSession_FormatError_RuntimeField9, set a human side's six ratings to
     //  fixed values; not ported)
     if (manager < 0) {
-        int rhythm = r[6] >> 1;  // computer teams: half the balance, at least 50
-        r[7] = uint8_t(rhythm < 50 ? 50 : rhythm);
+        int rhythm = r[6] >> 1;  // computer teams: half the balance, at least 48
+        r[7] = uint8_t(rhythm < 48 ? 48 : rhythm);  // Diamond 3.7: at least 48 (50 before)
     } else {
-        // human teams: record +0xd9 (signed) * 5 plus the balance, scaled to 0-100
+        // human teams: record +0xd9 (signed) * 5 plus a constant 110, scaled to 0-100. Diamond 3.7: the
+        // condition/technique balance r[6] no longer enters (before: d9 * 5 + r[6]).
         const int8_t d9 = int8_t(g.manager_records.at(size_t(manager) * 0xB0C + 0xd9));
-        r[7] = uint8_t((d9 * 5 + r[6]) * 100 / 0xFF);
+        r[7] = uint8_t((d9 * 5 + 110) * 100 / 0xFF);
     }
 }
 

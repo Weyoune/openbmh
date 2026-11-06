@@ -469,13 +469,13 @@ int club_popularity(GameState& g, int m, int team, bool pay) {
     static const uint8_t kKind[4] = {0, 1, 3, 2};                      // SeasonRuntimeField11
     static const uint8_t kEntry[4] = {0x00, 0x0f, 0x13, 0x15};         // SeasonRuntimeField12
     static const uint8_t kPlus[4] = {0x14, 0x1e, 0x14, 0x0f};          // SeasonRuntimeField13
-    static const int32_t kPremium[4] = {500000, 1500000, 2500000, 1500000};  // SeasonRuntimeField14
+    static const int32_t kPremium[4] = {400000, 850000, 1000000, 850000};  // SeasonRuntimeField14
     int8_t p = int8_t(kKind[en.find(team)] * 10 + 10);
     if (team == mem.u16(::bmh::layout::Cup_AdvanceCup_RuntimeField6)) {
         if (pay) {
             post_composed(g, m, kChampionshipBonusText);  // ChampionshipBonusText
             book_money(g, m, -700000, true);
-            set_rec32(g, m, 0x874, rec32(g, m, 0x874) + 1000000);
+            set_rec32(g, m, 0x874, rec32(g, m, 0x874) + 700000);
         }
         p = int8_t(p + 10);
     }
@@ -529,7 +529,7 @@ void season_event(GameState& g, int m, GameRandom& game, WatcomRandom& rand, Min
     // Int64T: bankrupt, or out of credit
     const uint8_t cut = rec8(g, m, 0x220);
     const int32_t total = int32_t(rec8(g, m, 0x26f)) * 80000 + (assets(g, m, 0xf) - assets(g, m, 0x10));
-    if (total < -6000000 || ((cut >> 5) == 2 && int32_t(cut & 0x1f) * 100000 <= rec32(g, m, 0x330))) return;
+    if (total < -4000000 || ((cut >> 5) == 2 && int32_t(cut & 0x1f) * 100000 <= rec32(g, m, 0x330))) return;
     if (g.memory.u8(::bmh::layout::GameMode) < 3) set_rec32(g, m, 0x320, rec32(g, m, 0x314) - rec32(g, m, 0x324));
     bool poor = false;
     int32_t w = worth;
@@ -1358,7 +1358,7 @@ void licence_withdrawals(GameState& g, int league, std::vector<uint16_t>& down, 
         if (kDownPlaces[league] == 0) continue;
         const uint8_t cut = rec8(g, int(m), 0x220);
         const int32_t total = int32_t(rec8(g, int(m), 0x26f)) * 80000 + (assets(g, int(m), 0xf) - assets(g, int(m), 0x10));
-        const bool broke = total < -6000000 || ((cut >> 5) == 2 && int32_t(cut & 0x1f) * 100000 <= rec32(g, int(m), 0x330));
+        const bool broke = total < -4000000 || ((cut >> 5) == 2 && int32_t(cut & 0x1f) * 100000 <= rec32(g, int(m), 0x330));
         if (broke && rec8(g, int(m), 0x210) == 0x1e) {
             rec8(g, int(m), 0x210) = 0;
             post_text(g, int(m), text_id(::bmh::layout::Season_LicenceWithdrawals_TextPointer));

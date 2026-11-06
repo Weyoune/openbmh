@@ -75,7 +75,7 @@ constexpr int8_t kWantedBig[4] = {2, 6, 7, 5}, kWantedSmall[4] = {2, 4, 5, 4};
 constexpr int8_t kEuropeBonus[4] = {0, 1, 3, 2};
 constexpr uint8_t kWinnerEntry[4] = {0x00, 0x0f, 0x13, 0x15};
 constexpr int8_t kWinnerBonus[4] = {0x14, 0x1e, 0x14, 0x0f};
-constexpr int32_t kWinnerPremium[4] = {500000, 1500000, 2500000, 1500000};
+constexpr int32_t kWinnerPremium[4] = {400000, 850000, 1000000, 850000};  // Diamond 3.7 (500000, 1500000, 2500000, 1500000 before)
 // Statistics: value of the facilities (BalancePlanRuntimeField5, u16 per facility).
 constexpr uint16_t kFacilityValue[22] = {2000, 3000, 3000, 8000, 4000, 3000, 2500, 2500, 2500, 2500, 2600,
                                          2600, 2600, 2600, 13000, 9000, 9000, 8000, 1000, 1500, 1500, 2000};
@@ -529,7 +529,7 @@ void advertising_offers(GameState& g, int manager, WatcomRandom& rand, MinuteRep
     if (int16_t(score) < 0) score = 0;
     score = int16_t(score) * 100 / 0x78;
     int base = (int16_t(score) * 60000 + 1000000) / 0xc;
-    base = ((0xb4 - g.level * 5) * base) / 100;
+    base = ((0x87 - g.level * 5) * base) / 100;  // Diamond 3.7: 0x87 (0xb4 before)
     for (int kind = 0; kind < 3; kind++)
         for (int k = 0; k < 10; k++) {
             const size_t o = 0x8cc + size_t(kind) * 0x78 + size_t(k) * 0xc;
@@ -721,7 +721,7 @@ void transfer_bid(GameState& g, int slot, uint32_t list, bool high, int months, 
         }
         // RateTransferBidSource: fee and salary bases of the offer
         const uint8_t term = mem.u8(list + 0x34 + uint32_t(free_bid));
-        uint32_t fee_base = (mem.u32(list + 0x2c) / 10000) * 0x30d4;
+        uint32_t fee_base = (mem.u32(list + 0x2c) / 10000) * 10000;  // Diamond 3.7: base 10000 per 10000 of value (12500 before)
         if (term & 0x80) fee_base >>= 2;
         const int years = ((term & 0x7F) - 1) / 0xc;
         const uint32_t salary_base = ((uint32_t(years * 0x14 + 100) * mem.u32(list + 0x30)) / 10000) * 100;
@@ -741,7 +741,7 @@ void transfer_bid(GameState& g, int slot, uint32_t list, bool high, int months, 
 namespace {
 
 // RateTransferBidSource: fee and salary bases of bid `bid` of a list entry (-1: none, a one-year
-// term): the fee base is the market value / 10000 * 12500 (a quarter for a loan), the
+// term): the fee base is the market value / 10000 * 10000 (a quarter for a loan), the
 // salary base the salary * (100 + 20 per extra contract year) / 100.
 void offer_bases(const StaticMemory& mem, uint32_t list, int bid, uint32_t& fee_base, uint32_t& salary_base) {
     bool loan = false;
@@ -751,7 +751,7 @@ void offer_bases(const StaticMemory& mem, uint32_t list, int bid, uint32_t& fee_
         loan = (term & 0x80) != 0;
         years = uint8_t(((term & 0x7F) - 1) / 0xc);
     }
-    fee_base = (mem.u32(list + 0x2c) / 10000) * 0x30d4;
+    fee_base = (mem.u32(list + 0x2c) / 10000) * 10000;  // Diamond 3.7: base 10000 per 10000 of value (12500 before)
     if (loan) fee_base >>= 2;
     salary_base = ((uint32_t(years * 0x14 + 100) * mem.u32(list + 0x30)) / 10000) * 100;
 }
@@ -2826,7 +2826,10 @@ void weekly_processing(GameState& g, GameRandom& game, WatcomRandom& rand, Minut
         const uint32_t out = p.w35c >> 27;
         const uint32_t w364 = p.w364;
         int injury = int((w364 >> 16) & 0x1F);
-        if (!quiet && game.range(0, 0xb4 - g.level * 2) == 0 && injury == 0 && out == 0) {
+        // Diamond 3.7: the chance of a training injury is 1 in (144 - (3 * level + 3) / 5 - level + 1), at least 1 in 1
+        // (an older build used 1 in (180 - 2 * level + 1)).
+        const int training_injury_range = std::max(0, 0x90 - (g.level * 3 + 3) / 5 - g.level);
+        if (!quiet && game.range(0, training_injury_range) == 0 && injury == 0 && out == 0) {
             if (slot >= 0x870 && rand.range(0, 1) == 0) continue;
             int type = rand.range(0, 0x1e);
             const int team = slot_team(int(slot));
@@ -2840,8 +2843,10 @@ void weekly_processing(GameState& g, GameRandom& game, WatcomRandom& rand, Minut
             }
             continue;
         }
-        if (out == 0 || out == 0x1F) continue;
-        if (injury > 0x18 && rand.range(0, 0x25) == 0) {
+        // Diamond 3.7: only a player who is already retired (both the injury type and the duration are 0x1f) is skipped;
+        // a long injury (more than 20 matchdays) ends a career with 1 in 40 (an older build: more than 24, 1 in 38).
+        if (out == 0 || (out == 0x1F && injury == 0x1F)) continue;
+        if (injury > 0x14 && rand.range(0, 0x27) == 0) {
             // the career is over
             p.w35c = (p.w35c & 0x07FFFFFFu) | 0xF8000000u;
             p.w364 |= 0x1Fu << 16;
@@ -2905,7 +2910,7 @@ void weekly_processing(GameState& g, GameRandom& game, WatcomRandom& rand, Minut
                 book_money(g, m, -int32_t(pay), true);
             }
             const uint8_t mood = g.tactics.at(at + 0xc);
-            if (mood % 0xc <= 7 && !(g.tactics.at(at + 0xb) & 0x20) && mood % 0xc != 0 && mood <= 0xf &&
+            if (mood % 0xc <= 7 && !(g.tactics.at(at + 0xb) & 0x20) && mood % 0xc != 0 && mood <= 0x12 &&
                 !(g.tactics.at(at + 0x4f) & 0x80) && !quiet) {
                 const int16_t rating = int16_t(rec.i16(0x8aa) + (rec.i16(0x8ac) >> 2));
                 if (rand.range(0, 500 - (rating - 0x2a8) / 2) == 0) {

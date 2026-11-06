@@ -410,7 +410,7 @@ void starting_sponsors(GameState& g, int m) {
     const size_t rec = size_t(m) * kRecord;
     int league = g.manager_records.at(rec + 0x210);
     if (league > 2) league--;
-    const int v = (((league * -20 + 80) * 60000 + 1000000) / 12 * (mem.u8(::bmh::layout::Difficulty) * -5 + 0xaa)) / 3000000 * 10000;
+    const int v = (((league * -20 + 80) * 60000 + 1000000) / 12 * (mem.u8(::bmh::layout::Difficulty) * -5 + 0x7d)) / 3000000 * 10000;
     for (size_t o : {size_t(0xae8), size_t(0xadc), size_t(0xa34)}) put32(g.manager_records, rec + o, uint32_t(v));
     for (size_t o : {size_t(0xaed), size_t(0xae1), size_t(0xa39)}) g.manager_records.at(rec + o) = 1;
 }
@@ -567,7 +567,7 @@ bool career_add_manager(GameState& g, const LeImage& exe, int m, const CareerMan
         }
     for (size_t i = 0; i < 0x690; i++) g.manager_results.at(size_t(m) * 0x690 + i) = 0xff;
     const uint8_t level = mem.u8(::bmh::layout::Difficulty);
-    const uint32_t money = level == 0 ? 50000000u : 4000000u - level * 200000u;
+    const uint32_t money = level == 0 ? 50000000u : 3000000u - level * 200000u;  // Diamond 3.7: 3 million start capital step base (4 million before)
     put32(r, rec + 0x314, money);
     put32(r, rec + 0x324, money);
     r.at(rec + 0x219) = r.at(rec + 0x218) = 0xf;

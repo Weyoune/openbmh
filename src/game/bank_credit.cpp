@@ -234,7 +234,7 @@ BankCreditBounds bank_credit_bounds(const BankCreditContext& c, const BankCredit
         int32_t lo = 0, hi = 0;
         if (field == 0) {
             lo = 1000;
-            hi = sub(12000000, accrued);
+            hi = sub(8000000, accrued);  // Diamond 3.7: credit limit 8 million (12 million before)
             // case 5: no more than the lender can pay out (balance + credit line)
             if (c.counterparty && c.lender_liquidity < hi) hi = sub(c.lender_liquidity, accrued);
         }
@@ -256,7 +256,7 @@ BankCreditBounds bank_credit_bounds(const BankCreditContext& c, const BankCredit
         if (field == 6) { hi = liquidity < accrued ? liquidity : signed_word(v[0]); }
         // Source checks availability before overriding the principal bounds.
         if (lo >= hi) return {};
-        if (field == 0 && lo < signed_word(c.saved[0])) { lo = signed_word(c.saved[0]); hi = 12000000; }
+        if (field == 0 && lo < signed_word(c.saved[0])) { lo = signed_word(c.saved[0]); hi = 8000000; }
         if (lo < 0 || hi < 0 || lo >= hi) return {};
         return {word(lo), word(hi), word(lo - (lo == 1)), true};
     } catch (const std::invalid_argument&) { return {}; }
