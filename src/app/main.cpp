@@ -1070,6 +1070,15 @@ int main(int argc, char** argv) {
                     *market_backdrop, "OpenBMH - transfer_market_notice") == PendingOfferAnswer::unsupported)
                     throw std::runtime_error("transfer market presenter stopped");
             };
+            // PresentManagerDialog yes/no question: poaching asks the selling manager whether the offered fee is
+            // fine and the buyer whether he pays the fee the DFB sets. Without this hook the engine refuses a poaching
+            // offer (the ANGEBOT button of the Abwerben dialog then does nothing).
+            hooks.confirm = [&, market_backdrop](const GameState& staged, int manager, const std::string& text) {
+                const auto answer = present_pending_dialog(staged, ui::loan_return_question_dialog(staged, manager, text),
+                    *market_backdrop, "OpenBMH - transfer_market_question");
+                if (answer == PendingOfferAnswer::unsupported) throw std::runtime_error("transfer market presenter stopped");
+                return answer == PendingOfferAnswer::yes;
+            };
             return hooks;
         };
         // Forward declarations: the club, player and statistics presenters call each other, so
