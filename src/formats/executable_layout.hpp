@@ -1415,6 +1415,7 @@ inline constexpr auto Month_ReturnLoans_TextPointer7 = 0xaee44;
 inline constexpr auto Month_ReturnLoans_TextPointer8 = 0xaee48;
 inline constexpr auto Month_SearchProfileNews_TextPointer = 0xaedd8;
 inline constexpr auto Month_SearchProfileNews_TextPointer2 = 0xaf254;
+inline constexpr auto Month_SearchProfileNews_TextPointer3 = 0xaf258;   // ending of the message box after "Suchen"
 inline constexpr auto NationalFriendlyPayerPrefixText = 0xa000f;
 inline constexpr auto NextDeskManager = 0xbd6cc;
 inline constexpr auto NoClubText = 0xaec74;

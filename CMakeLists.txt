@@ -240,6 +240,7 @@ add_library(bmhcore STATIC
     src/game/matchday_setup.cpp
     src/game/prediction.cpp
     src/game/month.cpp
+    src/game/search_profile.cpp
     src/game/desk.cpp
     src/game/cup.cpp
     src/game/club_info.cpp
@@ -1192,6 +1193,9 @@ add_test(NAME daily_interest_unit_tests COMMAND daily_interest_unit_tests)
 add_executable(transfer_seller_actions_tests tests/transfer_seller_actions_tests.cpp)
 target_link_libraries(transfer_seller_actions_tests PRIVATE bmhcore)
 add_test(NAME transfer_seller_actions_tests COMMAND transfer_seller_actions_tests)
+add_executable(search_profile_tests tests/search_profile_tests.cpp)
+target_link_libraries(search_profile_tests PRIVATE bmhcore)
+add_test(NAME search_profile_tests COMMAND search_profile_tests)
 
 add_executable(transfer_seller_app_tests tests/transfer_seller_app_tests.cpp ${BMH_APP_SESSION_SDL_SOURCE})
 target_link_libraries(transfer_seller_app_tests PRIVATE bmhui openbmh_audio ${BMH_SDL_TARGET})
