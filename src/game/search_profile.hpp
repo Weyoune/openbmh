@@ -24,10 +24,15 @@ constexpr uint8_t kSearchProfileOff = 0x40;
 // The stored profile of a manager slot (all zero for an invalid slot).
 SearchProfile search_profile(const GameState& g, int manager);
 
+// Whether the values can come out of the dialog: bytes 0..3 and 8..17 are switches (0 or 1, the "off" bit is
+// ignored in byte 0), the age bar has 25 cells (bytes 4 and 5 are 0..24) and the strength bar 100 (bytes 6 and 7 are 0..99).
+bool search_profile_valid(SearchProfile profile);
+
 // Stores the profile the way the original dialog does when it is closed: a profile with every value 0 or
 // every value 1 is switched off (bit 0x40), and so is any profile that was left by right click
 // (`cancelled`). Returns whether the stored profile is active. Fails (false, nothing stored) for an
-// invalid manager slot or a value above 1 where the original has only switches.
+// invalid manager slot or invalid values (see search_profile_valid) - check these first to tell
+// "refused" from "switched off".
 bool set_search_profile(GameState& g, int manager, SearchProfile profile, bool cancelled);
 
 // Average strengths per position class of the manager's own squad (original sub_19A38): index 0..3

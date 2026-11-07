@@ -146,7 +146,9 @@ This index includes registered and reserved names. `ListOptions` and `Help` from
 | `BuyPlayer` | player:Player | VER-KAUFEN on a market player: the offer editor |
 | `HirePlayer` | player:Player, months:int(12\|24) | VER-LEIHEN on a market player: the loan offer |
 | `OpenOffers` | player:Player | Open Offers. See current Help for behaviour and bounds. |
-| `OpenSearch` | – | Open Search. See current Help for behaviour and bounds. |
+| `ShowSearchProfile` | – | SUCHEN: your search profile as 18 values (positions, age, strength, attributes, sides, price classes) |
+| `SuggestSearchProfile` | [whole:bool], [apply:bool] | VORSCHLAG: the profile your squad asks for; `apply` stores it and lists the matching players |
+| `SetSearchProfile` | values:[18 numbers], [apply:bool] | SUCHEN: store the profile; all values 0 or all 1 count as no search; `apply` lists the players on the transfer list that fit (the original's "Spieler ... ist interessant!" boxes) |
 | `OpenPoach` | – | ABWERBEN: pick a player of another club (Transfer.Poach) |
 | `ShowTransferNews` | [count:int] | Show Transfer News. See current Help for behaviour and bounds. |
 | `ShowTeamInfo` | – | Show Team Info. See current Help for behaviour and bounds. |

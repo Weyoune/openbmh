@@ -45,9 +45,7 @@ SearchProfile search_profile(const GameState& g, int manager) {
     return profile;
 }
 
-bool set_search_profile(GameState& g, int manager, SearchProfile profile, bool cancelled) {
-    if (manager < 0 || size_t(manager) >= g.manager_teams.size() ||
-        (size_t(manager) + 1) * kRecord > g.manager_records.size()) return false;
+bool search_profile_valid(SearchProfile profile) {
     profile[0] &= 0x3F;  // the dialog starts from the stored profile without the "off" bit
     for (size_t i = 0; i < profile.size(); ++i) {
         const bool range = i >= 4 && i <= 7;
@@ -55,6 +53,13 @@ bool set_search_profile(GameState& g, int manager, SearchProfile profile, bool c
         if (i >= 4 && i <= 5 && profile[i] > 24) return false;     // age bar: 25 cells
         if (i >= 6 && i <= 7 && profile[i] > 99) return false;     // strength bar: 100 cells
     }
+    return true;
+}
+
+bool set_search_profile(GameState& g, int manager, SearchProfile profile, bool cancelled) {
+    if (manager < 0 || size_t(manager) >= g.manager_teams.size() ||
+        (size_t(manager) + 1) * kRecord > g.manager_records.size() || !search_profile_valid(profile)) return false;
+    profile[0] &= 0x3F;
     int sum = 0;
     for (uint8_t value : profile) sum += value;
     if (sum == 0 || sum == 18 || cancelled) profile[0] |= kSearchProfileOff;

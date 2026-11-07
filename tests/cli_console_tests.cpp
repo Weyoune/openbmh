@@ -1420,6 +1420,16 @@ void coverage_tests(const std::filesystem::path& data, const std::filesystem::pa
         block({"SellPlayer(row:19)", "BuyPlayer(" + id + ")", "ShowNegotiation", "SetOfferField(Fee, 100000)",
                "SetOfferField(Salary, 20000)", "ShowTeamInfo", "ShowPlayerInfo", "SubmitOffer", "GoBack", "GoBack"});
     }
+    {
+        // the search profile (buttons SUCHEN and VORSCHLAG): the suggestion, storing a profile, a refused value
+        check(contains(block({"Key(M)", "SuggestSearchProfile"}), "profile active"), "coverage: the suggestion is a profile");
+        block({"SetSearchProfile([1,1,0,0,0,24,0,99,0,0,0,0,0,0,0,0,0,0], false)", "ShowSearchProfile"});
+        check(contains(block({"SetSearchProfile([1,1,1,1,0,24,0,99,0,0,0,0,0,0,0,0,0,0])"}), "search profile stored"),
+              "coverage: a profile is stored");
+        check(contains(block({"SetSearchProfile([2,1,1,1,0,24,0,99,0,0,0,0,0,0,0,0,0,0])"}, true), "E_BAD_ARGUMENT"),
+              "coverage: a switch above 1 is refused");
+        block({"GoBack"});
+    }
     block({"Key(T)", "ShowTable(0)", "OpenTeamInfo(club:0)", "ShowTeamSquad", "ShowPlayer(row:0)", "CloseTeamInfo", "ShowTable(1)", "GoBack",
            "Open(HighScore)", "ShowHighScore", "GoBack", "Open(TopScorers)", "ShowScorers(Assists, League)", "SetList(Score)", "SetScope(Managers)", "GoBack", "Open(Fixtures)", "NextMatchday", "GoBack", "OpenMailbox", "ListMessages", "GoBack"});
     block({"Open(SaveGame)", "Save(COVER)", "GoBack"});

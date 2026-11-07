@@ -6026,6 +6026,38 @@ bool CareerSession::apply_desk_setting(int manager, bool price, int index, int v
     return true;
 }
 
+// The stored search profile of a manager slot (all zero for an invalid slot).
+SearchProfile CareerSession::search_profile(int manager) const { return bmh::search_profile(g_, manager); }
+
+// The profile "Vorschlag" proposes for the manager's squad; nothing is stored.
+SearchProfile CareerSession::suggest_search_profile(int manager, bool whole_squad) const {
+    return bmh::suggest_search_profile(g_, manager, whole_squad);
+}
+
+// Stores an edited search profile like the closing dialog does and, with `apply`, returns the transfer-list entries
+// that fit it. Only the active manager of a club with a transfer market may do this, and not while another window
+// owns the session. The revision rises only when the stored bytes changed.
+std::optional<CareerSession::SearchProfileDispatch> CareerSession::dispatch_search_profile(int manager,
+    const SearchProfile& profile, bool cancelled, bool apply, uint64_t& revision, std::string& error) {
+    if (balance_draft_ || balance_dispatch_active_ || strengths_owner_ || strengths_dispatch_active_ ||
+        top_scorers_owner_ || top_scorers_dispatch_active_ || stadium_.block_expansion || other_games_owner_ ||
+        other_games_dispatch_active_ || transfer_offer_editor_ || market_dispatch_active_ ||
+        pending_offer_dispatch_active_ || calendar_advance_active_) { error = "search_profile_blocked"; return std::nullopt; }
+    if (manager < 0 || size_t(manager) >= g_.manager_teams.size() || g_.manager_teams[size_t(manager)] == kNoTeam ||
+        !g_.memory.has(::bmh::layout::ActiveManager) || g_.memory.u8(::bmh::layout::ActiveManager) != manager ||
+        revision == std::numeric_limits<uint64_t>::max()) { error = "invalid_search_profile_owner"; return std::nullopt; }
+    if (!search_profile_valid(profile)) { error = "invalid_search_profile"; return std::nullopt; }
+    const auto before = bmh::search_profile(g_, manager);
+    SearchProfileDispatch result;
+    result.active = set_search_profile(g_, manager, profile, cancelled);
+    const auto stored = bmh::search_profile(g_, manager);
+    result.profile = stored;
+    if (stored != before) ++revision;
+    if (apply) result.hits = search_profile_hits(g_, manager);
+    error.clear();
+    return result;
+}
+
 // Validates the owner and the price range (8-25) and applies the ticket price; revision plus one.
 bool CareerSession::dispatch_ticket_price(const TicketPriceRequest& request, uint64_t& revision,
                                           std::string& error) {

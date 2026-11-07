@@ -38,6 +38,7 @@
 #include "game/pending_offer.hpp"
 #include "game/poach.hpp"
 #include "game/human_buyer_sale.hpp"
+#include "game/search_profile.hpp"
 #include "game/weekly.hpp"
 #include "ui/flow.hpp"
 #include "ui/desk_state.hpp"
@@ -177,6 +178,21 @@ public:
         const ui::TransferMarketRequest&, const HumanBuyerSaleHooks&,
         uint64_t& revision, std::string& error,
         const std::function<int(const GameState&, const TransferOfferListView&)>& review = {});
+
+    // The search profile of a human manager (transfer market buttons "Suchen" and "Vorschlag", game/search_profile.hpp).
+    // `search_profile` is the stored profile, `suggest_search_profile` the one the squad asks for (nothing is stored).
+    // `dispatch_search_profile` stores an edited profile the way the closing dialog does (`cancelled` = left by right
+    // click, which switches the profile off) and, with `apply`, lists the transfer-list entries that fit it right now.
+    // The revision rises only when the stored profile changed.
+    SearchProfile search_profile(int manager) const;
+    SearchProfile suggest_search_profile(int manager, bool whole_squad) const;
+    struct SearchProfileDispatch {
+        SearchProfile profile{};
+        bool active = false;
+        std::vector<SearchProfileHit> hits;
+    };
+    std::optional<SearchProfileDispatch> dispatch_search_profile(int manager, const SearchProfile& profile, bool cancelled,
+        bool apply, uint64_t& revision, std::string& error);
 
     struct TransferMarketPreviewDispatch {
         ui::PreparationState preparation;

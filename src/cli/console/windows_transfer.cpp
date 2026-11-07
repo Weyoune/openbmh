@@ -516,8 +516,74 @@ void Console::register_transfer_commands() {
             show_offer();
         });
 
+    // --- the search profile (buttons Suchen / Vorschlag of the market, game/search_profile.hpp) ---------------
+    // The 18 values of the profile in the order of the original dialog; the console shows and takes them as a list.
+    static const char* const kProfileLabels[18] = {
+        "Goalkeeper", "Defender", "Midfielder", "Forward", "AgeMin(16+)", "AgeMax(16+)", "StrengthMin", "StrengthMax",
+        "AttrCondition", "AttrTechnique", "AttrForm", "Side1", "Side2", "Side3", "Side4", "PriceLow", "PriceMid", "PriceHigh"};
+    auto show_profile = [this](const SearchProfile& p, const char* heading) {
+        std::vector<std::vector<std::string>> rows;
+        for (size_t i = 0; i < p.size(); ++i)
+            rows.push_back({kProfileLabels[i], std::to_string(i == 0 ? p[i] & ~kSearchProfileOff : p[i])});
+        emit_table({heading, "Value"}, rows);
+        std::string list;
+        for (size_t i = 0; i < p.size(); ++i) list += (i ? "," : "") + std::to_string(i == 0 ? p[i] & ~kSearchProfileOff : p[i]);
+        emit('i', std::string("profile ") + (p[0] & kSearchProfileOff ? "OFF" : "active") + "; as SetSearchProfile([" + list + "])");
+    };
+    auto manager_slot = [market] { return market().manager_slot; };
+    add({"Transfer", "ShowSearchProfile", {}, "SUCHEN: your search profile (18 values; positions, age, strength, attributes, sides, price classes)", false},
+        [this, manager_slot, show_profile](const Values&) { show_profile(session_->search_profile(manager_slot()), "Search profile"); });
+    add({"Transfer", "SuggestSearchProfile", {boolean("whole", true), boolean("apply", true)},
+         "VORSCHLAG: the profile your squad asks for (whole = count the substitutes); apply = store it and list the matches", false},
+        [this, manager_slot, show_profile, flush_notices](const Values& v) {
+            const int manager = manager_slot();
+            const auto suggestion = session_->suggest_search_profile(manager, v.boolean("whole", false));
+            show_profile(suggestion, "Suggestion");
+            if (v.boolean("apply", false)) {
+                std::string error;
+                const auto result = session_->dispatch_search_profile(manager, suggestion, false, true, revision_, error);
+                if (!result) require_engine(false, "search profile", error);
+                emit('+', std::to_string(result->hits.size()) + " listed player(s) fit the profile");
+                for (const auto& hit : result->hits) emit('i', utf8(hit.message));
+            }
+        });
+    Param profile_values = detail::text("values");
+    profile_values.display = "values:[18 numbers] (see ShowSearchProfile)";
+    add({"Transfer", "SetSearchProfile", {profile_values, boolean("apply", true)},
+         "SUCHEN: store the search profile (the 18 values of ShowSearchProfile, switches 0/1, age 0..24 = 16..40, strength 0..99); apply = list the matches now", false},
+        [this, manager_slot, show_profile](const Values& v) {
+            std::string list = v.text("values");
+            if (list.size() >= 2 && list.front() == '[' && list.back() == ']') list = list.substr(1, list.size() - 2);
+            SearchProfile profile{};
+            size_t count = 0, start = 0;
+            while (start <= list.size()) {
+                const size_t comma = list.find(',', start);
+                std::string item = list.substr(start, comma == std::string::npos ? std::string::npos : comma - start);
+                item.erase(0, item.find_first_not_of(' '));
+                item.erase(item.find_last_not_of(' ') + 1);
+                if (item.empty() || item.find_first_not_of("0123456789") != std::string::npos || item.size() > 3)
+                    fail("E_BAD_ARGUMENT", "the profile values are numbers separated by commas");
+                if (count >= profile.size()) fail("E_BAD_ARGUMENT", "the profile has 18 values");
+                profile[count++] = uint8_t(std::min(255, std::stoi(item)));
+                if (comma == std::string::npos) break;
+                start = comma + 1;
+            }
+            if (count != profile.size()) fail("E_BAD_ARGUMENT", "the profile has 18 values, not " + std::to_string(count));
+            if (!search_profile_valid(profile))
+                fail("E_BAD_ARGUMENT", "switches are 0 or 1, the age values 0..24 and the strength values 0..99");
+            std::string error;
+            const auto result = session_->dispatch_search_profile(manager_slot(), profile, false, v.boolean("apply", true), revision_, error);
+            if (!result) require_engine(false, "search profile", error);
+            emit('+', result->active ? "search profile stored"
+                                     : "search profile stored but switched off (all values 0 or all 1 count as no search)");
+            if (v.boolean("apply", true)) {
+                emit('+', std::to_string(result->hits.size()) + " listed player(s) fit the profile");
+                for (const auto& hit : result->hits) emit('i', utf8(hit.message));
+            }
+        });
+
     // the rest of the market (06-verein 5): later steps of stage 3 or engine gaps
-    for (const char* name : {"SetSquadView", "SetSquadSheet", "SetMarketVisible", "ShowPlayer", "OpenOffers", "OpenSearch",
+    for (const char* name : {"SetSquadView", "SetSquadSheet", "SetMarketVisible", "ShowPlayer", "OpenOffers",
                              "ShowTransferNews", "ShowTeamInfo"})
         add({"Transfer", name, {}, "not in the console yet", false},
             [name](const Values&) { fail("E_ENGINE_GAP", std::string(name) + " is not in the console yet"); });
