@@ -44,7 +44,7 @@ struct ControlInput {
         "real seller listing helper");
   const uint32_t ordinary=::bmh::layout::EditorList+uint32_t(listing.list_entry)*0x58;
   TransferBidRequest bid;bid.manager=1;bid.list_entry=listing.list_entry;bid.player=listing.player;
-  bid.fee=int32_t((state.memory.u32(ordinary+0x2c)/10000u)*0x30d4u);
+  bid.fee=int32_t((state.memory.u32(ordinary+0x2c)/10000u)*10000u);
   bid.annual_salary=int32_t(((100u*state.memory.u32(ordinary+0x30))/10000u)*200u);
   bid.contract_years=1;
   check(submit_transfer_bid(state,bid,helper).status==TransferActionStatus::pending,

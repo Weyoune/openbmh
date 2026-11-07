@@ -134,8 +134,9 @@ TransferMarketState transfer_market_from_game(const GameState& g, uint64_t revis
             item.seller_name = g.club_name(item.seller);
             item.own_listing = item.seller == state.runtime_club;
         }
-        // Asking fee as stored in the list entry, scaled as the original does (value/10000 times 0x30d4); must fit in int32.
-        const uint64_t fee = uint64_t(g.memory.u32(entry + 0x2c) / 10000) * 0x30d4;
+        // Asking fee as stored in the list entry, rounded down to whole 10000 as the original does (sub_3C940 of Diamond 3.7:
+        // value/10000 times 10000; the older build scaled it by 0x30d4 = 1.25); must fit in int32.
+        const uint64_t fee = uint64_t(g.memory.u32(entry + 0x2c) / 10000) * 10000;
         if (fee > uint64_t(std::numeric_limits<int32_t>::max())) throw FormatError("transfer market: asking fee out of range");
         item.asking_fee = int32_t(fee);
         item.salary_reference = g.memory.u32(entry + 0x30);
@@ -171,6 +172,11 @@ TransferMarketState transfer_market_from_game(const GameState& g, uint64_t revis
     state.decorated_background=!g.memory.has(::bmh::layout::PlainBackground)||g.memory.u8(::bmh::layout::PlainBackground)==0;
     state.textured_panes=!g.memory.has(::bmh::layout::SolidPanelBackground)||g.memory.u8(::bmh::layout::SolidPanelBackground)==0;
     state.source_market_mode=g.memory.has(::bmh::layout::GameMode)?g.memory.u8(::bmh::layout::GameMode):uint8_t(0);
+    // The search profile and the two suggestions of "Vorschlag" (a national coach has no market, so no profile).
+    if(state.runtime_club!=kNoTeam) {
+        state.search_profile=search_profile(g,manager);
+        for(int whole=0;whole<2;++whole)state.search_suggestion[size_t(whole)]=suggest_search_profile(g,manager,whole!=0);
+    }
     if(g.memory.has(::bmh::layout::ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField)&&g.memory.has(::bmh::layout::ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField2))state.currency=std::pair<int32_t,int32_t>{int32_t(g.memory.u32(::bmh::layout::CurrencyMultiplier)),int32_t(g.memory.u32(::bmh::layout::CurrencyDivisor))};
     // Roster block shown on the left side of the screen (same data as the club info screen).
     state.roster.runtime_team=state.runtime_club;state.roster.original_club_name=state.club_name;
@@ -319,7 +325,8 @@ std::string transfer_market_request_json(const TransferMarketRequest& r) {
         r.kind == TransferMarketRequestKind::open_offer ? "open_offer" :
         r.kind == TransferMarketRequestKind::preview_quote ? "preview_quote" :
         r.kind == TransferMarketRequestKind::open_poach ? "open_poach" :
-        r.kind == TransferMarketRequestKind::review_offers ? "review_offers" : "none";
+        r.kind == TransferMarketRequestKind::review_offers ? "review_offers" :
+        r.kind == TransferMarketRequestKind::store_search_profile ? "store_search_profile" : "none";
     std::ostringstream out;
     out << "{\"kind\":\"" << kind << "\",\"manager_slot\":" << r.manager_slot
         << ",\"runtime_club\":" << r.runtime_club << ",\"revision\":" << r.revision
@@ -333,7 +340,11 @@ std::string transfer_market_request_json(const TransferMarketRequest& r) {
         << ",\"fee\":" << r.bid.fee << ",\"annual_salary\":" << r.bid.annual_salary
         << ",\"contract_years\":" << unsigned(r.bid.contract_years) << ",\"bonuses\":[";
     for (size_t i = 0; i < r.bid.bonuses.size(); ++i) { if (i) out << ','; out << r.bid.bonuses[i]; }
-    out << "],\"selected_players\":[";
+    out << "],\"search_profile\":[";
+    for (size_t i = 0; i < r.search_profile.size(); ++i) { if (i) out << ','; out << unsigned(r.search_profile[i]); }
+    out << "],\"search_cancelled\":" << (r.search_cancelled ? "true" : "false")
+        << ",\"search_apply\":" << (r.search_apply ? "true" : "false");
+    out << ",\"selected_players\":[";
     for(size_t n=0;n<r.selected_players.size();++n){if(n)out<<',';const auto& p=r.selected_players[n];out<<"{\"list_entry\":"<<p.list_entry<<",\"source_slot\":"<<p.source_slot<<",\"player\":"<<p.player<<",\"seller\":"<<p.seller<<",\"squad_row\":"<<p.squad_row<<'}';}
     out << "]}";
     return out.str();
@@ -347,7 +358,10 @@ TransferMarketScreen::TransferMarketScreen(const std::filesystem::path& data, Tr
       background_(load_vga(asset_path(data / "KB", "56.VGA"))),
       frame_(load_vga(asset_path(data / "KB", "129.VGA"))),widgets_(load_vga(asset_path(data / "KB", "0.VGA"))),
       atlas_(load_vga(asset_path(data / "KB", "2.VGA"))),flags_(load_vga(asset_path(data / "KB", "24.VGA"))),
-      market_widgets_(load_vga(asset_path(data / "KB", "30.VGA"))) {
+      market_widgets_(load_vga(asset_path(data / "KB", "30.VGA"))),
+      search_panel_(load_vga(asset_path(data / "KB", "69.VGA"))) {
+    if (search_panel_.width != 136 || search_panel_.height != 135)
+        throw FormatError("transfer market: invalid search dialog asset");
     if (background_.width != 318 || background_.height != 207 || frame_.width!=320 || frame_.height!=240 || state_.manager_slot < 0 || state_.runtime_club < 0)
         throw FormatError("transfer market: invalid screen state or assets");
     if (state_.items.size() > 40) throw FormatError("transfer market: too many list rows");
@@ -585,6 +599,7 @@ Image TransferMarketScreen::render() const {
     sprite_font_.draw(out,SpriteFont::centered_title_x(sprite_font_.text_width(title)),13,title);
     sprite_font_.draw(out,5,235,original_to_utf8(state_.club_name));
     draw_market_overview(out);
+    if (search_open_) draw_search(out);
     if (!feedback_.empty()) {
         rect(out, 1, 227, 318, 12, 0x39);
         auto line = feedback_;
@@ -701,7 +716,7 @@ TransferMarketRequest TransferMarketScreen::make_open_offer(bool loan) {
 // Selection by position over the market rows (x 201..297, y 25..115, 15 px per row) or the roster
 // names (x 9..60). A new selection requests a quote preview unless Komplett is on.
 TransferMarketRequest TransferMarketScreen::move(int x,int y) {
-    if(pending_||close_requested_)return {};
+    if(pending_||close_requested_||search_open_)return {};
     if(!(view_flags_&1)&&x>=201&&x<=297&&y>=25&&y<115) {
         const auto order=market_order();const size_t first=order.empty()?0:std::min(market_page_,(order.size()-1)/6)*6,index=first+size_t((y-25)/15);
         if(index<order.size()){if(selected_item_==order[index])return {};selected_item_=order[index];selected_squad_.reset();selected_snapshot_.reset();return make_preview(true);}
@@ -729,6 +744,7 @@ TransferMarketRequest TransferMarketScreen::move(int x,int y) {
 // (y 202..212; the right part x>=254 means loan).
 TransferMarketRequest TransferMarketScreen::click(int x,int y,bool right) {
     if(pending_||close_requested_)return {};
+    if(search_open_)return click_search(x,y,right);
     if(right) {
         if(!(view_flags_&1)&&x>=185&&x<=319&&y>=21&&y<=163) {
             const auto rows=market_order();market_page_+=1;
@@ -743,6 +759,14 @@ TransferMarketRequest TransferMarketScreen::click(int x,int y,bool right) {
         // Reset's logical4 follows Data and the three leading market
         // buttons: its physical EXE/TransferMarket_Click_RuntimeField entry3 is Abwerben.
         const int px=exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField + 3*6),py=exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField2+3*6),pw=exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField3+3*6);
+        // The two buttons before Abwerben (Source entries 1 and 2): Suchen opens the search dialog with the stored
+        // profile, Vorschlag with the profile the squad asks for (Source sub_19409; the dialog is local UI state).
+        for(int search_button=1;search_button<=2&&state_.source_market_mode==3;++search_button) {
+            const int sx=exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField + search_button*6),sy=exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField2+search_button*6),sw=exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField3+search_button*6);
+            if(x<sx||x>sx+sw||y<sy||y>sy+10)continue;
+            open_search(search_button==1?state_.search_profile:state_.search_suggestion[(view_flags_&0x400)?1:0]);
+            return {};
+        }
         if(state_.source_market_mode==3&&x>=px&&x<=px+pw&&y>=py&&y<=py+10) {
             TransferMarketRequest request;
             request.kind=TransferMarketRequestKind::open_poach;
@@ -797,10 +821,90 @@ TransferMarketRequest TransferMarketScreen::click(int x,int y,bool right) {
     }
     return {};
 }
+// --- search dialog (Source sub_19409) --------------------------------------------------------------------------
+// Opens the dialog on a copy of `profile` (without the "off" bit of byte 0, as the Source dialog starts).
+void TransferMarketScreen::open_search(SearchProfile profile) {
+    profile[0] &= 0x3F;
+    search_edit_ = profile;
+    search_open_ = true;
+}
+
+// Draws the dialog: the 136x135 panel at (184,20), the seven bars (a dark stripe per row and the selected cells or the
+// range in the highlight colour), the price estimate of the profile and the confirm button.
+void TransferMarketScreen::draw_search(Image& out) const {
+    copy(out, search_panel_, 0, 0, 184, 20, 136, 135);
+    for (int row = 0; row < 7; ++row) {
+        const uint32_t at = ::bmh::layout::TransferMarket_SearchRows_RuntimeField + uint32_t(row) * 5;
+        const int y = exe_.u8(at), step = exe_.u8(at + 1), cells = exe_.u8(at + 2), slider = exe_.u8(at + 3), offset = exe_.u8(at + 4);
+        rect(out, 217, y, 100, 2, 0x42);   // Source rectangle (217,y)-(316,y+1)
+        if (slider) {
+            const int low = 100 * search_edit_.at(size_t(offset)) / cells, high = 100 * search_edit_.at(size_t(offset) + 1) / cells;
+            rect(out, 217 + low, y, high - low + 1, 2, 0xF7);
+        } else {
+            for (int cell = 0, x = 217; cell < cells; ++cell, x += step)
+                if (search_edit_.at(size_t(offset) + size_t(cell))) rect(out, x + 3, y, step - 5, 2, 0xF7);
+        }
+    }
+    // Price estimate: five times the (inverted) age midpoint plus five times the strength midpoint, limited to 12..620.
+    int value = 5 * (31 - (search_edit_[4] + search_edit_[5]) / 2) + 5 * ((search_edit_[7] + search_edit_[6]) / 2);
+    value = std::clamp(value, 12, 620);
+    value = value * (value >> 2) * ((value >> 3) + 100) / 10;
+    auto price = original_money(10000 * (value / 10000));
+    price.erase(0, price.find_first_not_of('%'));
+    original_text(out, 216, 148, price, 0x7A);
+    button(out, 277, 140, 40, texts_[text_id(::bmh::layout::TransferMarket_SearchButton_TextPointer)], false);
+}
+
+// A click inside the dialog: the confirm button closes it and applies the profile, the right button closes it and
+// switches the search off, a click on a bar row edits that row (Source: a switch toggles its cell; on a slider the
+// click moves the nearer end of the range, and the two ends never become equal).
+TransferMarketRequest TransferMarketScreen::click_search(int x, int y, bool right) {
+    if (right) return close_search(true);
+    if (x >= 277 && x <= 317 && y >= 140 && y <= 150) return close_search(false);
+    if (x < 216 || x > 317) return {};
+    for (int row = 0; row < 7; ++row) {
+        const uint32_t at = ::bmh::layout::TransferMarket_SearchRows_RuntimeField + uint32_t(row) * 5;
+        const int row_y = exe_.u8(at), step = exe_.u8(at + 1), cells = exe_.u8(at + 2), slider = exe_.u8(at + 3), offset = exe_.u8(at + 4);
+        if (y < row_y - 2 || y > row_y + 3) continue;
+        int value = (x - 217) / step;
+        if (slider) {
+            auto& low = search_edit_.at(size_t(offset));
+            auto& high = search_edit_.at(size_t(offset) + 1);
+            if ((int(low) + int(high)) / 2 < value && value != 0) {
+                if (value > cells - 1) value = cells - 1;
+                high = uint8_t(value);
+            } else {
+                low = uint8_t(std::max(0, value));
+            }
+            if (low == high) { if (low) --low; else ++high; }
+        } else if (value >= 0 && value < cells) {   // (the Source also toggles the byte after the row for a click on its last pixel column)
+            search_edit_.at(size_t(offset) + size_t(value)) ^= 1;
+        }
+    }
+    return {};
+}
+
+// Leaves the dialog and posts the profile to the session. Source sets view-flag bit 1 (the Suchen button) to whether
+// the closed profile is an active search.
+TransferMarketRequest TransferMarketScreen::close_search(bool cancelled) {
+    search_open_ = false;
+    view_flags_ = uint16_t((view_flags_ & ~2u) | (search_profile_active(search_edit_, cancelled) ? 2u : 0u));
+    TransferMarketRequest request;
+    request.kind = TransferMarketRequestKind::store_search_profile;
+    request.manager_slot = state_.manager_slot; request.runtime_club = state_.runtime_club; request.revision = state_.revision;
+    request.search_profile = search_edit_; request.search_cancelled = cancelled; request.search_apply = !cancelled;
+    pending_ = request; feedback_.clear();
+    return request;
+}
+
 // Keyboard shortcuts: Esc closes, B or Enter opens an offer for the selected market item,
 // V or Enter lists the selected squad player.
 TransferMarketRequest TransferMarketScreen::key(std::string_view key) {
     if(pending_||close_requested_)return {};
+    if(search_open_) {   // the dialog only knows the mouse; Esc counts as the right button
+        if(key=="ESC"||key=="ESCAPE")return close_search(true);
+        return {};
+    }
     if(key=="ESC"||key=="ESCAPE"){close_requested_=true;return {};}
     if(key=="B"&&selected_item_)return make_open_offer();
     if(key=="V"&&selected_squad_)return make_listing();
@@ -889,7 +993,9 @@ std::string TransferMarketScreen::state_json() const {
         << ",\"active_field\":" << active_field_ << ",\"numeric_input\":" << json_quote(numeric_input_)
         << ",\"pending\":" << (pending_ ? transfer_market_request_json(*pending_) : "null")
         << ",\"feedback\":" << json_quote(feedback_)
-        << ",\"preview\":";
+        << ",\"search_open\":" << (search_open_ ? "true" : "false") << ",\"search_edit\":[";
+    for (size_t i = 0; i < search_edit_.size(); ++i) out << (i ? "," : "") << unsigned(search_edit_[i]);
+    out << "],\"preview\":";
     if (preview_) {
         out << "{\"source_slot\":" << preview_->source_slot << ",\"player\":" << preview_->player
             << ",\"seller\":" << preview_->seller << ",\"revision\":" << preview_->revision

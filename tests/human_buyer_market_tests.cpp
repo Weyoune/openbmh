@@ -1059,7 +1059,7 @@ int main(int argc,char** argv) try {
         const uint32_t list=c.request.list_address;
         TransferBidRequest bid;bid.manager=c.buyer_manager;bid.list_entry=c.request.list_entry;
         bid.player=c.player;bid.source_slot=int(c.request.source_pool_slot);bid.contract_years=2;bid.loan=true;
-        const uint32_t fee_base=(g.memory.u32(list+0x2c)/10000u)*0x30d4u;
+        const uint32_t fee_base=(g.memory.u32(list+0x2c)/10000u)*10000u;
         const uint32_t salary_base=((120u*g.memory.u32(list+0x30))/10000u)*100u;
         bid.fee=int32_t(fee_base*2u);bid.annual_salary=int32_t(salary_base*2u);
         for(size_t n=0;n<7;++n)bid.bonuses[n]=uint32_t(n+3);

@@ -56,13 +56,18 @@ bool search_profile_valid(SearchProfile profile) {
     return true;
 }
 
+bool search_profile_active(SearchProfile profile, bool cancelled) {
+    profile[0] &= 0x3F;
+    int sum = 0;
+    for (uint8_t value : profile) sum += value;
+    return !(sum == 0 || sum == 18 || cancelled);
+}
+
 bool set_search_profile(GameState& g, int manager, SearchProfile profile, bool cancelled) {
     if (manager < 0 || size_t(manager) >= g.manager_teams.size() ||
         (size_t(manager) + 1) * kRecord > g.manager_records.size() || !search_profile_valid(profile)) return false;
     profile[0] &= 0x3F;
-    int sum = 0;
-    for (uint8_t value : profile) sum += value;
-    if (sum == 0 || sum == 18 || cancelled) profile[0] |= kSearchProfileOff;
+    if (!search_profile_active(profile, cancelled)) profile[0] |= kSearchProfileOff;
     for (size_t i = 0; i < profile.size(); ++i)
         g.manager_records.at(size_t(manager) * kRecord + kSearchProfileOffset + i) = profile[i];
     return (profile[0] & kSearchProfileOff) == 0;

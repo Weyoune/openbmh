@@ -1916,6 +1916,10 @@ inline constexpr auto TransferMarket_Rect_TextPointer2 = 0xa0045;
 inline constexpr auto TransferMarket_Rect_TextPointer3 = 0xae148;
 inline constexpr auto TransferMarket_Rect_TextPointer4 = 0xae14c;
 inline constexpr auto TransferMarket_Rect_TextPointer5 = 0xae150;
+// Search dialog (buttons Suchen / Vorschlag): seven 5-byte rows (y, step in px, cells, slider flag, profile offset)
+// and the text pointer of its confirm button.
+inline constexpr auto TransferMarket_SearchRows_RuntimeField = 0xa20fb;
+inline constexpr auto TransferMarket_SearchButton_TextPointer = 0xae144;
 inline constexpr auto TransferMarket_Rect_TextPointer6 = 0xaecac;
 inline constexpr auto TransferMarket_Rect_TextPointer7 = 0xaf250;
 inline constexpr auto TransferMarket_Render_TextPointer = 0xaf264;

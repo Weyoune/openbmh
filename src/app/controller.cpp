@@ -542,6 +542,34 @@ void serve_transfer_action(ui::StartupFlow& flow, CareerSession& session,
         }
         return;
     }
+    // Search dialog closed (Suchen / Vorschlag): store the profile; with apply, the listings that fit are announced one
+    // by one through the notice presenter, like the original's message boxes. Only a changed profile raises the revision.
+    if (request.kind == ui::TransferMarketRequestKind::store_search_profile) {
+        if (entry_policy != HumanBuyerMarketEntryPolicy::normal_interactive) {
+            flow.reject_preparation_action("Der Original-Suchdialog ist in diesem Einstieg nicht verfügbar.");
+            return;
+        }
+        std::string error;
+        const uint64_t before = revision;
+        const bool stored = TransferActions(session).apply(revision, [&] {
+            const auto result = session.dispatch_search_profile(request.manager_slot, request.search_profile,
+                request.search_cancelled, request.search_apply, revision, error);
+            if (!result) return false;
+            if (presenters.notice)
+                for (const auto& hit : result->hits)
+                    presenters.notice(session.state(), HumanBuyerSaleNotice{request.manager_slot, hit.entry, -1,
+                        ::bmh::layout::Month_SearchProfileNews_TextPointer3, hit.message, 0x40});
+            return true;
+        });
+        if (!stored) {
+            flow.reject_preparation_action("Das Suchprofil konnte nicht gespeichert werden.");
+        } else if (revision != before) {
+            flow.acknowledge_preparation(session.preparation_projection(revision), {});
+        } else {
+            flow.acknowledge_unchanged_transfer_market();
+        }
+        return;
+    }
     // All other kinds (bid, list, review offers): run through TransferActions::market with the
     // sale hooks. The notice presenter is wrapped to remember whether a notice was shown, so the
     // callback can keep the original notice/acknowledge order.

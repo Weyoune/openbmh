@@ -131,7 +131,7 @@ struct OrdinaryInput {
                     if ((candidate.squad_slots.at(0xb70u + size_t(entry)) & 0xfff) != player ||
                         (candidate.memory.u16(at + 8) & 0x7fff) != team || candidate.memory.u16(at) != 0xffff)
                         continue;
-                    const uint32_t fee_base = (candidate.memory.u32(at + 0x2c) / 10000u) * 0x30d4u;
+                    const uint32_t fee_base = (candidate.memory.u32(at + 0x2c) / 10000u) * 10000u;
                     const uint32_t salary_base = ((100u * candidate.memory.u32(at + 0x30)) / 10000u) * 100u;
                     const uint32_t cash = read32(candidate.manager_records, 0x314);
                     if (!fee_base || !salary_base || fee_base > cash / 3 || salary_base > 0x3fffffffu) continue;

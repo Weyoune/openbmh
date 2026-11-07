@@ -28,6 +28,11 @@ SearchProfile search_profile(const GameState& g, int manager);
 // ignored in byte 0), the age bar has 25 cells (bytes 4 and 5 are 0..24) and the strength bar 100 (bytes 6 and 7 are 0..99).
 bool search_profile_valid(SearchProfile profile);
 
+// Whether a profile closed with `cancelled` (right click) or not counts as an active search: the "off" bit of
+// byte 0 is ignored, every value 0 or every value 1 (the sum is 0 or 18) switches the search off, and so does
+// leaving the dialog by right click. The dialog uses the result for the button state, the engine for the stored bit.
+bool search_profile_active(SearchProfile profile, bool cancelled);
+
 // Stores the profile the way the original dialog does when it is closed: a profile with every value 0 or
 // every value 1 is switched off (bit 0x40), and so is any profile that was left by right click
 // (`cancelled`). Returns whether the stored profile is active. Fails (false, nothing stored) for an

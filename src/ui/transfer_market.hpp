@@ -18,6 +18,7 @@
 #include "game/poach.hpp"
 #include "ui/sprite_font.hpp"
 #include "game/desk_actions.hpp"
+#include "game/search_profile.hpp"
 #include "ui/manager.hpp"
 #include "ui/setup.hpp"
 
@@ -63,13 +64,18 @@ struct TransferMarketState {
     uint8_t source_market_mode = 0; // Unknown is not an inferred Mode III.
     std::optional<std::pair<int32_t,int32_t>> currency;
     std::array<uint16_t,5> active_strengths{},team_strengths{};
+    // Search profile of the manager (buttons Suchen / Vorschlag): the stored profile and the two suggestions the squad
+    // asks for (index 0 = first eleven, 1 = whole squad, chosen by the Komplett-style view flag 0x400).
+    SearchProfile search_profile{};
+    std::array<SearchProfile,2> search_suggestion{};
 };
 
 TransferMarketState transfer_market_from_game(const GameState&, uint64_t revision);
 std::string transfer_market_state_json(const TransferMarketState&);
 TaxDialogProjection poach_notice_from_game(const GameState&,const PoachStart&,std::string original_message);
 
-enum class TransferMarketRequestKind { none, submit_bid, list_player, open_offer, preview_quote, open_poach, review_offers };
+enum class TransferMarketRequestKind { none, submit_bid, list_player, open_offer, preview_quote, open_poach, review_offers,
+                                       store_search_profile };
 struct TransferMarketSelection {
     int list_entry=-1,source_slot=-1,player=-1,seller=-1,squad_row=-1;
 };
@@ -86,6 +92,10 @@ struct TransferMarketRequest {
     int preview_snapshot_index = -1;
     bool offer_is_loan = false;
     std::vector<TransferMarketSelection> selected_players;
+    // store_search_profile: the edited profile when the search dialog is closed; `search_cancelled` = left by right click
+    // (the profile is kept but switched off), `search_apply` = closed with the "Suchen" button (list the matches).
+    SearchProfile search_profile{};
+    bool search_cancelled = false, search_apply = false;
 };
 std::string transfer_market_request_json(const TransferMarketRequest&);
 
@@ -112,6 +122,9 @@ public:
     TransferMarketRequest key(std::string_view);
     bool text(std::string_view);
     bool close_requested() const { return close_requested_; }
+    // The search dialog (buttons Suchen / Vorschlag) is open: it owns every click until it is closed.
+    bool search_open() const { return search_open_; }
+    const SearchProfile& search_edit() const { return search_edit_; }
     const TransferMarketState& state() const { return state_; }
     const std::optional<TransferMarketRequest>& pending() const { return pending_; }
     void acknowledge(TransferMarketState, std::string notice = {});
@@ -129,7 +142,7 @@ private:
     LeImage exe_;
     TextDb texts_;
     SpriteFont sprite_font_;
-    Image background_, frame_, widgets_, atlas_, flags_, market_widgets_;
+    Image background_, frame_, widgets_, atlas_, flags_, market_widgets_, search_panel_;
     uint16_t view_flags_ = 0x1f0;
     bool data_b_ = false;
     size_t market_page_ = 0;
@@ -149,6 +162,12 @@ private:
     std::string numeric_input_, feedback_; // feedback is UTF-8, like host notices.
     int active_field_ = 0;
     bool close_requested_ = false;
+    bool search_open_ = false;
+    SearchProfile search_edit_{};
+    void open_search(SearchProfile profile);
+    void draw_search(Image&) const;
+    TransferMarketRequest click_search(int x, int y, bool right);
+    TransferMarketRequest close_search(bool cancelled);
     void draw_text(Image&, int x, int y, std::string_view, uint8_t color) const;
     void commit_numeric_field();
     TransferMarketRequest make_review(const TransferMarketItem&);

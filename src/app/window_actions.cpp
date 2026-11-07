@@ -202,7 +202,8 @@ std::string TransferActions::rejection(const ui::TransferMarketRequest& request,
     } else if (request.kind != ui::TransferMarketRequestKind::open_offer &&
                request.kind != ui::TransferMarketRequestKind::preview_quote &&
                request.kind != ui::TransferMarketRequestKind::open_poach &&
-               request.kind != ui::TransferMarketRequestKind::review_offers)
+               request.kind != ui::TransferMarketRequestKind::review_offers &&
+               request.kind != ui::TransferMarketRequestKind::store_search_profile)
         return "Diese Transferaktion ist nicht verfügbar.";
     return {};
 }

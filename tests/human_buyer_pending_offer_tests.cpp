@@ -453,7 +453,7 @@ Control make_control(GameState& g,int free_row=-1,bool buyer_full=false,bool sal
  c.player=listing.player;c.seller_row=player_row(g,c.seller,c.player);
  check(c.seller_row>=0,"listed player remains in a concrete seller row");
  const uint32_t ordinary=::bmh::layout::EditorList+uint32_t(listing.list_entry)*0x58;
- const uint32_t fee_base=(g.memory.u32(ordinary+0x2c)/10000)*0x30d4;
+ const uint32_t fee_base=(g.memory.u32(ordinary+0x2c)/10000)*10000;
  const uint32_t salary_base=((100u*g.memory.u32(ordinary+0x30))/10000)*100;
  TransferBidRequest bid;bid.manager=1;bid.list_entry=listing.list_entry;bid.player=listing.player;
  bid.fee=int32_t(fee_base);bid.annual_salary=int32_t(salary_base*2);bid.contract_years=1;

@@ -517,6 +517,76 @@ void check_transfer_market_controller(const std::filesystem::path& data) {
         check(listed_again, "the declined player stands on the transfer list again");
     }
 
+    {   // the search dialog behind the buttons Suchen and Vorschlag (Source sub_19409)
+        flow.send_key("ESC");
+        flow.attach_preparation_context(session->preparation_projection(revision));
+        const auto menu = std::find_if(flow.desktop()->state().items.begin(), flow.desktop()->state().items.end(),
+            [](const DeskItem& item) { return item.kind == 17 && !item.disabled; });
+        check(menu != flow.desktop()->state().items.end(), "the desktop offers the market for the search dialog");
+        flow.click(menu->x + menu->width / 2, menu->y + menu->height / 2);
+        const auto exe = load_le(asset_path(data, "BMH.exe"));
+        const auto button_at = [&](int n) {
+            return std::pair<int, int>{exe.u16(::bmh::layout::TransferMarket_Click_RuntimeField + uint32_t(n) * 6) + 2,
+                                       exe.u16(::bmh::layout::TransferMarket_Click_RuntimeField2 + uint32_t(n) * 6) + 2};
+        };
+        HumanBuyerSaleHooks hooks;
+        hooks.allocator_gate = HumanBuyerSaleAllocatorGate::zero;
+        hooks.direct_mode = HumanBuyerSaleDirectMode::ordinary_ai_purchase;
+        std::vector<std::string> boxes;
+        hooks.notice = [&](const GameState&, const HumanBuyerSaleNotice& notice) { boxes.push_back(notice.original_message); };
+        const auto serve_search = [&](const FlowResult& result) {
+            return app::serve_flow_request(flow, result, session, data, data, 0x1789abcd, revision, playback, audio_session, false,
+                {}, {}, {}, {}, {}, {}, {}, {}, {}, app::PendingOfferEntryPolicy::legacy_unpresented, hooks,
+                app::HumanBuyerMarketEntryPolicy::normal_interactive);
+        };
+        const int manager = initial.manager_slot;
+        // Suchen: opens locally with the stored profile (the career starts with an inactive one: every value 1)
+        const auto [search_x, search_y] = button_at(1);
+        check(flow.click(search_x, search_y).request == FlowRequest::none &&
+              flow.state_json().find("\"search_open\":true") != std::string::npos, "Suchen opens the dialog without a request");
+        check(flow.state_json().find("\"search_edit\":[0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]") != std::string::npos,
+              "the dialog shows the stored profile (a new career: off bit, otherwise all 1) without its off bit");
+        flow.click(272, 25);            // switch the midfielder cell off (row y 25, 25 px cells)
+        flow.click(316, 42);            // age slider: the upper end to the right edge
+        flow.click(316, 58);            // strength slider: the upper end to 99
+        check(flow.render().width == 320, "the market with the open search dialog renders");
+        flow.move_action(200, 100);     // the pointer moves under an open dialog are ignored
+        const auto confirm = flow.click(285, 145);   // the confirm button
+        check(confirm.request == FlowRequest::submenu_action && std::holds_alternative<TransferMarketRequest>(confirm.submenu_action) &&
+              std::get<TransferMarketRequest>(confirm.submenu_action).kind == TransferMarketRequestKind::store_search_profile,
+              "the confirm button posts the profile");
+        const auto& stored_request = std::get<TransferMarketRequest>(confirm.submenu_action);
+        check(stored_request.search_apply && !stored_request.search_cancelled && stored_request.search_profile[2] == 0 &&
+              stored_request.search_profile[5] == 24 && stored_request.search_profile[7] == 99,
+              "the posted profile carries the edits");
+        const uint64_t before_store = revision;
+        check(serve_search(confirm).empty(), "the profile is stored by the production controller");
+        const auto stored = search_profile(game, manager);
+        check(revision == before_store + 1 && !(stored[0] & kSearchProfileOff) && stored[2] == 0 && stored[5] == 24 && stored[7] == 99,
+              "the stored profile is active and has the edits");
+        check(boxes.size() == search_profile_hits(game, manager).size() && !boxes.empty(),
+              "every listing that fits is announced through the notice presenter");
+        check(flow.state_json().find("\"search_open\":false") != std::string::npos && !flow.pending_transfer_market(),
+              "the dialog is closed and the request settled");
+        // Vorschlag opens with the profile the squad asks for; leaving by right click keeps it but switches the search off
+        const auto [suggest_x, suggest_y] = button_at(2);
+        check(flow.click(suggest_x, suggest_y).request == FlowRequest::none &&
+              flow.state_json().find("\"search_open\":true") != std::string::npos, "Vorschlag opens the dialog");
+        const auto expected = suggest_search_profile(game, manager, false);
+        std::string expected_json = "\"search_edit\":[";
+        for (size_t i = 0; i < expected.size(); ++i) expected_json += (i ? "," : "") + std::to_string(i == 0 ? expected[i] & 0x3f : expected[i]);
+        check(flow.state_json().find(expected_json) != std::string::npos, "the dialog shows the suggestion of the squad");
+        boxes.clear();
+        const auto leave = flow.click(100, 100, true);
+        check(leave.request == FlowRequest::submenu_action &&
+              std::get<TransferMarketRequest>(leave.submenu_action).search_cancelled &&
+              !std::get<TransferMarketRequest>(leave.submenu_action).search_apply, "the right button posts a cancelled profile");
+        check(serve_search(leave).empty(), "the cancelled profile is stored");
+        const auto switched_off = search_profile(game, manager);
+        check((switched_off[0] & kSearchProfileOff) && switched_off[1] == expected[1] && boxes.empty(),
+              "the suggestion is kept, switched off, and nothing is announced");
+    }
+
     // The old KB23 editor/legacy heuristic is no longer the ordinary GUI route.
     // Keep its controller capability checks on real Source KB31 events, with
     // the Core owner as the integration reference (not an independent EXE oracle).
