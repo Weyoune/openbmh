@@ -409,6 +409,114 @@ void check_transfer_market_controller(const std::filesystem::path& data) {
           session->rand().seed() == listed_seed && session->rand().calls() == listed_calls,
           "consumed list request replay is inert");
 
+    {   // GUI route: the offers on an own listing are reviewed from the roster and accepted before the listing expires
+        int entry = -1;
+        for (int e = 0; e < 40; ++e) if ((game.squad_slots.at(0xb70 + size_t(e)) & 0xfff) == listed_player) entry = e;
+        check(entry >= 0, "the own listing has a transfer-list entry");
+        const uint32_t list = ::bmh::layout::EditorList + uint32_t(entry) * 0x58;
+        MinuteReport bid_report;
+        for (int tries = 0; tries < 400 && int16_t(game.memory.u16(list)) == -1; ++tries)
+            transfer_bid(game, 0xb70 + entry, list, false, -1, session->game(), session->rand(), bid_report);
+        check(!bid_report.unsupported && int16_t(game.memory.u16(list)) != -1, "the engine places a bid on the own listing");
+        flow.send_key("ESC");
+        flow.attach_preparation_context(session->preparation_projection(revision));
+        const auto menu17 = std::find_if(flow.desktop()->state().items.begin(), flow.desktop()->state().items.end(),
+            [](const DeskItem& item) { return item.kind == 17 && !item.disabled; });
+        check(menu17 != flow.desktop()->state().items.end(), "the desktop still offers the market");
+        flow.click(menu17->x + menu17->width / 2, menu17->y + menu17->height / 2);
+        const auto marked = flow.click(20, list_y);   // marking a roster player first asks for the value preview
+        if (marked.request == FlowRequest::submenu_action)
+            check(app::serve_flow_request(flow, marked, session, data, data, 0x1789abcd, revision, playback, audio_session, false,
+                {}, {}, {}, {}, {}, {}, {}, {}, {}, app::PendingOfferEntryPolicy::legacy_unpresented, {},
+                app::HumanBuyerMarketEntryPolicy::normal_interactive).empty(), "the roster preview is served");
+        const auto review_request = flow.click(200, 207);
+        check(review_request.request == FlowRequest::submenu_action &&
+              std::holds_alternative<TransferMarketRequest>(review_request.submenu_action) &&
+              std::get<TransferMarketRequest>(review_request.submenu_action).kind == TransferMarketRequestKind::review_offers,
+              "an already listed player opens the review of his offers");
+        int offers_shown = 0;
+        HumanBuyerSaleHooks hooks;
+        hooks.allocator_gate = HumanBuyerSaleAllocatorGate::zero;
+        hooks.direct_mode = HumanBuyerSaleDirectMode::ordinary_ai_purchase;
+        hooks.notice = [](const GameState&, const HumanBuyerSaleNotice&) {};
+        const app::TransferOfferPresenter review = [&](const GameState&, const TransferOfferListView& view) {
+            offers_shown = view.offer_count;
+            return 0;   // accept the first bid
+        };
+        const auto error = app::serve_flow_request(flow, review_request, session, data, data, 0x1789abcd,
+            revision, playback, audio_session, false, {}, review, {}, {}, {}, {}, {}, {}, {},
+            app::PendingOfferEntryPolicy::legacy_unpresented, hooks, app::HumanBuyerMarketEntryPolicy::normal_interactive);
+        check(error.empty() && offers_shown > 0, "the review presents the offers");
+        check((game.squad_slots.at(0xb70 + size_t(entry)) & 0xfff) != listed_player && !flow.pending_transfer_market(),
+              "accepting a bid in the review sells the player and settles the request");
+    }
+
+    {   // a declined listing: at expiry the player leaves the list (the seller declines every offer) and can be listed again
+        const auto before = transfer_market_from_game(game, revision);
+        int row2 = -1;
+        for (int row = std::min(17, int(before.squad.size()) - 1); row >= 11 && row2 < 0; --row) {
+            const auto& player = before.squad[size_t(row)];
+            if (player.player < 0 || player.already_listed || player.row == listing_row) continue;
+            auto trial_state = game; auto trial_rand = session->rand(); MinuteReport trial_report;
+            if (list_manager_player(trial_state, before.manager_slot, player.row, trial_rand, trial_report).status ==
+                TransferActionStatus::accepted && !trial_report.unsupported) row2 = player.row;
+        }
+        check(row2 >= 0, "another listable reserve player exists");
+        MinuteReport report;
+        const auto listed = list_manager_player(game, before.manager_slot, row2, session->rand(), report);
+        check(listed.status == TransferActionStatus::accepted && listed.list_entry >= 0, "the second player is listed");
+        const int entry = listed.list_entry;
+        const uint32_t list = ::bmh::layout::EditorList + uint32_t(entry) * 0x58;
+        for (int tries = 0; tries < 400 && int16_t(game.memory.u16(list)) == -1; ++tries)
+            transfer_bid(game, 0xb70 + entry, list, false, -1, session->game(), session->rand(), report);
+        check(int16_t(game.memory.u16(list)) != -1, "a bid arrives on the second listing");
+        game.memory.set8(list + 0x56, 1);   // expires with this countdown
+        int declined = 0;
+        game.transfer_offer_selector = [&](const GameState&, const TransferOfferListView&) { ++declined; return -1; };
+        transfer_list_countdown(game, session->game(), session->rand(), report, false, TransferAllocatorContext::zero);
+        game.transfer_offer_selector = {};
+        check(!report.unsupported && declined > 0, "the seller was asked and declined");
+        check((game.squad_slots.at(0xb70 + size_t(entry)) & 0xfff) == 0xfff, "after the decline the player has left the transfer list");
+
+        const auto fresh = transfer_market_from_game(game, revision);
+        int y2 = -1, line = 36;
+        for (size_t n = 0; n < fresh.roster.players.size(); ++n) {
+            const auto& player = fresh.roster.players[n];
+            if (player.borrowed) continue;
+            if (n && (player.displayed_slot & 0xc000) != (fresh.roster.players[n-1].displayed_slot & 0xc000)) line += 2;
+            if (player.player_id < 0) continue;
+            if (player.physical_row == row2) { y2 = line - 3; break; }
+            line += 7;
+        }
+        check(y2 >= 29 && y2 < 215, "the declined player is visible in the roster");
+        flow.send_key("ESC");
+        flow.attach_preparation_context(session->preparation_projection(revision));
+        const auto menu = std::find_if(flow.desktop()->state().items.begin(), flow.desktop()->state().items.end(),
+            [](const DeskItem& item) { return item.kind == 17 && !item.disabled; });
+        check(menu != flow.desktop()->state().items.end(), "the desktop offers the market again");
+        flow.click(menu->x + menu->width / 2, menu->y + menu->height / 2);
+        HumanBuyerSaleHooks relist_hooks;
+        relist_hooks.allocator_gate = HumanBuyerSaleAllocatorGate::zero;
+        relist_hooks.direct_mode = HumanBuyerSaleDirectMode::ordinary_ai_purchase;
+        relist_hooks.notice = [](const GameState&, const HumanBuyerSaleNotice&) {};
+        const auto serve_relist = [&](const FlowResult& result) {
+            return app::serve_flow_request(flow, result, session, data, data, 0x1789abcd, revision, playback, audio_session, false,
+                {}, {}, {}, {}, {}, {}, {}, {}, {}, app::PendingOfferEntryPolicy::legacy_unpresented, relist_hooks,
+                app::HumanBuyerMarketEntryPolicy::normal_interactive);
+        };
+        const auto marked_again = flow.click(20, y2);
+        if (marked_again.request == FlowRequest::submenu_action) check(serve_relist(marked_again).empty(), "the roster preview is served");
+        const auto relist = flow.click(200, 207);
+        check(relist.request == FlowRequest::submenu_action && std::holds_alternative<TransferMarketRequest>(relist.submenu_action) &&
+              std::get<TransferMarketRequest>(relist.submenu_action).kind == TransferMarketRequestKind::list_player,
+              "a player who left the list after a decline can be listed again from the roster");
+        check(serve_relist(relist).empty(), "the second listing is served");
+        bool listed_again = false;
+        for (int e = 0; e < 40; ++e) listed_again |= (game.squad_slots.at(0xb70 + size_t(e)) & 0xfff) ==
+            (game.squad_slots.at(squad_range(before.runtime_club).first + size_t(row2)) & 0xfff);
+        check(listed_again, "the declined player stands on the transfer list again");
+    }
+
     // The old KB23 editor/legacy heuristic is no longer the ordinary GUI route.
     // Keep its controller capability checks on real Source KB31 events, with
     // the Core owner as the integration reference (not an independent EXE oracle).
@@ -7265,6 +7373,9 @@ int main(int argc, char** argv) {
         }
         if(argc==3 && std::string_view(argv[2])=="--live-intervention-only") {
             check_live_observer_determinism(data); return 0;
+        }
+        if(argc==3 && std::string_view(argv[2])=="--market-only") {
+            check_transfer_market_controller(data);return 0;
         }
         if(argc==3 && std::string_view(argv[2])=="--poach-only") {
             check_poach_ui_components(data);return 0;
