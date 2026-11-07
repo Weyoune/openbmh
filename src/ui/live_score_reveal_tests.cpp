@@ -26,6 +26,18 @@ int main() {
         reveal.observe(bmh::LiveChanceStage::result,resolved);
         if(reveal.project(resolved)!=resolved)throw std::runtime_error("result did not reveal goal");
     }
+    // Statistics (chances, shots, ...) count a chance only at its result, like the score.
+    {
+        LiveScoreReveal stats_reveal;
+        stats_reveal.observe(bmh::LiveChanceStage::preview,frame);
+        auto counted=frame;counted.matches[0].home_stats={11,4,2,1};counted.matches[0].away_stats={11,3,0,0};
+        counted.matches[0].home_stats[1]++;
+        const auto shown=stats_reveal.project(counted);
+        if(shown.matches[0].home_stats!=frame.matches[0].home_stats||shown.matches[0].away_stats!=frame.matches[0].away_stats||
+           shown.matches[1]!=counted.matches[1])throw std::runtime_error("statistics counted before the result");
+        stats_reveal.observe(bmh::LiveChanceStage::result,counted);
+        if(stats_reveal.project(counted)!=counted)throw std::runtime_error("result did not reveal statistics");
+    }
     reveal.observe(bmh::LiveChanceStage::preview,frame);
     if(reveal.project(frame)!=frame)throw std::runtime_error("miss changed score");
     auto next=frame;next.minute++;

@@ -140,6 +140,18 @@ LiveMatchdayFrame live_matchday_frame(int minute, const std::vector<MatchGroup>&
     return frame;
 }
 
+LiveMatchdayFrame live_matchday_frame_before_chance(int minute, const std::vector<MatchGroup>& groups,
+                                                    const GameState& state, const LiveChanceEvent& event) {
+    // MatchEngine::chance writes two log pairs (outcome, then kind/distance) = 4 words before the preview hook.
+    // The copy is small: chances are rare and only the log of one group is shortened.
+    if (event.group < 0 || size_t(event.group) >= groups.size() || groups[size_t(event.group)].log.size() < 4)
+        return live_matchday_frame(minute, groups, state);
+    std::vector<MatchGroup> before = groups;
+    auto& log = before[size_t(event.group)].log;
+    log.resize(log.size() - 4);
+    return live_matchday_frame(minute, before, state);
+}
+
 LiveChanceProjection live_chance_projection(const LiveChanceEvent& event,
         const std::vector<MatchGroup>& groups, const GameState& state, const LeImage& exe) {
     if (event.group < 0 || size_t(event.group) >= groups.size() || event.match < 0 ||

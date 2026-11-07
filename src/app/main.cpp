@@ -3291,7 +3291,10 @@ int main(int argc, char** argv) {
                 }, [&](const LiveChanceEvent& event, const std::vector<MatchGroup>& groups,
                        const GameState& state) {
                     if (!running || live_skipped) return;
-                    const auto frame = ui::live_matchday_frame(event.minute, groups, state);
+                    // Preview: the chance is already in the event log, but its statistics must not count yet.
+                    const auto frame = event.stage == LiveChanceStage::preview
+                        ? ui::live_matchday_frame_before_chance(event.minute, groups, state, event)
+                        : ui::live_matchday_frame(event.minute, groups, state);
                     live_score_reveal.observe(event.stage, frame);
                     if (frame.matches.empty()) return;
                     const auto chance = ui::live_chance_projection(event, groups, state, season_exe);

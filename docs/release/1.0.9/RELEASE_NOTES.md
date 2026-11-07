@@ -28,6 +28,10 @@ compared with the engine; every difference found was ported and documented.
   was inverted in the port (older players were recycled the wrong way round);
   this is fixed.
 - **Season end.** Retirement and leave rules for the player slots.
+- **Live match statistics.** The chance counters at the bottom of the live
+  matchday screen counted a chance as soon as the engine logged it, before the
+  presentation started. They are now held back like the score and appear with
+  the result of the chance.
 
 ## What was measured, what was derived
 
@@ -47,9 +51,9 @@ in the source as a known gap).
 
 ## Open points
 
-Reported by the Diamond author and not changed here: bug in "fetch player from
-transfer market / check offers", and the chance counters at the bottom of the
-match screen count up slightly too early. Earlier open points remain: the
+Reported by the Diamond author and not changed here: the bug in "fetch player
+from transfer market / check offers" (exact steps still to be reproduced).
+Earlier open points remain: the
 "player card: original atlas bounds" error (#77), sporadic double clicks (#58)
 and the macOS match scene speed (#70).
 
