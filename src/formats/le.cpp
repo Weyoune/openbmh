@@ -6,7 +6,11 @@
 // LeImage::cstring() reads NUL-terminated strings from the image. No global state.
 #include "formats/le.hpp"
 
+#include "formats/diamond_image.hpp"
+
 #include <algorithm>
+#include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <vector>
 
@@ -22,9 +26,62 @@ struct Object {
 
 std::string LeImage::cstring(uint32_t address) const {
     std::string s;
-    while (contains(address) && u8(address) != 0) s.push_back(char(u8(address++)));
+    const uint32_t first = address;
+    while (contains(address) && bytes_[address - base_] != 0) s.push_back(char(bytes_[address++ - base_]));
+    if (le_trace::hook) le_trace::hook(first, uint32_t(s.size()) + 1, 't');
     return s;
 }
+
+namespace le_trace {
+void (*hook)(uint32_t, uint32_t, char) = nullptr;
+
+namespace {
+// One flag byte per image address: 1 number read, 2 string read, 4 start of a bulk read.
+std::vector<uint8_t>& marks() {
+    static std::vector<uint8_t> value(0x100000, 0);
+    return value;
+}
+std::string& trace_path() {
+    static std::string value;
+    return value;
+}
+void record(uint32_t address, uint32_t length, char kind) {
+    auto& m = marks();
+    const uint8_t flag = kind == 'n' ? 1 : kind == 't' ? 2 : 4;
+    if (address < 0x10000 || address - 0x10000 >= m.size()) return;
+    if (length == 0) length = 1;
+    for (uint32_t i = 0; i < length && address - 0x10000 + i < m.size(); ++i) m[address - 0x10000 + i] |= flag;
+}
+// Appends the marked ranges ("<flag> <start> <length>" in hex, one per line) to the trace file.
+void flush() {
+    if (trace_path().empty()) return;
+    std::ofstream out(trace_path(), std::ios::app);
+    const auto& m = marks();
+    for (uint8_t flag : {uint8_t(1), uint8_t(2), uint8_t(4)}) {
+        size_t i = 0;
+        while (i < m.size()) {
+            if (!(m[i] & flag)) { ++i; continue; }
+            size_t j = i;
+            while (j < m.size() && (m[j] & flag)) ++j;
+            out << std::hex << unsigned(flag) << ' ' << (i + 0x10000) << ' ' << (j - i) << '\n';
+            i = j;
+        }
+    }
+}
+}  // namespace
+
+void enable_from_environment() {
+    static bool done = false;
+    if (done) return;
+    done = true;
+    if (const char* path = std::getenv("OPENBMH_LE_TRACE"); path && *path) {
+        trace_path() = path;
+        (void)marks();  // constructed before atexit(flush) is registered, so it is destroyed after flush has run
+        hook = record;
+        std::atexit(flush);
+    }
+}
+}  // namespace le_trace
 
 namespace {
 constexpr char kImageMagic[14] = "OPENBMH-IMAGE";  // 13 characters and the NUL
@@ -41,6 +98,14 @@ void save_image(const LeImage& image, const std::filesystem::path& path) {
 }
 
 LeImage load_le(const std::filesystem::path& path) {
+    le_trace::enable_from_environment();
+    // The game runs from its asset files alone: for a BMH.exe that is not there the embedded numbers and texts of the
+    // Diamond 3.7 executable stand in for it.
+    {
+        std::error_code ec;
+        if (is_executable_name(path.filename()) && !std::filesystem::exists(path, ec))
+            return diamond_constants_image();
+    }
     const Bytes raw = read_file(path);
     if (raw.size() >= sizeof kImageMagic + 8 && std::equal(kImageMagic, kImageMagic + sizeof kImageMagic, raw.begin())) {
         const auto word = [&](size_t at) { return uint32_t(raw[at] | raw[at + 1] << 8 | raw[at + 2] << 16) | uint32_t(raw[at + 3]) << 24; };

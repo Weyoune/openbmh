@@ -38,6 +38,9 @@ std::filesystem::path asset_path(const std::filesystem::path& directory, const s
             found = e.path();
         }
     }
+    // The game runs from its asset files alone: BMH.exe may be missing, load_le() then uses the embedded numbers of the
+    // Diamond executable (formats/diamond_image.hpp). The returned path simply does not exist.
+    if (found.empty() && folded(name) == "bmh.exe") return directory / "BMH.exe";
     if (found.empty()) throw FormatError("missing original asset: " + (directory / name).string());
     return found;
 }

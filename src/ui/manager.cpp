@@ -131,7 +131,9 @@ ManagerScreen::ManagerScreen(const std::filesystem::path& data, int slot, const 
         if (id < 0 || id >= int(db_.club_names.size()) || !unique.insert(id).second)
             throw FormatError("manager selection: club order must contain unique valid master IDs");
     choice_.slot = slot; choice_.roster_revision = context_.revision;
-    choice_.name = texts_[(::bmh::layout::Career_NewCareerMarketsAndMoods_ExecutableField - ::bmh::layout::TextPointerTable) / 4 + slot];
+    // The default name of a new manager: OpenBMH (the original text blocks offer "Nobody" for every slot). The player can still
+    // type another name; the name editor of the original keeps working on this string.
+    choice_.name = "OpenBMH";
     while (club_locked(master_id(choice_.selection_club))) ++choice_.selection_club;
     choice_.master_club = master_id(choice_.selection_club);
     while (portrait_locked(choice_.portrait)) ++choice_.portrait;

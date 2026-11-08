@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "formats/binary.hpp"
+#include "formats/diamond_image.hpp"
 #include "launch/archive.hpp"
 #include "launch/game_data.hpp"
 
@@ -169,9 +170,9 @@ bool prepare_english_game(const fs::path& source, const fs::path& target, std::s
         }
         if (auto f = find_file(source, "TEXTE.BLK")) copy(*f, target / "TEXTD.BLK");
         if (auto f = find_file(source, "M3E.MAN")) copy(*f, target / "M3D.MAN");
+        // FLTD.EXE is optional: without it the numbers and texts built into OpenBMH stand in (formats/diamond_image.hpp)
         const auto exe = find_file(source, "FLTD.EXE");
-        if (!exe) throw std::runtime_error("FLTD.EXE is missing");
-        save_image(translate_fltd(*exe), target / "BMH.exe");
+        save_image(exe ? translate_fltd(*exe) : english_constants_image(), target / "BMH.exe");
         return true;
     } catch (const std::exception& e) {
         error = e.what();

@@ -213,6 +213,7 @@ add_library(bmhcore STATIC
     src/formats/textd.cpp
     src/formats/fbm.cpp
     src/formats/le.cpp
+    src/formats/diamond_image.cpp
     src/formats/m3d.cpp
     src/formats/savestate.cpp
     src/game/schedule.cpp
@@ -1191,6 +1192,10 @@ add_test(NAME daily_interest_unit_tests COMMAND daily_interest_unit_tests)
 add_executable(transfer_seller_actions_tests tests/transfer_seller_actions_tests.cpp)
 target_link_libraries(transfer_seller_actions_tests PRIVATE bmhcore)
 add_test(NAME transfer_seller_actions_tests COMMAND transfer_seller_actions_tests)
+add_executable(diamond_image_tests tests/diamond_image_tests.cpp)
+target_link_libraries(diamond_image_tests PRIVATE bmhcore)
+add_test(NAME diamond_image_tests COMMAND diamond_image_tests)
+bmh_add_data_test(NAME diamond_image_data_tests COMMAND diamond_image_tests "${BMH_DATA}")
 add_executable(search_profile_tests tests/search_profile_tests.cpp)
 target_link_libraries(search_profile_tests PRIVATE bmhcore)
 add_test(NAME search_profile_tests COMMAND search_profile_tests)

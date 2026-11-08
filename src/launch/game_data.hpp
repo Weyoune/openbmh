@@ -10,6 +10,10 @@
 // OpenBMH has one game and match engine (the supported rule profile rules); the original files are only
 // data. The check therefore asks whether the data is complete and readable, not which
 // edition it is. Fan extras next to the files (pictures, manuals) are ignored.
+//
+// The German game does not need BMH.EXE: the numbers of the executable are built into OpenBMH (formats/diamond_image.hpp).
+// A directory with the asset files (TEXTD.BLK, M3D.MAN, the picture, font and sound folders) is a complete game; the
+// texts of the executable are built in as well. The same holds for the English game (TEXTE.BLK, M3E.MAN; FLTD.EXE).
 
 #include <cstdint>
 #include <filesystem>
@@ -32,6 +36,8 @@ struct GameCheck {
     std::filesystem::path exe;        // the EXE as found (its case may differ)
     std::string title;                // e.g. "Bundesliga Manager Hattrick 2026-27 (supported rule profile)"
     std::vector<std::string> problems;  // missing or unreadable files; empty = data complete
+    // Hints that do not stop the game.
+    std::vector<std::string> notes;
     // Data complete and the engine can run it. False also for complete data the engine does
     // not run yet (`unsupported` says why).
     bool playable = false;
