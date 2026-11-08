@@ -426,21 +426,23 @@ ResolvedGame resolve_game(const fs::path& input, const fs::path& cache) {
             const fs::path marker = prepared / ".openbmh-english";
             // the version of the translation (launch/fltd.cpp, fltd_map.inc): a cache built
             // by another version is built again
-            constexpr const char* kTranslation = "english translation 18";  // 18: numbers and texts built in (no FLTD.EXE needed), 17: English monthly environment tables (16: overwrite question)
+            constexpr const char* kTranslation = "english translation 18";  // 18: numbers built in (no FLTD.EXE needed), 17: English monthly environment tables (16: overwrite question)
+            const std::string texts = texts_signature(game.check.directory);  // an English game made without openbmh.dat is made again with it
+            const std::string version = std::string(kTranslation) + (game.check.exe.empty() ? " " + texts : std::string());
             std::string built;
             {
                 std::ifstream in(marker);
                 std::getline(in, built);
             }
             std::error_code ec;
-            if (built != kTranslation) {
+            if (built != version) {
                 fs::remove_all(prepared, ec);
                 std::string error;
                 if (!prepare_english_game(game.check.directory, prepared, error)) {
                     game.error = "The English version cannot be prepared: " + error;
                     return game;
                 }
-                std::ofstream(marker) << kTranslation << "\n" << path_to_utf8(game.check.directory) << "\n";
+                std::ofstream(marker) << version << "\n" << path_to_utf8(game.check.directory) << "\n";
             }
             game.check.directory = prepared;
             game.check.playable = true;

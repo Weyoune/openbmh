@@ -170,9 +170,9 @@ bool prepare_english_game(const fs::path& source, const fs::path& target, std::s
         }
         if (auto f = find_file(source, "TEXTE.BLK")) copy(*f, target / "TEXTD.BLK");
         if (auto f = find_file(source, "M3E.MAN")) copy(*f, target / "M3D.MAN");
-        // FLTD.EXE is optional: without it the numbers and texts built into OpenBMH stand in (formats/diamond_image.hpp)
+        // FLTD.EXE is optional: without it the numbers built into OpenBMH and the texts of openbmh.dat stand in (formats/diamond_image.hpp)
         const auto exe = find_file(source, "FLTD.EXE");
-        save_image(exe ? translate_fltd(*exe) : english_constants_image(), target / "BMH.exe");
+        save_image(exe ? translate_fltd(*exe) : english_constants_image(source), target / "BMH.exe");
         return true;
     } catch (const std::exception& e) {
         error = e.what();

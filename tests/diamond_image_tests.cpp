@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The game without BMH.exe and FLTD.EXE (formats/diamond_image.*): the images built from the embedded numbers and texts
-// of the Diamond 3.7 executable and of the English Football Limited. Usage: diamond_image_tests [<BMH data dir>]
+// of the Diamond 3.7 executable and of the English Football Limited. Usage: diamond_image_tests [<BMH data dir> | -] [<openbmh.dat>]
 // (with a data directory the embedded German image is also compared byte for byte with its BMH.exe).
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <string_view>
 
 #include "formats/diamond_image.hpp"
 #include "formats/le.hpp"
@@ -26,21 +27,42 @@ bool contains_text(const LeImage& image, const std::string& text) {
     return std::search(b.begin(), b.end(), text.begin(), text.end()) != b.end();
 }
 
-void german() {
-    const LeImage image = diamond_constants_image();
+// Without the texts file the images hold the numbers only; with it (argv[2], data/openbmh.dat) they also hold the texts.
+void german(const Bytes& dat) {
+    LeImage image = diamond_constants_image();
     require(image.size() > kMinimumSize && image.base() == kImageStart, "the German image has the layout of the Diamond data object");
-    // the game texts are built in: a line of the live commentary
-    require(contains_text(image, "DER LINIENRICHTER HAT DIE FAHNE OBEN"), "the German texts are embedded");
     // the letter tables of the cup draw and fixtures are numbers of the image
     require(contains_text(image, "abcdefghijklmnopqrst"), "the fixture letter tables are embedded");
+    if (dat.empty()) return;
+    require(apply_texts(image, 1, dat), "openbmh.dat has the German texts");
+    require(contains_text(image, "DER LINIENRICHTER HAT DIE FAHNE OBEN"), "the German texts come from openbmh.dat");
 }
 
-void english() {
-    const LeImage image = english_constants_image();
+void english(const Bytes& dat) {
+    LeImage image = english_constants_image();
     require(image.base() == kImageStart && image.size() > kMinimumSize, "the English image lies in the German address space");
-    require(contains_text(image, "Competition closed"), "the English texts are embedded");
+    if (dat.empty()) return;
+    require(apply_texts(image, 2, dat), "openbmh.dat has the English texts");
+    require(contains_text(image, "Competition closed"), "the English texts come from openbmh.dat");
 }
 
+void damaged_file(const Bytes& dat) {
+    LeImage image = diamond_constants_image();
+    bool threw = false;
+    try { apply_texts(image, 1, Bytes{'n', 'o', 't', ' ', 'a', ' ', 'f', 'i', 'l', 'e', ' ', ' ', ' ', ' ', ' ', ' '}); } catch (const FormatError&) { threw = true; }
+    require(threw, "a file without the magic is refused");
+    if (dat.size() < 40) return;
+    Bytes cut(dat.begin(), dat.begin() + 40);
+    threw = false;
+    try { apply_texts(image, 1, cut); } catch (const FormatError&) { threw = true; }
+    require(threw, "a truncated file is refused");
+    // a range that is not a text of the game cannot be written: the file never changes a number of the image
+    Bytes bad = dat;
+    for (size_t at = 12 + 4 + 8; at < 12 + 4 + 12; ++at) bad[at] ^= 0x55;   // the address of the first German range
+    threw = false;
+    try { apply_texts(image, 1, bad); } catch (const FormatError&) { threw = true; }
+    require(threw, "a range that is no text range is refused");
+}
 void missing_executable() {
     // a BMH.exe that is not there stands for the embedded German image
     const fs::path nowhere = fs::temp_directory_path() / "openbmh-no-such-directory" / "BMH.exe";
@@ -73,10 +95,13 @@ void against_real_executable(const fs::path& directory) {
 }  // namespace
 
 int main(int argc, char** argv) try {
-    german();
-    english();
+    Bytes dat;
+    if (argc > 2) dat = read_file(argv[2]);
+    german(dat);
+    english(dat);
+    damaged_file(dat);
     missing_executable();
-    if (argc > 1) against_real_executable(argv[1]);
+    if (argc > 1 && std::string_view(argv[1]) != "-") against_real_executable(argv[1]);
     if (failures) return 1;
     std::cout << "PASS embedded German and English images\n";
     return 0;

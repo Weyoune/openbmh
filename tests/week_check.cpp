@@ -271,7 +271,10 @@ bool replay_matchday(GameState& b, std::vector<MatchGroup>& groups, GameRandom& 
                         MatchEngine trial{sc, gc, gg, wr, engine.referees};
                         trial.month = engine.month;
                         MinuteReport tr;
-                        trial.rerate_team(team, tr);
+                        {
+                            NoHook no_hook;  // (the trial draws on copies: they must not count as draws of the port)
+                            trial.rerate_team(team, tr);
+                        }
                         const bool hit = !tr.unsupported && gg.seed() == int32_t(std::stoll(field(after.line, "game_seed"))) &&
                                          wr.seed() == uint32_t(std::stoull(field(after.line, "rand_seed")));
                         if (!hit) continue;

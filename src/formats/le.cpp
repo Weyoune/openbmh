@@ -99,12 +99,12 @@ void save_image(const LeImage& image, const std::filesystem::path& path) {
 
 LeImage load_le(const std::filesystem::path& path) {
     le_trace::enable_from_environment();
-    // The game runs from its asset files alone: for a BMH.exe that is not there the embedded numbers and texts of the
-    // Diamond 3.7 executable stand in for it.
+    // The game runs from its asset files alone: for a BMH.exe that is not there the embedded numbers of the Diamond 3.7 executable
+    // and the texts of openbmh.dat stand in for it.
     {
         std::error_code ec;
         if (is_executable_name(path.filename()) && !std::filesystem::exists(path, ec))
-            return diamond_constants_image();
+            return diamond_constants_image(path.has_parent_path() ? path.parent_path() : std::filesystem::path("."));
     }
     const Bytes raw = read_file(path);
     if (raw.size() >= sizeof kImageMagic + 8 && std::equal(kImageMagic, kImageMagic + sizeof kImageMagic, raw.begin())) {

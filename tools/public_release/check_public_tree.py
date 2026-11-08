@@ -31,7 +31,9 @@ ASSET_SUFFIXES = {
 }
 # Newly supplied project artwork and an unchanged MIT/public-domain decoder.
 # Exact hashes keep this exception from admitting original-game asset dumps.
-REVIEWED_BINARY_FILES = {"assets/start-screen.jpg": "28df5a72cd7b6951c9eebf30532ea9557007a46f0a73614ba22401c403e379dc"}
+# data/openbmh.dat: the game texts of the original executables (tools/diamond_constants/generate.py); regenerate = new hash here
+REVIEWED_BINARY_FILES = {"assets/start-screen.jpg": "28df5a72cd7b6951c9eebf30532ea9557007a46f0a73614ba22401c403e379dc",
+                         "data/openbmh.dat": "ae313060d3c34a9b45adae8565715618182137443ab20c1485b2da6e2c9e62a4"}
 REVIEWED_UPSTREAM_FILES = {"src/app/third_party/stb_image.h": "594c2fe35d49488b4382dbfaec8f98366defca819d916ac95becf3e75f4200b3"}
 PRIVATE_PREFIXES = (
     ("data", "original"), ("docs", "manuals"), ("docs", "analyses"),

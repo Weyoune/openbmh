@@ -1087,9 +1087,16 @@ set(BMH_TEST_SPORTSCHAU_APP_TESTS_INPUT_1 "" CACHE PATH "External input 1 for sp
 bmh_add_data_test(NAME sportschau_app_tests REQUIRED_OPTIONS BMH_TEST_SPORTSCHAU_APP_TESTS_INPUT_1 COMMAND sportschau_app_tests "${BMH_DATA}"
     "${BMH_TEST_SPORTSCHAU_APP_TESTS_INPUT_1}")
 
-# The runtime component deliberately contains only the two products and notices.
+# openbmh.dat (the game texts of the original executables, tools/diamond_constants) ships next to the programs and is copied
+# next to the built programs as well, where the game looks for it.
+foreach(product IN ITEMS openbmh_play openbmh_cli)
+    add_custom_command(TARGET ${product} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/data/openbmh.dat" "$<TARGET_FILE_DIR:${product}>")
+endforeach()
+
+# The runtime component deliberately contains only the two products, openbmh.dat and notices.
 install(TARGETS openbmh_play openbmh_cli RUNTIME DESTINATION . COMPONENT Runtime)
-install(FILES README.md LICENSE THIRD_PARTY_NOTICES.md ACKNOWLEDGEMENTS.md CONTRIBUTING.md
+install(FILES README.md LICENSE THIRD_PARTY_NOTICES.md ACKNOWLEDGEMENTS.md CONTRIBUTING.md data/openbmh.dat
     DESTINATION . COMPONENT Runtime)
 install(DIRECTORY docs/ DESTINATION docs COMPONENT Runtime)
 if(MSVC)
@@ -1194,8 +1201,8 @@ target_link_libraries(transfer_seller_actions_tests PRIVATE bmhcore)
 add_test(NAME transfer_seller_actions_tests COMMAND transfer_seller_actions_tests)
 add_executable(diamond_image_tests tests/diamond_image_tests.cpp)
 target_link_libraries(diamond_image_tests PRIVATE bmhcore)
-add_test(NAME diamond_image_tests COMMAND diamond_image_tests)
-bmh_add_data_test(NAME diamond_image_data_tests COMMAND diamond_image_tests "${BMH_DATA}")
+add_test(NAME diamond_image_tests COMMAND diamond_image_tests - "${CMAKE_CURRENT_SOURCE_DIR}/data/openbmh.dat")
+bmh_add_data_test(NAME diamond_image_data_tests COMMAND diamond_image_tests "${BMH_DATA}" "${CMAKE_CURRENT_SOURCE_DIR}/data/openbmh.dat")
 add_executable(search_profile_tests tests/search_profile_tests.cpp)
 target_link_libraries(search_profile_tests PRIVATE bmhcore)
 add_test(NAME search_profile_tests COMMAND search_profile_tests)
