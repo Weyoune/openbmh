@@ -706,7 +706,9 @@ TransferMarketRequest TransferMarketScreen::make_review(const TransferMarketItem
 TransferMarketRequest TransferMarketScreen::make_open_offer(bool loan) {
     if(pending_||!selected_item_)return {};
     const auto& item=state_.items.at(size_t(*selected_item_));
-    if(item.own_listing)return make_review(item);
+    // An own listing chosen in the market list: VERKAUFEN first asks whether the player leaves the list (as for a player
+    // chosen in the squad); "no" leads on to the offers.
+    if(item.own_listing)return make_review(item,true);
     TransferMarketRequest request;request.kind=TransferMarketRequestKind::open_offer;request.offer_is_loan=loan;
     request.manager_slot=state_.manager_slot;request.runtime_club=state_.runtime_club;request.revision=state_.revision;
     if(item.own_bid)request.bid=*item.own_bid;

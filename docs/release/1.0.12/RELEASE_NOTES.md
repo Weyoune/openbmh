@@ -35,6 +35,15 @@ already did). Now pressed while held:
   no button and are unchanged. Toggles that stay on (training, filters) keep their
   lasting state.
 
+## Transfer market
+
+- **Verkaufen on a listed player chosen in the market list.** Choosing an own listed
+  player in the right-hand list and pressing VERKAUFEN gave "Noch keine Angebote"
+  (or went straight to the offers) instead of the question of the original,
+  "Wollen Sie ... vom Transfermarkt holen?". It now asks first, as it already did for
+  a player chosen in the squad list: yes takes him off the list, no leads on to the
+  offers.
+
 ## Internal
 
 - The drawing of the wide push button, of the calculator window (panel and keys) and

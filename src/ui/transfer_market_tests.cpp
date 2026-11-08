@@ -98,6 +98,16 @@ int main(int argc,char** argv){
         check(withdraw.kind==TransferMarketRequestKind::review_offers&&withdraw.ask_withdraw&&withdraw.bid.list_entry==4&&
               transfer_market_request_json(withdraw).find("\"ask_withdraw\":true")!=std::string::npos,
               "selling a listed own player without offers still asks whether he leaves the list");
+        {   // the same question when the listed player is chosen in the market list (right panel), with and without offers
+            for(const uint8_t offers:{uint8_t(0),uint8_t(1)}) {
+                auto own_state=listed;own_state.items[0].offers=offers;
+                TransferMarketScreen own(argv[1],own_state);
+                auto chosen=own.click(210,28);own.acknowledge_preview(own_state,quote(chosen));
+                const auto sell_listed=own.click(200,206);
+                check(sell_listed.kind==TransferMarketRequestKind::review_offers&&sell_listed.ask_withdraw&&sell_listed.bid.list_entry==4,
+                      "selling an own listing chosen in the market list asks whether the player leaves the list");
+            }
+        }
         auto expired=fixture();expired.squad_slots[2932]=0x0fff;
         check(!transfer_market_from_game(expired,5).squad[0].already_listed,
               "cleared rejected/expired pool entry immediately makes the player listable again");
