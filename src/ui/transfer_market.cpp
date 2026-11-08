@@ -573,11 +573,11 @@ void TransferMarketScreen::draw_market_overview(Image& out) const {
         }
         original_text(out,201,183,padded(average[4]),0x6b);
         // Filter and mode buttons: positions and rectangles come from a table in the executable (6 bytes per entry).
-        for(int n=4;n<13;++n)button(out,exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField + n*6),exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField2+n*6),exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField3+n*6),texts_[text_id(::bmh::layout::TransferMarket_Rect_TextPointer5)+size_t(n)],(view_flags_&(1u<<n))!=0);
+        for(int n=4;n<13;++n)button(out,exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField + n*6),exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField2+n*6),exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField3+n*6),texts_[text_id(::bmh::layout::TransferMarket_Rect_TextPointer5)+size_t(n)],((view_flags_&(1u<<n))!=0)!=(pressed_button_==n));
     }
-    button(out,1,215,51,texts_[text_id(data_b_?::bmh::layout::TransferMarket_Rect_TextPointer3: ::bmh::layout::TransferMarket_Rect_TextPointer4)],true);
-    button(out,55,215,51,texts_[text_id(::bmh::layout::TransferMarket_Rect_TextPointer5)],full);
-    for(int n=1;n<4;++n)if(!full&&state_.source_market_mode==3)button(out,exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField + n*6),exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField2+n*6),exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField3+n*6),texts_[text_id(::bmh::layout::TransferMarket_Rect_TextPointer5)+size_t(n)],(view_flags_&(1u<<n))!=0);
+    button(out,1,215,51,texts_[text_id(data_b_?::bmh::layout::TransferMarket_Rect_TextPointer3: ::bmh::layout::TransferMarket_Rect_TextPointer4)],pressed_button_!=100);
+    button(out,55,215,51,texts_[text_id(::bmh::layout::TransferMarket_Rect_TextPointer5)],full!=(pressed_button_==101));
+    for(int n=1;n<4;++n)if(!full&&state_.source_market_mode==3)button(out,exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField + n*6),exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField2+n*6),exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField3+n*6),texts_[text_id(::bmh::layout::TransferMarket_Rect_TextPointer5)+size_t(n)],((view_flags_&(1u<<n))!=0)!=(pressed_button_==n));
 }
 // Formats an amount like the original: converted with the currency multiplier/divisor,
 // left-padded to 9 characters and followed by the currency suffix.
@@ -743,6 +743,7 @@ TransferMarketRequest TransferMarketScreen::move(int x,int y) {
 // Left click handles the Data/Komplett buttons, poach and filter buttons, marking of rows, and the action bar
 // (y 202..212; the right part x>=254 means loan).
 TransferMarketRequest TransferMarketScreen::click(int x,int y,bool right) {
+    pressed_button_=-1;   // the release ends the held look of a button
     if(pending_||close_requested_)return {};
     if(search_open_)return click_search(x,y,right);
     if(right) {
@@ -852,7 +853,7 @@ void TransferMarketScreen::draw_search(Image& out) const {
     auto price = original_money(10000 * (value / 10000));
     price.erase(0, price.find_first_not_of('%'));
     original_text(out, 216, 148, price, 0x7A);
-    button(out, 277, 140, 40, texts_[text_id(::bmh::layout::TransferMarket_SearchButton_TextPointer)], false);
+    button(out, 277, 140, 40, texts_[text_id(::bmh::layout::TransferMarket_SearchButton_TextPointer)], pressed_button_ == 200);
 }
 
 // A click inside the dialog: the confirm button closes it and applies the profile, the right button closes it and
@@ -895,6 +896,33 @@ TransferMarketRequest TransferMarketScreen::close_search(bool cancelled) {
     request.search_profile = search_edit_; request.search_cancelled = cancelled; request.search_apply = !cancelled;
     pending_ = request; feedback_.clear();
     return request;
+}
+
+// The button under the pointer (same hit areas as click()): 100 Data, 101 Komplett, 1..3 the buttons before Abwerben (mode III),
+// 4..10 the position and page buttons, 11/12 the action bar (purchase / loan), 200 the confirm button of the search dialog.
+int TransferMarketScreen::button_at(int x, int y) const {
+    if (search_open_) return x >= 277 && x <= 317 && y >= 140 && y <= 150 ? 200 : -1;
+    if (x >= 1 && x <= 52 && y >= 215 && y <= 225) return 100;
+    if (x >= 55 && x <= 106 && y >= 215 && y <= 225) return 101;
+    if (view_flags_ & 1) return -1;
+    for (int n = 1; n <= 10; ++n) {
+        if (n <= 3 && state_.source_market_mode != 3) continue;
+        const int bx = exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField + n * 6);
+        const int by = exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField2 + n * 6);
+        const int width = exe_.u16(::bmh::layout::TransferMarket_Click_RuntimeField3 + n * 6);
+        if (x >= bx && x <= bx + width && y >= by && y <= by + 10) return n;
+    }
+    if (y >= 202 && y <= 212 && x >= 185 && x <= 318) return x >= 254 ? 12 : 11;
+    return -1;
+}
+
+// Mouse DOWN: the button under the pointer is drawn pressed until the release (the action itself happens in click()).
+bool TransferMarketScreen::press(int x, int y, bool right) {
+    if (pending_ || close_requested_) return false;
+    const int id = right ? -1 : button_at(x, y);
+    const bool changed = id != pressed_button_;
+    pressed_button_ = id;
+    return changed;
 }
 
 // Keyboard shortcuts: Esc closes, B or Enter opens an offer for the selected market item,
@@ -993,6 +1021,7 @@ std::string TransferMarketScreen::state_json() const {
         << ",\"active_field\":" << active_field_ << ",\"numeric_input\":" << json_quote(numeric_input_)
         << ",\"pending\":" << (pending_ ? transfer_market_request_json(*pending_) : "null")
         << ",\"feedback\":" << json_quote(feedback_)
+        << ",\"pressed_button\":" << pressed_button_
         << ",\"search_open\":" << (search_open_ ? "true" : "false") << ",\"search_edit\":[";
     for (size_t i = 0; i < search_edit_.size(); ++i) out << (i ? "," : "") << unsigned(search_edit_[i]);
     out << "],\"preview\":";

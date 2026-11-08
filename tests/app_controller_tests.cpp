@@ -16,6 +16,7 @@
 #include "app/controller.hpp"
 #include "app/window_actions.hpp"
 #include "ui/manager.hpp"
+#include "ui/pending_offer.hpp"
 #include "ui/contracts.hpp"
 #include "game/month.hpp"
 #include "game/desk_actions.hpp"
@@ -533,7 +534,21 @@ void check_transfer_market_controller(const std::filesystem::path& data) {
         hooks.allocator_gate = HumanBuyerSaleAllocatorGate::zero;
         hooks.direct_mode = HumanBuyerSaleDirectMode::ordinary_ai_purchase;
         std::vector<std::string> boxes;
-        hooks.notice = [&](const GameState&, const HumanBuyerSaleNotice& notice) { boxes.push_back(notice.original_message); };
+        // Like the graphical client, every notice is turned into its dialog (an unknown notice there refuses the whole action).
+        hooks.notice = [&](const GameState& state, const HumanBuyerSaleNotice& notice) {
+            (void)pending_offer_notice_dialog(state, PendingOfferNotice{notice.manager, notice.raw_offer_slot,
+                notice.source_text_address, notice.original_message});
+            boxes.push_back(notice.original_message);
+        };
+        // All notices the transfer routes can raise have a dialog (the poached player's agreement and the scouting boxes included).
+        for (const uint32_t address : {::bmh::layout::DeskActions_SubmitTransferOfferEditorSource_TextPointer,
+                 ::bmh::layout::DeskActions_SubmitTransferOfferEditorSource_RuntimeField,
+                 ::bmh::layout::DeskActions_SubmitTransferOfferEditorSource_ExecutableField,
+                 ::bmh::layout::DeskActions_SubmitTransferBidImpl_ExecutableField,
+                 ::bmh::layout::DeskActions_Unsupported_ExecutableField, ::bmh::layout::DeskActions_Unsupported_ExecutableField2,
+                 ::bmh::layout::DeskActions_Unsupported_ExecutableField3, ::bmh::layout::DeskActions_Unsupported_TextPointer3,
+                 ::bmh::layout::Month_SearchProfileNews_TextPointer3, ::bmh::layout::Month_SearchProfileNews_TextPointer4})
+            (void)pending_offer_notice_dialog(game, PendingOfferNotice{initial.manager_slot, -1, address, "x"});
         const auto serve_search = [&](const FlowResult& result) {
             return app::serve_flow_request(flow, result, session, data, data, 0x1789abcd, revision, playback, audio_session, false,
                 {}, {}, {}, {}, {}, {}, {}, {}, {}, app::PendingOfferEntryPolicy::legacy_unpresented, hooks,
@@ -564,8 +579,8 @@ void check_transfer_market_controller(const std::filesystem::path& data) {
         const auto stored = search_profile(game, manager);
         check(revision == before_store + 1 && !(stored[0] & kSearchProfileOff) && stored[2] == 0 && stored[5] == 24 && stored[7] == 99,
               "the stored profile is active and has the edits");
-        check(boxes.size() == search_profile_hits(game, manager).size() && !boxes.empty(),
-              "every listing that fits is announced through the notice presenter");
+        check(boxes.size() == search_profile_hits(game, manager).size() + 1 && boxes.size() > 1,
+              "the scouting department reports first, then every listing that fits gets its message box");
         check(flow.state_json().find("\"search_open\":false") != std::string::npos && !flow.pending_transfer_market(),
               "the dialog is closed and the request settled");
         // Vorschlag opens with the profile the squad asks for; leaving by right click keeps it but switches the search off

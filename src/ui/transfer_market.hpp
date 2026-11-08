@@ -117,6 +117,8 @@ public:
     TransferMarketScreen(const std::filesystem::path&, TransferMarketState);
     Image render() const;
     TransferMarketRequest click(int x, int y, bool right = false);
+    // Mouse DOWN on a button: the button is drawn pressed until the release (click). Returns whether the picture changed.
+    bool press(int x, int y, bool right = false);
     // TransferMarketScreen hover preview; host acknowledges the quote before more input.
     TransferMarketRequest move(int x, int y);
     TransferMarketRequest key(std::string_view);
@@ -164,6 +166,9 @@ private:
     bool close_requested_ = false;
     bool search_open_ = false;
     SearchProfile search_edit_{};
+    // The button held by the mouse (draw id: 1..12 market buttons, 100 Data, 101 Komplett, 200 search confirm), -1 none.
+    int pressed_button_ = -1;
+    int button_at(int x, int y) const;
     void open_search(SearchProfile profile);
     void draw_search(Image&) const;
     TransferMarketRequest click_search(int x, int y, bool right);

@@ -17,6 +17,7 @@
 #include "cli/console/detail.hpp"
 #include "game/desk_actions.hpp"
 #include "game/human_buyer_sale.hpp"
+#include "game/messages.hpp"
 #include "game/poach.hpp"
 #include "game/schedule.hpp"
 #include "ui/club_info.hpp"
@@ -543,6 +544,7 @@ void Console::register_transfer_commands() {
                 std::string error;
                 const auto result = session_->dispatch_search_profile(manager, suggestion, false, true, revision_, error);
                 if (!result) require_engine(false, "search profile", error);
+                emit('i', utf8(message_text(session_->state(), ::bmh::layout::Month_SearchProfileNews_TextPointer4)));
                 emit('+', std::to_string(result->hits.size()) + " listed player(s) fit the profile");
                 for (const auto& hit : result->hits) emit('i', utf8(hit.message));
             }
@@ -577,6 +579,7 @@ void Console::register_transfer_commands() {
             emit('+', result->active ? "search profile stored"
                                      : "search profile stored but switched off (all values 0 or all 1 count as no search)");
             if (v.boolean("apply", true)) {
+                emit('i', utf8(message_text(session_->state(), ::bmh::layout::Month_SearchProfileNews_TextPointer4)));
                 emit('+', std::to_string(result->hits.size()) + " listed player(s) fit the profile");
                 for (const auto& hit : result->hits) emit('i', utf8(hit.message));
             }

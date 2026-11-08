@@ -182,6 +182,9 @@ TaxDialogProjection pending_offer_notice_dialog(const GameState& game,
     case ::bmh::layout::PendingOffer_FormatError_ExecutableField2: // SystemIdentity(manager|0x80): interactive ACK after normal settlement.
     case ::bmh::layout::PendingOffer_ConstructionNoticeDialog_TextPointer: // SettleHumanBuyerSale -> SystemIdentity: buyer subsidy, composed amounts.
     case ::bmh::layout::PendingOffer_FormatError_ExecutableField3: // SettleHumanBuyerSale -> SystemIdentity: buyer subsidy threshold exceeded.
+    case ::bmh::layout::DeskActions_SubmitTransferOfferEditorSource_ExecutableField: // poached player agrees: "Ihr erstes Angebot wird angenommen!" (without it the Angebot button of the Abwerben dialog failed).
+    case ::bmh::layout::Month_SearchProfileNews_TextPointer3: // search dialog -> sub_57ECA: a listed player fits the profile.
+    case ::bmh::layout::Month_SearchProfileNews_TextPointer4: // search dialog -> sub_57ECA: "your scouting department ..." after Suchen.
         out.source_manager_flags = uint8_t(notice.manager) | 0x80;
         break;
     case ::bmh::layout::PendingOffer_PendingOfferNoticeDialog_ExecutableField2: // SDLFlushEvents3(manager|0x40): timed warning.

@@ -555,6 +555,12 @@ void serve_transfer_action(ui::StartupFlow& flow, CareerSession& session,
             const auto result = session.dispatch_search_profile(request.manager_slot, request.search_profile,
                 request.search_cancelled, request.search_apply, revision, error);
             if (!result) return false;
+            // Confirming ("Suchen") first reports that the scouting department looks (Source sub_19409 sub_57ECA with
+            // text 0xAF25C), then one box per listing that fits (sub_190B5).
+            if (presenters.notice && request.search_apply)
+                presenters.notice(session.state(), HumanBuyerSaleNotice{request.manager_slot, -1, -1,
+                    ::bmh::layout::Month_SearchProfileNews_TextPointer4,
+                    message_text(session.state(), ::bmh::layout::Month_SearchProfileNews_TextPointer4), 0x40});
             if (presenters.notice)
                 for (const auto& hit : result->hits)
                     presenters.notice(session.state(), HumanBuyerSaleNotice{request.manager_slot, hit.entry, -1,
@@ -607,8 +613,10 @@ void serve_transfer_action(ui::StartupFlow& flow, CareerSession& session,
                 else flow.acknowledge_preparation(session.preparation_projection(revision), std::move(notice));
             }, review);
         if (!outcome) throw FormatError(error);
-    } catch (const std::exception&) {
-        flow.reject_preparation_action("Diese Transferaktion konnte nicht übernommen werden.");
+    } catch (const std::exception& e) {
+        std::fprintf(stderr, "transfer action: %s\n", e.what());
+        if (app::debug::enabled()) app::debug::log(std::string("transfer action refused: ") + e.what());
+        flow.reject_preparation_action(std::string("Diese Transferaktion konnte nicht übernommen werden (") + e.what() + ").");
     }
 }
 
@@ -633,8 +641,11 @@ void serve_transfer_offer(ui::StartupFlow& flow, CareerSession& session,
                 flow.acknowledge_transfer_offer(std::move(applied.preparation), std::move(applied.editor));
             });
         if (!result) throw FormatError(error);
-    } catch (const std::exception&) {
-        flow.reject_transfer_offer("Diese Angebotsaktion konnte nicht übernommen werden.");
+    } catch (const std::exception& e) {
+        // The reason goes to the debug log and to stderr, and the player sees it: a refused offer must not look like a dead button.
+        std::fprintf(stderr, "transfer offer: %s\n", e.what());
+        if (app::debug::enabled()) app::debug::log(std::string("transfer offer refused: ") + e.what());
+        flow.reject_transfer_offer(std::string("Diese Angebotsaktion konnte nicht übernommen werden (") + e.what() + ").");
     }
 }
 

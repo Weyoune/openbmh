@@ -1254,6 +1254,9 @@ FlowResult StartupFlow::pointer_down(int x,int y,bool right) {
     }
     if (environment_) return {environment_->pointer_down(x,y,right)};
     if (advertising_) return {advertising_->move(x,y)};
+    // The transfer market draws the held button pressed (Suchen, Vorschlag, Abwerben, Data ...); the action follows on the release.
+    if (transfer_market_ && !player_card_ && !outgoing_transfer_ && !toto_ && !pitch_ && !lineup_)
+        return {transfer_market_->press(x,y,right)};
     if(pitch_){
         const std::string before=pitch_->state_json();
         const auto request=pitch_->pointer_down(x,y,right);
