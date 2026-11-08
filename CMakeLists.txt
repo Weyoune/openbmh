@@ -284,12 +284,9 @@ if(MSVC)
 endif()
 
 # --- Game data launcher (src/launch): find, unpack and check the original game data ---------
-# ZIP: miniz (MIT), 7z: the C decoder of the LZMA SDK (public domain), file dialog:
+# ZIP: miniz 3.0.2 (MIT, vendored in third_party/miniz), 7z: the C decoder of the LZMA SDK (public domain), file dialog:
 # nativefiledialog-extended (zlib). All pinned; fetched like SDL2.
 include(FetchContent)
-FetchContent_Declare(miniz
-    URL https://github.com/richgel999/miniz/releases/download/3.0.2/miniz-3.0.2.zip
-    URL_HASH SHA256=ada38db0b703a56d3dd6d57bf84a9c5d664921d870d8fea4db153979fb5332c5)
 FetchContent_Declare(lzma_sdk
     GIT_REPOSITORY https://github.com/ip7z/7zip.git
     GIT_TAG 24.09
@@ -301,9 +298,10 @@ FetchContent_Declare(nfd
     GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
     GIT_TAG v1.2.1
     GIT_SHALLOW TRUE)
-FetchContent_MakeAvailable(miniz lzma_sdk nfd)
+FetchContent_MakeAvailable(lzma_sdk nfd)
 
 add_library(bmh_miniz STATIC ${miniz_SOURCE_DIR}/miniz.c)
+set(miniz_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniz")  # vendored: no download that can fail
 target_include_directories(bmh_miniz PUBLIC ${miniz_SOURCE_DIR})
 set(BMH_LZMA_C ${lzma_sdk_SOURCE_DIR}/C)
 add_library(bmh_7z STATIC

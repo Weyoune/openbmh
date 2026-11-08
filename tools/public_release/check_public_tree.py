@@ -44,6 +44,8 @@ PRIVATE_DOCUMENTS = {
     "PUBLIC_RELEASE_TODO.md", "chat.txt",
 }
 SOURCE_SUFFIXES = {".cpp", ".hpp", ".h", ".c", ".inc"}
+# Unmodified third-party sources (miniz, MIT) keep their authors' own headers and are not ours to rewrite.
+VENDORED_PREFIX = "third_party/"
 SKIP_DIRECTORIES = {".git", "__pycache__", ".cache", "_deps", "node_modules"}
 
 LEGACY_SYMBOLS = re.compile(
@@ -230,6 +232,8 @@ def scan_tree(root: Path):
     findings = []
     names = checked_files(root)
     for name in names:
+        if name.startswith(VENDORED_PREFIX):
+            continue
         path = root / name
         if path.is_symlink():
             findings.append(Finding(name, 0, "symlink-not-reviewed"))
@@ -255,6 +259,8 @@ def scan_history(root: Path):
             metadata, name = entry.split(b"\t", 1)
             mode, kind, object_id = metadata.decode().split()
             path = name.decode("utf-8")
+            if path.startswith(VENDORED_PREFIX):
+                continue
             if kind != "blob":
                 findings.append(Finding(path, 0, "unreviewed-history-object"))
                 continue
