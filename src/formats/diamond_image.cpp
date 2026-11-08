@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <string_view>
 #include <system_error>
 
 #ifdef _WIN32
@@ -98,6 +99,7 @@ void add_texts(LeImage& image, int edition, const std::filesystem::path& game_di
 
 std::filesystem::path find_texts_file(const std::filesystem::path& game_directory) {
     if (const char* env = std::getenv("OPENBMH_DAT"); env && *env) {
+        if (std::string_view(env) == "-") return {};  // "no texts file at all" (tests of the launcher)
         std::error_code ec;
         if (std::filesystem::is_regular_file(env, ec)) return env;
     }

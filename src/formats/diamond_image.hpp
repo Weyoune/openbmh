@@ -23,7 +23,7 @@ namespace bmh {
 // times (u32 address, u32 length), then the bytes of all ranges. A range must be one of the edition's text ranges, so
 // the file can never change a number of the image.
 //
-// The file is looked for in: the environment variable OPENBMH_DAT, the folder of the game data, the folder of the
+// The file is looked for in: the environment variable OPENBMH_DAT ("-" = none at all), the folder of the game data, the folder of the
 // running program, the current folder. Returns an empty path when there is none.
 std::filesystem::path find_texts_file(const std::filesystem::path& game_directory);
 

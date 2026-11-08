@@ -72,20 +72,24 @@ std::optional<Family> family_of_exe(const std::string& file_name) {
     return std::nullopt;
 }
 
-// Whether `directory` holds the asset files of the English game (FLTD.EXE is not needed: its numbers and texts are built in).
+// Whether `directory` holds the asset files of the English game and the built-in numbers have their texts (openbmh.dat):
+// then FLTD.EXE is not needed. Without openbmh.dat the game needs the executable.
 bool has_english_assets(const fs::path& directory) {
     std::error_code ec;
     if (!fs::is_directory(directory, ec)) return false;
     const auto kb = find_file(directory, "KB");
-    return find_file(directory, "TEXTE.BLK") && find_file(directory, "M3E.MAN") && kb && fs::is_directory(*kb, ec);
+    return find_file(directory, "TEXTE.BLK") && find_file(directory, "M3E.MAN") && kb && fs::is_directory(*kb, ec) &&
+           !find_texts_file(directory).empty();
 }
 
-// Whether `directory` holds the asset files of the German game (the executable is not needed: its numbers are built in).
+// Whether `directory` holds the asset files of the German game and the built-in numbers have their texts (openbmh.dat):
+// then BMH.EXE is not needed. Without openbmh.dat the game needs the executable.
 bool has_german_assets(const fs::path& directory) {
     std::error_code ec;
     if (!fs::is_directory(directory, ec)) return false;
     const auto kb = find_file(directory, "KB");
-    return find_file(directory, "TEXTD.BLK") && find_file(directory, "M3D.MAN") && kb && fs::is_directory(*kb, ec);
+    return find_file(directory, "TEXTD.BLK") && find_file(directory, "M3D.MAN") && kb && fs::is_directory(*kb, ec) &&
+           !find_texts_file(directory).empty();
 }
 
 // Every game EXE directly in `directory`.
@@ -386,7 +390,7 @@ GameCheck check_game_directory(const fs::path& path) {
         return c;
     }
     if (exes.empty()) {
-        c.problems.push_back("no BMH.EXE or FLTD.EXE in " + path_to_utf8(dir) + ", and no game asset files (TEXTD.BLK, M3D.MAN) or the English ones (TEXTE.BLK, M3E.MAN)");
+        c.problems.push_back("no BMH.EXE or FLTD.EXE in " + path_to_utf8(dir) + ". The game needs either BMH.EXE (FLTD.EXE for the English game) and the asset files, or openbmh.dat (from the release package) and the asset files.");
         return c;
     }
     // a named EXE decides; otherwise the German game before the English one

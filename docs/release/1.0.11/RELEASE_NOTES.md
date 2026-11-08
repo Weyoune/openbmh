@@ -6,21 +6,23 @@ selling of a listed player, and corrects the asking price shown in the market.
 Extended development remains separate in
 [OpenBMH-Extended](https://github.com/Weyoune/OpenBMH-extended).
 
-## No BMH.EXE or FLTD.EXE needed
+## BMH.EXE or openbmh.dat
 
+- A game needs its asset files and **either** the executable (`BMH.EXE`, or
+  `FLTD.EXE` for the English game) **or** the file **openbmh.dat**. If both are
+  there, the executable is used as before. If neither is there, OpenBMH asks for
+  a game directory or for `BMH.EXE`.
 - The numbers of the Diamond 3.7 executable (tables, rates, positions, prices) and
-  of the English Football Limited are built into the program. A game folder, ZIP
-  or 7z with only the asset files (`TEXTD.BLK` and `M3D.MAN`, or `TEXTE.BLK`
-  and `M3E.MAN`, plus the picture, font and sound folders) is a complete game.
-  A `BMH.EXE` or `FLTD.EXE` that is there is used as before.
-- The game texts of the original executables (live commentary, some messages) are
-  in the file **openbmh.dat**, which ships next to `OpenBMH` and `openbmh_cli`
-  in the release package. The game looks for it in the game folder, in the
-  program folder and in the current folder (or where `OPENBMH_DAT` points to).
-  Without the file those texts are empty and the game still runs.
+  of the English Football Limited are built into the program. `openbmh.dat` holds
+  the game texts of those executables (live commentary, messages). It ships next
+  to `OpenBMH` and `openbmh_cli` in the release package and is found in the
+  game folder, in the program folder and in the current folder (or where
+  `OPENBMH_DAT` points to). A folder, ZIP or 7z with only the asset files
+  (`TEXTD.BLK` and `M3D.MAN`, or `TEXTE.BLK` and `M3E.MAN`, plus the
+  picture, font and sound folders) is a complete game when `openbmh.dat` is
+  found.
 - The default manager name is "OpenBMH" instead of "Nobody".
 - A recorded session gives the same output as with the real `BMH.EXE`.
-
 ## Changes since 1.0.9 (1.0.10 was never published; its changes are part of this release)
 
 - **Suchen and Vorschlag in the transfer market.** Both buttons did nothing.
@@ -73,7 +75,7 @@ Extended development remains separate in
   the original and cannot be reproduced exactly (documented in the source).
 - Only one matchday and the days after it were recorded from the real 3.7; the
   weekly processing, month changes and transfers are not yet compared.
-- The graphical client has not yet been tried with asset files only.
+- The graphical client has not yet been tried with `openbmh.dat` and asset files only.
 - Earlier open points remain: "player card: original atlas bounds" (#77), sporadic
   double clicks (#58) and the macOS match scene speed (#70).
 

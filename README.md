@@ -15,10 +15,9 @@ This is an independent community project, with no affiliation with or endorsemen
 
 Check the [releases page](https://github.com/Weyoune/openbmh/releases) for available packages and their platform notes. A Windows package uses the name `OpenBMH-<version>-windows-x64.zip`. Availability and native validation are stated for each release; source build instructions do not establish platform support on their own.
 
-1. Have your own supported game installation available. OpenBMH needs its asset files (texts, master database, pictures, fonts, sounds); neither `BMH.EXE` nor `FLTD.EXE` is required: the numbers of the Diamond 3.7 executable and of the English Football Limited are built in, and their game texts (live commentary, messages) are in `openbmh.dat`, which ships next to the programs in the release package (without that file those texts are empty).
+1. Have your own supported game installation available. OpenBMH needs its asset files (texts, master database, pictures, fonts, sounds) and **either** `BMH.EXE` (`FLTD.EXE` for the English game) **or** `openbmh.dat`, which ships next to the programs in the release package and holds the game texts of the original executables; the numbers of those executables are built into OpenBMH. If both are there, the executable is used. If neither is there, OpenBMH asks for the game directory or for `BMH.EXE`.
 2. Extract the OpenBMH package into a separate directory, or alongside the game files.
 3. Start `OpenBMH` (`OpenBMH.exe` on Windows). Select the game directory (or `BMH.EXE`) when prompted. A ZIP or 7z containing one game installation can also be selected.
-4. A BMH.EXE (or FLTD.EXE) that stays in the game directory is used as before; it carries its own edition's numbers and texts.
 
 From a terminal in the extracted package on Linux or macOS:
 
