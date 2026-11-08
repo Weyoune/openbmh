@@ -62,4 +62,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$RELEASE_TAG" dist/*.zip dist/SHA256SUMS dist/QA-REPORT.json --draft --verify-tag --title "OpenBMH $RELEASE_TAG" --notes-file docs/release/1.0.11/RELEASE_NOTES.md
+          gh release create "$RELEASE_TAG" dist/*.zip dist/SHA256SUMS dist/QA-REPORT.json --draft --verify-tag --title "OpenBMH $RELEASE_TAG" --notes-file docs/release/1.0.12/RELEASE_NOTES.md
