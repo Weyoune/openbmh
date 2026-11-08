@@ -23,7 +23,7 @@ class PackageAllowlistTests(unittest.TestCase):
             root = Path(directory)
             # Empty authored placeholders test names/structure, not executable behavior.
             for name in ['OpenBMH', 'openbmh_cli', 'README.md', 'LICENSE',
-                         'THIRD_PARTY_NOTICES.md', 'ACKNOWLEDGEMENTS.md', 'CONTRIBUTING.md']:
+                         'THIRD_PARTY_NOTICES.md', 'ACKNOWLEDGEMENTS.md', 'CONTRIBUTING.md', 'openbmh.dat']:
                 (root / name).write_text('synthetic')
             notes = root / 'docs/release/1.0/RELEASE_NOTES.md'
             notes.parent.mkdir(parents=True)

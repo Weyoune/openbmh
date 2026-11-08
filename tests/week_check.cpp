@@ -1057,10 +1057,11 @@ const Entry* desk = &pause;  // (after an offer message box the next pause)
         GameRandom gp = bg;
         WatcomRandom wp = br;
         bool g_ahead = false, w_ahead = false;
+        long g_steps = 0, w_steps = 0;  // draws the snapshot lies ahead of our state (reported below)
         for (long k = 0; k < 20000 && !g_ahead; k++, gp.range(0, 1))
-            g_ahead = gp.seed() == int32_t(std::stoll(field(e.line, "game_seed")));
+            g_ahead = gp.seed() == int32_t(std::stoll(field(e.line, "game_seed"))), g_steps = k;
         for (long k = 0; k < 20000 && !w_ahead; k++, wp.rand())
-            w_ahead = wp.seed() == uint32_t(std::stoull(field(e.line, "rand_seed")));
+            w_ahead = wp.seed() == uint32_t(std::stoull(field(e.line, "rand_seed"))), w_steps = k;
         if (!w_ahead) {
             // (a Watcom seed on no path of the stream: the snapshot caught a temporary generator
             //  state, as with minute snapshots - not counted)
@@ -1085,7 +1086,8 @@ const Entry* desk = &pause;  // (after an offer message box the next pause)
             }
         }
         if (!g_ahead || !w_ahead) return false;
-        std::printf("  (late snapshot: taken inside the processing of day %u, not counted)\n", b.date);
+        std::printf("  (late snapshot: taken inside the processing of day %u, %ld game and %ld Watcom draws ahead of the "
+                    "port's state, both on the port's streams; not counted)\n", b.date, g_steps, w_steps);
         return true;
     };
 
