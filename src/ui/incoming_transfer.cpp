@@ -601,6 +601,7 @@ std::optional<int> IncomingTransferScreen::pointer_up(int x, int y, bool right, 
 // then the bid area (x 4..190, y from 0x8f, rows 0x11 pixels high). Empty slots, unsupported transactions
 // (except in the pending variant) and clicks after an answer are ignored.
 std::optional<int> IncomingTransferScreen::click(int x, int y, bool right, uint64_t elapsed_ms) {
+    notice_pressed_ = false;   // the release ends the pressed look
     if (confirmation_mode_) {
         if (!right && x >= 95 && x <= 220 && y >= 166 && y <= 176)
             confirmation_dismissed_ = true;
@@ -676,7 +677,17 @@ void IncomingTransferScreen::draw_notice(Image& out) const {
     notice.body=state_.notice_text;
     notice.source_manager_flags=confirmation_mode_?0x80:0x40;
     draw_source_dialog(out,{widgets_,faces_,&badge_atlas_,body_,heading_,exe_,
-        sprite_font_,texts_},notice,gradient_text_);
+        sprite_font_,texts_},notice,gradient_text_,
+        notice_pressed_ ? std::optional<GameEndTaxDialog::Button>(GameEndTaxDialog::Button::acknowledge) : std::nullopt);
+}
+
+// Mouse DOWN on OK of a confirmation notice: drawn pressed until the release. Returns true when the picture changed.
+bool IncomingTransferScreen::press(int x, int y) {
+    const bool on = confirmation_mode_ && !confirmation_dismissed_ &&
+        source_dialog_button_at(TaxDialogKind::acknowledgement, false, x, y) == GameEndTaxDialog::Button::acknowledge;
+    const bool changed = on != notice_pressed_;
+    notice_pressed_ = on;
+    return changed;
 }
 
 } // namespace bmh::ui

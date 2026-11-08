@@ -2551,12 +2551,18 @@ int main(int argc, char** argv) {
                         while (quit_confirmation.poll(&event)) {
                             if (event.type == SDL_QUIT) { running = false; return; }
                             if (event.type == SDL_MOUSEBUTTONDOWN &&
-                                (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT))
+                                (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT)) {
                                 decision_screen.pointer_down(event.button.button == SDL_BUTTON_RIGHT);
-                            else if (event.type == SDL_MOUSEBUTTONUP &&
-                                (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT))
+                                // OK of the confirmation looks pressed while the mouse button is held
+                                if (event.button.button == SDL_BUTTON_LEFT && confirmation &&
+                                    decision_screen.press(event.button.x, event.button.y))
+                                    rendered_phase = UINT64_MAX;
+                            } else if (event.type == SDL_MOUSEBUTTONUP &&
+                                (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT)) {
                                 (void)decision_screen.pointer_up(event.button.x, event.button.y,
                                     event.button.button == SDL_BUTTON_RIGHT, elapsed);
+                                if (confirmation && !decision_screen.confirmation_dismissed()) rendered_phase = UINT64_MAX;
+                            }
                         }
                         if (confirmation ? decision_screen.confirmation_dismissed() : decision_screen.outcome_dismissed()) return;
                         SDL_Delay(10);
