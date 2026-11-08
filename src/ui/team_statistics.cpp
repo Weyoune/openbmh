@@ -3,6 +3,7 @@
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/team_statistics.hpp"
+#include "ui/dialog_frame.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -31,22 +32,8 @@ void rect(Image& out, int x, int y, int w, int h, uint8_t value) {
 }
 void source_frame(Image& out, const Image& widgets, const LeImage& exe,
                   int x, int y, int w, int h, uint8_t color) {
-    for (int yy = 0; yy < h - 7; ++yy) for (int xx = 0; xx < w - 7; ++xx)
-        out.at(x + 4 + xx, y + 4 + yy) = exe.u8(::bmh::layout::Advertising_PatternRect_RuntimeField + (yy & 15) * 16 + (xx & 15));
-    copy(out, widgets, 0, 0, x, y, 4, 4); copy(out, widgets, 4, 0, x + w - 4, y, 4, 4);
-    copy(out, widgets, 0, 4, x, y + h - 4, 4, 4); copy(out, widgets, 4, 4, x + w - 4, y + h - 4, 4, 4);
-    for (int xx = 4; xx < w - 4; xx += 74) {
-        const int amount = std::min(74, w - 4 - xx);
-        copy(out, widgets, 0, 104, x + xx, y, amount, 4); copy(out, widgets, 0, 108, x + xx, y + h - 4, amount, 4);
-    }
-    for (int yy = 4; yy < h - 4; yy += 96) {
-        const int amount = std::min(96, h - 4 - yy);
-        copy(out, widgets, 0, 8, x, y + yy, 4, amount); copy(out, widgets, 4, 8, x + w - 4, y + yy, 4, amount);
-    }
-    int ramp = 0; while (ramp < 32 && exe.u8(::bmh::layout::Advertising_Text_RuntimeField2 + ramp) != color) ++ramp;
-    const uint8_t shadow = exe.u8(::bmh::layout::Advertising_Text_RuntimeField + ramp * 6 + 5);
-    rect(out, x + 2, y + h, w, 2, 0x40); rect(out, x + w, y + 2, 2, h, 0x40);
-    (void)shadow;
+    (void)color;
+    draw_dialog_frame(out, widgets, exe, x, y, w, h, true);   // dialog_frame.hpp
 }
 std::string source_field(int value, int width) {
     std::string s = std::to_string(value);

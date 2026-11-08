@@ -5,6 +5,7 @@
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/balance_plan.hpp"
+#include "ui/calculator_widgets.hpp"
 
 #include <algorithm>
 #include <charconv>
@@ -100,12 +101,11 @@ void BalanceScreen::draw_buttons(Image& o)const{
  button(170,63,at(texts_,::bmh::layout::BalancePlan_DrawButtons_TextPointer+uint32_t(state_.draft.view)*4),0);button(245,63,at(texts_,::bmh::layout::BalancePlan_DrawButtons_TextPointer2),1);
 }
 void BalanceScreen::draw_calculator(Image& o)const{
- if(!calculator_open_)return;const int cx=state_.calculator_x,cy=state_.calculator_y;copy(o,calculator_art_,0,0,cx,cy,113,136);
- fill(o,cx+113,cy+2,2,136,0x40);fill(o,cx+2,cy+136,113,2,0x40);
+ if(!calculator_open_)return;const int cx=state_.calculator_x,cy=state_.calculator_y;draw_calculator_panel(o,calculator_art_,cx,cy);   // calculator_widgets.hpp
  auto draw=[&](int x,int baseline,std::string_view raw,uint8_t color,bool gradient=true){const int w=body_.text_width(raw),top=baseline-body_.baseline;if(x<0||top<0||x+w>o.width||top+body_.height>o.height)return;if(!gradient||!state_.gradient){body_.draw(o,x,top,raw,color);return;}Image mask(std::max(1,w),body_.height);body_.draw(mask,0,0,raw,1);int idx=0;while(idx<32&&exe_.u8(::bmh::layout::Advertising_Text_RuntimeField2+uint32_t(idx))!=color)++idx;for(int yy=0;yy<body_.height;++yy)for(int xx=0;xx<w;++xx)if(mask.at(xx,yy))o.at(x+xx,top+yy)=idx<32?exe_.u8(::bmh::layout::Advertising_Text_RuntimeField+uint32_t(idx*6+yy)):color;};
  std::string title(at(texts_,active_profile_.source_text_address));draw(cx+8+(105-8)/2-body_.text_width(title)/2,cy+14,title,0x62);
  const bool flash=current_milliseconds_<calculator_flash_until_;
- for(int i=0;i<15;++i){int x=cx+exe_.u16(::bmh::layout::Advertising_Click_RuntimeField+uint32_t(i)*2),y=cy+exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2+uint32_t(i));const bool down=pressed_calculator_control_==i||(flash&&flash_calculator_control_==i);copy(o,calculator_art_,down?15:0,136,x+(down?1:0),y+(down?1:0),down?14:15,down?13:14);draw(x+(down?6:5),y+(down?10:9),kKeys.substr(size_t(i),1),0x62,false);}
+ for(int i=0;i<15;++i){int x=cx+exe_.u16(::bmh::layout::Advertising_Click_RuntimeField+uint32_t(i)*2),y=cy+exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2+uint32_t(i));const bool down=pressed_calculator_control_==i||(flash&&flash_calculator_control_==i);draw_calculator_key(o,calculator_art_,x,y,down);draw(x+(down?6:5),y+(down?10:9),kKeys.substr(size_t(i),1),0x62,false);}
  for(size_t i=0;i<8;++i)if(active_profile_.presets[i]){int x=cx+exe_.u16(::bmh::layout::Advertising_Click_RuntimeField+uint32_t(i+15)*2),y=cy+exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2+uint32_t(i+15));auto t=calc7(*active_profile_.presets[i]);draw(x+47-body_.text_width(t),y+12,t,0x62);}
  auto value=calculator_value_edited_?calc8(calculator_value_):calc7(calculator_value_);const int value_x=cx+exe_.u16(::bmh::layout::Advertising_Click_RuntimeField+23*2),value_y=cy+exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2+23);draw(value_x+47-body_.text_width(value),value_y+12,value,0x00);
 }

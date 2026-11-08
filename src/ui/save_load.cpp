@@ -5,6 +5,7 @@
 #include "formats/native_save_version.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/save_load.hpp"
+#include "ui/dialog_frame.hpp"
 #include "ui/button_frame.hpp"
 
 #include <algorithm>
@@ -247,21 +248,7 @@ bool SaveLoadScreen::info_press(int x, int y) {
 }
 
 void SaveLoadScreen::frame(Image& out, int x, int y, int width, int height) const {
-    pattern(out, exe_, x + 4, y + 4, width - 7, height - 7);
-    copy(out, widgets_, 0, 0, x, y, 4, 4);
-    copy(out, widgets_, 4, 0, x + width - 4, y, 4, 4);
-    copy(out, widgets_, 0, 4, x, y + height - 4, 4, 4);
-    copy(out, widgets_, 4, 4, x + width - 4, y + height - 4, 4, 4);
-    for (int at = 4; at < width - 4; at += 74) {
-        const int count = std::min(74, width - 4 - at);
-        copy(out, widgets_, 0, 104, x + at, y, count, 4);
-        copy(out, widgets_, 0, 108, x + at, y + height - 4, count, 4);
-    }
-    for (int at = 4; at < height - 4; at += 96) {
-        const int count = std::min(96, height - 4 - at);
-        copy(out, widgets_, 0, 8, x, y + at, 4, count);
-        copy(out, widgets_, 4, 8, x + width - 4, y + at, 4, count);
-    }
+    draw_dialog_frame(out, widgets_, exe_, x, y, width, height, false);   // dialog_frame.hpp
 }
 
 void SaveLoadScreen::button(Image& out, int x, int y, int width, std::string_view label, bool pressed) const {

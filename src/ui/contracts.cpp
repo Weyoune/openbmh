@@ -4,7 +4,9 @@
 // input into ContractRequest values. Applying an offer or insurance is left to the session.
 #include "formats/executable_layout.hpp"
 #include "ui/contracts.hpp"
+#include "ui/dialog_frame.hpp"
 #include "ui/button_frame.hpp"
+#include "ui/calculator_widgets.hpp"
 #include "ui/game_end.hpp"
 
 #include <algorithm>
@@ -47,22 +49,7 @@ void pattern(Image& out, const LeImage& exe, int x, int y, int width, int height
 // Draws a panel in the original style: optional drop shadow, tiled pattern inside, four 4x4 corners
 // and edge strips (copied in pieces of at most 74 pixels horizontally and 96 vertically).
 void frame(Image& out, const LeImage& exe, const Image& widgets, int x, int y, int width, int height, bool shadow = true) {
-    if (shadow) { fill(out, x + 2, y + height, width, 2, 0x40); fill(out, x + width, y + 2, 2, height, 0x40); }
-    pattern(out, exe, x + 4, y + 4, width - 7, height - 7);
-    copy_region(out, widgets, 0, 0, x, y, 4, 4);
-    copy_region(out, widgets, 4, 0, x + width - 4, y, 4, 4);
-    copy_region(out, widgets, 0, 4, x, y + height - 4, 4, 4);
-    copy_region(out, widgets, 4, 4, x + width - 4, y + height - 4, 4, 4);
-    for (int at = 4; at < width - 4; at += 74) {
-        const int n = std::min(74, width - 4 - at);
-        copy_region(out, widgets, 0, 104, x + at, y, n, 4);
-        copy_region(out, widgets, 0, 108, x + at, y + height - 4, n, 4);
-    }
-    for (int at = 4; at < height - 4; at += 96) {
-        const int n = std::min(96, height - 4 - at);
-        copy_region(out, widgets, 0, 8, x, y + at, 4, n);
-        copy_region(out, widgets, 4, 8, x + width - 4, y + at, 4, n);
-    }
+    draw_dialog_frame(out, widgets, exe, x, y, width, height, shadow);   // dialog_frame.hpp
 }
 
 // Fills a rectangle with one palette index; throws if it leaves the image.
@@ -542,14 +529,13 @@ Image ContractsScreen::render() const {
     } else if (page_ == Page::calculator) {
         // Calculator: background image at (10,10), drop shadow, label, 15 keys (digits and the letters D, R, C, J, N),
         // 8 preset buttons and the current input right-aligned. Key and preset positions come from tables in the executable.
-        copy_region(out, calculator_, 0, 0, 10, 10, 113, 136);
-        fill(out,123,12,2,136,0x40);fill(out,12,146,113,2,0x40);
+        draw_calculator_panel(out, calculator_, 10, 10);   // calculator_widgets.hpp
         const auto label=calculator_bonus_index_==-2?db(::bmh::layout::Contracts_Out_ExecutableField19):calculator_bonus_index_<0?db(::bmh::layout::Contracts_Out_ExecutableField14):db(::bmh::layout::Contracts_Out_ExecutableField4+calculator_bonus_index_*4);
         centered(18,115,24,label,98);
         for(int i=0;i<15;++i) {
             const int x=10+exe_.u16(::bmh::layout::Advertising_Click_RuntimeField+i*2), y=10+exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2+i);
-            copy_region(out,calculator_,0,136,x,y,15,14);
-            text(out,x+5,y+9,std::string(1,"0123456789DRCJN"[i]),98,-1);
+            const int p=draw_calculator_key(out,calculator_,x,y,pressed_key_==i);
+            text(out,x+5+p,y+9+p,std::string(1,"0123456789DRCJN"[i]),98,-1);
         }
         for(int i=0;i<8;++i) {
             const int x=10+exe_.u16(::bmh::layout::Advertising_Click_RuntimeField+(i+15)*2), y=10+exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2+i+15);
@@ -597,13 +583,21 @@ bool ContractsScreen::press(int x, int y) {
             else if (x >= 261 && x <= 312 && !team && state_.mode_three) id = 2;
         }
     }
-    const bool changed = id != pressed_button_;
+    // a key of the open calculator
+    int key = -1;
+    if (page_ == Page::calculator)
+        for (int i = 0; i < 15; ++i)
+            if (calculator_key_hit(x, y, 10 + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField + size_t(i) * 2),
+                                   10 + exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2 + size_t(i)))) key = i;
+    const bool changed = id != pressed_button_ || key != pressed_key_;
     pressed_button_ = id;
+    pressed_key_ = key;
     return changed;
 }
 
 bool ContractsScreen::click(int x, int y, bool right) {
     pressed_button_ = -1;   // the release ends the pressed look
+    pressed_key_ = -1;
     if (page_ == Page::result) {
         if (x >= 95 && x <= 220 && y >= 166 && y <= 176) { page_ = result_return_; result_backdrop_.reset(); state_.feedback.clear(); return true; }
         return false;

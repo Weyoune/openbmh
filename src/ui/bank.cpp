@@ -6,6 +6,7 @@
 #include "formats/executable_layout.hpp"
 #include "ui/bank.hpp"
 #include "ui/button_frame.hpp"
+#include "ui/calculator_widgets.hpp"
 #include "ui/game_end.hpp"
 
 #include <algorithm>
@@ -586,9 +587,7 @@ BankRequest BankScreen::finish_credit() {
 void BankScreen::draw_calculator(Image& out) const {
     // BalanceFromGame uses the 113x136 source crop from KB6 at the caller's
     // a449d/a449f origin, then draws the source text and 23 calculator cells.
-    copy_region(out, calculator_art_, 0, 0, 103, 55, 113, 136);
-    rect(out, 105, 191, 113, 2, 0x40);
-    rect(out, 216, 57, 2, 136, 0x40);
+    draw_calculator_panel(out, calculator_art_, 103, 55);   // calculator_widgets.hpp
     std::string title = texts_.strings.size() > 838 ? texts_[838] : std::string{};
     title += state_.account_text.empty() ? money(state_.balance) : state_.account_text;
     const int title_width = font_.text_width(title);
@@ -597,8 +596,8 @@ void BankScreen::draw_calculator(Image& out) const {
     for (int i = 0; i < 15; ++i) {
         const int x = 103 + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField + size_t(i) * 2);
         const int y = 55 + exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2 + size_t(i));
-        copy_region(out, calculator_art_, 0, 136, x, y, 15, 14);
-        body_baseline_raw(out, x + 5, y + 9, std::string(1, "0123456789DRCJN"[i]), 0x62, false);
+        const int p = draw_calculator_key(out, calculator_art_, x, y, pressed_key_ == i);
+        body_baseline_raw(out, x + 5 + p, y + 9 + p, std::string(1, "0123456789DRCJN"[i]), 0x62, false);
     }
     for (int i = 0; i < 8; ++i) {
         if (calculator_presets_[size_t(i)] == UINT32_MAX) continue;
@@ -1003,6 +1002,14 @@ bool BankScreen::press(int x, int y) {
         dialog = int(source_dialog_button_at(question ? TaxDialogKind::question : TaxDialogKind::acknowledgement, false, x, y));
     const bool dialog_changed = dialog != pressed_dialog_;
     pressed_dialog_ = dialog;
+    // a key of the open calculator
+    int key = -1;
+    if (calculator_open_ && !pending_)
+        for (int i = 0; i < 15; ++i)
+            if (calculator_key_hit(x, y, 103 + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField + size_t(i) * 2),
+                                   55 + exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2 + size_t(i)))) key = i;
+    const bool key_changed = key != pressed_key_;
+    pressed_key_ = key;
     int id = -1;
     const bool has_buttons = (exchange_open_ || property_open_ || deposit_open_ || credit_open_) && !calculator_open_ &&
         !credit_notice_open_ && !credit_fee_confirmation_open_ && !property_notice_open_ && !investment_warning_open_ && !pending_;
@@ -1012,11 +1019,12 @@ bool BankScreen::press(int x, int y) {
     }
     const bool changed = id != pressed_button_;
     pressed_button_ = id;
-    return changed || dialog_changed;
+    return changed || dialog_changed || key_changed;
 }
 BankRequest BankScreen::click(int x, int y, bool right) {
     pressed_button_ = -1;   // the release ends the pressed look
     pressed_dialog_ = int(GameEndTaxDialog::Button::none);
+    pressed_key_ = -1;
     if (credit_notice_open_) {
         if (right || (x >= 95 && x <= 220 && y >= 166 && y <= 176)) {
             credit_notice_open_ = false;

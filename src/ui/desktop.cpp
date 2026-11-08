@@ -4,6 +4,7 @@
 // acknowledged DeskState updates. It also provides desk_request_json() and desk_menu_name().
 #include "formats/executable_layout.hpp"
 #include "ui/desktop.hpp"
+#include "ui/dialog_frame.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -147,19 +148,7 @@ void DesktopScreen::sprite_text(Image& out, int x, int baseline, std::string_vie
 }
 void DesktopScreen::frame(Image& out, int x, int y, int w, int h) const {
     if (w < 8 || h < 8) throw FormatError("desktop: invalid drawer size");
-    for (int yy = 4; yy < h - 3; ++yy) for (int xx = 4; xx < w - 3; ++xx)
-        if (x + xx >= 0 && y + yy >= 0 && x + xx < out.width && y + yy < out.height)
-            out.at(x + xx, y + yy) = exe_.u8(::bmh::layout::Advertising_PatternRect_RuntimeField + ((yy - 4) % 16) * 16 + (xx - 4) % 16);
-    copy(out, widgets_, 0, 0, x, y, 4, 4); copy(out, widgets_, 4, 0, x + w - 4, y, 4, 4);
-    copy(out, widgets_, 0, 4, x, y + h - 4, 4, 4); copy(out, widgets_, 4, 4, x + w - 4, y + h - 4, 4, 4);
-    for (int k = 4; k < w - 4; k += 74) {
-        const int n = std::min(74, w - 4 - k);
-        copy(out, widgets_, 0, 104, x + k, y, n, 4); copy(out, widgets_, 0, 108, x + k, y + h - 4, n, 4);
-    }
-    for (int k = 4; k < h - 4; k += 96) {
-        const int n = std::min(96, h - 4 - k);
-        copy(out, widgets_, 0, 8, x, y + k, 4, n); copy(out, widgets_, 4, 8, x + w - 4, y + k, 4, n);
-    }
+    draw_dialog_frame(out, widgets_, exe_, x, y, w, h, false);   // dialog_frame.hpp
 }
 void DesktopScreen::digits(Image& out, int value, int sx, int sy, int w, int h, int x, int y, int base, int gap) const {
     int count = 1;

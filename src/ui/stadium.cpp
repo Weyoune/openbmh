@@ -4,7 +4,9 @@
 // construction. Source-tick timing for the calculator is advanced by the caller.
 #include "formats/executable_layout.hpp"
 #include "ui/stadium.hpp"
+#include "ui/dialog_frame.hpp"
 #include "ui/button_frame.hpp"
+#include "ui/calculator_widgets.hpp"
 
 #include <algorithm>
 #include <bit>
@@ -73,23 +75,7 @@ void source_shadow(Image& out, int x, int y, int w, int h) {
 // corner pieces from the widget atlas, and the edge strips tiled in runs of 74 px (top/bottom) and 96 px (left/right).
 void source_frame(Image& out, const Image& atlas, const LeImage& exe,
                   int x, int y, int w, int h, bool shadow = true) {
-    if (shadow) { fill(out, x + 2, y + h, w, 2, 0x40); fill(out, x + w, y + 2, 2, h, 0x40); }
-    for (int yy = 4; yy < h - 3; ++yy) for (int xx = 4; xx < w - 3; ++xx)
-        out.at(x + xx, y + yy) = exe.u8(::bmh::layout::Advertising_PatternRect_RuntimeField + size_t((yy - 4) & 15) * 16 + size_t((xx - 4) & 15));
-    copy_crop(out, atlas, 0, 0, x, y, 4, 4);
-    copy_crop(out, atlas, 4, 0, x + w - 4, y, 4, 4);
-    copy_crop(out, atlas, 0, 4, x, y + h - 4, 4, 4);
-    copy_crop(out, atlas, 4, 4, x + w - 4, y + h - 4, 4, 4);
-    for (int at = 4; at < w - 4; at += 74) {
-        const int n = std::min(74, w - 4 - at);
-        copy_crop(out, atlas, 0, 104, x + at, y, n, 4);
-        copy_crop(out, atlas, 0, 108, x + at, y + h - 4, n, 4);
-    }
-    for (int at = 4; at < h - 4; at += 96) {
-        const int n = std::min(96, h - 4 - at);
-        copy_crop(out, atlas, 0, 8, x, y + at, 4, n);
-        copy_crop(out, atlas, 4, 8, x + w - 4, y + at, 4, n);
-    }
+    draw_dialog_frame(out, atlas, exe, x, y, w, h, shadow);   // dialog_frame.hpp
 }
 // Draws text with its baseline at `baseline` (skipped entirely if it would leave the screen vertically).
 // In gradient mode (executable flag == 2) a color found in the 32-entry gradient table is recolored per glyph row
@@ -870,9 +856,7 @@ Image StadiumScreen::render_block_expansion(Image out) const {
 Image StadiumScreen::render_block_calculator(Image out) const {
     if (!block_calculator_open_ || block_calculator_cancel_wait_ || !state_.block_expansion) return out;
     const int x0 = block_calculator_x_, y0 = block_calculator_y_;
-    copy_crop(out, calculator_art_, 0, 0, x0, y0, 113, 136);
-    fill(out, x0 + 113, y0 + 2, 2, 136, 0x40);
-    fill(out, x0 + 2, y0 + 136, 113, 2, 0x40);
+    draw_calculator_panel(out, calculator_art_, x0, y0);   // calculator_widgets.hpp
     const auto& editor = *state_.block_expansion;
     const std::string title = texts_[1118];
     const int width = font_.text_width(title);
@@ -883,8 +867,7 @@ Image StadiumScreen::render_block_calculator(Image out) const {
         const int x = x0 + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField + size_t(i) * 2);
         const int y = y0 + exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2 + size_t(i));
         const bool pressed = block_calculator_pressed_key_ == i;
-        copy_crop(out, calculator_art_, pressed ? 15 : 0, 136, x + (pressed ? 1 : 0),
-                  y + (pressed ? 1 : 0), 15 - int(pressed), 14 - int(pressed));
+        draw_calculator_key(out, calculator_art_, x, y, pressed);
         text_at(out, x + 5 + int(pressed), y + 9 + int(pressed), keys.substr(size_t(i), 1), 0x62, false);
     }
     const uint32_t current = uint32_t(editor.quote.current_capacity_thousands) * 1000;

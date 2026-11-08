@@ -5,6 +5,7 @@
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/manager.hpp"
+#include "ui/dialog_frame.hpp"
 #include "ui/button_frame.hpp"
 #include "formats/league_visibility.hpp"
 
@@ -307,21 +308,7 @@ void ManagerScreen::small_text(Image& out, int x, int baseline, std::string_view
                 out.at(x + xx, baseline - 5 + y) = exe_.u8(::bmh::layout::Advertising_Text_RuntimeField + gradient * 6 + y);
 }
 void ManagerScreen::frame(Image& out, int x, int y, int w, int h, bool shadow) const {
-    if (shadow) {
-        rect(out, x + 2, y + h, w, 2, 0x40);
-        rect(out, x + w, y + 2, 2, h, 0x40);
-    }
-    pattern(out, x + 4, y + 4, w - 7, h - 7);
-    copy(out, widgets_, 0, 0, x, y, 4, 4); copy(out, widgets_, 4, 0, x + w - 4, y, 4, 4);
-    copy(out, widgets_, 0, 4, x, y + h - 4, 4, 4); copy(out, widgets_, 4, 4, x + w - 4, y + h - 4, 4, 4);
-    for (int k = 4; k < w - 4; k += 74) {
-        int n = std::min(74, w - 4 - k);
-        copy(out, widgets_, 0, 104, x + k, y, n, 4); copy(out, widgets_, 0, 108, x + k, y + h - 4, n, 4);
-    }
-    for (int k = 4; k < h - 4; k += 96) {
-        int n = std::min(96, h - 4 - k);
-        copy(out, widgets_, 0, 8, x, y + k, 4, n); copy(out, widgets_, 4, 8, x + w - 4, y + k, 4, n);
-    }
+    draw_dialog_frame(out, widgets_, exe_, x, y, w, h, shadow);   // dialog_frame.hpp
 }
 int ManagerScreen::sprite_text_width(std::string_view value) const {
     int width = 0;

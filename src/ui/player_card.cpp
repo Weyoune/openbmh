@@ -5,6 +5,7 @@
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/player_card.hpp"
+#include "ui/dialog_frame.hpp"
 #include "ui/button_frame.hpp"
 
 #include <algorithm>
@@ -218,11 +219,7 @@ void PlayerCardScreen::text(Image& out,int x,int baseline,std::string_view value
         out.at(x+xx,baseline-font.baseline+yy)=state_.lineup.gradient_text?exe_.u8(::bmh::layout::Advertising_Text_RuntimeField+gradient*6+yy):color;
 }
 void PlayerCardScreen::frame(Image& out,int x,int y,int w,int h) const {
-    for(int yy=4;yy<h-3;++yy)for(int xx=4;xx<w-3;++xx)out.at(x+xx,y+yy)=exe_.u8(::bmh::layout::Advertising_PatternRect_RuntimeField+((yy-4)%16)*16+(xx-4)%16);
-    copy(out,widgets_,0,0,x,y,4,4);copy(out,widgets_,4,0,x+w-4,y,4,4);
-    copy(out,widgets_,0,4,x,y+h-4,4,4);copy(out,widgets_,4,4,x+w-4,y+h-4,4,4);
-    for(int at=4;at<w-4;at+=74){const int n=std::min(74,w-4-at);copy(out,widgets_,0,104,x+at,y,n,4);copy(out,widgets_,0,108,x+at,y+h-4,n,4);}
-    for(int at=4;at<h-4;at+=96){const int n=std::min(96,h-4-at);copy(out,widgets_,0,8,x,y+at,4,n);copy(out,widgets_,4,8,x+w-4,y+at,4,n);}
+    draw_dialog_frame(out,widgets_,exe_,x,y,w,h,false);   // dialog_frame.hpp
 }
 void PlayerCardScreen::button(Image& out,int x,int y,int width,std::string_view value,bool active) const {
     const int height=width>31?10:9;

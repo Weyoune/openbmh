@@ -5,6 +5,7 @@
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/game_end.hpp"
+#include "ui/dialog_frame.hpp"
 #include "ui/button_frame.hpp"
 
 #include <algorithm>
@@ -155,12 +156,7 @@ private:
     }
 };
 void frame(Image& o,const Image& a,const LeImage& exe,int x,int y,int w,int h,bool shadow) {
-    if(shadow){fill(o,x+2,y+h,w,2,0x40);fill(o,x+w,y+2,2,h,0x40);}
-    for(int yy=4;yy<h-3;++yy)for(int xx=4;xx<w-3;++xx)
-        o.at(x+xx,y+yy)=exe.u8(::bmh::layout::Advertising_PatternRect_RuntimeField+size_t((yy-4)&15)*16+size_t((xx-4)&15));
-    copy(o,a,0,0,x,y,4,4);copy(o,a,4,0,x+w-4,y,4,4);copy(o,a,0,4,x,y+h-4,4,4);copy(o,a,4,4,x+w-4,y+h-4,4,4);
-    for(int at=4;at<w-4;at+=74){int n=std::min(74,w-4-at);copy(o,a,0,104,x+at,y,n,4);copy(o,a,0,108,x+at,y+h-4,n,4);}
-    for(int at=4;at<h-4;at+=96){int n=std::min(96,h-4-at);copy(o,a,0,8,x,y+at,4,n);copy(o,a,4,8,x+w-4,y+at,4,n);}
+    draw_dialog_frame(o,a,exe,x,y,w,h,shadow);   // dialog_frame.hpp
 }
 std::string source_number(int32_t value, unsigned minimum_digits) {
     const bool negative = value < 0;

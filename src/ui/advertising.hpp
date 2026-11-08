@@ -178,6 +178,7 @@ private:
     void pattern_rect(Image&, int x, int y, int width, int height) const;
     void source_frame(Image&, int x, int y, int width, int height, bool shadow = true) const;
     void button(Image&, int x, int y, int width, std::string_view label, bool pressed = false) const;
+    int pressed_key_ = -1;      // spending calculator key held down by the mouse
     int pressed_button_ = -1;   // offer button held down by the mouse (0 cancel, 1 accept)
 };
 

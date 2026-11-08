@@ -117,6 +117,7 @@ private:
     enum class Page : uint8_t { roster, player_offer, team_premiums, calculator, insurance, result };
     ContractsState state_;
     int pressed_button_ = -1;   // button below the panel held down by the mouse
+    int pressed_key_ = -1;      // calculator key held down by the mouse
     LeImage exe_;
     Font font_;
     Font large_font_;

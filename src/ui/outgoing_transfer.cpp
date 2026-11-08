@@ -6,6 +6,7 @@
 #include "formats/executable_layout.hpp"
 #include "ui/outgoing_transfer.hpp"
 #include "ui/button_frame.hpp"
+#include "ui/calculator_widgets.hpp"
 
 #include <algorithm>
 #include <charconv>
@@ -395,9 +396,7 @@ void OutgoingTransferScreen::draw_editor_fields(Image& out) const {
 void OutgoingTransferScreen::draw_calculator(Image& out) const {
     constexpr int x0 = kCalculatorX, y0 = kCalculatorY;
     if (!calculator_open_ || !active_profile_.supported) return;
-    copy_region(out, calculator_art_, 0, 0, x0, y0, 113, 136);
-    fill_rect(out, x0 + 113, y0 + 2, 2, 136, 0x40);
-    fill_rect(out, x0 + 2, y0 + 136, 113, 2, 0x40);
+    draw_calculator_panel(out, calculator_art_, x0, y0);   // calculator_widgets.hpp
     std::string title;
     if (active_profile_.source_text_address)
         title = std::string(text_at(texts_, active_profile_.source_text_address));
@@ -427,8 +426,8 @@ void OutgoingTransferScreen::draw_calculator(Image& out) const {
     for (int i = 0; i < 15; ++i) {
         const int x = x0 + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField + size_t(i) * 2);
         const int y = y0 + exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2 + size_t(i));
-        copy_region(out, calculator_art_, 0, 136, x, y, 15, 14);
-        draw_body(x + 5, y + 9, keys.substr(size_t(i), 1), 0x62, false);
+        const int p = draw_calculator_key(out, calculator_art_, x, y, pressed_key_ == i);
+        draw_body(x + 5 + p, y + 9 + p, keys.substr(size_t(i), 1), 0x62, false);
     }
     for (size_t i = 0; i < active_profile_.presets.size(); ++i) {
         if (!active_profile_.presets[i]) continue;
@@ -489,13 +488,21 @@ bool OutgoingTransferScreen::press(int x, int y) {
         for (size_t i = 0; i < kFooterButtonX.size(); ++i)
             if (x >= kFooterButtonX[i] && x <= kFooterButtonX[i] + kFooterButtonWidth && y >= kFooterButtonY &&
                 y <= kFooterButtonY + kFooterButtonHeight) id = int(i);
-    const bool changed = id != pressed_button_;
+    // a key of the open calculator
+    int key = -1;
+    if (!closed_ && !pending_ && calculator_open_ && active_profile_.supported)
+        for (int i = 0; i < 15; ++i)
+            if (calculator_key_hit(x, y, kCalculatorX + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField + size_t(i) * 2),
+                                   kCalculatorY + exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2 + size_t(i)))) key = i;
+    const bool changed = id != pressed_button_ || key != pressed_key_;
     pressed_button_ = id;
+    pressed_key_ = key;
     return changed;
 }
 
 OutgoingTransferRequest OutgoingTransferScreen::click(int x, int y, bool right, bool double_click) {
     pressed_button_ = -1;   // the release ends the pressed look
+    pressed_key_ = -1;
     if (closed_ || pending_) return {};
     if (double_click && !right && !calculator_open_ && y > 0x12 && y < 0x21) {
         state_.quote_loan = !state_.quote_loan;

@@ -6,7 +6,9 @@
 #include "formats/executable_layout.hpp"
 #include "game/environment.hpp"
 #include "ui/advertising.hpp"
+#include "ui/dialog_frame.hpp"
 #include "ui/button_frame.hpp"
+#include "ui/calculator_widgets.hpp"
 #include "ui/game_end.hpp"
 
 #include <algorithm>
@@ -801,8 +803,15 @@ bool AdvertisingScreen::press(int x, int y) {
         if (x >= 89 && x <= 154) id = 0;
         else if (x >= 164 && x <= 229 && offer_acceptable()) id = 1;
     }
-    const bool changed = id != pressed_button_;
+    // a key of the open spending calculator
+    int key = -1;
+    if (spending_calculator_open_ && !notification_open() && !pending_ && !close_requested_)
+        for (int i = 0; i < 15; ++i)
+            if (calculator_key_hit(x, y, 103 + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField + size_t(i) * 2),
+                                   55 + exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2 + size_t(i)))) key = i;
+    const bool changed = id != pressed_button_ || key != pressed_key_;
     pressed_button_ = id;
+    pressed_key_ = key;
     return changed;
 }
 
@@ -813,30 +822,13 @@ void AdvertisingScreen::pattern_rect(Image& out, int x, int y, int width, int he
 }
 
 void AdvertisingScreen::source_frame(Image& out, int x, int y, int width, int height, bool shadow) const {
-    if (shadow) { fill_rect(out, x + 2, y + height, width, 2, 0x40); fill_rect(out, x + width, y + 2, 2, height, 0x40); }
-    pattern_rect(out, x + 4, y + 4, width - 7, height - 7);
-    copy(out, widgets_, 0, 0, x, y, 4, 4);
-    copy(out, widgets_, 4, 0, x + width - 4, y, 4, 4);
-    copy(out, widgets_, 0, 4, x, y + height - 4, 4, 4);
-    copy(out, widgets_, 4, 4, x + width - 4, y + height - 4, 4, 4);
-    for (int at = 4; at < width - 4; at += 74) {
-        const int n = std::min(74, width - 4 - at);
-        copy(out, widgets_, 0, 104, x + at, y, n, 4);
-        copy(out, widgets_, 0, 108, x + at, y + height - 4, n, 4);
-    }
-    for (int at = 4; at < height - 4; at += 96) {
-        const int n = std::min(96, height - 4 - at);
-        copy(out, widgets_, 0, 8, x, y + at, 4, n);
-        copy(out, widgets_, 4, 8, x + width - 4, y + at, 4, n);
-    }
+    draw_dialog_frame(out, widgets_, exe_, x, y, width, height, shadow);   // dialog_frame.hpp
 }
 
 void AdvertisingScreen::draw_spending_calculator(Image& out) const {
     constexpr int x0 = 103, y0 = 55;
     if (calculator_.width < 113 || calculator_.height < 150) return;
-    copy(out, calculator_, 0, 0, x0, y0, 113, 136);
-    fill_rect(out, x0 + 113, y0 + 2, 2, 136, 0x40);
-    fill_rect(out, x0 + 2, y0 + 136, 113, 2, 0x40);
+    draw_calculator_panel(out, calculator_, x0, y0);   // calculator_widgets.hpp
     const std::string& title = selected_spending_slot_ == 16 ? state_.merchandise_calculator_title :
                                                                state_.budget_calculator_title;
     const std::string bytes = utf8_to_original(title);
@@ -846,9 +838,9 @@ void AdvertisingScreen::draw_spending_calculator(Image& out) const {
     for (int i = 0; i < 15; ++i) {
         const int x = x0 + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField + size_t(i) * 2);
         const int y = y0 + exe_.u8(::bmh::layout::Advertising_Click_RuntimeField2 + size_t(i));
-        copy(out, calculator_, 0, 136, x, y, 15, 14);
+        const int p = draw_calculator_key(out, calculator_, x, y, pressed_key_ == i);
         // Render calls the raw font renderer for key legends.
-        text(out, x + 5, y + 9, keys.substr(size_t(i), 1), 98, 15, false);
+        text(out, x + 5 + p, y + 9 + p, keys.substr(size_t(i), 1), 98, 15, false);
     }
     for (int i = 0; i < 8; ++i) {
         const int x = x0 + exe_.u16(::bmh::layout::Advertising_Click_RuntimeField + size_t(i + 15) * 2);
@@ -1064,6 +1056,7 @@ bool AdvertisingScreen::move(int x, int y) {
 
 bool AdvertisingScreen::click(int x, int y) {
     pressed_button_ = -1;   // the release ends the pressed look
+    pressed_key_ = -1;
     pointer_position_ = std::array<int, 2>{x, y};
     if (close_requested_ || pending_ || x < 0 || y < 0 || x >= 320 || y >= 240) return false;
     if (notification_open()) return dismiss_notification();

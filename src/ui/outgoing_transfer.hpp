@@ -128,6 +128,7 @@ private:
     bool calculator_open_ = false;
     bool closed_ = false;
     int pressed_button_ = -1;   // footer button held down by the mouse
+    int pressed_key_ = -1;      // calculator key held down by the mouse
     std::optional<OutgoingTransferRequest> pending_;
 
     OutgoingTransferIdentity identity() const;
