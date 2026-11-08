@@ -1096,6 +1096,9 @@ bool StartupFlow::press_hold(int x,int y) {
     if (bank_) return bank_->press(x, y);
     if (outgoing_transfer_) return outgoing_transfer_->press(x, y);
     if (manager_ && !desktop_) return manager_->press(x, y);
+    // the setup screen at the start of a game, and its joining variant
+    if (joining_) return !manager_ && !join_options_pending_ && !join_choice_pending_ && join_setup_ && join_setup_->press(x, y);
+    if (screen_name() == "setup") return setup_.press(x, y);
     return false;
 }
 

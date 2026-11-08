@@ -42,9 +42,14 @@ public:
     SetupScreen(const std::filesystem::path& data, SetupOptions current);
     const SetupOptions& options() const { return options_; }
     SetupResult click(int x, int y, bool right_button = false);
+    // Mouse DOWN on a minus or plus button: drawn pressed until the release (click()). True when the picture changed.
+    bool press(int x, int y);
     Image render() const;
 
 private:
+    int button_at(int x, int y) const;
+    SetupResult handle_click(int x, int y, bool right);
+    int pressed_button_ = -1;   // minus/plus button held down by the mouse
     SetupOptions options_;
     Image background_, atlas_;
     std::array<int, 8> button_x_{}, button_y_{};

@@ -84,7 +84,36 @@ SetupScreen::SetupScreen(const std::filesystem::path& data, SetupOptions current
     difficulty_arrows_locked_ = current.difficulty == 0;
 }
 
+// The button (0..3 minus, 4..7 plus of duration, difficulty, managers, mode) under the pointer that can be used, or -1.
+int SetupScreen::button_at(int x, int y) const {
+    for (int b = 0; b < 8; ++b) {
+        if (joining_ && (!joining_arrow_permission_[b] ||
+                         (difficulty_arrows_locked_ && (b == 1 || b == 5))))
+            continue;
+        if (x >= button_x_[b] && x <= button_x_[b] + 0x33 && y >= button_y_[b] && y <= button_y_[b] + 0x28) return b;
+    }
+    return -1;
+}
+
+// Mouse DOWN on a minus or plus button: it is drawn pressed until the release (click()). Returns true when the
+// picture changed.
+bool SetupScreen::press(int x, int y) {
+    const int id = x < 0 || y < 0 || x >= 320 || y >= 240 ? -1 : button_at(x, y);
+    const bool changed = id != pressed_button_;
+    pressed_button_ = id;
+    return changed;
+}
+
 SetupResult SetupScreen::click(int x, int y, bool right) {
+    // the release ends the pressed look, which needs a redraw even when the value stays (a button at its limit)
+    const bool was_pressed = pressed_button_ >= 0;
+    pressed_button_ = -1;
+    SetupResult result = handle_click(x, y, right);
+    result.changed |= was_pressed;
+    return result;
+}
+
+SetupResult SetupScreen::handle_click(int x, int y, bool right) {
     if (x < 0 || y < 0 || x >= 320 || y >= 240) return {};
     if (right) return {false, SetupRequest::new_game};
     if (!joining_) {
@@ -122,8 +151,12 @@ Image SetupScreen::render() const {
         if (joining_ && (!joining_arrow_permission_[b] ||
                          (difficulty_arrows_locked_ && (b == 1 || b == 5))))
             continue;
-        copy_rect(out, atlas_, 0x36 + (b > 3 ? 0x26 : 0), button_source_y_,
-                  button_x_[b], button_y_[b], 0x26, 0x26);
+        // Held down by the mouse: the darker picture at the bottom of the atlas (not a shifted copy of the raised one).
+        if (pressed_button_ == b)
+            copy_rect(out, atlas_, b > 3 ? 0x26 : 0, atlas_.height - 0x26, button_x_[b], button_y_[b], 0x26, 0x26);
+        else
+            copy_rect(out, atlas_, 0x36 + (b > 3 ? 0x26 : 0), button_source_y_,
+                      button_x_[b], button_y_[b], 0x26, 0x26);
     }
     const int values[] = {options_.duration, options_.difficulty, options_.managers, options_.mode};
     for (int i = 0; i < 4; ++i) {

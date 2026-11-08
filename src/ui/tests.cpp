@@ -17,6 +17,18 @@ int main(int argc, char** argv) {
         const auto before = screen.options();
         check(before == SetupOptions{}, "original defaults");
         check(screen.render().pixels.size() == 320*240, "native framebuffer");
+        {   // minus and plus look pressed (the darker picture) while held, raised again after the release
+            SetupScreen probe(argv[1]);
+            const auto raised = probe.render();
+            check(!probe.press(5, 5) && !probe.press(130, 214), "no pressed look outside the buttons");
+            check(probe.press(30, 30) && probe.render().pixels != raised.pixels, "minus shows the pressed look");
+            check(!probe.press(30, 30), "an unchanged press does not redraw");
+            check(probe.press(260, 30) && probe.render().pixels != raised.pixels, "plus shows the pressed look");
+            probe.click(5, 5);   // released elsewhere: the button is raised again and nothing is changed
+            check(probe.render().pixels == raised.pixels && probe.options() == SetupOptions{}, "the release ends the pressed look");
+            probe.press(260, 30);
+            check(probe.click(260, 30).changed, "the release redraws even when the value cannot change");
+        }
         check(!screen.click(-1, 30).changed && !screen.click(320, 239, true).changed, "outside viewport");
         check(screen.click(130, 214).request == SetupRequest::none, "gap between controls");
         check(screen.click(214, 215).request == SetupRequest::load_game, "disk requests load");
