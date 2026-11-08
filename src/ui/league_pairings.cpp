@@ -4,6 +4,7 @@
 // session. It also defines the constants and time conversion helper declared in the header.
 #include "formats/executable_layout.hpp"
 #include "ui/league_pairings.hpp"
+#include "ui/button_frame.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -250,15 +251,8 @@ Image LeaguePairingsScreen::render() const {
     for(int n=0;n<8;++n) {
         const int x=1+(n/4)*74,y=176+(n%4)*13;
         const bool selected=pressed_button_==n||(state_.source.preferences&(1u<<n));
-        int dx=x,dy=y;
-        if(selected) {
-            const uint8_t background=out.at(x,y+10);fill(out,x,y,71,2,background);fill(out,x,y,2,11,background);
-            dx+=2;dy+=2;
-        } else {fill(out,x+2,y+10,70,2,0x40);fill(out,x+70,y+2,2,10,0x40);}
-        const int sy=selected?44:74;copy(out,widgets_,24,sy,dx,dy,31,10);
-        int used=31;while(70-used>20) {const int amount=std::min(8,70-used-20);
-            copy(out,widgets_,24,sy+10,dx+used,dy,amount,10);used+=amount;}
-        const int left=70-used;copy(out,widgets_,45-left,sy+20,dx+used,dy,left,10);
+        const int shift=draw_wide_button_frame(out,widgets_,x,y,70,selected);   // button_frame.hpp
+        const int dx=x+shift,dy=y+shift;
         const auto label=original_to_utf8(state_.buttons[size_t(n)]);
         sprite_.draw(out,dx+35-sprite_.text_width(label)/2,dy+7,label,exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + uint32_t(selected)));
     }

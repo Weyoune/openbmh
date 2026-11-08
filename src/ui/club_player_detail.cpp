@@ -5,6 +5,7 @@
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/club_player_detail.hpp"
+#include "ui/button_frame.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -139,14 +140,12 @@ void ClubPlayerDetailScreen::frame(Image& out,int x,int y,int w,int h) const {
 }
 void ClubPlayerDetailScreen::button(Image& out,int x,int y,int width,std::string_view value,bool active) const {
     const int height=width>31?10:9;
-    if(active){const auto base=out.at(x,y+height);rect(out,x,y,width+1,2,base);rect(out,x,y,2,height+1,base);x+=2;y+=2;}
-    else {rect(out,x+2,y+height,width,2,0x40);rect(out,x+width,y+2,2,height,0x40);}
-    if(width>31){
-        const int sy=active?44:74;
-        copy(out,widgets_,24,sy,x,y,31,10);int at=31,remaining=width-31;
-        while(remaining>20){const int n=std::min(8,remaining-20);copy(out,widgets_,24,sy+10,x+at,y,n,10);at+=n;remaining-=n;}
-        copy(out,widgets_,45-remaining,sy+20,x+at,y,remaining,10);
-    }else frame(out,x,y,width,height);
+    if(width>31){const int shift=draw_wide_button_frame(out,widgets_,x,y,width,active);x+=shift;y+=shift;}   // button_frame.hpp
+    else{
+        if(active){const auto base=out.at(x,y+height);rect(out,x,y,width+1,2,base);rect(out,x,y,2,height+1,base);x+=2;y+=2;}
+        else {rect(out,x+2,y+height,width,2,0x40);rect(out,x+width,y+2,2,height,0x40);}
+        frame(out,x,y,width,height);
+    }
     const int font=exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(active));
     if(font==3){text(out,x,y+height/2+2,value,0,x+width);return;}
     int length=0;for(unsigned char c:value){const int g=exe_.u8(::bmh::layout::ClubInfo_Raw_RuntimeField3 + c);length+=g?exe_.u16(::bmh::layout::ClubInfo_Raw_RuntimeField2+g*2)-exe_.u16(::bmh::layout::ClubInfo_Raw_RuntimeField+g*2):2;}

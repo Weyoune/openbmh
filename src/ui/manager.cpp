@@ -5,6 +5,7 @@
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/manager.hpp"
+#include "ui/button_frame.hpp"
 #include "formats/league_visibility.hpp"
 
 #include <algorithm>
@@ -341,20 +342,8 @@ void ManagerScreen::sprite_text(Image& out, int x, int y, std::string_view value
     }
 }
 void ManagerScreen::button(Image& out, int x, int y, int w, std::string_view label, bool selected) const {
-    if (selected) {
-        const auto c = out.at(x, y + 10);
-        rect(out, x, y, w + 1, 2, c); rect(out, x, y, 2, 11, c); x += 2; y += 2;
-    } else {
-        rect(out, x + 2, y + 10, w, 2, 0x40); rect(out, x + w, y + 2, 2, 10, 0x40);
-    }
-    int sy = selected ? 44 : 74;
-    copy(out, widgets_, 24, sy, x, y, 31, 10);
-    int k = 31;
-    for (; w - k > 20;) {
-        int n = std::min(8, w - k - 20);
-        copy(out, widgets_, 24, sy + 10, x + k, y, n, 10); k += n;
-    }
-    copy(out, widgets_, 45 - (w - k), sy + 20, x + k, y, w - k, 10);
+    const int shift = draw_wide_button_frame(out, widgets_, x, y, w, selected);
+    x += shift; y += shift;
     int font = exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(selected));
     sprite_text(out, x + w / 2 - sprite_text_width(label) / 2, y + 7, label, font);
 }

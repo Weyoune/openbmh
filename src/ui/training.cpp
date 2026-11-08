@@ -2,6 +2,7 @@
 // Implementation of TrainingScreen and the training projections (training.hpp): initialization state, skill bars under the pointer, request construction and JSON output.
 #include "formats/executable_layout.hpp"
 #include "ui/training.hpp"
+#include "ui/button_frame.hpp"
 
 #include <algorithm>
 #include <numeric>
@@ -189,19 +190,16 @@ void TrainingScreen::sprite_text(Image& out, int x, int baseline, std::string_vi
     }
 }
 void TrainingScreen::button(Image& out, int x, int y, int width, int height, std::string_view label, bool active) const {
-    if (!active) {
-        rect(out, x + 2, y + height, width, 2, 0x40); rect(out, x + width, y + 2, 2, height, 0x40);
+    if (height == 10 && width > 31) {
+        const int shift = draw_wide_button_frame(out, widgets_, x, y, width, active);   // button_frame.hpp
+        x += shift; y += shift;
     } else {
-        const uint8_t base = out.pixels.at(size_t(y + height) * out.width + x);
-        rect(out, x, y, width + 1, 2, base); rect(out, x, y, 2, height + 1, base); x += 2; y += 2;
-    }
-    if (height < 11 && width > 31) {
-        const int shift = active ? -30 : 0;
-        copy(out, widgets_, 24, 74 + shift, x, y, 31, 10);
-        int cursor = 31, left = width - 31;
-        while (left > 20) { const int n = std::min(8, left - 20); copy(out, widgets_, 24, 84 + shift, x + cursor, y, n, 10); cursor += n; left -= n; }
-        copy(out, widgets_, 45 - left, 94 + shift, x + cursor, y, left, 10);
-    } else {
+        if (!active) {
+            rect(out, x + 2, y + height, width, 2, 0x40); rect(out, x + width, y + 2, 2, height, 0x40);
+        } else {
+            const uint8_t base = out.pixels.at(size_t(y + height) * out.width + x);
+            rect(out, x, y, width + 1, 2, base); rect(out, x, y, 2, height + 1, base); x += 2; y += 2;
+        }
         // PatternStartsAt(0,0x12): original four-pixel frame and patterned interior.
         for (int yy = 4; yy < height - 3; ++yy) for (int xx = 4; xx < width - 3; ++xx)
             out.at(x + xx, y + yy) = exe_.u8(::bmh::layout::Advertising_PatternRect_RuntimeField + ((yy - 4) % 16) * 16 + (xx - 4) % 16);

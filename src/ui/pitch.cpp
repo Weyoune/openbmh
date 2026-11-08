@@ -4,6 +4,7 @@
 // authoritative positions; changes only appear after the session acknowledges a new lineup and extras.
 #include "formats/executable_layout.hpp"
 #include "ui/pitch.hpp"
+#include "ui/button_frame.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -243,11 +244,11 @@ void PitchScreen::text(Image& out,int x,int baseline,std::string_view value,uint
 }
 void PitchScreen::button(Image& out,int x,int y,std::string_view value,bool selected)const{
     constexpr int width=43,height=10;
-    if(selected){ // FormatError3 erases the upper/left frame, then offsets its pressed atlas by two pixels.
-        rect(out,x,y,width+1,2,0x42);rect(out,x,y,2,height+1,0x42);x+=2;y+=2;
-    }else{rect(out,x+2,y+height,width,2,0x40);rect(out,x+width,y+2,2,height,0x40);}
-    const int sy=selected?44:74,font=exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(selected));
-    copy(out,widgets_,24,sy,x,y,31,10);copy(out,widgets_,33,sy+20,x+31,y,12,10);
+    // FormatError3 erases the upper/left frame (colour 0x42 here), then offsets its pressed atlas by two pixels
+    // (button_frame.hpp).
+    const int shift=draw_wide_button_frame(out,widgets_,x,y,width,selected,-1,0x42);x+=shift;y+=shift;
+    (void)height;
+    const int font=exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(selected));
     if(font==3)text(out,x+width/2-font_.text_width(value)/2,y+7,value,0);
     else {int length=0;for(unsigned char c:value){const int g=exe_.u8(::bmh::layout::ClubInfo_Raw_RuntimeField3 + c);length+=g?exe_.u16(::bmh::layout::ClubInfo_Raw_RuntimeField2+g*2)-exe_.u16(::bmh::layout::ClubInfo_Raw_RuntimeField+g*2):2;}
         int xx=x+width/2-length/2;for(unsigned char c:value){if(c<=31||c>=128)continue;const int g=exe_.u8(::bmh::layout::ClubInfo_Raw_RuntimeField3 + c);
@@ -258,13 +259,10 @@ void PitchScreen::diamond_button(Image& out,int x,int y,std::string_view value,b
     // FormatError3: width60, height9 normalized to 10, with pressed frame and
     // runtime font byte Advertising_Button_RuntimeField+selected. Match the original +2 pressed offset.
     constexpr int width=60,height=10;
-    int dx=x,dy=y;const int mode=exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + unsigned(selected));
-    if(selected){const uint8_t bg=out.at(x,y+height);rect(out,x,y,width+1,2,bg);rect(out,x,y,2,height+1,bg);dx+=2;dy+=2;}
-    else{rect(out,x+2,y+height,width,2,0x40);rect(out,x+width,y+2,2,height,0x40);}
-    const int row=selected?44:74;copy(out,widgets_,24,row,dx,dy,31,10,0xc0);
-    int used=31;while(width-used>20){const int amount=std::min(8,width-used-20);
-        copy(out,widgets_,24,row+10,dx+used,dy,amount,10,0xc0);used+=amount;}
-    const int tail=width-used;copy(out,widgets_,45-tail,row+20,dx+used,dy,tail,10,0xc0);
+    const int mode=exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + unsigned(selected));
+    const int shift=draw_wide_button_frame(out,widgets_,x,y,width,selected,0xc0);   // button_frame.hpp
+    const int dx=x+shift,dy=y+shift;
+    (void)height;
     if(mode==3){const auto native_value=utf8_to_original(value);
         text(out,dx+width/2-font_.text_width(native_value)/2,dy+7,native_value,0);}
     else sprite_.draw(out,dx+width/2-sprite_.text_width(value)/2,dy+7,value,mode);

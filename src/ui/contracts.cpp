@@ -453,15 +453,9 @@ Image ContractsScreen::render() const {
     const std::array<std::string,4> tabs{original_to_utf8(texts_[117]),original_to_utf8(texts_[118]),original_to_utf8(texts_[119]),original_to_utf8(texts_[120])};
     for (int i = 0; i < (state_.mode_three?4:3); ++i) {
         const int x = i * 60 + 2, w = i == 3 ? 71 : 51;
-        if(i!=tab_) {fill(out,x+2,225,w,2,0x40);fill(out,x+w,217,2,10,0x40);}
-        else {const uint8_t color=out.at(x,225);fill(out,x,215,w+1,2,color);fill(out,x,215,2,11,color);}
-        const int source_y = i == tab_ ? 44 : 74;
-        const int dest_y = 215 + (i == tab_ ? 2 : 0);
-        const int dest_x = x + (i == tab_ ? 2 : 0);
-        copy_region(out, widgets_, 24, source_y, dest_x, dest_y, 31, 10);
-        int tab_at = 31, remain = w - 31;
-        while (remain > 20) { const int n = std::min(8, remain - 20); copy_region(out, widgets_, 24, source_y + 10, dest_x + tab_at, dest_y, n, 10); tab_at += n; remain -= n; }
-        if (remain > 0) copy_region(out, widgets_, 45 - remain, source_y + 20, dest_x + tab_at, dest_y, remain, 10);
+        const int shift = draw_wide_button_frame(out, widgets_, x, 215, w, i == tab_);   // button_frame.hpp
+        const int dest_y = 215 + shift;
+        const int dest_x = x + shift;
         sprite_font_.draw(out, dest_x + w/2 - sprite_font_.text_width(tabs[size_t(i)])/2, dest_y+7, tabs[size_t(i)], exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + (i==tab_)));
     }
 

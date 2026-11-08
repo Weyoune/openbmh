@@ -5,6 +5,7 @@
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/game_end.hpp"
+#include "ui/button_frame.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -176,12 +177,7 @@ std::string source_number(int32_t value, unsigned minimum_digits) {
 }
 void button(Image& o,const Image& a,const SpriteFont& sf,const LeImage& exe,int x,int y,int w,
             std::string_view label,bool selected=false){
-    if(selected){const auto under=o.at(x,y+10);fill(o,x,y,w+1,2,under);fill(o,x,y,2,11,under);x+=2;y+=2;}
-    else {fill(o,x+2,y+10,w,2,0x40);fill(o,x+w,y+2,2,10,0x40);}
-    const int sy=selected?44:74;
-    copy(o,a,24,sy,x,y,31,10);int used=31;
-    while(w-used>20){int n=std::min(8,w-used-20);copy(o,a,24,sy+10,x+used,y,n,10);used+=n;}
-    copy(o,a,45-(w-used),sy+20,x+used,y,w-used,10);
+    const int shift=draw_wide_button_frame(o,a,x,y,w,selected);x+=shift;y+=shift;
     sf.draw(o,x+w/2-sf.text_width(label)/2,y+7,label,exe.u8(::bmh::layout::Advertising_Button_RuntimeField + int(selected)));
 }
 std::string_view text_at(const TextDb& texts,uint32_t address) {

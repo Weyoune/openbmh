@@ -4,6 +4,7 @@
 // only requested through pending() and takes effect when the session returns a new state.
 #include "formats/executable_layout.hpp"
 #include "ui/other_games.hpp"
+#include "ui/button_frame.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -192,25 +193,8 @@ void OtherGamesScreen::draw_button(Image& out, int x, int y, int width,
     const bool down = pressed || selected;
     // FormatError3 shifts both a selected competition and a held button by (+2,+2).
     // Keep this Original inset; selection is not an unshifted alternate skin.
-    const int dx = x + (down ? 2 : 0), dy = y + (down ? 2 : 0);
-    if (down) {
-        const uint8_t background = out.at(x, y + 10);
-        fill(out, x, y, width + 1, 2, background);
-        fill(out, x, y, 2, 11, background);
-    } else {
-        fill(out, x + 2, y + 10, width, 2, 0x40);
-        fill(out, x + width, y + 2, 2, 10, 0x40);
-    }
-    const int sy = down ? 44 : 74;
-    copy(out, widgets_, 24, sy, dx, dy, 31, 10, 0xc0);
-    int used = 31;
-    while (width - used > 20) {
-        const int count = std::min(8, width - used - 20);
-        copy(out, widgets_, 24, sy + 10, dx + used, dy, count, 10, 0xc0);
-        used += count;
-    }
-    const int tail = width - used;
-    copy(out, widgets_, 45 - tail, sy + 20, dx + used, dy, tail, 10, 0xc0);
+    const int shift = draw_wide_button_frame(out, widgets_, x, y, width, down, 0xc0);
+    const int dx = x + shift, dy = y + shift;
     const auto label = original_to_utf8(std::string(raw_label));
     sprite_.draw(out, dx + width / 2 - sprite_.text_width(label) / 2, dy + 7, label,
                  exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + (down ? 1u : 0u)));

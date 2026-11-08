@@ -4,6 +4,7 @@
 // views and converts button and row clicks into ClubInfoRequest values. It does not change the game itself.
 #include "formats/executable_layout.hpp"
 #include "ui/club_info.hpp"
+#include "ui/button_frame.hpp"
 
 #include <algorithm>
 #include <array>
@@ -317,13 +318,8 @@ Image ClubInfoScreen::render() const {
         const bool active = (x == 1 && pressed_button_ == (projection_.has_squad ? ClubInfoButton::view : ClubInfoButton::category)) ||
                             (x == 60 && pressed_button_ == ClubInfoButton::statistics) ||
                             (x == 120 && pressed_button_ == ClubInfoButton::category);
-        if (active) { const uint8_t base = out.at(x, 225); rect(out, x, 215, width + 1, 2, base); rect(out, x, 215, 2, height + 1, base); x += 2; }
-        else { rect(out, x + 2, 225, width, 2, 0x40); rect(out, x + width, 217, 2, height, 0x40); }
-        const int sy = active ? 44 : 74;
-        copy(out, widgets_, 24, sy, x, 215 + (active ? 2 : 0), 31, 10);
-        int at = 31, remain = width - 31;
-        while (remain > 20) { const int n = std::min(8, remain - 20); copy(out, widgets_, 24, sy + 10, x + at, 215 + (active ? 2 : 0), n, 10); at += n; remain -= n; }
-        copy(out, widgets_, 45 - remain, sy + 20, x + at, 215 + (active ? 2 : 0), remain, 10);
+        (void)height;
+        x += draw_wide_button_frame(out, widgets_, x, 215, width, active);   // button_frame.hpp
         if (!label.empty()) {
             const int mode = exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(active));
             const int label_baseline = active ? 224 : 222;

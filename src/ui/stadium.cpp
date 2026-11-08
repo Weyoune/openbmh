@@ -4,6 +4,7 @@
 // construction. Source-tick timing for the calculator is advanced by the caller.
 #include "formats/executable_layout.hpp"
 #include "ui/stadium.hpp"
+#include "ui/button_frame.hpp"
 
 #include <algorithm>
 #include <bit>
@@ -714,26 +715,22 @@ void StadiumScreen::original_button(Image& out, int x, int y, int w, int h,
     // wide buttons requested with height 9 are drawn 10 px high
     const int visible_h = w > 31 && h == 9 ? 10 : h;
     if (visible_h != 10 && !(w <= 31 && visible_h == 9)) throw FormatError("stadium: unsupported Original button height");
-    if (selected) {
-        const auto under = out.at(x, y + visible_h);
-        fill(out, x, y, w <= 31 ? w + 1 : w, 2, under); fill(out, x, y, 2, visible_h + 1, under); x += 2; y += 2;
-    } else { fill(out, x + 2, y + visible_h, w, 2, 0x40); fill(out, x + w, y + 2, 2, visible_h, 0x40); }
-    if (w <= 31) {
-        source_frame(out, widgets_, exe_, x, y, w, visible_h, false);
+    if (w > 31) {
+        // wide buttons: the shared frame (button_frame.hpp)
+        const int shift = draw_wide_button_frame(out, widgets_, x, y, w, selected);
+        x += shift; y += shift;
         sprite_font_.draw(out, x + w / 2 - sprite_font_.text_width(original_to_utf8(label)) / 2,
-                          y + visible_h / 2 + 2, original_to_utf8(label), exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(selected)));
+                          y + 7, original_to_utf8(label), exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(selected)));
         return;
     }
-    const int sy = selected ? 44 : 74;
-    copy_crop(out, widgets_, 24, sy, x, y, 31, 10);
-    int used = 31;
-    while (w - used > 20) {
-        const int n = std::min(8, w - used - 20);
-        copy_crop(out, widgets_, 24, sy + 10, x + used, y, n, 10); used += n;
-    }
-    copy_crop(out, widgets_, 45 - (w - used), sy + 20, x + used, y, w - used, 10);
+    if (selected) {
+        const auto under = out.at(x, y + visible_h);
+        fill(out, x, y, w + 1, 2, under); fill(out, x, y, 2, visible_h + 1, under); x += 2; y += 2;
+    } else { fill(out, x + 2, y + visible_h, w, 2, 0x40); fill(out, x + w, y + 2, 2, visible_h, 0x40); }
+    // narrow buttons (w <= 31): the four-pixel frame around a pattern
+    source_frame(out, widgets_, exe_, x, y, w, visible_h, false);
     sprite_font_.draw(out, x + w / 2 - sprite_font_.text_width(original_to_utf8(label)) / 2,
-                      y + 7, original_to_utf8(label), exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(selected)));
+                      y + visible_h / 2 + 2, original_to_utf8(label), exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(selected)));
 }
 
 // Creates a request stamped with the identity of the current state (manager, club, scope, sequence and revision).

@@ -3,6 +3,7 @@
 #include "formats/badge_policy.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/transfer_market.hpp"
+#include "ui/button_frame.hpp"
 
 #include <algorithm>
 #include <charconv>
@@ -447,13 +448,11 @@ void TransferMarketScreen::original_text(Image& out,int x,int baseline,std::stri
 // Active buttons look pressed (the frame is drawn on the other side).
 void TransferMarketScreen::button(Image& out,int x,int y,int width,std::string_view label,bool active) const {
     const int height=width>31?10:9;
-    if(active){const uint8_t c=out.at(x,y+height);rect(out,x,y,width+1,2,c);rect(out,x,y,2,height+1,c);x+=2;y+=2;}
-    else{rect(out,x+2,y+height,width,2,0x40);rect(out,x+width,y+2,2,height,0x40);}
     if(width>31) {
-        const int sy=active?44:74;copy(out,widgets_,24,sy,x,y,31,10);int at=31,left=width-31;
-        while(left>20){const int n=std::min(8,left-20);copy(out,widgets_,24,sy+10,x+at,y,n,10);at+=n;left-=n;}
-        copy(out,widgets_,45-left,sy+20,x+at,y,left,10);
+        const int shift=draw_wide_button_frame(out,widgets_,x,y,width,active);x+=shift;y+=shift;   // button_frame.hpp
     } else {
+        if(active){const uint8_t c=out.at(x,y+height);rect(out,x,y,width+1,2,c);rect(out,x,y,2,height+1,c);x+=2;y+=2;}
+        else{rect(out,x+2,y+height,width,2,0x40);rect(out,x+width,y+2,2,height,0x40);}
         for(int yy=4;yy<height-3;++yy)for(int xx=4;xx<width-3;++xx)
             out.at(x+xx,y+yy)=exe_.u8(::bmh::layout::Advertising_PatternRect_RuntimeField+(yy-4)%16*16+(xx-4)%16);
         copy(out,widgets_,0,0,x,y,4,4);copy(out,widgets_,4,0,x+width-4,y,4,4);

@@ -3,7 +3,10 @@
 //   raised  - drop shadow at the right and bottom, bevel art at y=74 of the widget image;
 //   pressed - no shadow, the button moved two pixels down and right, bevel art at y=44.
 // A button without a lasting state (Kaufen, Verkaufen, Angebot, Abbruch, ...) is shown pressed while the mouse button is
-// held down; the screens keep the held button in `pressed_*` members and draw it with this helper.
+// held down; the screens keep the held button in `pressed_*` members and draw it with this helper. Buttons that carry a
+// lasting state (a selected competition, a toggle that is on) use the same pressed look.
+//
+// This is the single place of the drawing; the dialogs only choose the position, width, state and label.
 #pragma once
 
 #include <algorithm>
@@ -16,14 +19,19 @@ namespace bmh::ui {
 // Draws the frame of a button of the given width (10 pixels high) with its top left corner at (x,y).
 // Returns the offset (0 raised, 2 pressed) that the label must be moved by; the label colour mode of the
 // pressed look is the one after the raised one in the executable (Advertising_Button_RuntimeField + 1).
-inline int draw_wide_button_frame(Image& out, const Image& art, int x, int y, int width, bool pressed) {
+//   transparent: a palette index of the widget image that is not copied (the dialogs that draw over a picture use 0xc0), -1 none.
+//   background:  the colour that replaces the drop shadow of a pressed button; -1 takes the pixel under the button's
+//                lower left corner, as the original does.
+inline int draw_wide_button_frame(Image& out, const Image& art, int x, int y, int width, bool pressed,
+                                  int transparent = -1, int background = -1) {
     constexpr int height = 10;
     const auto put = [&](int sx, int sy, int dx, int dy, int w, int h) {
         for (int yy = 0; yy < h; ++yy) for (int xx = 0; xx < w; ++xx) {
             const int tx = dx + xx, ty = dy + yy, px = sx + xx, py = sy + yy;
             if (tx < 0 || ty < 0 || tx >= out.width || ty >= out.height || px < 0 || py < 0 ||
                 px >= art.width || py >= art.height) continue;
-            out.at(tx, ty) = art.pixels[size_t(py) * size_t(art.width) + size_t(px)];
+            const uint8_t color = art.pixels[size_t(py) * size_t(art.width) + size_t(px)];
+            if (color != transparent) out.at(tx, ty) = color;
         }
     };
     const auto fill = [&](int fx, int fy, int w, int h, uint8_t color) {
@@ -32,9 +40,10 @@ inline int draw_wide_button_frame(Image& out, const Image& art, int x, int y, in
     };
     if (pressed) {
         // the place of the shadow shows the background again
-        const uint8_t background = out.at(std::min(x, out.width - 1), std::min(y + height, out.height - 1));
-        fill(x, y, width + 1, 2, background);
-        fill(x, y, 2, height + 1, background);
+        const uint8_t shade = background >= 0 ? uint8_t(background)
+            : out.at(std::clamp(x, 0, out.width - 1), std::clamp(y + height, 0, out.height - 1));
+        fill(x, y, width + 1, 2, shade);
+        fill(x, y, 2, height + 1, shade);
         x += 2;
         y += 2;
     } else {
