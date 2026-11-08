@@ -96,6 +96,9 @@ struct TransferMarketRequest {
     // (the profile is kept but switched off), `search_apply` = closed with the "Suchen" button (list the matches).
     SearchProfile search_profile{};
     bool search_cancelled = false, search_apply = false;
+    // review_offers started by VERKAUFEN on an already listed own player: the original first asks
+    // "Wollen Sie <name> vom Transfermarkt holen?" (yes = off the list, no = look at the offers).
+    bool ask_withdraw = false;
 };
 std::string transfer_market_request_json(const TransferMarketRequest&);
 
@@ -175,7 +178,7 @@ private:
     TransferMarketRequest close_search(bool cancelled);
     void draw_text(Image&, int x, int y, std::string_view, uint8_t color) const;
     void commit_numeric_field();
-    TransferMarketRequest make_review(const TransferMarketItem&);
+    TransferMarketRequest make_review(const TransferMarketItem&, bool ask_withdraw = false);
     TransferMarketRequest make_bid();
     TransferMarketRequest make_listing(bool loan=false);
     TransferMarketRequest make_open_offer(bool loan=false);

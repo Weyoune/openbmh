@@ -343,7 +343,8 @@ std::string transfer_market_request_json(const TransferMarketRequest& r) {
     out << "],\"search_profile\":[";
     for (size_t i = 0; i < r.search_profile.size(); ++i) { if (i) out << ','; out << unsigned(r.search_profile[i]); }
     out << "],\"search_cancelled\":" << (r.search_cancelled ? "true" : "false")
-        << ",\"search_apply\":" << (r.search_apply ? "true" : "false");
+        << ",\"search_apply\":" << (r.search_apply ? "true" : "false")
+        << ",\"ask_withdraw\":" << (r.ask_withdraw ? "true" : "false");
     out << ",\"selected_players\":[";
     for(size_t n=0;n<r.selected_players.size();++n){if(n)out<<',';const auto& p=r.selected_players[n];out<<"{\"list_entry\":"<<p.list_entry<<",\"source_slot\":"<<p.source_slot<<",\"player\":"<<p.player<<",\"seller\":"<<p.seller<<",\"squad_row\":"<<p.squad_row<<'}';}
     out << "]}";
@@ -650,7 +651,7 @@ TransferMarketRequest TransferMarketScreen::make_listing(bool loan) {
     if (item.already_listed) {
         const auto listing = std::find_if(state_.items.begin(), state_.items.end(),
             [&](const auto& row) { return row.player == item.player && row.own_listing; });
-        if (listing != state_.items.end()) return make_review(*listing);
+        if (listing != state_.items.end()) return make_review(*listing, true);
         feedback_ = "Spieler steht bereits auf der Liste"; return {};
     }
     TransferMarketRequest request;
@@ -689,11 +690,13 @@ TransferMarketRequest TransferMarketScreen::make_preview(bool purchase) {
     pending_=request;preview_.reset();return request;
 }
 // Creates a request to review the bids on one of the player's own listings; refuses if there are none.
-TransferMarketRequest TransferMarketScreen::make_review(const TransferMarketItem& item) {
+TransferMarketRequest TransferMarketScreen::make_review(const TransferMarketItem& item, bool ask_withdraw) {
     if (pending_) return {};
-    if (item.offers == 0) { feedback_ = "Noch keine Angebote für diesen Spieler."; return {}; }
+    // Without offers there is nothing to review; VERKAUFEN still has to ask whether the player leaves the list.
+    if (item.offers == 0 && !ask_withdraw) { feedback_ = "Noch keine Angebote für diesen Spieler."; return {}; }
     TransferMarketRequest request;
     request.kind = TransferMarketRequestKind::review_offers;
+    request.ask_withdraw = ask_withdraw;
     request.manager_slot = state_.manager_slot; request.runtime_club = state_.runtime_club;
     request.revision = state_.revision; request.bid.manager = state_.manager_slot;
     request.bid.list_entry = item.list_entry; request.bid.player = item.player;

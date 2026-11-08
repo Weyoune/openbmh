@@ -516,6 +516,36 @@ void check_transfer_market_controller(const std::filesystem::path& data) {
         for (int e = 0; e < 40; ++e) listed_again |= (game.squad_slots.at(0xb70 + size_t(e)) & 0xfff) ==
             (game.squad_slots.at(squad_range(before.runtime_club).first + size_t(row2)) & 0xfff);
         check(listed_again, "the declined player stands on the transfer list again");
+
+        // VERKAUFEN on a listed player asks "Wollen Sie ... vom Transfermarkt holen?"; no keeps the listing, yes takes him off
+        const auto player_id = game.squad_slots.at(squad_range(before.runtime_club).first + size_t(row2)) & 0xfff;
+        const auto on_list = [&] {
+            for (int e = 0; e < 40; ++e) if ((game.squad_slots.at(0xb70 + size_t(e)) & 0xfff) == player_id) return true;
+            return false;
+        };
+        std::string asked;
+        bool answer = false;
+        relist_hooks.confirm = [&](const GameState&, int, const std::string& text) { asked = text; return answer; };
+        for (const bool yes : {false, true}) {
+            answer = yes; asked.clear();
+            auto selected = FlowResult{};
+            auto sell_again = flow.click(200, 207);   // after a "no" the player is still selected
+            if (sell_again.request != FlowRequest::submenu_action) {
+                selected = flow.click(20, y2);
+                if (selected.request == FlowRequest::submenu_action) check(serve_relist(selected).empty(), "the listed player's preview is served");
+                sell_again = flow.click(200, 207);
+            }
+            check(sell_again.request == FlowRequest::submenu_action && std::holds_alternative<TransferMarketRequest>(sell_again.submenu_action) &&
+                  std::get<TransferMarketRequest>(sell_again.submenu_action).kind == TransferMarketRequestKind::review_offers &&
+                  std::get<TransferMarketRequest>(sell_again.submenu_action).ask_withdraw,
+                  "selling a listed player starts the withdraw question even without offers");
+            const app::TransferOfferPresenter no_bid = [](const GameState&, const TransferOfferListView&) { return -1; };
+            check(app::serve_flow_request(flow, sell_again, session, data, data, 0x1789abcd, revision, playback, audio_session, false,
+                      {}, no_bid, {}, {}, {}, {}, {}, {}, {}, app::PendingOfferEntryPolicy::legacy_unpresented, relist_hooks,
+                      app::HumanBuyerMarketEntryPolicy::normal_interactive).empty(), "the withdraw question is served");
+            check(!asked.empty(), "the question 'vom Transfermarkt holen' was asked");
+            check(on_list() == !yes, yes ? "answering yes takes the player off the transfer list" : "answering no keeps the player on the list");
+        }
     }
 
     {   // the search dialog behind the buttons Suchen and Vorschlag (Source sub_19409)

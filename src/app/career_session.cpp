@@ -4440,9 +4440,21 @@ std::optional<TransferActionResult> CareerSession::dispatch_transfer_market(
         TransferActionResult result;
         if (request.kind == ui::TransferMarketRequestKind::review_offers) {
             const auto view = project_transfer_offer_list(next_state, request.bid.list_entry);
-            const int selected = view.offer_count ? review(next_state, view) : -1;
             result.player = view.player; result.list_entry = view.list_entry;
             result.status = TransferActionStatus::pending;
+            // VERKAUFEN on a listed player: "Wollen Sie <name> vom Transfermarkt holen?". Yes frees the list
+            // slot (the player stays in the squad), no goes on to the offers.
+            bool withdrawn = false;
+            if (request.ask_withdraw && hooks.confirm) {
+                const std::string question = message_text(next_state, ::bmh::layout::TransferMarket_WithdrawQuestion_TextPointer) +
+                    next_state.player_name(view.player) +
+                    message_text(next_state, ::bmh::layout::TransferMarket_WithdrawQuestion_TextPointer2);
+                if (hooks.confirm(next_state, request.manager_slot, question)) {
+                    next_state.squad_slots.at(0xb70u + size_t(view.list_entry)) = 0xfff;
+                    withdrawn = true;
+                }
+            }
+            const int selected = !withdrawn && view.offer_count ? review(next_state, view) : -1;
             if (selected != -1) {
                 auto allocator = TransferAllocatorContext::unsupported;
                 if (turn_driver_.transfer_allocator_context == PendingOfferAllocatorGate::zero)

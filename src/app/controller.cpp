@@ -605,7 +605,8 @@ void serve_transfer_action(ui::StartupFlow& flow, CareerSession& session,
                     notice = applied.action.status == TransferActionStatus::accepted
                         ? "Das Angebot wurde angenommen."
                         : applied.action.status == TransferActionStatus::pending
-                            ? "Spieler bleibt auf der Transferliste."
+                            ? (applied.changed ? "Spieler wurde von der Transferliste genommen."
+                                               : "Spieler bleibt auf der Transferliste.")
                             : "Angebot abgelehnt; Transferliste unverändert.";
                 }
                 if (!applied.changed && source_finished) flow.acknowledge_unchanged_transfer_market();

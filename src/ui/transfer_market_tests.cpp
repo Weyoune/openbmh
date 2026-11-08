@@ -94,9 +94,10 @@ int main(int argc,char** argv){
         review.acknowledge_unchanged();
         listed.items[0].offers=0;TransferMarketScreen waiting(argv[1],listed);
         auto hover_waiting=waiting.click(20,32);waiting.acknowledge_preview(listed,quote(hover_waiting));
-        check(waiting.key("V").kind==TransferMarketRequestKind::none&&
-              waiting.state_json().find("Noch keine Angebote")!=std::string::npos,
-              "an own listing without incoming offers gives visible feedback");
+        const auto withdraw=waiting.key("V");
+        check(withdraw.kind==TransferMarketRequestKind::review_offers&&withdraw.ask_withdraw&&withdraw.bid.list_entry==4&&
+              transfer_market_request_json(withdraw).find("\"ask_withdraw\":true")!=std::string::npos,
+              "selling a listed own player without offers still asks whether he leaves the list");
         auto expired=fixture();expired.squad_slots[2932]=0x0fff;
         check(!transfer_market_from_game(expired,5).squad[0].already_listed,
               "cleared rejected/expired pool entry immediately makes the player listable again");

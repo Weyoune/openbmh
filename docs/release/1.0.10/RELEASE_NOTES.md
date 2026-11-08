@@ -24,6 +24,10 @@ separate in [OpenBMH-Extended](https://github.com/Weyoune/OpenBMH-extended).
   dialog, which refused the whole offer. Both exist now. A refused offer or
   transfer action also shows its reason (and writes it to the debug log)
   instead of a dead button.
+- **Verkaufen on a listed player.** Clicking a player who is already on the transfer
+  list and then VERKAUFEN did nothing when no offer had arrived yet. It now asks
+  the question of the original, "Wollen Sie ... vom Transfermarkt holen?": yes takes
+  the player off the list (he stays in the squad), no leads on to the offers.
 - **Pressed buttons.** Suchen, Vorschlag, Abwerben and the other buttons of
   the market are drawn pressed while the mouse button is held.
 - **Scouting message.** Confirming the search dialog first shows the message
