@@ -1086,6 +1086,15 @@ FlowResult StartupFlow::process_timer_expired(int pointer_x, int pointer_y) {
     return {}; // other modal callers retain their own input owner
 }
 
+bool StartupFlow::press_hold(int x,int y) {
+    if (player_card_) return false;   // the card covers its parent
+    if (pitch_) return pitch_->press(x, y);
+    if (lineup_) return lineup_->press(x, y);
+    if (bank_) return bank_->press(x, y);
+    if (outgoing_transfer_) return outgoing_transfer_->press(x, y);
+    return false;
+}
+
 // Routes a mouse press to the active child page (checked in a fixed order); the submenu pages then forward their pending action through finish_*_input.
 FlowResult StartupFlow::pointer_down(int x,int y,bool right) {
     if(pitch_hold_release_barrier_&&!right)return {};

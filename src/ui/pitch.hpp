@@ -98,6 +98,8 @@ public:
     // dispatches and acknowledges the returned native page-word request.
     PitchRequest request_page_control(int control);
     PitchRequest pointer_down(int x,int y,bool right=false);
+    // Mouse DOWN on a momentary button: drawn pressed; pointer_down() then runs its action and ends the look.
+    bool press(int x,int y);
     bool take_source_down_release_barrier(){const bool value=source_down_release_barrier_;source_down_release_barrier_=false;return value;}
     PitchRequest save_formation(int x, int y); // completed long press, own slots 4..7
     bool move(int x, int y);
@@ -146,6 +148,7 @@ private:
     std::vector<std::pair<int,int>> rows() const;
     void text(Image&, int x, int baseline, std::string_view, uint8_t color) const;
     void button(Image&, int x, int y, std::string_view, bool selected = false) const;
+    int pressed_lower_button_ = -1;   // momentary button held down by the mouse (0 Daten, 1 Spielfeld/Kurz)
     void jersey(Image&, const LineupPlayer&, int depth, int lane, int color, bool number = true) const;
     PitchRequest request(PitchRequestKind, int row, int second = -1, int depth = -1, int lane = -1);
     PitchRequest automatic_request(PitchRequestKind, int index);

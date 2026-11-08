@@ -5,6 +5,7 @@
 // accepts a request.
 #include "formats/executable_layout.hpp"
 #include "ui/bank.hpp"
+#include "ui/button_frame.hpp"
 #include "ui/game_end.hpp"
 
 #include <algorithm>
@@ -782,16 +783,13 @@ Image BankScreen::render() const {
         }
         const auto draw_button = [&](int x, uint32_t text_address) {
             constexpr int y = 174, button_width = 64;
-            rect(out, x + 2, y + 10, button_width, 2, 0x40); rect(out, x + button_width, y + 2, 2, 10, 0x40);
-            copy_region(out, widgets_, 24, 74, x, y, 31, 10);
-            int at = 31, remaining = button_width - 31;
-            while (remaining > 20) { const int n = std::min(8, remaining - 20); copy_region(out, widgets_, 24, 84, x + at, y, n, 10); at += n; remaining -= n; }
-            if (remaining > 0) copy_region(out, widgets_, 45 - remaining, 94, x + at, y, remaining, 10);
+            const bool down = pressed_button_ == (x < 100 ? 0 : 1);
+            const int shift = draw_wide_button_frame(out, widgets_, x, y, button_width, down);
             const size_t id = text_id(text_address);
             if (id < texts_.strings.size()) {
                 const std::string label = original_to_utf8(texts_[id]);
-                sprite_font_.draw(out, x + (button_width - sprite_font_.text_width(label)) / 2, y + 7,
-                                  label, exe_.u8(::bmh::layout::Advertising_Button_RuntimeField));
+                sprite_font_.draw(out, x + shift + (button_width - sprite_font_.text_width(label)) / 2, y + shift + 7,
+                                  label, exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(down)));
             }
         };
         draw_button(60, ::bmh::layout::Bank_FormatError_RuntimeField18 + 4 * 4);
@@ -831,18 +829,10 @@ Image BankScreen::render() const {
         draw_property_card(out, selected_fund_, 124, false);
         const auto source_button = [&](int x, std::string_view label) {
             constexpr int width = 64, y = 174;
-            rect(out, x + 2, y + 10, width, 2, 0x40);
-            rect(out, x + width, y + 2, 2, 10, 0x40);
-            copy_region(out, widgets_, 24, 74, x, y, 31, 10);
-            int at = 31, remaining = width - 31;
-            while (remaining > 20) {
-                const int n = std::min(8, remaining - 20);
-                copy_region(out, widgets_, 24, 84, x + at, y, n, 10);
-                at += n; remaining -= n;
-            }
-            if (remaining > 0) copy_region(out, widgets_, 45 - remaining, 94, x + at, y, remaining, 10);
-            sprite_font_.draw(out, x + (width - sprite_font_.text_width(label)) / 2, y + 7,
-                              label, exe_.u8(::bmh::layout::Advertising_Button_RuntimeField));
+            const bool down = pressed_button_ == (x < 100 ? 0 : 1);
+            const int shift = draw_wide_button_frame(out, widgets_, x, y, width, down);
+            sprite_font_.draw(out, x + shift + (width - sprite_font_.text_width(label)) / 2, y + shift + 7,
+                              label, exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(down)));
         };
         source_button(60, original_to_utf8(texts_[191]));
         source_button(185, original_to_utf8(texts_[192]));
@@ -924,13 +914,10 @@ Image BankScreen::render() const {
         if (visible_tip_) body_baseline(out, 200, 167, db(::bmh::layout::Bank_FormatError_RuntimeField19 + uint32_t(*visible_tip_) * 4), 0xf7);
         auto source_button = [&](int x, std::string_view label) {
             constexpr int width = 64, y = 174;
-            rect(out, x + 2, y + 10, width, 2, 0x40); rect(out, x + width, y + 2, 2, 10, 0x40);
-            copy_region(out, widgets_, 24, 74, x, y, 31, 10);
-            int at = 31, remain = width - 31;
-            while (remain > 20) { const int n = std::min(8, remain - 20); copy_region(out, widgets_, 24, 84, x + at, y, n, 10); at += n; remain -= n; }
-            if (remain > 0) copy_region(out, widgets_, 45 - remain, 94, x + at, y, remain, 10);
-            sprite_font_.draw(out, x + (width - sprite_font_.text_width(label)) / 2, y + 7,
-                              label, exe_.u8(::bmh::layout::Advertising_Button_RuntimeField));
+            const bool down = pressed_button_ == (x < 100 ? 0 : 1);
+            const int shift = draw_wide_button_frame(out, widgets_, x, y, width, down);
+            sprite_font_.draw(out, x + shift + (width - sprite_font_.text_width(label)) / 2, y + shift + 7,
+                              label, exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(down)));
         };
         source_button(60, original_to_utf8(texts_[191]));
         source_button(185, original_to_utf8(texts_[192]));
@@ -948,18 +935,10 @@ Image BankScreen::render() const {
     body_baseline(out, 195, 82, state_.deposit_text.empty() ? money(state_.deposit) : state_.deposit_text, 0x00);
     auto source_button = [&](int x, std::string_view label) {
         const int width = 64, y = 174;
-        rect(out, x + 2, y + 10, width, 2, 0x40);
-        rect(out, x + width, y + 2, 2, 10, 0x40);
-        copy_region(out, widgets_, 24, 74, x, y, 31, 10);
-        int at = 31, remaining = width - 31;
-        while (remaining > 20) {
-            const int n = std::min(8, remaining - 20);
-            copy_region(out, widgets_, 24, 84, x + at, y, n, 10);
-            at += n; remaining -= n;
-        }
-        if (remaining > 0) copy_region(out, widgets_, 45 - remaining, 94, x + at, y, remaining, 10);
-        sprite_font_.draw(out, x + (width - sprite_font_.text_width(label)) / 2, y + 7, label,
-                          exe_.u8(::bmh::layout::Advertising_Button_RuntimeField));
+        const bool down = pressed_button_ == (x < 100 ? 0 : 1);
+        const int shift = draw_wide_button_frame(out, widgets_, x, y, width, down);
+        sprite_font_.draw(out, x + shift + (width - sprite_font_.text_width(label)) / 2, y + shift + 7, label,
+                          exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(down)));
     };
     source_button(60, original_to_utf8(texts_[193]));
     source_button(185, original_to_utf8(texts_[194]));
@@ -1011,7 +990,22 @@ BankRequest BankScreen::submit() {
                         state_.revision, withdrawing_ ? -int32_t(value) : int32_t(value)};
     pending_ = request; feedback_.clear(); return request;
 }
+// Mouse DOWN on one of the two bottom buttons (Kaufen/Verkaufen, Einzahlen/Abheben, OK/Abbruch of a credit): the button
+// is drawn pressed until the release. Returns true when the picture changed.
+bool BankScreen::press(int x, int y) {
+    int id = -1;
+    const bool has_buttons = (exchange_open_ || property_open_ || deposit_open_ || credit_open_) && !calculator_open_ &&
+        !credit_notice_open_ && !credit_fee_confirmation_open_ && !property_notice_open_ && !investment_warning_open_ && !pending_;
+    if (has_buttons && y >= 174 && y <= 184) {
+        if (x >= 60 && x <= 124) id = 0;
+        else if (x >= 185 && x <= 249) id = 1;
+    }
+    const bool changed = id != pressed_button_;
+    pressed_button_ = id;
+    return changed;
+}
 BankRequest BankScreen::click(int x, int y, bool right) {
+    pressed_button_ = -1;   // the release ends the pressed look
     if (credit_notice_open_) {
         if (right || (x >= 95 && x <= 220 && y >= 166 && y <= 176)) {
             credit_notice_open_ = false;

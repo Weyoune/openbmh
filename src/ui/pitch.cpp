@@ -422,8 +422,8 @@ Image PitchScreen::render()const{
     if(automatic_page()&&extras_.mode!=1)for(int f=0;f<3;++f){
         const int x=241+f*27;copy(out,atlas_,196+f*24,38,x,205,24,18);
         copy(out,atlas_,256+((extras_.automatic_weights>>(2*f))&3)*16,32,x+19,211,4,5);}
-    button(out,196,110,texts_[(::bmh::layout::Lineup_Render_TextPointer-::bmh::layout::TextPointerTable)/4+(state_.view==LineupView::data_a?1:0)]);
-    button(out,196,123,texts_[(::bmh::layout::Pitch_Render_TextPointer-::bmh::layout::TextPointerTable)/4]);
+    button(out,196,110,texts_[(::bmh::layout::Lineup_Render_TextPointer-::bmh::layout::TextPointerTable)/4+(state_.view==LineupView::data_a?1:0)],pressed_lower_button_==0);
+    button(out,196,123,texts_[(::bmh::layout::Pitch_Render_TextPointer-::bmh::layout::TextPointerTable)/4],pressed_lower_button_==1);
     button(out,196,136,texts_[(::bmh::layout::Pitch_Render_TextPointer2-::bmh::layout::TextPointerTable)/4],(extras_.native_display_word&0x0010)!=0);
     if(extras_.mode!=1)button(out,196,149,texts_[(::bmh::layout::Pitch_Render_TextPointer3-::bmh::layout::TextPointerTable)/4],order_panel_open_);
     if(extras_.opponent_team>=0&&!extras_.indoor.value_or(false))
@@ -757,7 +757,16 @@ PitchRequest PitchScreen::click(int x,int y,bool right){
         selected_=row;hovered_=row;ghost_.reset();return {};}
     return {};
 }
+// Mouse DOWN on one of the two momentary buttons of the desktop page (Daten A/B at y=110, Spielfeld/Kurz at y=123): drawn
+// pressed; pointer_down() runs the action and ends the pressed look. The toggles below them keep their lasting state.
+bool PitchScreen::press(int x,int y){
+    int id=-1;
+    if(!pending_&&!close_&&(extras_.native_display_word&0x08)!=0&&x>=196&&x<=239){
+        if(y>=110&&y<=120)id=0;else if(y>=123&&y<=133)id=1;}
+    const bool changed=id!=pressed_lower_button_;pressed_lower_button_=id;return changed;
+}
 PitchRequest PitchScreen::pointer_down(int x,int y,bool right){
+    pressed_lower_button_=-1;
     source_down_release_barrier_=false;
     const uint16_t display_word=shooter_editor_open_
         ? uint16_t(extras_.native_display_word&0xff0f)

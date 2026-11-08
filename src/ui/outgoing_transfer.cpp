@@ -5,6 +5,7 @@
 // never recomputed here.
 #include "formats/executable_layout.hpp"
 #include "ui/outgoing_transfer.hpp"
+#include "ui/button_frame.hpp"
 
 #include <algorithm>
 #include <charconv>
@@ -448,28 +449,17 @@ void OutgoingTransferScreen::draw_footer(Image& out) const {
     // OpenTransferEditor registers four FormatError3 controls from a216c/a216e/a2170.
     // The address stride in OutgoingTransfer_DrawFooter_TextPointer is exactly one TEXTD pointer (four bytes):
     // IDs 230..233 are Team-Info, Spieler-Info, Angebot and Abbruch.
-    constexpr int drawn_height = 10; // FormatError3 raises requested h=9 for width>31.
     for (size_t i = 0; i < kFooterButtonX.size(); ++i) {
         const int x = kFooterButtonX[i];
-        // FormatError3 first calls ColorBottomRightBevel for the raised control's shadow.
-        fill_rect(out, x + 2, kFooterButtonY + drawn_height, kFooterButtonWidth, 2, 0x40);
-        fill_rect(out, x + kFooterButtonWidth, kFooterButtonY + 2, 2, drawn_height, 0x40);
-        // FormatError3's standard KB0 frame; its requested nine-pixel height
-        // is raised to ten for widths over 31, then the sprite is tiled.
-        copy_region(out, button_art_, 24, 74, x, kFooterButtonY, 31, drawn_height);
-        int used = 31;
-        while (kFooterButtonWidth - used > 20) {
-            const int count = std::min(8, kFooterButtonWidth - used - 20);
-            copy_region(out, button_art_, 24, 84, x + used, kFooterButtonY, count, drawn_height);
-            used += count;
-        }
-        const int remaining = kFooterButtonWidth - used;
-        copy_region(out, button_art_, 45 - remaining, 94, x + used, kFooterButtonY,
-                    remaining, drawn_height);
+        // FormatError3: shadow, KB0 frame (height raised to ten for widths over 31) and tiled middle; a button held
+        // down by the mouse is drawn in the pressed look (button_frame.hpp).
+        const bool down = pressed_button_ == int(i);
+        const int shift = draw_wide_button_frame(out, button_art_, x, kFooterButtonY, kFooterButtonWidth, down);
         const auto label = original_to_utf8(text_at(texts_, ::bmh::layout::OutgoingTransfer_DrawFooter_TextPointer + uint32_t(i) * 4));
         const int text_width = sprite_font_.text_width(label);
-        sprite_font_.draw(out, x + kFooterButtonWidth / 2 - text_width / 2,
-                          kFooterButtonY + 7, label, exe_.u8(::bmh::layout::Advertising_Button_RuntimeField));
+        sprite_font_.draw(out, x + shift + kFooterButtonWidth / 2 - text_width / 2,
+                          kFooterButtonY + shift + 7, label,
+                          exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(down)));
     }
 }
 
@@ -492,7 +482,20 @@ OutgoingTransferRequest OutgoingTransferScreen::process_timer_expired() {
 // presets edit the value and right click cancels it; otherwise right click cancels the screen, footer buttons send
 // team info, player info, submit (only when editable) or cancel; clicks on the fee, salary or (mode 3) contract/bonus
 // areas open the calculator. Opening the calculator is local state and sends no request.
+// Mouse DOWN on a footer button: it is drawn pressed until the release. Returns true when the picture changed.
+bool OutgoingTransferScreen::press(int x, int y) {
+    int id = -1;
+    if (!closed_ && !pending_ && !calculator_open_)
+        for (size_t i = 0; i < kFooterButtonX.size(); ++i)
+            if (x >= kFooterButtonX[i] && x <= kFooterButtonX[i] + kFooterButtonWidth && y >= kFooterButtonY &&
+                y <= kFooterButtonY + kFooterButtonHeight) id = int(i);
+    const bool changed = id != pressed_button_;
+    pressed_button_ = id;
+    return changed;
+}
+
 OutgoingTransferRequest OutgoingTransferScreen::click(int x, int y, bool right, bool double_click) {
+    pressed_button_ = -1;   // the release ends the pressed look
     if (closed_ || pending_) return {};
     if (double_click && !right && !calculator_open_ && y > 0x12 && y < 0x21) {
         state_.quote_loan = !state_.quote_loan;

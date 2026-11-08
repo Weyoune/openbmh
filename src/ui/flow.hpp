@@ -110,6 +110,9 @@ public:
     FlowResult click(int x, int y, bool right = false, bool double_click = false);
     // Mouse button press (DOWN) entry point; click() handles the matching release.
     FlowResult pointer_down(int x,int y,bool right=false);
+    // Left press on a screen whose buttons have no lasting state (bank, offer editor, ...): the button under the pointer is
+    // drawn pressed until the release. Returns true when the screen must be presented at once.
+    bool press_hold(int x,int y);
     // Timer expiry event together with the current pointer position.
     FlowResult process_timer_expired(int pointer_x = 0, int pointer_y = 0);
     bool timed_notice_open() const;

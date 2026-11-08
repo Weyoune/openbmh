@@ -64,6 +64,8 @@ public:
     LineupRequest initialize();
     Image render() const;
     LineupRequest click(int x, int y, bool right = false);
+    // Mouse DOWN on a bottom button: drawn pressed until the release (click()).
+    bool press(int x, int y);
     bool move(int x, int y); // local original name-column hover
     LineupRequest key(std::string_view key);
     bool close_requested() const { return close_; }
@@ -88,7 +90,8 @@ private:
     std::vector<std::pair<int,int>> rows() const; // (squad row, baseline)
     void text(Image&, int x, int baseline, std::string_view, uint8_t color, int right = -1) const;
     void sprite_text(Image&, int x, int baseline, std::string_view, int font = 5) const;
-    void button(Image&, int x, int y, std::string_view value) const;
+    void button(Image&, int x, int y, std::string_view value, bool pressed = false) const;
+    int pressed_button_ = -1;   // bottom button held down by the mouse
     LineupRequest request(LineupRequestKind, int first = -1, int second = -1);
 };
 

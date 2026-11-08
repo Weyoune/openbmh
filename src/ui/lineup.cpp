@@ -4,6 +4,7 @@
 // Swapping or preparing is done by the session, not here.
 #include "formats/executable_layout.hpp"
 #include "ui/lineup.hpp"
+#include "ui/button_frame.hpp"
 
 #include <algorithm>
 #include <sstream>
@@ -168,17 +169,16 @@ void LineupScreen::sprite_text(Image& out,int x,int baseline,std::string_view va
         copy(out,letters_,sx,(font-4)*7,x,baseline-6,width,7,0);x+=width;
     }
 }
-void LineupScreen::button(Image& out,int x,int y,std::string_view value) const {
-    constexpr int width=55,height=10;
-    rect(out,x+2,y+height,width,2,0x40);rect(out,x+width,y+2,2,height,0x40);
-    copy(out,widgets_,24,74,x,y,31,10);
-    int at=31,remaining=width-31;
-    while(remaining>20){const int n=std::min(8,remaining-20);copy(out,widgets_,24,84,x+at,y,n,10);at+=n;remaining-=n;}
-    copy(out,widgets_,45-remaining,94,x+at,y,remaining,10);
-    if(exe_.u8(::bmh::layout::Advertising_Button_RuntimeField)==3)text(out,x,y+7,value,0,x+width);
+void LineupScreen::button(Image& out,int x,int y,std::string_view value,bool pressed) const {
+    constexpr int width=55;
+    // a button held down by the mouse is drawn pressed (button_frame.hpp): moved by two pixels, other label mode
+    const int shift=draw_wide_button_frame(out,widgets_,x,y,width,pressed);
+    const int mode=exe_.u8(::bmh::layout::Advertising_Button_RuntimeField+int(pressed));
+    x+=shift;y+=shift;
+    if(mode==3)text(out,x,y+7,value,0,x+width);
     else {
         int length=0;for(unsigned char c:value){const int g=exe_.u8(::bmh::layout::ClubInfo_Raw_RuntimeField3 + c);length+=g?exe_.u16(::bmh::layout::ClubInfo_Raw_RuntimeField2+g*2)-exe_.u16(::bmh::layout::ClubInfo_Raw_RuntimeField+g*2):2;}
-        sprite_text(out,x+width/2-length/2,y+7,value,exe_.u8(::bmh::layout::Advertising_Button_RuntimeField));
+        sprite_text(out,x+width/2-length/2,y+7,value,mode);
     }
 }
 std::vector<std::pair<int,int>> LineupScreen::rows() const {
@@ -237,8 +237,8 @@ Image LineupScreen::render() const {
                 number((p.statistics ? p.statistics->goals : le16(Bytes(p.board.begin(),p.board.end()),0x4a)),3)+exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField2)+number((p.statistics ? p.statistics->assists : le16(Bytes(p.board.begin(),p.board.end()),0x4c)),3)+exe_.cstring(::bmh::layout::ClubInfo_Raw_ExecutableField),0x6c);
         }
     }
-    button(out,1,215,texts_[(::bmh::layout::Lineup_Render_TextPointer-::bmh::layout::TextPointerTable)/4+(state_.view==LineupView::data_a?1:0)]);
-    button(out,58,215,texts_[(::bmh::layout::Lineup_Render_TextPointer2-::bmh::layout::TextPointerTable)/4]);
+    button(out,1,215,texts_[(::bmh::layout::Lineup_Render_TextPointer-::bmh::layout::TextPointerTable)/4+(state_.view==LineupView::data_a?1:0)],pressed_button_==0);
+    button(out,58,215,texts_[(::bmh::layout::Lineup_Render_TextPointer2-::bmh::layout::TextPointerTable)/4],pressed_button_==1);
     return out;
 }
 LineupRequest LineupScreen::request(LineupRequestKind kind,int first,int second) {
@@ -252,7 +252,14 @@ LineupRequest LineupScreen::initialize() {
     if(pending_||close_||state_.entry_prepared)return {};
     return request(LineupRequestKind::prepare_lineup);
 }
+// Mouse DOWN on a bottom button (Daten A/B, Spielfeld): drawn pressed until the release.
+bool LineupScreen::press(int x,int y) {
+    int id=-1;
+    if(!pending_&&!close_&&y>=215&&y<=224){if(x>=1&&x<=56)id=0;else if(x>=58&&x<=113)id=1;}
+    const bool changed=id!=pressed_button_;pressed_button_=id;return changed;
+}
 LineupRequest LineupScreen::click(int x,int y,bool right) {
+    pressed_button_=-1;   // the release ends the pressed look
     if(pending_||close_)return {};
     if(right){if(selected_)selected_.reset();else close_=true;return {};}
     if(y>=215&&y<=224){

@@ -27,6 +27,16 @@ int main(int argc, char** argv) {
         check(screen.render().width == 320, "original bank room canvas");
         check(screen.click(270, 90).kind == BankRequestKind::none && screen.state_json().find("\"deposit_open\":true") != std::string::npos,
               "Kasse opens the deposit view locally");
+        {   // a bottom button looks pressed while the mouse button is held and normal again after the release
+            const auto raised = screen.render();
+            check(!screen.press(10, 10), "no pressed look outside the buttons");
+            check(screen.press(90, 180) && screen.render().pixels != raised.pixels, "Einzahlen shows the pressed look");
+            check(!screen.press(90, 180), "an unchanged press does not redraw");
+            screen.click(90, 180);
+            screen.click(0, 0, true);   // back to the Sparbuch page (the calculator was opened by the click)
+            screen.click(270, 90);
+            check(screen.render().pixels == raised.pixels, "the release ends the pressed look");
+        }
         screen.click(90, 180);
         check(screen.calculator_open(), "Einzahlen button opens the original calculator");
         check(!screen.text("-500"), "rejects non-digit input");

@@ -4180,6 +4180,19 @@ int main(int argc, char** argv) {
                 // Remember where the right press began, to detect releases without a matching press.
                 if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_RIGHT)
                     right_press_screen = flow.screen_name();
+                // Buttons without a lasting state look pressed while the mouse button is held (bank, offer editor,
+                // lineup, pitch). The pitch runs its action at the press itself, so the pressed look is held briefly.
+                if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT &&
+                    flow.press_hold(e.button.x, e.button.y)) {
+                    const auto image = process_timer_image(flow.render());
+                    for (size_t i = 0; i < pixels.size(); ++i) pixels[i] = palette.argb[image.pixels[i]];
+                    SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
+                    SDL_RenderClear(renderer);
+                    SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+                    SDL_RenderPresent(renderer);
+                    dirty = false;
+                    if (flow.in_pitch()) SDL_Delay(90);
+                }
                 // Screens that react to the press itself get pointer_down() now.
                 if(!selector_consumed&&e.type==SDL_MOUSEBUTTONDOWN&&(flow.desktop()||flow.in_balance()||flow.in_desk_records()||flow.in_achievements()||flow.in_indoor_standings()||flow.in_reschedule_calendar()||flow.in_league_pairings()||flow.in_family_table()||flow.in_toto_calculator()||flow.in_stadium()||flow.in_environment()||flow.in_strengths()||flow.in_top_scorers()||flow.in_opportunities()||flow.in_statistics_menu()||flow.in_statistics_page()||flow.in_analytics()||flow.in_other_games()||flow.in_pitch()||flow.in_settings())&&
                     (e.button.button==SDL_BUTTON_LEFT||e.button.button==SDL_BUTTON_RIGHT)) {

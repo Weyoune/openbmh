@@ -97,6 +97,8 @@ public:
                            OutgoingTransferEditorState state);
     Image render() const;
     OutgoingTransferRequest click(int x, int y, bool right = false, bool double_click = false);
+    // Mouse DOWN: the footer button under the pointer is drawn pressed until the release (click()).
+    bool press(int x, int y);
     // Source event8 returns calculator cancellation before closing its editor.
     OutgoingTransferRequest process_timer_expired();
     OutgoingTransferRequest key(std::string_view key);
@@ -125,6 +127,7 @@ private:
     std::string numeric_text_, feedback_;
     bool calculator_open_ = false;
     bool closed_ = false;
+    int pressed_button_ = -1;   // footer button held down by the mouse
     std::optional<OutgoingTransferRequest> pending_;
 
     OutgoingTransferIdentity identity() const;

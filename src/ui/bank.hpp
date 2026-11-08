@@ -112,6 +112,8 @@ public:
     BankScreen(const std::filesystem::path&, BankState);
     Image render() const;
     BankRequest click(int x, int y, bool right = false);
+    // Mouse DOWN: draws the bottom button under the pointer pressed until the release (click()).
+    bool press(int x, int y);
     BankRequest key(std::string_view);
     bool text(std::string_view);
     bool close_requested() const { return close_requested_; }
@@ -153,6 +155,7 @@ private:
     bool credit_fee_confirmation_open_ = false, credit_notice_open_ = false;
     bool credit_fees_accepted_ = false;
     bool selling_shares_ = false;
+    int pressed_button_ = -1;   // 0 left, 1 right bottom button while the mouse button is held
     bool calculator_stock_count_ = false;
     bool calculator_property_count_ = false;
     int selected_stock_ = 11;
