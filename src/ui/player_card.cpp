@@ -326,7 +326,7 @@ Image PlayerCardScreen::render_card() const {
         if(i==5){const auto market=player_card_market_value(a,exe_);value=market?cash(*market,1)+exe_.cstring(::bmh::layout::ClubPlayerDetail_Copy_ExecutableField):"?";}
         text(out,x,base+11,value,0x6a);
     }
-    button(out,8,211,60,label(::bmh::layout::ClubPlayerDetail_Copy_TextPointer7));button(out,80,211,96,label(::bmh::layout::ClubPlayerDetail_Copy_ExecutableField5),statistics_open_);
+    button(out,8,211,60,label(::bmh::layout::ClubPlayerDetail_Copy_TextPointer7),pressed_button_==0);button(out,80,211,96,label(::bmh::layout::ClubPlayerDetail_Copy_ExecutableField5),statistics_open_||pressed_button_==1);
     return out;
 }
 
@@ -365,11 +365,22 @@ Image PlayerCardScreen::render_statistics() const {
     }
     button(out,265,142,30,label(::bmh::layout::ClubPlayerDetail_RenderStatistics_ExecutableField),(statistics_flags_&0x40)!=0);
     button(out,265,153,30,label(::bmh::layout::ClubPlayerDetail_RenderStatistics_ExecutableField2),(statistics_flags_&0x80)!=0);
-    button(out,8,185,140,label(::bmh::layout::ClubPlayerDetail_RenderStatistics_ExecutableField3));
+    button(out,8,185,140,label(::bmh::layout::ClubPlayerDetail_RenderStatistics_ExecutableField3),pressed_button_==2);
     return out;
 }
 
+// Mouse DOWN on a button of the card (Schließen, Statistik, and Zurück of the statistics page): drawn pressed until
+// the release. Returns true when the picture changed.
+bool PlayerCardScreen::press(int x,int y) {
+    int id=-1;
+    if(!close_){
+        if(statistics_open_){if(x>=8&&x<=148&&y>=185&&y<=195)id=2;}
+        else if(y>=211&&y<=220){if(x>=8&&x<=68)id=0;else if(x>=80&&x<=176)id=1;}
+    }
+    const bool changed=id!=pressed_button_;pressed_button_=id;return changed;
+}
 bool PlayerCardScreen::click(int x,int y,bool right) {
+    pressed_button_=-1;   // the release ends the pressed look
     if(close_)return false;
     if(statistics_open_){
         if(right||(x>=8&&x<=148&&y>=185&&y<=195)){

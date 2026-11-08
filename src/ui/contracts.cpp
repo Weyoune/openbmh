@@ -575,7 +575,8 @@ Image ContractsScreen::render() const {
         notice.body=utf8_to_original(state_.feedback);
         notice.source_manager_flags=0x80;
         draw_source_dialog(out,{widgets_,faces_,&badge_atlas_,font_,large_font_,
-            exe_,sprite_font_,texts_},notice,state_.gradient_text);
+            exe_,sprite_font_,texts_},notice,state_.gradient_text,
+            pressed_button_==3?std::optional<GameEndTaxDialog::Button>(GameEndTaxDialog::Button::acknowledge):std::nullopt);
     }
     return out;
 }
@@ -589,7 +590,10 @@ Image ContractsScreen::render() const {
 // release. Returns true when the picture changed.
 bool ContractsScreen::press(int x, int y) {
     int id = -1;
-    if (page_ == Page::player_offer || page_ == Page::team_premiums) {
+    if (page_ == Page::result) {
+        // OK of the manager's answer (id 3)
+        if (source_dialog_button_at(TaxDialogKind::acknowledgement, false, x, y) == GameEndTaxDialog::Button::acknowledge) id = 3;
+    } else if (page_ == Page::player_offer || page_ == Page::team_premiums) {
         const bool team = page_ == Page::team_premiums && team_premium_mode_;
         const auto selected = std::find_if(state_.players.begin(), state_.players.end(), [&](const auto& p) { return p.row == state_.selected_row; });
         const int top = team || selected == state_.players.end() || selected->row >= 13 ? 22 : 130;

@@ -339,6 +339,14 @@ void draw_source_dialog(Image& out,const SourceDialogAssets& assets,const TaxDia
         button(out,assets.widgets,assets.sprite,assets.exe,175,166,75,no,pressed==Button::no);
     }
 }
+GameEndTaxDialog::Button source_dialog_button_at(TaxDialogKind kind,bool timed_notice,int x,int y){
+    using Button=GameEndTaxDialog::Button;
+    if(y<166||y>176)return Button::none;
+    if(kind==TaxDialogKind::acknowledgement)return !timed_notice&&x>=95&&x<=220?Button::acknowledge:Button::none;
+    if(x>=62&&x<=137)return Button::yes;
+    if(x>=175&&x<=250)return Button::no;
+    return Button::none;
+}
 GameEndTaxDialog::Button GameEndTaxDialog::hit_test(int x,int y)const{
     if(y<166||y>176)return Button::none;
     if(projection_.kind==TaxDialogKind::acknowledgement)

@@ -1087,9 +1087,12 @@ FlowResult StartupFlow::process_timer_expired(int pointer_x, int pointer_y) {
 }
 
 bool StartupFlow::press_hold(int x,int y) {
-    if (player_card_) return false;   // the card covers its parent
+    if (advertising_) return advertising_->press(x, y);
+    if (save_load_) return save_load_->press(x, y);
+    if (player_card_) return player_card_->press(x, y);   // the card covers its parent
     if (pitch_) return pitch_->press(x, y);
     if (lineup_) return lineup_->press(x, y);
+    if (training_camp_) return training_camp_->press(x, y);
     if (bank_) return bank_->press(x, y);
     if (outgoing_transfer_) return outgoing_transfer_->press(x, y);
     if (manager_ && !desktop_) return manager_->press(x, y);

@@ -6,6 +6,7 @@
 #include "formats/executable_layout.hpp"
 #include "game/environment.hpp"
 #include "ui/advertising.hpp"
+#include "ui/button_frame.hpp"
 #include "ui/game_end.hpp"
 
 #include <algorithm>
@@ -759,11 +760,11 @@ Image AdvertisingScreen::render() const {
 
             copy(image, logos_, 32, 217, 138, 174, 11, 14);
 
-            button(image, 89, 191, 66, state_.cancel_label);
+            button(image, 89, 191, 66, state_.cancel_label, pressed_button_ == 0);
             // The original shows ABBRECHEN only when the selected offer cannot be accepted
             // (for example while a running sponsor contract is not terminable).
             if (offer_acceptable())
-                button(image, 164, 191, 66, state_.accept_label);
+                button(image, 164, 191, 66, state_.accept_label, pressed_button_ == 1);
         }
     }
     if (hovered_target_ >= 0) {
@@ -779,21 +780,30 @@ Image AdvertisingScreen::render() const {
     return image;
 }
 
-void AdvertisingScreen::button(Image& image, int x, int y, int width, std::string_view label) const {
-    // FormatError3's normal KB/0 bevel. Source promotes any wide button shorter
-    // than ten pixels to a ten-pixel button before tiling its centre.
-    constexpr int height = 10;
-    copy(image, widgets_, 24, 74, x, y, 31, height);
-    int used = 31;
-    while (width - used > 20) {
-        const int count = std::min(8, width - used - 20);
-        copy(image, widgets_, 24, 84, x + used, y, count, height);
-        used += count;
-    }
-    copy(image, widgets_, 45 - (width - used), 94, x + used, y, width - used, height);
+void AdvertisingScreen::button(Image& image, int x, int y, int width, std::string_view label, bool pressed) const {
+    // FormatError3's KB/0 bevel (button_frame.hpp: raised with shadow, or pressed while the mouse button is held).
+    // Source promotes any wide button shorter than ten pixels to a ten-pixel button before tiling its centre.
+    const int shift = draw_wide_button_frame(image, widgets_, x, y, width, pressed);
     if (!label.empty())
-        sprite_font_.draw(image, x + width / 2 - sprite_font_.text_width(label) / 2, y + 7,
-                          label, exe_.u8(::bmh::layout::Advertising_Button_RuntimeField));
+        sprite_font_.draw(image, x + shift + width / 2 - sprite_font_.text_width(label) / 2, y + shift + 7,
+                          label, exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(pressed)));
+}
+
+// Mouse DOWN on ABBRECHEN or the accept button of the open offer: drawn pressed until the release.
+bool AdvertisingScreen::press(int x, int y) {
+    int id = -1;
+    // OK of an acknowledging notification (id 2); a warning is timed and has no button
+    if (notification_open() && !close_requested_ && !pending_ && !state_.notification_warning &&
+        source_dialog_button_at(TaxDialogKind::acknowledgement, false, x, y) == GameEndTaxDialog::Button::acknowledge)
+        id = 2;
+    else if (offer_open_ && !close_requested_ && !pending_ && !notification_open() && !spending_calculator_open_ &&
+        y >= 191 && y <= 200) {
+        if (x >= 89 && x <= 154) id = 0;
+        else if (x >= 164 && x <= 229 && offer_acceptable()) id = 1;
+    }
+    const bool changed = id != pressed_button_;
+    pressed_button_ = id;
+    return changed;
 }
 
 void AdvertisingScreen::pattern_rect(Image& out, int x, int y, int width, int height) const {
@@ -859,7 +869,8 @@ void AdvertisingScreen::draw_notification(Image& out) const {
     notice.body=utf8_to_original(state_.notification_text);
     notice.source_manager_flags=state_.notification_warning?0x40:0x80;
     draw_source_dialog(out,{widgets_,faces_,badge_atlas_?&*badge_atlas_:nullptr,
-        font_,large_font_,exe_,sprite_font_,texts_},notice,state_.font_gradient);
+        font_,large_font_,exe_,sprite_font_,texts_},notice,state_.font_gradient,
+        pressed_button_ == 2 ? std::optional<GameEndTaxDialog::Button>(GameEndTaxDialog::Button::acknowledge) : std::nullopt);
 }
 
 bool AdvertisingScreen::dismiss_notification() {
@@ -1052,6 +1063,7 @@ bool AdvertisingScreen::move(int x, int y) {
 }
 
 bool AdvertisingScreen::click(int x, int y) {
+    pressed_button_ = -1;   // the release ends the pressed look
     pointer_position_ = std::array<int, 2>{x, y};
     if (close_requested_ || pending_ || x < 0 || y < 0 || x >= 320 || y >= 240) return false;
     if (notification_open()) return dismiss_notification();

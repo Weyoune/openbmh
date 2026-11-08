@@ -47,6 +47,8 @@ public:
     PlayerCardScreen(const std::filesystem::path& data, PlayerCardState state, std::optional<Image> parent_frame = std::nullopt);
     Image render() const;
     bool click(int x, int y, bool right = false);
+    // Mouse DOWN on a card button: drawn pressed until the release (click()).
+    bool press(int x, int y);
     bool key(std::string_view key);
     bool close_requested() const { return close_; }
     bool in_statistics() const { return statistics_open_; }
@@ -61,6 +63,7 @@ private:
     std::array<Image, 2> loan_badges_;
     bool close_ = false;
     bool statistics_open_ = false;
+    int pressed_button_ = -1;   // 0 Schließen, 1 Statistik, 2 Zurück (statistics page) while the mouse button is held
     std::optional<Image> statistics_frame_; // previous UI frame for original button redraw edges
     std::optional<Image> restored_card_frame_; // card loop does not reconstruct its outer frame
     uint8_t statistics_flags_ = 0;

@@ -122,6 +122,10 @@ class SpriteFont;
 // including the existing season-end dialog, share PresentManagerDialog's drawing path.
 // SourceBadgeFallback classifies the raw club token before reading its badge selector.
 bool source_badge_fallback(int club_token);
+// The button of a manager notice (kind acknowledgement: OK, kind question: Ja/Nein) under the pointer, for the pressed look
+// that every screen showing such a dialog draws while the mouse button is held (draw_source_dialog's `pressed`).
+// A timed notice has no button.
+GameEndTaxDialog::Button source_dialog_button_at(TaxDialogKind kind, bool timed_notice, int x, int y);
 struct SourceDialogAssets {
     const Image& widgets;
     const Image& faces;

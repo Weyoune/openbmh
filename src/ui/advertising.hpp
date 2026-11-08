@@ -113,6 +113,8 @@ public:
     Image render() const;
     bool move(int x, int y);
     bool click(int x, int y);
+    // Mouse DOWN on a button of the open offer: drawn pressed until the release (click()).
+    bool press(int x, int y);
     bool key(std::string_view key);
     bool open_offers(int display_slot);
     bool text(std::string_view input);
@@ -175,7 +177,8 @@ private:
     void draw_notification(Image&) const;
     void pattern_rect(Image&, int x, int y, int width, int height) const;
     void source_frame(Image&, int x, int y, int width, int height, bool shadow = true) const;
-    void button(Image&, int x, int y, int width, std::string_view label) const;
+    void button(Image&, int x, int y, int width, std::string_view label, bool pressed = false) const;
+    int pressed_button_ = -1;   // offer button held down by the mouse (0 cancel, 1 accept)
 };
 
 } // namespace bmh::ui

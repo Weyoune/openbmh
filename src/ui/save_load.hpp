@@ -47,6 +47,8 @@ public:
     bool info_press(int x, int y);
     bool info_open() const { return bool(info_); }
     bool click(int x, int y, bool right = false, bool double_click = false);
+    // Mouse DOWN on Ja/Nein of the overwrite question or the page button: drawn pressed until the release (click()).
+    bool press(int x, int y);
     bool key(std::string_view key);
     bool text(std::string_view value);
     const std::optional<SaveLoadRequest>& pending() const { return pending_; }
@@ -85,7 +87,9 @@ private:
     void request_action();
     bool select_row(int y);
     void frame(Image&, int x, int y, int width, int height) const;
-    void button(Image&, int x, int y, int width, std::string_view label = {}) const;
+    void button(Image&, int x, int y, int width, std::string_view label = {}, bool pressed = false) const;
+    int pressed_question_ = 0;   // GameEndTaxDialog::Button (0 none) of the overwrite question held down by the mouse
+    int pressed_more_ = 0;       // page button of a long file list held down by the mouse
     void text(Image&, int x, int baseline, std::string_view value, uint8_t color, int max_width,
               const Font&, bool gradient = false) const;
 };

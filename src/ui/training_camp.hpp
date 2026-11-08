@@ -66,6 +66,8 @@ public:
     TrainingCampScreen(const std::filesystem::path& data, TrainingCampState state);
     Image render() const;
     TrainingCampRequest click(int x, int y, bool right = false);
+    // Mouse DOWN on the booking button: drawn pressed until the release (click()).
+    bool press(int x, int y);
     TrainingCampRequest key(std::string_view key);
     bool move(int x, int y);
     const TrainingCampState& state() const { return state_; }
@@ -87,6 +89,8 @@ private:
     int selected_resort_ = -1;
     int preview_resort_ = -1; // Text(-1) preserves the last photo while clearing details.
     int chosen_resort_ = -1;
+    bool booking_pressed_ = false;   // booking button held down by the mouse
+    bool notice_pressed_ = false;    // OK of the notice held down by the mouse
     bool close_requested_ = false;
     std::optional<TrainingCampRequest> pending_;
     std::string rejection_;

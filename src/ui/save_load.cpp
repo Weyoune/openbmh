@@ -5,6 +5,7 @@
 #include "formats/native_save_version.hpp"
 #include "formats/executable_layout.hpp"
 #include "ui/save_load.hpp"
+#include "ui/button_frame.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -141,7 +142,7 @@ Image SaveLoadScreen::render() const {
     text(out, 106, 216, displayed_filename, filename_selected_ ? 0x27 : 0x6c, 140, footer_font_, true);
 
     if (entries_.size() > 15) {
-        button(out, 206, 183, 56, original_to_utf8(exe_.cstring(::bmh::layout::SaveLoad_Render_ExecutableField)));
+        button(out, 206, 183, 56, original_to_utf8(exe_.cstring(::bmh::layout::SaveLoad_Render_ExecutableField)), pressed_more_ != 0);
     }
 
     for (int row = 0; row < 15; ++row) {
@@ -192,7 +193,9 @@ Image SaveLoadScreen::render() const {
         // OpenBMH deviates from the original: the host file picker uses the
         // shared dialog's system identity without a live manager portrait projection.
         draw_source_dialog(out, {widgets_, widgets_, nullptr, footer_font_, font_, exe_, sprite_font_, texts_},
-                           question, gradient_text_);
+                           question, gradient_text_,
+                           pressed_question_ == 0 ? std::nullopt : std::optional<GameEndTaxDialog::Button>(
+                               static_cast<GameEndTaxDialog::Button>(pressed_question_)));
     }
     return out;
 }
@@ -261,20 +264,12 @@ void SaveLoadScreen::frame(Image& out, int x, int y, int width, int height) cons
     }
 }
 
-void SaveLoadScreen::button(Image& out, int x, int y, int width, std::string_view label) const {
-    // FormatError3 normal button bevel from KB/0.VGA, with Source horizontal tiling.
-    const int sy = 74;
-    copy(out, widgets_, 24, sy, x, y, 31, 10);
-    int used = 31;
-    while (width - used > 20) {
-        const int count = std::min(8, width - used - 20);
-        copy(out, widgets_, 24, sy + 10, x + used, y, count, 10);
-        used += count;
-    }
-    copy(out, widgets_, 45 - (width - used), sy + 20, x + used, y, width - used, 10);
+void SaveLoadScreen::button(Image& out, int x, int y, int width, std::string_view label, bool pressed) const {
+    // FormatError3 button bevel from KB/0.VGA with Source horizontal tiling (button_frame.hpp: raised or pressed).
+    const int shift = draw_wide_button_frame(out, widgets_, x, y, width, pressed);
     if (!label.empty())
-        sprite_font_.draw(out, x + width / 2 - sprite_font_.text_width(label) / 2, y + 7, label,
-                          exe_.u8(::bmh::layout::Advertising_Button_RuntimeField));
+        sprite_font_.draw(out, x + shift + width / 2 - sprite_font_.text_width(label) / 2, y + shift + 7, label,
+                          exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(pressed)));
 }
 
 void SaveLoadScreen::text(Image& out, int x, int baseline, std::string_view value,
@@ -344,7 +339,24 @@ void SaveLoadScreen::request_action() {
                                file_kind_, origin_item_id_};
 }
 
+// Mouse DOWN on Ja/Nein of the overwrite question, or on the page button of a long file list: drawn pressed until
+// the release. Returns true when the picture changed.
+bool SaveLoadScreen::press(int x, int y) {
+    int question = 0, more = 0;
+    if (!info_ && !pending_) {
+        if (overwrite_confirmation_open_)
+            question = int(source_dialog_button_at(TaxDialogKind::question, false, x, y));
+        else if (entries_.size() > 15 && x >= 206 && x <= 262 && y >= 183 && y <= 193) more = 1;
+    }
+    const bool changed = question != pressed_question_ || more != pressed_more_;
+    pressed_question_ = question;
+    pressed_more_ = more;
+    return changed;
+}
+
 bool SaveLoadScreen::click(int x, int y, bool right, bool double_click) {
+    pressed_question_ = 0;   // the release ends the pressed look
+    pressed_more_ = 0;
     if (info_) { info_.reset(); return true; }
     if (pending_) return false;
     if (overwrite_confirmation_open_) {

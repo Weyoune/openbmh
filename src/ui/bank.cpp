@@ -621,8 +621,10 @@ void BankScreen::draw_manager_dialog(Image& out, std::string_view message, bool 
     notice.body=utf8_to_original(message);
     notice.source_manager_flags=with_ack_button?0x80:0x40;
     if(credit_fee_confirmation_open_&&!with_ack_button)notice.kind=TaxDialogKind::question;
+    const auto held=static_cast<GameEndTaxDialog::Button>(pressed_dialog_);
     draw_source_dialog(out,{widgets_,faces_,badge_atlas_?&*badge_atlas_:nullptr,
-        font_,large_font_,exe_,sprite_font_,texts_},notice,state_.gradient_text);
+        font_,large_font_,exe_,sprite_font_,texts_},notice,state_.gradient_text,
+        held==GameEndTaxDialog::Button::none?std::nullopt:std::optional<GameEndTaxDialog::Button>(held));
 }
 void BankScreen::draw_investment_warning(Image& out) const {
     draw_manager_dialog(out, state_.investment_limit_text, false);
@@ -993,6 +995,14 @@ BankRequest BankScreen::submit() {
 // Mouse DOWN on one of the two bottom buttons (Kaufen/Verkaufen, Einzahlen/Abheben, OK/Abbruch of a credit): the button
 // is drawn pressed until the release. Returns true when the picture changed.
 bool BankScreen::press(int x, int y) {
+    // the buttons of the manager notices and of the credit fee question (OK, Ja, Nein)
+    const bool notice = credit_notice_open_ || property_notice_open_;
+    const bool question = credit_fee_confirmation_open_ && !notice;
+    int dialog = int(GameEndTaxDialog::Button::none);
+    if (notice || question)
+        dialog = int(source_dialog_button_at(question ? TaxDialogKind::question : TaxDialogKind::acknowledgement, false, x, y));
+    const bool dialog_changed = dialog != pressed_dialog_;
+    pressed_dialog_ = dialog;
     int id = -1;
     const bool has_buttons = (exchange_open_ || property_open_ || deposit_open_ || credit_open_) && !calculator_open_ &&
         !credit_notice_open_ && !credit_fee_confirmation_open_ && !property_notice_open_ && !investment_warning_open_ && !pending_;
@@ -1002,10 +1012,11 @@ bool BankScreen::press(int x, int y) {
     }
     const bool changed = id != pressed_button_;
     pressed_button_ = id;
-    return changed;
+    return changed || dialog_changed;
 }
 BankRequest BankScreen::click(int x, int y, bool right) {
     pressed_button_ = -1;   // the release ends the pressed look
+    pressed_dialog_ = int(GameEndTaxDialog::Button::none);
     if (credit_notice_open_) {
         if (right || (x >= 95 && x <= 220 && y >= 166 && y <= 176)) {
             credit_notice_open_ = false;
