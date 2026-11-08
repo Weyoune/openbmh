@@ -1,6 +1,6 @@
 # OpenBMH
 
-**Classic-Version: 1.0.10.** Die originalgetreue Linie bleibt in diesem Repository.
+**Classic-Version: 1.0.11.** Die originalgetreue Linie bleibt in diesem Repository.
 Erweiterte Ligen, die gemeinsame deutsche/englische Karriere und der Dateneditor
 werden separat als **[OpenBMH-Extended 1.0 Beta](https://github.com/Weyoune/OpenBMH-extended)** entwickelt.
 
@@ -31,7 +31,7 @@ In Windows PowerShell, use `.\OpenBMH.exe` and `.\openbmh_cli.exe` instead.
 
 To report a problem, start the game with `-debug`. It then writes `openbmh-debug.log` (timestamped events, errors and refused actions) and `openbmh-stderr.log` into the `debug` sub folder of the save directory, and saves the game there after every match day (`DBG00001.FBM`, `DBG00002.FBM`, ...). Attach the log and the last save to the report.
 
-Use a writable save directory and keep backups of existing games. German editions are the primary compatibility target. **Football Limited / English data support is experimental**; original V2.20 save import and some edition-specific behaviour remain limited. See the [release notes](docs/release/1.0.10/RELEASE_NOTES.md).
+Use a writable save directory and keep backups of existing games. German editions are the primary compatibility target. **Football Limited / English data support is experimental**; original V2.20 save import and some edition-specific behaviour remain limited. See the [release notes](docs/release/1.0.11/RELEASE_NOTES.md).
 
 ## Features and direction
 
