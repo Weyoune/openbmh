@@ -4,6 +4,7 @@
 // input into ContractRequest values. Applying an offer or insurance is left to the session.
 #include "formats/executable_layout.hpp"
 #include "ui/contracts.hpp"
+#include "ui/button_frame.hpp"
 #include "ui/game_end.hpp"
 
 #include <algorithm>
@@ -469,14 +470,12 @@ Image ContractsScreen::render() const {
         frame(out, exe_, widgets_, x, y, w, h, shadow);
     };
     // Draws a button of width w: 31 pixel left part, repeated strips and the right end, with the label centred.
-    auto button = [&](int x, int y, int w, std::string_view label) {
-        fill(out, x + 2, y + 10, w, 2, 0x40); fill(out, x + w, y + 2, 2, 10, 0x40);
-        copy_region(out, widgets_, 24, 74, x, y, 31, 10);
-        int at = 31, remaining = w - 31;
-        while (remaining > 20) { const int n = std::min(8, remaining - 20); copy_region(out, widgets_, 24, 84, x + at, y, n, 10); at += n; remaining -= n; }
-        if (remaining > 0) copy_region(out, widgets_, 45 - remaining, 94, x + at, y, remaining, 10);
-        const int font = exe_.u8(::bmh::layout::Advertising_Button_RuntimeField);
-        sprite_font_.draw(out, x + (w - sprite_font_.text_width(label)) / 2, y + 7, label, font);
+    // `id` is the button's number on the page; the one held down by the mouse is drawn pressed (button_frame.hpp).
+    auto button = [&](int id, int x, int y, int w, std::string_view label) {
+        const bool down = pressed_button_ == id;
+        const int shift = draw_wide_button_frame(out, widgets_, x, y, w, down);
+        const int font = exe_.u8(::bmh::layout::Advertising_Button_RuntimeField + int(down));
+        sprite_font_.draw(out, x + shift + (w - sprite_font_.text_width(label)) / 2, y + shift + 7, label, font);
     };
     // Looks up a text from the original text table by its pointer-table address.
     auto db = [&](uint32_t address) { return original_to_utf8(texts_[(address-::bmh::layout::TextPointerTable)/4]); };
@@ -544,8 +543,8 @@ Image ContractsScreen::render() const {
                 }
             }
         }
-        button(5,top+76,51,db(::bmh::layout::Contracts_Out_ExecutableField17));button(90,top+76,80,db(::bmh::layout::Contracts_Out_ExecutableField18));
-        if(!team&&state_.mode_three)button(261,top+76,51,db(page_==Page::player_offer?::bmh::layout::Contracts_Out_ExecutableField2: ::bmh::layout::Contracts_Out_ExecutableField));
+        button(0,5,top+76,51,db(::bmh::layout::Contracts_Out_ExecutableField17));button(1,90,top+76,80,db(::bmh::layout::Contracts_Out_ExecutableField18));
+        if(!team&&state_.mode_three)button(2,261,top+76,51,db(page_==Page::player_offer?::bmh::layout::Contracts_Out_ExecutableField2: ::bmh::layout::Contracts_Out_ExecutableField));
     } else if (page_ == Page::calculator) {
         // Calculator: background image at (10,10), drop shadow, label, 15 keys (digits and the letters D, R, C, J, N),
         // 8 preset buttons and the current input right-aligned. Key and preset positions come from tables in the executable.
@@ -586,7 +585,27 @@ Image ContractsScreen::render() const {
 // (a request that the session acknowledges), the tab row switches tabs, left click on a name shows player info.
 // Calculator: keys, presets and accept/cancel. Offer and premium pages: term columns, premium lines and the buttons
 // at top+76 (back, send, switch page).
+// Mouse DOWN on one of the buttons below the offer or premium panel (back, send, switch page): drawn pressed until the
+// release. Returns true when the picture changed.
+bool ContractsScreen::press(int x, int y) {
+    int id = -1;
+    if (page_ == Page::player_offer || page_ == Page::team_premiums) {
+        const bool team = page_ == Page::team_premiums && team_premium_mode_;
+        const auto selected = std::find_if(state_.players.begin(), state_.players.end(), [&](const auto& p) { return p.row == state_.selected_row; });
+        const int top = team || selected == state_.players.end() || selected->row >= 13 ? 22 : 130;
+        if (y >= top + 76 && y <= top + 85) {
+            if (x < 60) id = 0;
+            else if (x >= 90 && x <= 170) id = 1;
+            else if (x >= 261 && x <= 312 && !team && state_.mode_three) id = 2;
+        }
+    }
+    const bool changed = id != pressed_button_;
+    pressed_button_ = id;
+    return changed;
+}
+
 bool ContractsScreen::click(int x, int y, bool right) {
+    pressed_button_ = -1;   // the release ends the pressed look
     if (page_ == Page::result) {
         if (x >= 95 && x <= 220 && y >= 166 && y <= 176) { page_ = result_return_; result_backdrop_.reset(); state_.feedback.clear(); return true; }
         return false;

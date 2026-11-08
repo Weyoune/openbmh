@@ -461,11 +461,16 @@ int main(int argc, char** argv) {
                             random = random_before;
                             return -2;
                         }
-                        // Clicks act on button release.
-                        if (event.type == SDL_MOUSEBUTTONUP &&
+                        // Clicks act on button release; a button held down is drawn pressed meanwhile.
+                        if (event.type == SDL_MOUSEBUTTONDOWN && event.button.button == SDL_BUTTON_LEFT) {
+                            if (screen.press(event.button.x, event.button.y)) {
+                                present_season(screen.render(), "OpenBMH - contracts");
+                            }
+                        } else if (event.type == SDL_MOUSEBUTTONUP &&
                             (event.button.button == SDL_BUTTON_LEFT || event.button.button == SDL_BUTTON_RIGHT)) {
                             changed |= screen.click(event.button.x, event.button.y,
                                                     event.button.button == SDL_BUTTON_RIGHT);
+                            changed = true;   // also ends a pressed look that did not lead to a change
                         } else if (event.type == SDL_MOUSEMOTION) {
                             changed |= screen.move(event.motion.x, event.motion.y);
                         } else if (event.type == SDL_TEXTINPUT) {

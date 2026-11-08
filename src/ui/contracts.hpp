@@ -96,6 +96,8 @@ public:
     ContractsScreen(const std::filesystem::path&, ContractsState);
     Image render() const;
     bool click(int x, int y, bool right = false);
+    // Mouse DOWN: the button under the pointer is drawn pressed until the release (click()).
+    bool press(int x, int y);
     bool process_timer_expired(int pointer_x, int pointer_y);
     bool key(std::string_view);
     bool move(int x, int y);
@@ -114,6 +116,7 @@ public:
 private:
     enum class Page : uint8_t { roster, player_offer, team_premiums, calculator, insurance, result };
     ContractsState state_;
+    int pressed_button_ = -1;   // button below the panel held down by the mouse
     LeImage exe_;
     Font font_;
     Font large_font_;

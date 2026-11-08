@@ -52,6 +52,8 @@ public:
     ManagerView view() const { return view_; }
     std::string screen_name() const;
     bool click(int x, int y, bool right = false);
+    // Mouse DOWN on JA/NEIN of the confirmation: drawn pressed until the release (click()).
+    bool press(int x, int y);
     bool move(int x, int y);
     bool text(std::string_view utf8);
     bool key(std::string_view name);
@@ -85,6 +87,7 @@ private:
     std::vector<ManagerChoice> confirmed_;
     SelectionContext context_;
     ManagerView view_ = ManagerView::selection;
+    int pressed_button_ = -1;   // JA (0) or NEIN (1) held down by the mouse
     std::filesystem::path data_;
     LeImage exe_;
     Database db_;

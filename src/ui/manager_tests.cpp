@@ -49,7 +49,16 @@ int main(int argc, char** argv) {
         s.click(5, 225, true); check(!s.click(20, 20), "confirmation requires a button");
         s.click(210, 169, true);
         check(s.choice() == chosen && s.view() == ManagerView::selection, "No preserves choices with either mouse button");
-        s.click(5, 225, true); s.click(90, 169);
+        s.click(5, 225, true);
+        {   // JA and NEIN look pressed while the mouse button is held, normal again after the release
+            const auto raised = s.render();
+            check(!s.press(10, 10), "no pressed look outside the buttons");
+            check(s.press(210, 169) && s.render().pixels != raised.pixels, "NEIN shows the pressed look");
+            check(s.press(90, 169) && s.render().pixels != raised.pixels, "JA shows the pressed look");
+            s.click(10, 10);
+            check(s.render().pixels == raised.pixels, "the release ends the pressed look");
+        }
+        s.click(90, 169);
         check(s.view() == ManagerView::accepted && !s.click(90, 169), "accepted choice cannot repeat");
 
         ManagerChoice first{0, "ONE", 0, 0, 1, 0};

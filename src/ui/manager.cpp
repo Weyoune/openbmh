@@ -201,7 +201,19 @@ bool ManagerScreen::move(int x, int y) {
     if (next == hover_) return false;
     hover_ = next; return true;
 }
+// Mouse DOWN on JA or NEIN of the confirmation: the button is drawn pressed until the release.
+bool ManagerScreen::press(int x, int y) {
+    int id = -1;
+    if (view_ == ManagerView::confirmation && y >= 166 && y <= 176) {
+        if (x >= 62 && x <= 137) id = 0;
+        else if (x >= 175 && x <= 250) id = 1;
+    }
+    const bool changed = id != pressed_button_;
+    pressed_button_ = id;
+    return changed;
+}
 bool ManagerScreen::click(int x, int y, bool right) {
+    pressed_button_ = -1;   // the release ends the pressed look
     if (x < 0 || x >= 320 || y < 0 || y >= 240 || view_ == ManagerView::accepted || view_ == ManagerView::name_edit) return false;
     if (view_ == ManagerView::confirmation) {
         if (y >= 166 && y <= 176) {
@@ -399,8 +411,8 @@ Image ManagerScreen::render() const {
         small_text(out, 73 + 170 / 2 - small_.text_width(prompt) / 2, 140, prompt);
         // The original shows JA pushed in for a moment after it is clicked.
         button(out, 62, 166, 75, texts_[(::bmh::layout::GameEnd_Copy_TextPointer - ::bmh::layout::TextPointerTable) / 4],
-               view_ == ManagerView::accepted);
-        button(out, 175, 166, 75, texts_[(::bmh::layout::GameEnd_Copy_TextPointer2 - ::bmh::layout::TextPointerTable) / 4], false);
+               view_ == ManagerView::accepted || pressed_button_ == 0);
+        button(out, 175, 166, 75, texts_[(::bmh::layout::GameEnd_Copy_TextPointer2 - ::bmh::layout::TextPointerTable) / 4], pressed_button_ == 1);
     }
     return out;
 }

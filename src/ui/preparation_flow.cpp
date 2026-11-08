@@ -1092,6 +1092,7 @@ bool StartupFlow::press_hold(int x,int y) {
     if (lineup_) return lineup_->press(x, y);
     if (bank_) return bank_->press(x, y);
     if (outgoing_transfer_) return outgoing_transfer_->press(x, y);
+    if (manager_ && !desktop_) return manager_->press(x, y);
     return false;
 }
 
