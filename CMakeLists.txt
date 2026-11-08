@@ -300,8 +300,8 @@ FetchContent_Declare(nfd
     GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(lzma_sdk nfd)
 
-add_library(bmh_miniz STATIC ${miniz_SOURCE_DIR}/miniz.c)
 set(miniz_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniz")  # vendored: no download that can fail
+add_library(bmh_miniz STATIC ${miniz_SOURCE_DIR}/miniz.c)
 target_include_directories(bmh_miniz PUBLIC ${miniz_SOURCE_DIR})
 set(BMH_LZMA_C ${lzma_sdk_SOURCE_DIR}/C)
 add_library(bmh_7z STATIC
