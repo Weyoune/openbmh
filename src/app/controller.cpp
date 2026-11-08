@@ -556,7 +556,7 @@ void serve_transfer_action(ui::StartupFlow& flow, CareerSession& session,
                 request.search_cancelled, request.search_apply, revision, error);
             if (!result) return false;
             // Confirming ("Suchen") first reports that the scouting department looks (Source sub_19409 sub_57ECA with
-            // text 0xAF25C), then one box per listing that fits (sub_190B5).
+            // the scouting text), then one box per listing that fits.
             if (presenters.notice && request.search_apply)
                 presenters.notice(session.state(), HumanBuyerSaleNotice{request.manager_slot, -1, -1,
                     ::bmh::layout::Month_SearchProfileNews_TextPointer4,
