@@ -39,9 +39,15 @@ separately, see below). The other two are explained:
 
 ## Indoor tournament
 
-All eleven recorded rounds play their 40 minutes with the same random draws as the original. At the kick-off, however,
-the six strength values of the side records differ by 1 to 4 points in about half of the rounds (the port is mostly
-higher); ordinary matches show no such difference. This is tracked as issue 82. The desk after the round is identical in
+All eleven recorded rounds play their 40 minutes with the same random draws as the original. The six strength values
+of the side records at the kick-off first differed by 1 to 4 points in about half of the rounds (the port mostly
+higher). Cause (issue 82, resolved): the strengths depend on the **chance weather**, a runtime value that the
+original keeps from the last chance of the round before (rain above 2 or a temperature below 0 lowers players
+whose condition is below their technique). A savegame does not hold it, and the checker starts every turn from a
+savegame, so it had rain 0 / temperature 0. With the weather of the previous turn's last chance
+(`WEEK_PREV_WEATHER=rain,temperature`, taken from the "last chance weather" line of the previous check) the kick-off
+of **all eleven rounds is identical**, bytes 0 to 5 of every side. A running game keeps the weather in memory
+like the original, so this was a gap of the check and not of the engine. The desk after the round is identical in
 ten of eleven rounds (the eleventh is the tournament end above).
 
 ## How to read the "DIFF" lines of the checker
