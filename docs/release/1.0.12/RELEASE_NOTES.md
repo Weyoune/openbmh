@@ -45,6 +45,10 @@ already did). Now pressed while held:
   a player chosen in the squad list: yes takes him off the list, no leads on to the
   offers.
 
+- **No status text in the footer.** The transfer market replaced the club name in the
+  bottom row with status texts (rejections, hints). The original has no such line; the
+  club name now always stays there.
+
 ## Internal
 
 - The drawing of the wide push button, of the calculator window (panel and keys) and

@@ -74,7 +74,9 @@ int main(int argc,char** argv){
         const auto rejected_frame = screen.render();
         screen.key("V");
         screen.reject_action("Anderer sichtbarer Hinweis");
-        check(screen.render().pixels != rejected_frame.pixels, "host rejection is actually rendered in the footer");
+        // the original has no status line: the footer keeps showing the club name, the text stays in state_json()
+        check(screen.render().pixels == rejected_frame.pixels, "host rejection does not replace the club name in the footer");
+        check(screen.state_json().find("Anderer sichtbarer Hinweis")!=std::string::npos,"host rejection stays in the state");
 
         TransferMarketScreen selected(argv[1],s);
         auto marked_market=selected.click(210,28);selected.acknowledge_preview(s,quote(marked_market));

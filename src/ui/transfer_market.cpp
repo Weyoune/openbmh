@@ -590,8 +590,9 @@ std::string TransferMarketScreen::original_money(int32_t value) const {
     if(result.size()<9)result.insert(0,9-result.size(),'%');
     return result+exe_.cstring(::bmh::layout::CurrencySuffixText);
 }
-// Renders the complete 320x240 screen: frame (or plain bars), title, club name, the overview and a
-// feedback line that replaces the club name line when set (shortened to fit 310 pixels).
+// Renders the complete 320x240 screen: frame (or plain bars), title, club name and the overview. The original has
+// no status line: the bottom row always shows the club name. feedback_ stays available in state_json() for hosts
+// and tests but is never drawn.
 Image TransferMarketScreen::render() const {
     Image out=state_.decorated_background?frame_:Image(320,240);
     if(!state_.decorated_background){rect(out,0,4,320,13,0x44);rect(out,1,5,318,11,0x39);rect(out,0,228,320,10,0x44);rect(out,1,229,318,8,0x39);}
@@ -600,16 +601,6 @@ Image TransferMarketScreen::render() const {
     sprite_font_.draw(out,5,235,original_to_utf8(state_.club_name));
     draw_market_overview(out);
     if (search_open_) draw_search(out);
-    if (!feedback_.empty()) {
-        rect(out, 1, 227, 318, 12, 0x39);
-        auto line = feedback_;
-        while (!line.empty() && sprite_font_.text_width(line) > 310) {
-            size_t at = line.size() - 1;
-            while (at > 0 && (uint8_t(line[at]) & 0xc0) == 0x80) --at;
-            line.resize(at);
-        }
-        sprite_font_.draw(out, 5, 235, line);
-    }
     return out;
 }
 
