@@ -392,7 +392,10 @@ Image LeagueTableScreen::render() const {
             text(image, 12, y, "(" + formatted_field(row.previous_rank, 2) +
                 original_text(exe_, ::bmh::layout::CupDraw_DrawGroupOverview_TextPointer3), previous_color, 24);
         }
-        text(image, 30, y, row.name, row.name_color, 78);
+        // The original does not clip the name: 19 character names (BORUSSIA M'GLADBACH, TSG 1899 HOFFENHEIM) are
+        // shown in full and the games column, drawn afterwards at x=0x72, simply covers what reaches into it
+        // (checked against the real 3.7 table). 120 only guards against absurdly long names.
+        text(image, 30, y, row.name, row.name_color, 120);
         const std::string matches = formatted_field(row.games, 2) + original_text(exe_, ::bmh::layout::CupDraw_DrawGroupOverview_TextPointer4) +
             formatted_field(row.wins, 2) + original_text(exe_, ::bmh::layout::CupDraw_DrawGroupOverview_TextPointer5) +
             formatted_field(row.draws, 2) + original_text(exe_, ::bmh::layout::CupDraw_DrawGroupOverview_TextPointer5) +

@@ -49,6 +49,10 @@ already did). Now pressed while held:
   bottom row with status texts (rejections, hints). The original has no such line; the
   club name now always stays there.
 
+- **League table: club names in full.** Names were cut after about 17 characters
+  ("EINTRACHT FRANKFU"); the original shows them completely ("EINTRACHT FRANKFURT",
+  "TSG 1899 HOFFENHEIM") and lets the games column cover what reaches into it.
+
 ## Internal
 
 - The drawing of the wide push button, of the calculator window (panel and keys) and
