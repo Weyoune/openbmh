@@ -151,9 +151,11 @@ Image SetupScreen::render() const {
         if (joining_ && (!joining_arrow_permission_[b] ||
                          (difficulty_arrows_locked_ && (b == 1 || b == 5))))
             continue;
-        // Held down by the mouse: the darker picture at the bottom of the atlas (not a shifted copy of the raised one).
+        // Held down by the mouse: the darker 36x36 picture in the bottom rows of the atlas (minus at x 0, plus at
+        // x 36), drawn 2 pixels right and down of the raised button over the plain background (measured pixel for
+        // pixel against a recording of the original).
         if (pressed_button_ == b)
-            copy_rect(out, atlas_, b > 3 ? 0x26 : 0, atlas_.height - 0x26, button_x_[b], button_y_[b], 0x26, 0x26);
+            copy_rect(out, atlas_, b > 3 ? 36 : 0, atlas_.height - 36, button_x_[b] + 2, button_y_[b] + 2, 36, 36);
         else
             copy_rect(out, atlas_, 0x36 + (b > 3 ? 0x26 : 0), button_source_y_,
                       button_x_[b], button_y_[b], 0x26, 0x26);

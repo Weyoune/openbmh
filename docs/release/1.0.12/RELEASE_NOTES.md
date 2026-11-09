@@ -29,8 +29,9 @@ already did). Now pressed while held:
   decision:** OK of the confirmation.
 - **Start menu (game setup):** the minus and plus buttons show the original's
   darker pressed picture while the mouse button is held (also in the joining
-  manager's setup). It is a different picture, not a shifted copy of the button,
-  and was taken from a recording of the real game.
+  manager's setup). It is a different picture (36x36 pixels, drawn two pixels right
+  and down of the raised button on the plain background), not a shifted copy of the
+  button, and was compared pixel for pixel with a recording of the real game.
 - The notices that wait for any click (Sportschau, cup draw, game end screens) have
   no button and are unchanged. Toggles that stay on (training, filters) keep their
   lasting state.
