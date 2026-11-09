@@ -12,24 +12,37 @@ program); the checker is `tests/week_check.cpp`.
 
 ## Scope of the November 2026 series
 
-- 51 recorded "Weiter" turns of one career, from the first Saturday in August 2026 (game day 38) through the whole
-  first season, the season end on 1 July 2027 (day 365) and the first third of the second season (about day 533).
-  The human manager's club played every matchday (league and cup). Incoming transfer offers were declined.
-- **Match phase:** 5,912 recorded match minutes, every one inside the interval of random draws that the port passes
+- 73 recorded "Weiter" turns of one career, from the first Saturday in August 2026 (game day 38) through the whole
+  first season, the season end on 1 July 2027 (day 365) and most of the second season up to April 2028 (day 645).
+  The human manager's club played every matchday (league, cup and the indoor tournament). Incoming transfer offers
+  were declined.
+- **Match phase:** 7,642 recorded match minutes, every one inside the interval of random draws that the port passes
   through, none outside. Final whistle, stoppage time and the first extra-time pass match in every turn, in the second
   season as well.
-- **Weekly processing:** 53 runs of the routine ported from the original. At the desk after each turn the random states
-  and **all tables are identical** to the recording.
-- **Month change:** 13 runs (1 September 2026 to 1 December 2027, among them the change of the year and the two in the
-  summer break). Identical at the desk afterwards.
+- **Weekly processing:** 70 runs of the routine ported from the original (days 43 to 645). At the desk after each turn
+  the random states and **all tables are identical** to the recording.
+- **Month change:** 17 runs (1 September 2026 to 1 April 2028, among them the change of the year and the summer break).
+  Identical at the desk afterwards.
 - **Season end:** one run (day 365 with the last weekly processing and the month change, from the last matchday of the
   season on 8 May 2027 to the desk of 1 July 2027). Identical, all tables.
+- **Indoor tournament:** eleven rounds (see below).
 - Training, the stock market, the matchday preparation and the kick-off of the next matchday are part of the same turns
   and match as well (the match groups built by the port equal the first minute snapshot of the next matchday).
 
-Of the 51 evaluated turns 50 are identical at the desk. The remaining one differs in a single lineup flag of one
-player slot that the original clears when the manager's lineup page is shown (a routine of the user interface, not of
-the engine); the recording passed through that page.
+Of the 73 evaluated turns 71 are identical at the desk (random states and all tables; the transfer list is shown
+separately, see below). The other two are explained:
+
+- One differs in a single lineup flag of one player slot that the original clears when the manager's lineup page is
+  shown (a routine of the user interface, not of the engine); the recording passed through that page.
+- The last round of the indoor tournament ends with the tournament processing of the original (prizes, next
+  fixtures); the checker replays only the playing part of an indoor round, so that part is not compared.
+
+## Indoor tournament
+
+All eleven recorded rounds play their 40 minutes with the same random draws as the original. At the kick-off, however,
+the six strength values of the side records differ by 1 to 4 points in about half of the rounds (the port is mostly
+higher); ordinary matches show no such difference. This is tracked as issue 82. The desk after the round is identical in
+ten of eleven rounds (the eleventh is the tournament end above).
 
 ## How to read the "DIFF" lines of the checker
 
@@ -37,8 +50,8 @@ The recorder takes a day snapshot when the date changes, i.e. **inside** the ori
 port's state belongs to the end of the processing. The checker therefore prints such checkpoints as "late snapshot ...
 draws ahead of the port's state, not counted". They are not differences of the engine: the checkpoint after them (and the
 desk at the end of the turn) is identical in every counted turn. The transfer list is compared but not counted (the
-amounts of new bids depend on stale data in the original, documented in the source); where it differs at a desk the
-line says so.
+amounts of new bids depend on stale data in the original, documented in the source); a few desks show a handful of
+bytes there and the line says so.
 
 ## Recordings that were not used
 
@@ -59,4 +72,4 @@ matches.
   value in the original and are not reproduced (documented in the source).
 - Foul and card chances are derived from the constants of the 3.7 code and show no difference in the recorded
   minutes, but a deliberate comparison of the single routine was not made.
-- A second season end and later seasons.
+- A second season end and later seasons; the end of the indoor tournament.
