@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // GameState construction and accessors: building the state from a loaded save and the database
 // counts, manager of a team, club and player names, formation and formation positions.
-// Squad table layout constants are defined here. Draws no random numbers.
+// The squad table comes from the world layout (world_layout.hpp). Draws no random numbers.
 // Interface in state.hpp; every other file in this directory works on GameState.
 #include "formats/executable_layout.hpp"
 #include "game/state.hpp"
@@ -10,15 +10,11 @@
 #include <stdexcept>
 
 #include "game/rating.hpp"
+#include "game/world_layout.hpp"
 
 namespace bmh {
 
 namespace {
-
-// Squad table layout constants of V2.24 (TeamsWithSquads, LargeSquadClubCount, NoTeamSquadStart).
-constexpr int kBigSquadTeams = 90;
-constexpr size_t kNoTeamSquadStart = 3072;
-constexpr int kTeamsWithSquads = 168;
 
 // C-style signed division by 8 as compiled by Watcom (rounds toward zero).
 int div8(int x) { return x / 8; }
@@ -172,14 +168,18 @@ void GameState::formation_position(int team, int slot, int& x, int& y) const {
 }
 
 SquadRange squad_range(int team) {
-    if (team == kNoTeam) return {kNoTeamSquadStart, 24};
-    if (team < kBigSquadTeams) return {size_t(team) * 24, 24};
-    if (team < 138) return {size_t(team) * 16 + kBigSquadTeams * 8, 16};
+    // The squad table of the world layout (world_layout.hpp). Classic: 24 slots for the 90 domestic clubs, 16 for
+    // the 48 international ones from slot 2160, 24 for kNoTeam at 3072.
+    const WorldLayout& w = world_layout();
+    if (team == w.no_team()) return {w.pool_end, w.no_team_slots};
+    // (a negative id is no team: the table arithmetic of the original gives a range far outside the slots)
+    if (team < 0) return {size_t(team) * 24, 24};
+    if (team < w.league_teams) return {w.squad_start[size_t(team)], w.squad_size[size_t(team)]};
     return {0, 0};
 }
 
 TeamAverage team_average(const GameState& g, int team, uint16_t flags, WatcomRandom* rand) {
-    if (team >= kTeamsWithSquads && team != kNoTeam) {
+    if (team >= world_layout().first_foreign_cup() && team != world_layout().no_team()) {
         // TeamRating(team, profile 2 at layout field): a random value around the club's level
         if (!rand) throw std::invalid_argument("team_average: a team without squad needs the Watcom generator");
         RatingContext ctx;

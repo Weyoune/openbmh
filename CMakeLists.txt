@@ -271,6 +271,7 @@ add_library(bmhcore STATIC
     src/game/career.cpp
     src/game/save.cpp
     src/game/digest.cpp
+    src/game/world_layout.cpp
     src/game/turn.cpp
     src/game/turn_driver.cpp
 )
@@ -1186,6 +1187,11 @@ add_test(NAME environment_profile_tests COMMAND environment_profile_tests)
 add_executable(classic_rules_unit_tests tests/classic_rules_unit_tests.cpp)
 target_link_libraries(classic_rules_unit_tests PRIVATE bmhcore)
 add_test(NAME classic_rules_unit_tests COMMAND classic_rules_unit_tests)
+
+# The Classic world layout equals the numbers the engine used as literals (no game data needed).
+add_executable(world_layout_tests tests/world_layout_tests.cpp)
+target_link_libraries(world_layout_tests PRIVATE bmhcore)
+add_test(NAME world_layout_tests COMMAND world_layout_tests)
 
 add_executable(season_player_reset_tests tests/season_player_reset_tests.cpp)
 target_link_libraries(season_player_reset_tests PRIVATE bmhcore)
