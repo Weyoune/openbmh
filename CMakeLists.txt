@@ -267,6 +267,7 @@ add_library(bmhcore STATIC
     src/game/bank_credit.cpp
     src/game/career.cpp
     src/game/save.cpp
+    src/game/digest.cpp
     src/game/turn.cpp
     src/game/turn_driver.cpp
 )
@@ -513,6 +514,14 @@ if(MSVC)
     target_compile_options(app_controller_tests PRIVATE /utf-8)
 endif()
 bmh_add_data_test(NAME app_controller_tests COMMAND app_controller_tests "${BMH_DATA}")
+
+# Regression tool (not a test): replays an input script against the UI flow and the controller without a
+# window and writes picture/state fingerprints per step (see tests/ui_walk.cpp).
+add_executable(ui_walk tests/ui_walk.cpp ${BMH_APP_CONTROLLER_SOURCE} ${BMH_APP_SESSION_SDL_SOURCE})
+target_link_libraries(ui_walk PRIVATE bmhui openbmh_audio ${BMH_SDL_TARGET})
+if(MSVC)
+    target_compile_options(ui_walk PRIVATE /utf-8)
+endif()
 set(BMH_TEST_APP_DELAY_SETTINGS_TESTS_INPUT_1 "" CACHE PATH "External input 1 for app_delay_settings_tests; not distributed")
 bmh_add_data_test(NAME app_desktop_input_tests COMMAND app_controller_tests "${BMH_DATA}" --desktop-input-only)
 bmh_add_data_test(NAME app_advertising_input_tests COMMAND app_controller_tests "${BMH_DATA}" --advertising-input-only)

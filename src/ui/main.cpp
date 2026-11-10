@@ -36,6 +36,29 @@ static void emit(std::string fields) {
     std::cout << fields << ",\"step\":" << ++step << ",\"elapsed_ns\":" << elapsed << "}\n" << std::flush;
 }
 
+// --frames FILE: after every reported step one line with the screen name and two fingerprints
+// (FNV-1a, 64 bit): of the rendered 320x240 picture (palette indices) and of the state JSON. A
+// scripted walk through the screens (--save, --script) thereby becomes a regression net for
+// refactoring of the drawing code: the same script must write the same file before and after.
+static std::FILE* g_frames = nullptr;
+
+static uint64_t fnv1a(const uint8_t* data, size_t size) {
+    uint64_t h = 0xcbf29ce484222325ull;
+    for (size_t i = 0; i < size; ++i) h = (h ^ data[i]) * 0x100000001b3ull;
+    return h;
+}
+
+static void write_frame(const ui::StartupFlow& screen, const std::string& state) {
+    static uint64_t frame = 0;
+    if (!g_frames) return;
+    const Image image = screen.render();
+    std::fprintf(g_frames, "%llu %s %dx%d picture %016llx state %016llx\n", static_cast<unsigned long long>(++frame),
+                 screen.screen_name().c_str(), image.width, image.height,
+                 static_cast<unsigned long long>(fnv1a(image.pixels.data(), image.pixels.size())),
+                 static_cast<unsigned long long>(fnv1a(reinterpret_cast<const uint8_t*>(state.data()), state.size())));
+    std::fflush(g_frames);
+}
+
 static void report(const ui::StartupFlow& screen, ui::FlowResult result,
                    std::string_view input = {}) {
     const char* request = result.request == ui::FlowRequest::new_career ? "new_career" :
@@ -49,6 +72,7 @@ static void report(const ui::StartupFlow& screen, ui::FlowResult result,
                           result.request == ui::FlowRequest::file_action ? "file_action" :
                           result.request == ui::FlowRequest::load_game ? "load_game" : "none";
     auto state = screen.state_json();
+    write_frame(screen, state);
     state.pop_back();
     std::ostringstream out;
     out << state << ",\"changed\":" << (result.changed ? "true" : "false")
@@ -76,13 +100,13 @@ static std::string pointer_input(std::string_view type, int x, int y) {
 }
 
 int main(int argc, char** argv) {
-    fs::path data = ".", dump, script, save, save_directory;
+    fs::path data = ".", dump, script, save, save_directory, frames;
     std::optional<bool> indoor;
     try {
         for (int i = 1; i < argc; ++i) {
             std::string arg = argv[i];
             if (arg == "--help") {
-                std::puts("openbmh_ui --data BMH [--save original.FBM] [--save-directory dir] [--pitch-context outdoor|indoor] [--dump screen.bmp] [--script inputs.txt]\n"
+                std::puts("openbmh_ui --data BMH [--save original.FBM] [--save-directory dir] [--pitch-context outdoor|indoor] [--dump screen.bmp] [--script inputs.txt] [--frames fingerprints.txt]\n"
                           "Script: left X Y / right X Y / move X Y / hold X Y MS / text NAME / key ENTER|BACKSPACE|ESC|letter.\n"
                           "Script context injection: resume PATH (decimal original master IDs in observed selection order).\n"
                           "Native coordinates: 320x240. manager_confirmed waits for updated order; final new_career waits for engine.\n"
@@ -91,11 +115,12 @@ int main(int argc, char** argv) {
                           "Game changes remain pending until an explicit engine acknowledgement; RMT closes idle menus.");
                 return 0;
             }
-            if (arg != "--data" && arg != "--dump" && arg != "--script" && arg != "--save" && arg != "--save-directory" && arg != "--pitch-context") throw FormatError("unknown option: " + arg);
+            if (arg != "--data" && arg != "--dump" && arg != "--script" && arg != "--save" && arg != "--save-directory" && arg != "--pitch-context" && arg != "--frames") throw FormatError("unknown option: " + arg);
             if (++i == argc) throw FormatError("missing value for " + arg);
             if (arg == "--data") data = argv[i];
             if (arg == "--dump") dump = argv[i];
             if (arg == "--script") script = argv[i];
+            if (arg == "--frames") frames = argv[i];
             if (arg == "--save") save = argv[i];
             if (arg == "--save-directory") save_directory = argv[i];
             if (arg == "--pitch-context") {
@@ -105,6 +130,10 @@ int main(int argc, char** argv) {
             }
         }
         if (save_directory.empty()) save_directory = data;
+        if (!frames.empty()) {
+            g_frames = std::fopen(frames.string().c_str(), "wb");
+            if (!g_frames) throw FormatError("cannot write the frame fingerprint file");
+        }
         install_fixture_tables(load_le(ui::asset_path(data, "BMH.exe")));
         ui::StartupFlow screen(data, save_directory);
         if (indoor && save.empty()) throw FormatError("pitch context requires a reference save");

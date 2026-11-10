@@ -23,6 +23,7 @@
 
 #include "app/career_session.hpp"
 #include "game/desk_actions.hpp"
+#include "game/digest.hpp"
 #include "game/save.hpp"
 #include "game/lineup.hpp"
 #include "game/matchday.hpp"
@@ -194,6 +195,9 @@ int main(int argc, char** argv) {
         choice.name = "SIM";
         choice.master_club = argc > 3 ? std::atoi(argv[3]) : 0;
         choice.strength = argc > 5 ? std::atoi(argv[5]) : 2;
+        // SIM_LEAGUE=<0..4>: the league the manager starts in (default 0, the first league), so that the
+        // regression careers also cover promotion and the lower leagues.
+        if (const char* start_league = std::getenv("SIM_LEAGUE")) choice.start_league = std::atoi(start_league);
         std::string error;
         if (!session.confirm_manager(options, choice, error)) throw std::runtime_error("manager: " + error);
         ui::CareerInitializationResult init;
@@ -284,6 +288,22 @@ int main(int argc, char** argv) {
         GameState& g = const_cast<GameState&>(session.state());
         std::printf("career started: team %d, date %u, money %d\n", g.manager_teams.at(0), g.date, money(g, 0));
         check_state(g, "start", checks);
+        // SIM_DIGEST=<file>: one line per desk with the fingerprint of the whole state and both
+        // random generators (game/digest.hpp). Two builds that behave the same write the same
+        // file; this is the regression net for behaviour-preserving refactoring. Reading the
+        // state for the digest draws no random number and changes nothing.
+        std::FILE* digest_file = nullptr;
+        if (const char* digest_path = std::getenv("SIM_DIGEST")) {
+            digest_file = std::fopen(digest_path, "wb");
+            if (!digest_file) throw std::runtime_error(std::string("cannot write SIM_DIGEST file ") + digest_path);
+        }
+        const auto write_digest = [&](int turn) {
+            if (!digest_file) return;
+            std::fprintf(digest_file, "turn %d day %u digest %016llx\n", turn, g.date,
+                         static_cast<unsigned long long>(state_digest(g, session.game().seed(), session.rand().seed())));
+            std::fflush(digest_file);
+        };
+        write_digest(0);
         bool listed_for_sale = false;
         int ad_contracts = 0;  // SIM_ADVERTISING: contracts accepted
         for (; played < turns; played++) {
@@ -364,6 +384,7 @@ int main(int argc, char** argv) {
             g_human_team = g.manager_teams.at(0);
             check_results(session.last_turn_results(), when, checks, goals, matches);
             check_state(g, when, checks);
+            write_digest(played + 1);
             std::printf("%s: %s, place %d, money %d\n", when.c_str(), r.kind == TurnDeskKind::SeasonEndDesk ? "season end desk" : "desk",
                         table_position(g, g.manager_teams.at(0)), money(g, 0));
             if (r.kind == TurnDeskKind::SeasonEndDesk) {
@@ -371,6 +392,7 @@ int main(int argc, char** argv) {
                 ++seasons;
             }  // (the next kickoff runs the season change)
         }
+        if (digest_file) std::fclose(digest_file);
         if (const char* final_save = std::getenv("SIM_FINAL_SAVE")) {
             WatcomRandom envelope(1); // Diagnostic export must not change either gameplay stream.
             write_savegame(final_save, make_savegame(g, envelope));
