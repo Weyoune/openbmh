@@ -470,8 +470,18 @@ target_link_libraries(start_screen_tests PRIVATE openbmh_start_screen)
 add_test(NAME start_screen_tests COMMAND start_screen_tests)
 
 # The playable program: the shared UI library connected to the engine by src/app.
+# The game program: main() sets up data, window and sound; struct App (src/app/app.hpp) is the running
+# program, its member functions are defined by topic in the app_*.cpp files.
 add_executable(openbmh_play
     src/app/main.cpp
+    src/app/app_run.cpp
+    src/app/app_services.cpp
+    src/app/app_season.cpp
+    src/app/app_sportschau.cpp
+    src/app/app_transfer.cpp
+    src/app/app_club.cpp
+    src/app/app_notices.cpp
+    src/app/app_live.cpp
     ${BMH_APP_CONTROLLER_SOURCE}
     ${BMH_APP_SESSION_SDL_SOURCE})
 target_link_libraries(openbmh_play PRIVATE bmhui bmhlaunch_dialog openbmh_audio ${BMH_SDL_TARGET})

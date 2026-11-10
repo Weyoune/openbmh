@@ -5,8 +5,8 @@ Generated from source comment markers by `tools/public_release/collect_differenc
 See [Compatibility decisions](COMPATIBILITY.md) for the overall policy. These entries
 describe deliberate changes; they are not a list of every known compatibility limit.
 
+- [src/app/app_run.cpp](../src/app/app_run.cpp): display the repository-owned title at its native resolution until a complete left/right click, without loading balls.
 - [src/app/career_session.cpp](../src/app/career_session.cpp): supports designated set-piece record initialization and validation.
-- [src/app/main.cpp](../src/app/main.cpp): display the repository-owned title at its native resolution until a complete left/right click, without loading balls.
 - [src/app/quit_confirmation.hpp](../src/app/quit_confirmation.hpp): confirms application exit with a localized native dialog, with cancellation selected by default.
 - [src/game/career.cpp](../src/game/career.cpp): skips reserved calendar positions when assigning a joining manager to a club.
 - [src/game/career.hpp](../src/game/career.hpp): uses the supported player-generation ranges and excludes reserved calendar positions when assigning managers.
