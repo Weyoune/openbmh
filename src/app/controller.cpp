@@ -652,60 +652,78 @@ void serve_transfer_offer(ui::StartupFlow& flow, CareerSession& session,
 
 } // namespace
 
-// Main entry: handles one FlowResult. Each branch below serves one request kind: it checks that
-// the request is still the pending one and current, calls the session (through an Actions
-// facade) and then acknowledges or rejects through the flow. A non-empty return is an error
-// text for the console. The long parameter list is the optional presenter hooks.
-// Hands the flow's engine requests to the career session. Returns a message for the
-// console when something went wrong.
-std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& result, std::unique_ptr<app::CareerSession>& session,
-                  const fs::path& data, const fs::path& save_directory, uint32_t seed, uint64_t& revision,
-                  openbmh::audio::Playback& playback, std::optional<uint64_t>& audio_session, bool music_enabled,
-                  std::function<void(int, const std::vector<MatchGroup>&, const GameState&)> live_presenter,
-                  TransferOfferPresenter transfer_presenter,
-                  TransferDecisionPresenter transfer_decision_presenter, SeasonPresenter season_presenter,
-                  SeasonTaxHooks tax_presenter, SeasonHighscoreHook highscore_presenter,
-                  SeasonPromotionHook promotion_presenter, SeasonCupDrawHook cup_draw_presenter,
-                  PendingOfferHooks pending_offer_presenter, PendingOfferEntryPolicy pending_entry_policy,
-                  HumanBuyerSaleHooks market_sale_presenter, HumanBuyerMarketEntryPolicy market_entry_policy,
-                  TransferOfferTeamInfoPresenter team_info_presenter,
-                  TransferOfferPlayerInfoPresenter player_info_presenter,
-                  ConstructionNoticeHook construction_notice_presenter,
-                  SeasonTicketCompensationNoticeHook compensation_notice_presenter,
-                  SportschauPresentationHooks sportschau_presenter,
-                  AdvertisingRenewalPresenter advertising_renewal_presenter,
-                  CareerSession::PoachPlayerSelector poach_player_selector,
-                  PoachNoticePresenter poach_notice_presenter,
-                  ContractExpiryPresenter contract_expiry_presenter,
-                  NationalFriendlyQuestionPresenter national_friendly_question_presenter,
-                  LoanReturnPresenter loan_return_presenter,
-                  LoanReturnOfferPresenter loan_return_offer_presenter,
-                  LiveInterventionPresenter live_intervention_presenter,
-                  EnvironmentNoticePresenter environment_notice_presenter,
-                  LiveMatchEventPresenter live_match_event_presenter,
-                  LiveBallPresenter live_ball_presenter,
-                  LiveChancePresenter live_chance_presenter,
-                  LiveShotPresenter live_shot_presenter,
-                  LiveSetPiecePresenter live_set_piece_presenter,
-                  LiveBookingPresenter live_booking_presenter,
-                  LiveShootoutPresenter live_shootout_presenter,
-                  LiveRealityPresenter live_reality_presenter,
-                  PhaseResultPresenter phase_result_presenter, bool enable_autosave) {
-    std::string error;
-    // Autosave is configured on the existing session before any request is served.
-    if (enable_autosave && session) session->configure_autosave_directory(save_directory);
-    // While the opportunities owner is open in the session only its own screens (and the
-    // statistics menu and pages above it) may send requests; anything else is blocked.
-    if(session&&session->opportunities_active()&&result.request!=ui::FlowRequest::none&&
-       result.request!=ui::FlowRequest::opportunities_action&&
-       result.request!=ui::FlowRequest::statistics_menu_action&&
-       result.request!=ui::FlowRequest::statistics_page_action)
-        return "opportunities: another session action is blocked while the Source owner is open";
+namespace {
+
+// What a handler of FlowRequestServer answers: "not handled" (the request is not its kind, the next
+// handler is asked), or handled with the text serve_flow_request returns (empty = no message).
+// A handler body is the code that stood in serve_flow_request, unchanged: its "return {};" and
+// "return <text>;" statements convert to a handled answer.
+struct Served {
+    bool handled = true;
+    std::string message;
+    Served() = default;
+    Served(std::string text) : message(std::move(text)) {}
+    Served(const char* text) : message(text) {}
+    static Served not_handled() { Served s; s.handled = false; return s; }
+};
+
+// One call of serve_flow_request: the arguments (as references under their parameter names) and one
+// member function per kind of request. serve() asks the handlers in the original order.
+struct FlowRequestServer {
+    ui::StartupFlow& flow;
+    const ui::FlowResult& result;
+    std::unique_ptr<app::CareerSession>& session;
+    const fs::path& data;
+    const fs::path& save_directory;
+    uint32_t& seed;
+    uint64_t& revision;
+    openbmh::audio::Playback& playback;
+    std::optional<uint64_t>& audio_session;
+    bool& music_enabled;
+    std::function<void(int, const std::vector<MatchGroup>&, const GameState&)>& live_presenter;
+    TransferOfferPresenter& transfer_presenter;
+    TransferDecisionPresenter& transfer_decision_presenter;
+    SeasonPresenter& season_presenter;
+    SeasonTaxHooks& tax_presenter;
+    SeasonHighscoreHook& highscore_presenter;
+    SeasonPromotionHook& promotion_presenter;
+    SeasonCupDrawHook& cup_draw_presenter;
+    PendingOfferHooks& pending_offer_presenter;
+    PendingOfferEntryPolicy& pending_entry_policy;
+    HumanBuyerSaleHooks& market_sale_presenter;
+    HumanBuyerMarketEntryPolicy& market_entry_policy;
+    TransferOfferTeamInfoPresenter& team_info_presenter;
+    TransferOfferPlayerInfoPresenter& player_info_presenter;
+    ConstructionNoticeHook& construction_notice_presenter;
+    SeasonTicketCompensationNoticeHook& compensation_notice_presenter;
+    SportschauPresentationHooks& sportschau_presenter;
+    AdvertisingRenewalPresenter& advertising_renewal_presenter;
+    CareerSession::PoachPlayerSelector& poach_player_selector;
+    PoachNoticePresenter& poach_notice_presenter;
+    ContractExpiryPresenter& contract_expiry_presenter;
+    NationalFriendlyQuestionPresenter& national_friendly_question_presenter;
+    LoanReturnPresenter& loan_return_presenter;
+    LoanReturnOfferPresenter& loan_return_offer_presenter;
+    LiveInterventionPresenter& live_intervention_presenter;
+    EnvironmentNoticePresenter& environment_notice_presenter;
+    LiveMatchEventPresenter& live_match_event_presenter;
+    LiveBallPresenter& live_ball_presenter;
+    LiveChancePresenter& live_chance_presenter;
+    LiveShotPresenter& live_shot_presenter;
+    LiveSetPiecePresenter& live_set_piece_presenter;
+    LiveBookingPresenter& live_booking_presenter;
+    LiveShootoutPresenter& live_shootout_presenter;
+    LiveRealityPresenter& live_reality_presenter;
+    PhaseResultPresenter& phase_result_presenter;
+    bool& enable_autosave;
+    std::string error;   // the message of the handler at work (was a local of serve_flow_request)
+
     // Desk menu 5 (other games): the request must still be the desk's pending action at the current
     // revision, otherwise it is dropped silently. OtherGamesActions opens the page; on rejection the
     // desk action is rejected with the error text.
-    if(result.request==ui::FlowRequest::desk_action&&session&&
-       result.desk_action.kind==ui::DeskRequestKind::open_menu&&result.desk_action.menu_kind==5) {
+    Served open_other_games() {
+        if (!(result.request==ui::FlowRequest::desk_action&&session&&
+       result.desk_action.kind==ui::DeskRequestKind::open_menu&&result.desk_action.menu_kind==5)) return Served::not_handled();
         if(!flow.desktop()||!flow.desktop()->pending()||*flow.desktop()->pending()!=result.desk_action||
            result.desk_action.revision!=revision)return {};
         try {
@@ -732,10 +750,13 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return error;
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Other-games page action: only the flow's pending action is accepted; the session dispatches it
     // and the page is either closed or updated. Rejections go back to the page with the error.
-    if(result.request==ui::FlowRequest::other_games_action&&session) {
+    Served handle_other_games_action() {
+        if (!(result.request==ui::FlowRequest::other_games_action&&session)) return Served::not_handled();
         const auto* pending=flow.pending_other_games_action();
         if(!pending||*pending!=result.other_games_action)return {};
         try {
@@ -752,14 +773,14 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return error;
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
-    // While the other-games owner is open in the session, every other request is blocked.
-    if(session&&session->other_games_active()&&result.request!=ui::FlowRequest::none)
-        return "other games: another session action is blocked while the Source owner is open";
+
     // Desk menu 23 (statistics menu): shows the menu and its first page (rankings, category 0)
     // built from the session. If building the page fails the menu is closed and the error returned.
-    if(result.request==ui::FlowRequest::desk_action&&session&&
-       result.desk_action.kind==ui::DeskRequestKind::open_menu&&result.desk_action.menu_kind==23) {
+    Served open_statistics_menu() {
+        if (!(result.request==ui::FlowRequest::desk_action&&session&&
+       result.desk_action.kind==ui::DeskRequestKind::open_menu&&result.desk_action.menu_kind==23)) return Served::not_handled();
         if(!flow.desktop()||!flow.desktop()->pending()||*flow.desktop()->pending()!=result.desk_action||
            result.desk_action.revision!=revision)return {};
         flow.show_statistics_menu(result.desk_action,
@@ -777,12 +798,15 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return {};
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Statistics menu selection (indices 0 to 8 choose the page: 0 opportunities, 1 transfer history,
     // 2 analytics, 3 all-time table, 4 world cup, 5 finance totals, 6 series records, 7 rankings,
     // 8 minute statistics). Only the pending action is accepted; a failed national-friendly family
     // check closes the menu; the page is built from the session state and shown through the flow.
-    if(result.request==ui::FlowRequest::statistics_menu_action&&session) {
+    Served select_statistics_page() {
+        if (!(result.request==ui::FlowRequest::statistics_menu_action&&session)) return Served::not_handled();
         const auto* pending=flow.pending_statistics_menu();
         if(!pending||*pending!=result.statistics_menu_action)return {};
         if(flow.national_friendly_family_active()&&
@@ -1003,11 +1027,14 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return error;
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Statistics page action: close, or re-query the all-time table. The request must be the
     // pending one and match the menu owner and the desk (revision, manager slot); otherwise it is
     // dropped. A failing rebuild closes the page.
-    if(result.request==ui::FlowRequest::statistics_page_action&&session) {
+    Served handle_statistics_page_action() {
+        if (!(result.request==ui::FlowRequest::statistics_page_action&&session)) return Served::not_handled();
         const auto* pending=flow.pending_statistics_page_action();
         if(!pending||*pending!=result.statistics_page_action||!flow.in_statistics_page()||
            !flow.statistics_menu()||pending->owner!=flow.statistics_menu()->state().owner||
@@ -1031,10 +1058,13 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             flow.close_statistics_page();
         }
         return {};
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Rankings category selection: rebuilds the rankings from the session for the chosen category
     // and acknowledges it; any failure is reported as a rejection.
-    if(result.request==ui::FlowRequest::statistics_rankings_action&&session) {
+    Served handle_statistics_rankings_action() {
+        if (!(result.request==ui::FlowRequest::statistics_rankings_action&&session)) return Served::not_handled();
         const auto* pending=flow.pending_statistics_rankings();
         if(!pending||*pending!=result.statistics_rankings_action||
            pending->kind!=ui::StatisticsRankingsRequestKind::select_category||!flow.statistics_rankings())return {};
@@ -1046,11 +1076,14 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             flow.acknowledge_statistics_rankings(std::move(next));
         } catch(const std::exception&) { flow.reject_statistics_rankings(); }
         return {};
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Analytics screen action: close, or store a preference through OpportunitiesActions and
     // acknowledge the rebuilt page at the new revision. Rejection resets the pending state and
     // returns the error.
-    if(result.request==ui::FlowRequest::analytics_action&&session) {
+    Served handle_analytics_action() {
+        if (!(result.request==ui::FlowRequest::analytics_action&&session)) return Served::not_handled();
         const auto* pending=flow.pending_analytics();
         if(!pending||*pending!=result.analytics_action||!flow.analytics()||!flow.statistics_menu()||
            pending->owner!=flow.analytics()->state().owner||pending->manager_slot!=pending->owner.manager_slot||
@@ -1072,11 +1105,14 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return error;
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Opportunities (A-D) screen action: dispatched to the session; on close the parent screen is
     // restored (world cup picker for the national friendly case, closing the statistics menu
     // otherwise), else the page is acknowledged. Rejections go back to the screen.
-    if(result.request==ui::FlowRequest::opportunities_action&&session) {
+    Served handle_opportunities_action() {
+        if (!(result.request==ui::FlowRequest::opportunities_action&&session)) return Served::not_handled();
         const auto* pending=flow.pending_opportunities();
         if(!pending||*pending!=result.opportunities_action)return {};
         try {
@@ -1099,11 +1135,14 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             if(flow.pending_opportunities())flow.reject_opportunities(e.what());return e.what();
         }
         return error;
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Desk menu 20 (top scorers): opens the read-only top scorers page; same pending-request and
     // revision rules as the other menus, rejection goes back to the desk.
-    if(result.request==ui::FlowRequest::desk_action&&session&&
-       result.desk_action.kind==ui::DeskRequestKind::open_menu&&result.desk_action.menu_kind==20) {
+    Served open_top_scorers() {
+        if (!(result.request==ui::FlowRequest::desk_action&&session&&
+       result.desk_action.kind==ui::DeskRequestKind::open_menu&&result.desk_action.menu_kind==20)) return Served::not_handled();
         if(!flow.desktop()||!flow.desktop()->pending()||*flow.desktop()->pending()!=result.desk_action||
            result.desk_action.revision!=revision)return {};
         try {
@@ -1130,13 +1169,16 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return error;
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Desk menus 25 (fair play) and 26 (highscore): builds the read-only records page from the
     // session for the active manager. The highscore page also loads, updates and saves the ranked
     // highscore file in the save directory. Any error rejects the desk action.
-    if(result.request==ui::FlowRequest::desk_action&&session&&
+    Served open_fair_play_or_highscore() {
+        if (!(result.request==ui::FlowRequest::desk_action&&session&&
        result.desk_action.kind==ui::DeskRequestKind::open_menu&&
-       (result.desk_action.menu_kind==25||result.desk_action.menu_kind==26)) {
+       (result.desk_action.menu_kind==25||result.desk_action.menu_kind==26))) return Served::not_handled();
         if(!flow.desktop()||!flow.desktop()->pending()||*flow.desktop()->pending()!=result.desk_action||
            result.desk_action.revision!=revision)return {};
         try {
@@ -1205,10 +1247,13 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return {};
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Top scorers page action: dispatched to the session; the page is closed or acknowledged,
     // rejections go back to the page.
-    if(result.request==ui::FlowRequest::top_scorers_action&&session) {
+    Served handle_top_scorers_action() {
+        if (!(result.request==ui::FlowRequest::top_scorers_action&&session)) return Served::not_handled();
         const auto* pending=flow.pending_top_scorers();
         if(!pending||*pending!=result.top_scorers_action)return {};
         try {
@@ -1225,13 +1270,13 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return error;
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
-    // While the read-only top scorers owner is open, every other request is blocked.
-    if(session&&session->top_scorers_active()&&result.request!=ui::FlowRequest::none)
-        return "top scorers: another session action is blocked while the read-only owner is open";
+
     // Desk menu 28 (balance sheet): opens the balance page through BalanceActions.
-    if(result.request==ui::FlowRequest::desk_action&&session&&
-       result.desk_action.kind==ui::DeskRequestKind::open_menu&&result.desk_action.menu_kind==28) {
+    Served open_balance_sheet() {
+        if (!(result.request==ui::FlowRequest::desk_action&&session&&
+       result.desk_action.kind==ui::DeskRequestKind::open_menu&&result.desk_action.menu_kind==28)) return Served::not_handled();
         if(!flow.desktop()||!flow.desktop()->pending()||*flow.desktop()->pending()!=result.desk_action||
            result.desk_action.revision!=revision)return {};
         try {
@@ -1244,10 +1289,13 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return error;
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Balance page action: dispatched to the session; closed or acknowledged, rejections go back
     // to the page.
-    if(result.request==ui::FlowRequest::balance_action&&session) {
+    Served handle_balance_action() {
+        if (!(result.request==ui::FlowRequest::balance_action&&session)) return Served::not_handled();
         const auto* pending=flow.pending_balance();
         if(!pending||*pending!=result.balance_action)return {};
         try {
@@ -1264,15 +1312,14 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return error;
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
-    // While the balance owner is open in the session, every other request is blocked.
-    if(session&&session->balance_active()&&result.request!=ui::FlowRequest::none)
-        return "balance: another session action is blocked while the Bilanz owner is open";
+
     // Shows a league table result from the session. It first validates the dispatch (manager slot,
     // league, revision, controls, dialog phase) and throws FormatError if it is inconsistent, then
     // replaces the current league's page in the table set and hands it to the flow. Used by every
     // branch that enters or changes a league table.
-    const auto show_table_dispatch = [&](const CareerSession::LeagueTableDispatch& applied,
+    void show_table_dispatch(const CareerSession::LeagueTableDispatch& applied,
                                          std::optional<ui::PreparationState> preparation = {},bool friendly_entry=false) {
         const auto& id = applied.identity;
         if (!session || id.manager < 0 || id.manager > 3 || id.league < 0 || id.league >= 9 ||
@@ -1293,11 +1340,13 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         tables[size_t(id.league)] = applied.page;
         flow.show_family_table_dispatch(std::move(tables), id.league, id, applied.dialog,
             dialog_stage, applied.phase == Phase::forecast_pending_present, std::move(preparation),friendly_entry);
-    };
+    }
+
     // League family action (table, pairings and strengths screens share one owner in the session).
     // The request must carry the identity of the owner held by both the flow and the session, at
     // the current revision and from the child screen that is really open; otherwise it is stale.
-    if(result.request==ui::FlowRequest::league_family_action&&session) {
+    Served handle_league_family_action() {
+        if (!(result.request==ui::FlowRequest::league_family_action&&session)) return Served::not_handled();
         const auto& action=result.league_family_action;
         const auto& owner=flow.league_family_identity();
         const auto session_family=session->league_family_owner();
@@ -1531,12 +1580,15 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         // Anything else is not supported by this owner.
         flow.reject_league_family("league family action is not yet supported by this owner");
         return "league family action is not yet supported by this owner";
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Desk menu 2 (strengths): opens the strengths page and starts a league family owner for it.
     // The session's projection must match the desk on screen (manager slot, runtime club, day
     // counter and the desk's session identity key); otherwise the open is refused.
-    if(result.request==ui::FlowRequest::desk_action&&session&&
-       result.desk_action.kind==ui::DeskRequestKind::open_menu&&result.desk_action.menu_kind==2) {
+    Served open_strengths() {
+        if (!(result.request==ui::FlowRequest::desk_action&&session&&
+       result.desk_action.kind==ui::DeskRequestKind::open_menu&&result.desk_action.menu_kind==2)) return Served::not_handled();
         if(!flow.desktop()||!flow.desktop()->pending()||*flow.desktop()->pending()!=result.desk_action||
            result.desk_action.revision!=revision)return {};
         try {
@@ -1562,11 +1614,14 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return error;
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Desk menu 0 (league table): checks manager slot, runtime club and day counter against the
     // desk, prepares and begins the league family owner for the table and shows the table.
-    if(result.request==ui::FlowRequest::desk_action&&session&&
-       result.desk_action.kind==ui::DeskRequestKind::open_menu&&result.desk_action.menu_kind==0) {
+    Served open_league_table() {
+        if (!(result.request==ui::FlowRequest::desk_action&&session&&
+       result.desk_action.kind==ui::DeskRequestKind::open_menu&&result.desk_action.menu_kind==0)) return Served::not_handled();
         if(!flow.desktop()||!flow.desktop()->pending()||*flow.desktop()->pending()!=result.desk_action||
            result.desk_action.revision!=revision)return {};
         try {
@@ -1593,10 +1648,13 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return error;
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Strengths page action: dispatched to the session; closed or acknowledged. When a league
     // family is open its identity is refreshed after the child changed.
-    if(result.request==ui::FlowRequest::strengths_action&&session) {
+    Served handle_strengths_action() {
+        if (!(result.request==ui::FlowRequest::strengths_action&&session)) return Served::not_handled();
         const auto* pending=flow.pending_strengths();
         if(!pending||*pending!=result.strengths_action)return {};
         const auto family_before=session->league_family_owner();
@@ -1621,11 +1679,14 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return error;
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Desk menu 1 (pairings): checks manager slot, runtime club and day counter against the desk,
     // then opens the pairings page and begins the league family owner for it.
-    if(result.request==ui::FlowRequest::desk_action&&session&&
-        result.desk_action.kind==ui::DeskRequestKind::open_menu&&result.desk_action.menu_kind==1) {
+    Served open_league_pairings() {
+        if (!(result.request==ui::FlowRequest::desk_action&&session&&
+        result.desk_action.kind==ui::DeskRequestKind::open_menu&&result.desk_action.menu_kind==1)) return Served::not_handled();
         if(!flow.desktop()||!flow.desktop()->pending()||*flow.desktop()->pending()!=result.desk_action||
             result.desk_action.revision!=revision)return {};
         try {
@@ -1654,10 +1715,13 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return error;
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
+
     // Pairings page action: dispatched to the session; closed or acknowledged. With a league family
     // open, the family identity is refreshed from the new page state.
-    if(result.request==ui::FlowRequest::league_pairings_action&&session) {
+    Served handle_league_pairings_action() {
+        if (!(result.request==ui::FlowRequest::league_pairings_action&&session)) return Served::not_handled();
         const auto* pending=flow.pending_league_pairings();
         if(!pending||*pending!=result.league_pairings_action)return {};
         const auto family_before=session->league_family_owner();
@@ -1687,19 +1751,30 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return e.what();
         }
         return error;
+        return Served::not_handled();   // the original went on to the handlers after this one
     }
-    if (result.request == ui::FlowRequest::desk_action && session &&
-        result.desk_action.kind == ui::DeskRequestKind::open_menu && result.desk_action.menu_kind == 29) {
+
+    Served open_manager_join() {
+        if (!(result.request == ui::FlowRequest::desk_action && session &&
+        result.desk_action.kind == ui::DeskRequestKind::open_menu && result.desk_action.menu_kind == 29)) return Served::not_handled();
         // Desk menu 29: opens the dialog for adding a further manager to the running game.
         if (!flow.desktop() || !flow.desktop()->pending() || *flow.desktop()->pending() != result.desk_action ||
             result.desk_action.revision != revision) return {};
         try { flow.show_manager_join(session->manager_choices(revision),session->selection_context(revision)); }
         catch (const std::exception&) { flow.reject_desk_action("Der neue Manager kann hier nicht angelegt werden."); }
-    } else if (result.request == ui::FlowRequest::join_cancel && session) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served cancel_manager_join() {
+        if (!(result.request == ui::FlowRequest::join_cancel && session)) return Served::not_handled();
         // Join cancelled: the session drops the half finished join and the flow returns to the desk.
         if (!flow.join_origin() || *flow.join_origin() != result.desk_action) return {};
         session->cancel_manager_join(); flow.reject_manager_join({});
-    } else if ((result.request == ui::FlowRequest::join_options || result.request == ui::FlowRequest::join_manager) && session) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served continue_manager_join() {
+        if (!((result.request == ui::FlowRequest::join_options || result.request == ui::FlowRequest::join_manager) && session)) return Served::not_handled();
         // Manager join steps (options, then manager choice): the origin desk action and revision must
         // still match. Until the join is complete the team selection resumes; once complete the new
         // manager is committed to the session and the flow shows the result. Any failure cancels the
@@ -1740,8 +1815,11 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
                 return "manager join: " + std::string(e.what());
             }
         }
-    } else
-    if (result.request == ui::FlowRequest::manager_confirmed) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served confirm_new_manager() {
+        if (!(result.request == ui::FlowRequest::manager_confirmed)) return Served::not_handled();
         // New-career setup: a manager was confirmed. The session is created on demand, the choice is
         // stored and the selection screen resumes with a new revision.
         if (!session) session = std::make_unique<app::CareerSession>(data, seed);
@@ -1749,7 +1827,11 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         const ui::ManagerChoice* choice = flow.pending_manager();
         if (!choice || !session->confirm_manager(flow.options(), *choice, error)) return "manager: " + error;
         flow.resume_manager_selection(session->selection_context(++revision));
-    } else if (result.request == ui::FlowRequest::new_career) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served start_new_career() {
+        if (!(result.request == ui::FlowRequest::new_career)) return Served::not_handled();
         // New career: confirms the managers not yet confirmed, then finishes the initialization in the
         // session, takes over the first revision and hands the desk to the flow. Season pause and cup
         // draw presenters are installed only for this request (see the reset guard).
@@ -1782,26 +1864,46 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         session->configure_sound_capabilities(playback.original_ready() && playback.available(),
             playback.original_ready() && playback.available());
         start_original_desk_audio(playback, session->state(), music_enabled);
-    } else if(result.request==ui::FlowRequest::national_friendly_selected&&session) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served select_national_friendly() {
+        if (!(result.request==ui::FlowRequest::national_friendly_selected&&session)) return Served::not_handled();
         // National friendly: a nation was selected in the picker; the dialog sequence is served by
         // serve_national_friendly_selection.
         serve_national_friendly_selection(flow,*session,result.national_friendly_opponent,revision,data,
                                           national_friendly_question_presenter);
-    } else if (result.request == ui::FlowRequest::friendly_action && session) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_friendly_match_action() {
+        if (!(result.request == ui::FlowRequest::friendly_action && session)) return Served::not_handled();
         // Friendly match request (club or national); served by serve_friendly_action.
         serve_friendly_action(flow, *session, result.friendly_action, revision,data);
-    } else if (result.request == ui::FlowRequest::submenu_action && session &&
-               std::holds_alternative<ui::TransferMarketRequest>(result.submenu_action)) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_transfer_market_action() {
+        if (!(result.request == ui::FlowRequest::submenu_action && session &&
+               std::holds_alternative<ui::TransferMarketRequest>(result.submenu_action))) return Served::not_handled();
         // Transfer market request; served by serve_transfer_action.
         serve_transfer_action(flow, *session, std::get<ui::TransferMarketRequest>(result.submenu_action), revision,
                               market_sale_presenter, market_entry_policy, poach_player_selector, poach_notice_presenter, transfer_presenter);
-    } else if (result.request == ui::FlowRequest::submenu_action && session &&
-               std::holds_alternative<ui::OutgoingTransferRequest>(result.submenu_action)) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_outgoing_transfer_action() {
+        if (!(result.request == ui::FlowRequest::submenu_action && session &&
+               std::holds_alternative<ui::OutgoingTransferRequest>(result.submenu_action))) return Served::not_handled();
         // Outgoing transfer offer; served by serve_transfer_offer.
         serve_transfer_offer(flow, *session, std::get<ui::OutgoingTransferRequest>(result.submenu_action), revision,
                              market_sale_presenter, market_entry_policy, team_info_presenter, player_info_presenter);
-    } else if (result.request == ui::FlowRequest::submenu_action && session &&
-               std::holds_alternative<ui::LineupRequest>(result.submenu_action)) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_lineup_action() {
+        if (!(result.request == ui::FlowRequest::submenu_action && session &&
+               std::holds_alternative<ui::LineupRequest>(result.submenu_action))) return Served::not_handled();
         // Lineup change: must equal the flow's pending lineup request, otherwise it is dropped. The
         // session applies it and the preparation state is acknowledged; a refusal is shown as notice.
         const auto& request = std::get<ui::LineupRequest>(result.submenu_action);
@@ -1817,8 +1919,12 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         } catch (const std::exception&) {
             flow.reject_preparation_action("Diese Aufstellungsaktion konnte nicht übernommen werden.");
         }
-    } else if (result.request == ui::FlowRequest::submenu_action && session &&
-               std::holds_alternative<ui::PitchRequest>(result.submenu_action)) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_pitch_action() {
+        if (!(result.request == ui::FlowRequest::submenu_action && session &&
+               std::holds_alternative<ui::PitchRequest>(result.submenu_action))) return Served::not_handled();
         // Pitch (field position) change: same pattern as the lineup request, through LineupActions.
         const auto& request = std::get<ui::PitchRequest>(result.submenu_action);
         if (!flow.matches_pending_pitch(request)) return {};
@@ -1832,8 +1938,12 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         } catch (const std::exception&) {
             flow.reject_preparation_action("Diese Aufstellungsaktion konnte nicht übernommen werden.");
         }
-    } else if (result.request == ui::FlowRequest::submenu_action && session &&
-               std::holds_alternative<ui::TrainingRequest>(result.submenu_action)) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_training_action() {
+        if (!(result.request == ui::FlowRequest::submenu_action && session &&
+               std::holds_alternative<ui::TrainingRequest>(result.submenu_action))) return Served::not_handled();
         // Training change: dispatched to the session; the preparation state is acknowledged or the
         // request rejected with the session's error.
         const auto& request = std::get<ui::TrainingRequest>(result.submenu_action);
@@ -1842,8 +1952,12 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return {};
         }
         flow.acknowledge_preparation(session->preparation_projection(revision));
-    } else if (result.request == ui::FlowRequest::submenu_action && session &&
-               std::holds_alternative<ui::TacticsRequest>(result.submenu_action)) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_tactics_action() {
+        if (!(result.request == ui::FlowRequest::submenu_action && session &&
+               std::holds_alternative<ui::TacticsRequest>(result.submenu_action))) return Served::not_handled();
         // Tactics change: dispatched to the session; acknowledged or rejected with the error.
         const auto& request = std::get<ui::TacticsRequest>(result.submenu_action);
         if (!session->dispatch_tactics(request, revision, error)) {
@@ -1851,8 +1965,12 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return {};
         }
         flow.acknowledge_preparation(session->preparation_projection(revision));
-    } else if (result.request == ui::FlowRequest::submenu_action && session &&
-               std::holds_alternative<ui::TrainingCampRequest>(result.submenu_action)) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_training_camp_action() {
+        if (!(result.request == ui::FlowRequest::submenu_action && session &&
+               std::holds_alternative<ui::TrainingCampRequest>(result.submenu_action))) return Served::not_handled();
         // Training camp request: dispatched to the session; acknowledged or rejected.
         const auto& request = std::get<ui::TrainingCampRequest>(result.submenu_action);
         if (!session->dispatch_training_camp(request, revision, error)) {
@@ -1860,8 +1978,12 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return {};
         }
         flow.acknowledge_preparation(session->preparation_projection(revision));
-    } else if (result.request == ui::FlowRequest::submenu_action && session &&
-               std::holds_alternative<ui::BankRequest>(result.submenu_action)) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_bank_action() {
+        if (!(result.request == ui::FlowRequest::submenu_action && session &&
+               std::holds_alternative<ui::BankRequest>(result.submenu_action))) return Served::not_handled();
         // Bank action: the supplied request must equal the pending one, otherwise it is rejected as
         // stale. BankActions applies it and the preparation state is acknowledged.
         const auto* pending = flow.pending_bank_action();
@@ -1882,8 +2004,12 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         } catch (const std::exception&) {
             flow.reject_preparation_action("bank_ack_failed");
         }
-    } else if (result.request == ui::FlowRequest::submenu_action && session &&
-               std::holds_alternative<ui::StadiumRequest>(result.submenu_action)) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_stadium_action() {
+        if (!(result.request == ui::FlowRequest::submenu_action && session &&
+               std::holds_alternative<ui::StadiumRequest>(result.submenu_action))) return Served::not_handled();
         // Stadium action: must equal the pending stadium request; StadiumActions applies it (with the
         // construction and compensation notice hooks) and the preparation state is acknowledged.
         const auto& request = std::get<ui::StadiumRequest>(result.submenu_action);
@@ -1899,8 +2025,12 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         } catch (const std::exception&) {
             flow.reject_preparation_action("stadium_ack_failed");
         }
-    } else if (result.request == ui::FlowRequest::submenu_action && session &&
-               std::holds_alternative<ui::TotoRequest>(result.submenu_action)) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_toto_action() {
+        if (!(result.request == ui::FlowRequest::submenu_action && session &&
+               std::holds_alternative<ui::TotoRequest>(result.submenu_action))) return Served::not_handled();
         // Toto (betting) action: dispatched to the session; acknowledged or rejected.
         const auto& request = std::get<ui::TotoRequest>(result.submenu_action);
         if (!session->dispatch_toto(request, revision, error)) {
@@ -1908,7 +2038,11 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return {};
         }
         flow.acknowledge_preparation(session->preparation_projection(revision));
-    } else if (result.request == ui::FlowRequest::kickoff) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served play_matchday() {
+        if (!(result.request == ui::FlowRequest::kickoff)) return Served::not_handled();
         // Kickoff: plays the next match day. The request must still be the desk's pending action at
         // the current revision (a replayed one is ignored). All presenter hooks are installed on the
         // session for the duration of the turn and removed again by the reset guard below, then
@@ -1978,7 +2112,7 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             session->set_loan_return_offer_presenter(std::move(loan_return_offer_presenter), market_sale_presenter);
         if (transfer_presenter) session->set_transfer_offer_selector(transfer_presenter);
         if (transfer_decision_presenter) {
-            session->set_transfer_decision_observer([active = session.get(), &transfer_decision_presenter]
+            session->set_transfer_decision_observer([active = session.get(), &transfer_decision_presenter = transfer_decision_presenter]
                     (const TransferDecisionEvent& event) {
                 transfer_decision_presenter(active->state(), event);
             });
@@ -1999,7 +2133,7 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         // the UI change the lineup, tactics or pitch of the human team while the match runs.
         if (live_presenter || live_intervention_presenter) {
             // Hook installed on the session; called once per live minute with the engine, groups and state.
-            session->set_live_minute([&live_presenter, &live_intervention_presenter, active = session.get(), &live_revision]
+            session->set_live_minute([&live_presenter = live_presenter, &live_intervention_presenter = live_intervention_presenter, active = session.get(), &live_revision]
                     (int minute, MatchEngine& engine,
                     std::vector<MatchGroup>& groups, GameState& state) mutable {
                 if (live_presenter) live_presenter(minute, groups, state);
@@ -2057,7 +2191,7 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         // Live event hook: called by the session for match events that allow an intervention. The same
         // kinds of callbacks as for the minute hook are offered, bound to the event instead of a minute.
         if (live_match_event_presenter) {
-            session->set_live_event([&live_match_event_presenter, active = session.get(), &live_revision]
+            session->set_live_event([&live_match_event_presenter = live_match_event_presenter, active = session.get(), &live_revision]
                     (const LiveMatchEvent& event, MatchEngine& engine,
                      std::vector<MatchGroup>& groups, GameState& state) {
                 if (!active) return;
@@ -2119,7 +2253,7 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             if (sportschau_presenter.intro) {
                 // Intro wrapper: shows the intro once per matchday or once per group as the options demand, and
                 // only if the memory flags allow it and at least one shown competition has its setting enabled.
-                gated.intro = [source_options, &sportschau_presenter](const GameState& state,
+                gated.intro = [source_options, &sportschau_presenter = sportschau_presenter](const GameState& state,
                                                                        const SportschauIntroView& view) {
                     const bool once = view.group_index < 0 && source_options.intro_after_matchday != 0;
                     const bool per_group = view.group_index >= 0 && source_options.intro_each_group != 0;
@@ -2140,7 +2274,7 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             if (sportschau_presenter.fixture) {
                 // Fixture wrapper: forwards only when the option and the competition's setting in the game
                 // memory allow it.
-                gated.fixture = [source_options, &sportschau_presenter](const GameState& state,
+                gated.fixture = [source_options, &sportschau_presenter = sportschau_presenter](const GameState& state,
                                                                           const SportschauFixtureView& fixture) {
                     if (source_options.intro_after_matchday == 0 || fixture.source_setting_index < 0 ||
                         fixture.source_setting_index > 19)
@@ -2161,7 +2295,7 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         session->set_season_cup_draw(std::move(cup_draw_presenter));
         playback.set_original_options(original_audio_options(session->state(), music_enabled));
         // Sound hook: plays the original match sound cue the session asks for.
-        session->set_original_sound([&playback](uint8_t id, const GameState& state) {
+        session->set_original_sound([&playback = playback](uint8_t id, const GameState& state) {
             original_match_audio_command(playback, state, id);
         });
         // Runs the turn; the result tells whether it failed, is waiting at the desk, finished the
@@ -2198,7 +2332,11 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         // The Source matchday already owns its live/Sportschau/table presenters.
         // Keep the completed snapshot for queries; an extra generic result modal
         // has no Original caller and blocks the following desk (UI #69).
-    } else if (result.request == ui::FlowRequest::settings_file_action) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_settings_file_action() {
+        if (!(result.request == ui::FlowRequest::settings_file_action)) return Served::not_handled();
         // Settings file (load or save of the settings file in the save directory): the request must be
         // the pending one, belong to the current settings owner (sequence, desk item and manager slot),
         // carry the current revision and point into the save directory with the .ein extension;
@@ -2230,8 +2368,12 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         } catch (const std::exception&) {
             flow.reject_settings_file("settings_file_projection_or_ack_failed");
         }
-    } else if (result.request == ui::FlowRequest::file_action &&
-               result.file_action.file_kind == ui::SaveLoadFileKind::menu_layout) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_menu_layout_file() {
+        if (!(result.request == ui::FlowRequest::file_action &&
+               result.file_action.file_kind == ui::SaveLoadFileKind::menu_layout)) return Served::not_handled();
         // Menu layout file (.men): the request must equal the pending file action field by field; if
         // it does not, it is ignored (and rejected if one is pending). Revision and path (inside the
         // save directory) are checked before MenuLayoutActions applies it.
@@ -2262,7 +2404,11 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         } catch (const std::exception&) {
             flow.reject_file_action("menu_layout_projection_or_ack_failed");
         }
-    } else if (result.request == ui::FlowRequest::file_action) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_savegame_file() {
+        if (!(result.request == ui::FlowRequest::file_action)) return Served::not_handled();
         // Savegame file action. Revision and path (inside the save directory) are checked first.
         // Load: for a running game the request's manager must be the active manager; a new session
         // is built from the file and replaces the old one with the next revision. Save: only the
@@ -2315,7 +2461,11 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         } catch (const std::exception&) {
             flow.reject_file_action("save_written_but_projection_failed");
         }
-    } else if (result.request == ui::FlowRequest::mailbox_closed) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served close_mailbox() {
+        if (!(result.request == ui::FlowRequest::mailbox_closed)) return Served::not_handled();
         // Mailbox closed: only the pending close request is accepted; MailboxActions applies it and
         // the desk is acknowledged.
         const auto* pending = flow.pending_mailbox_close();
@@ -2332,7 +2482,11 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         } catch (const std::exception&) {
             flow.reject_mailbox_close("Die Nachrichtenansicht konnte nicht geschlossen werden.");
         }
-    } else if (result.request == ui::FlowRequest::mailbox_action) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_mailbox_action() {
+        if (!(result.request == ui::FlowRequest::mailbox_action)) return Served::not_handled();
         // Mailbox action (read, delete and so on): must equal the pending mailbox request; the session
         // applies it and the rebuilt mailbox state is acknowledged.
         // A consumed/replayed or forged event cannot write through a new modal request.
@@ -2350,7 +2504,11 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         } catch (const std::exception&) {
             flow.reject_mailbox("Diese Postfachaktion konnte nicht übernommen werden.");
         }
-    } else if (result.request == ui::FlowRequest::settings_action) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_settings_action() {
+        if (!(result.request == ui::FlowRequest::settings_action)) return Served::not_handled();
         // Settings change: must equal the pending request and belong to the current settings owner
         // sequence. If the session refuses and the refusal has an original notice text, that notice is
         // shown through the presenter before the request is rejected.
@@ -2382,7 +2540,11 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             flow.reject_settings(error);
             return {};
         }
-    } else if (result.request == ui::FlowRequest::settings_close) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served close_settings() {
+        if (!(result.request == ui::FlowRequest::settings_close)) return Served::not_handled();
         // Settings closed: the owner sequence must still match; DeskSettingsActions closes the owner
         // and the desk is acknowledged.
         if (!session || result.settings_owner_sequence != flow.settings_owner_sequence()) return {};
@@ -2399,9 +2561,13 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         } catch (const std::exception&) {
             flow.reject_settings_close("Einstellungen konnten nicht geschlossen werden.");
         }
-    } else if (result.request == ui::FlowRequest::desk_action && session &&
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served open_desk_page() {
+        if (!(result.request == ui::FlowRequest::desk_action && session &&
                result.desk_action.kind == ui::DeskRequestKind::open_menu &&
-               (result.desk_action.menu_kind == 4 || result.desk_action.menu_kind == 6 || result.desk_action.menu_kind == 7 || result.desk_action.menu_kind == 8 || result.desk_action.menu_kind == 9 || result.desk_action.menu_kind == 24 || result.desk_action.menu_kind == 27 || result.desk_action.menu_kind == 63 || result.desk_action.menu_kind == 19 || result.desk_action.menu_kind == 21)) {
+               (result.desk_action.menu_kind == 4 || result.desk_action.menu_kind == 6 || result.desk_action.menu_kind == 7 || result.desk_action.menu_kind == 8 || result.desk_action.menu_kind == 9 || result.desk_action.menu_kind == 24 || result.desk_action.menu_kind == 27 || result.desk_action.menu_kind == 63 || result.desk_action.menu_kind == 19 || result.desk_action.menu_kind == 21))) return Served::not_handled();
         // Read-only desk menus (4 achievements, 6 friendly matches, 7 and 8 calendars, 9 indoor
         // standings, 19 settings, 21 advertising, 24 environment, 27 contracts, 63 mailbox, others
         // settings): the request must equal the desk's pending action at the current revision for the
@@ -2501,7 +2667,11 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             flow.reject_desk_action("Diese Ansicht konnte nicht geladen werden.");
             std::fprintf(stderr,"desk menu %d: %s\n",request.menu_kind,e.what());
         }
-    } else if (result.request == ui::FlowRequest::reschedule_action && session) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_reschedule_action() {
+        if (!(result.request == ui::FlowRequest::reschedule_action && session)) return Served::not_handled();
         // Reschedule action (move a match in the calendar): the request must equal the pending one and
         // be owned by the open calendar (menu 7) at the current revision for the active manager.
         // RescheduleActions applies it; a day-full or team-clash refusal is explained with the original
@@ -2543,7 +2713,11 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             flow.reject_reschedule();
             return {};
         }
-    } else if (result.request == ui::FlowRequest::environment_action && session) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_environment_action() {
+        if (!(result.request == ui::FlowRequest::environment_action && session)) return Served::not_handled();
         // Environment (stadium surroundings) change: the pending request must match the screen's
         // owner, club, manager slot and revision, and the manager must be the active one with that club;
         // else it is rejected as stale. EnvironmentActions applies it, showing the original notice
@@ -2599,7 +2773,11 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             if(flow.pending_environment())flow.reject_environment_action({});
             return e.what();
         }
-    } else if (result.request == ui::FlowRequest::advertising_action && session) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_advertising_action() {
+        if (!(result.request == ui::FlowRequest::advertising_action && session)) return Served::not_handled();
         // Advertising action: must equal the pending request, otherwise it is rejected as outdated.
         // The session applies it (for a renewal check the question is shown through the presenter) and
         // the advertising view, desk and preparation are acknowledged.
@@ -2643,10 +2821,18 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         } catch (const std::exception&) {
             flow.reject_advertising_action("Die Werbeänderung konnte nicht bestätigt werden.");
         }
-    } else if (result.request == ui::FlowRequest::contracts_closed && session) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served close_contracts() {
+        if (!(result.request == ui::FlowRequest::contracts_closed && session)) return Served::not_handled();
         // Contracts screen closed: drops the stored contract quote.
         session->clear_contract_quote();
-    } else if (result.request == ui::FlowRequest::contract_action && session) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_contract_action() {
+        if (!(result.request == ui::FlowRequest::contract_action && session)) return Served::not_handled();
         // Contract action (demands, offer, bonuses, insurance): must equal the pending request. The
         // session applies it; the callback then rebuilds the contracts view and acknowledges it in the
         // form that matches the action kind.
@@ -2692,9 +2878,13 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         } catch (const std::exception&) {
             flow.reject_contract_action("Die Vertragsänderung konnte nicht bestätigt werden.");
         }
-    } else if (result.request == ui::FlowRequest::desk_action && session &&
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served change_desk_setting() {
+        if (!(result.request == ui::FlowRequest::desk_action && session &&
                (result.desk_action.kind == ui::DeskRequestKind::change_ticket_price ||
-                result.desk_action.kind == ui::DeskRequestKind::change_option)) {
+                result.desk_action.kind == ui::DeskRequestKind::change_option))) return Served::not_handled();
         // Desk widgets (ticket price and options): dispatched to the session; the desk is acknowledged
         // with a fresh projection or the action rejected.
         if (!session->dispatch_desk_widget(result.desk_action, revision, error)) {
@@ -2703,12 +2893,20 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
         }
         flow.acknowledge_desk(session->desktop_projection(revision));
         flow.attach_preparation_context(session->preparation_projection(revision));
-    } else if (result.request == ui::FlowRequest::submenu_action) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served reject_unsupported_submenu_action() {
+        if (!(result.request == ui::FlowRequest::submenu_action)) return Served::not_handled();
         // Fallback for sub-menu requests without an engine adapter.
         // Every pending request needs an ACK or a rejection. Until its engine
         // adapter exists, the screen must remain usable after this action.
         flow.reject_preparation_action("Diese Aktion ist noch nicht verfügbar.");
-    } else if (result.request == ui::FlowRequest::desk_action) {
+        return {};   // served: the original fell through to the final "return {}"
+    }
+
+    Served handle_remaining_desk_action() {
+        if (!(result.request == ui::FlowRequest::desk_action)) return Served::not_handled();
         // Remaining desk actions: a layout change is dispatched to the session; every other desk menu
         // is rejected as not available.
         if (result.desk_action.kind == ui::DeskRequestKind::change_layout) {
@@ -2722,8 +2920,130 @@ std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& resu
             return {};
         }
         flow.reject_desk_action("Dieses Menü ist noch nicht verfügbar.");
+        return {};   // served: the original fell through to the final "return {}"
     }
-    return {};
+
+    // The requests in the order the original function tried them; guards between handlers block
+    // requests that do not belong to the screen the session currently owns.
+    std::string serve() {
+        // Autosave is configured on the existing session before any request is served.
+        if (enable_autosave && session) session->configure_autosave_directory(save_directory);
+        // While the opportunities owner is open in the session only its own screens (and the
+        // statistics menu and pages above it) may send requests; anything else is blocked.
+        if(session&&session->opportunities_active()&&result.request!=ui::FlowRequest::none&&
+           result.request!=ui::FlowRequest::opportunities_action&&
+           result.request!=ui::FlowRequest::statistics_menu_action&&
+           result.request!=ui::FlowRequest::statistics_page_action)
+            return "opportunities: another session action is blocked while the Source owner is open";
+        if (Served served = open_other_games(); served.handled) return served.message;
+        if (Served served = handle_other_games_action(); served.handled) return served.message;
+        // While the other-games owner is open in the session, every other request is blocked.
+        if(session&&session->other_games_active()&&result.request!=ui::FlowRequest::none)
+            return "other games: another session action is blocked while the Source owner is open";
+        if (Served served = open_statistics_menu(); served.handled) return served.message;
+        if (Served served = select_statistics_page(); served.handled) return served.message;
+        if (Served served = handle_statistics_page_action(); served.handled) return served.message;
+        if (Served served = handle_statistics_rankings_action(); served.handled) return served.message;
+        if (Served served = handle_analytics_action(); served.handled) return served.message;
+        if (Served served = handle_opportunities_action(); served.handled) return served.message;
+        if (Served served = open_top_scorers(); served.handled) return served.message;
+        if (Served served = open_fair_play_or_highscore(); served.handled) return served.message;
+        if (Served served = handle_top_scorers_action(); served.handled) return served.message;
+        // While the read-only top scorers owner is open, every other request is blocked.
+        if(session&&session->top_scorers_active()&&result.request!=ui::FlowRequest::none)
+            return "top scorers: another session action is blocked while the read-only owner is open";
+        if (Served served = open_balance_sheet(); served.handled) return served.message;
+        if (Served served = handle_balance_action(); served.handled) return served.message;
+        // While the balance owner is open in the session, every other request is blocked.
+        if(session&&session->balance_active()&&result.request!=ui::FlowRequest::none)
+            return "balance: another session action is blocked while the Bilanz owner is open";
+        if (Served served = handle_league_family_action(); served.handled) return served.message;
+        if (Served served = open_strengths(); served.handled) return served.message;
+        if (Served served = open_league_table(); served.handled) return served.message;
+        if (Served served = handle_strengths_action(); served.handled) return served.message;
+        if (Served served = open_league_pairings(); served.handled) return served.message;
+        if (Served served = handle_league_pairings_action(); served.handled) return served.message;
+        if (Served served = open_manager_join(); served.handled) return served.message;
+        if (Served served = cancel_manager_join(); served.handled) return served.message;
+        if (Served served = continue_manager_join(); served.handled) return served.message;
+        if (Served served = confirm_new_manager(); served.handled) return served.message;
+        if (Served served = start_new_career(); served.handled) return served.message;
+        if (Served served = select_national_friendly(); served.handled) return served.message;
+        if (Served served = handle_friendly_match_action(); served.handled) return served.message;
+        if (Served served = handle_transfer_market_action(); served.handled) return served.message;
+        if (Served served = handle_outgoing_transfer_action(); served.handled) return served.message;
+        if (Served served = handle_lineup_action(); served.handled) return served.message;
+        if (Served served = handle_pitch_action(); served.handled) return served.message;
+        if (Served served = handle_training_action(); served.handled) return served.message;
+        if (Served served = handle_tactics_action(); served.handled) return served.message;
+        if (Served served = handle_training_camp_action(); served.handled) return served.message;
+        if (Served served = handle_bank_action(); served.handled) return served.message;
+        if (Served served = handle_stadium_action(); served.handled) return served.message;
+        if (Served served = handle_toto_action(); served.handled) return served.message;
+        if (Served served = play_matchday(); served.handled) return served.message;
+        if (Served served = handle_settings_file_action(); served.handled) return served.message;
+        if (Served served = handle_menu_layout_file(); served.handled) return served.message;
+        if (Served served = handle_savegame_file(); served.handled) return served.message;
+        if (Served served = close_mailbox(); served.handled) return served.message;
+        if (Served served = handle_mailbox_action(); served.handled) return served.message;
+        if (Served served = handle_settings_action(); served.handled) return served.message;
+        if (Served served = close_settings(); served.handled) return served.message;
+        if (Served served = open_desk_page(); served.handled) return served.message;
+        if (Served served = handle_reschedule_action(); served.handled) return served.message;
+        if (Served served = handle_environment_action(); served.handled) return served.message;
+        if (Served served = handle_advertising_action(); served.handled) return served.message;
+        if (Served served = close_contracts(); served.handled) return served.message;
+        if (Served served = handle_contract_action(); served.handled) return served.message;
+        if (Served served = change_desk_setting(); served.handled) return served.message;
+        if (Served served = reject_unsupported_submenu_action(); served.handled) return served.message;
+        if (Served served = handle_remaining_desk_action(); served.handled) return served.message;
+        return {};
+    }
+};
+
+}  // namespace
+
+// Main entry: handles one FlowResult. Each branch below serves one request kind: it checks that
+// the request is still the pending one and current, calls the session (through an Actions
+// facade) and then acknowledges or rejects through the flow. A non-empty return is an error
+// text for the console. The long parameter list is the optional presenter hooks.
+// Hands the flow's engine requests to the career session. Returns a message for the
+// console when something went wrong.
+std::string serve_flow_request(ui::StartupFlow& flow, const ui::FlowResult& result, std::unique_ptr<app::CareerSession>& session,
+                  const fs::path& data, const fs::path& save_directory, uint32_t seed, uint64_t& revision,
+                  openbmh::audio::Playback& playback, std::optional<uint64_t>& audio_session, bool music_enabled,
+                  std::function<void(int, const std::vector<MatchGroup>&, const GameState&)> live_presenter,
+                  TransferOfferPresenter transfer_presenter,
+                  TransferDecisionPresenter transfer_decision_presenter, SeasonPresenter season_presenter,
+                  SeasonTaxHooks tax_presenter, SeasonHighscoreHook highscore_presenter,
+                  SeasonPromotionHook promotion_presenter, SeasonCupDrawHook cup_draw_presenter,
+                  PendingOfferHooks pending_offer_presenter, PendingOfferEntryPolicy pending_entry_policy,
+                  HumanBuyerSaleHooks market_sale_presenter, HumanBuyerMarketEntryPolicy market_entry_policy,
+                  TransferOfferTeamInfoPresenter team_info_presenter,
+                  TransferOfferPlayerInfoPresenter player_info_presenter,
+                  ConstructionNoticeHook construction_notice_presenter,
+                  SeasonTicketCompensationNoticeHook compensation_notice_presenter,
+                  SportschauPresentationHooks sportschau_presenter,
+                  AdvertisingRenewalPresenter advertising_renewal_presenter,
+                  CareerSession::PoachPlayerSelector poach_player_selector,
+                  PoachNoticePresenter poach_notice_presenter,
+                  ContractExpiryPresenter contract_expiry_presenter,
+                  NationalFriendlyQuestionPresenter national_friendly_question_presenter,
+                  LoanReturnPresenter loan_return_presenter,
+                  LoanReturnOfferPresenter loan_return_offer_presenter,
+                  LiveInterventionPresenter live_intervention_presenter,
+                  EnvironmentNoticePresenter environment_notice_presenter,
+                  LiveMatchEventPresenter live_match_event_presenter,
+                  LiveBallPresenter live_ball_presenter,
+                  LiveChancePresenter live_chance_presenter,
+                  LiveShotPresenter live_shot_presenter,
+                  LiveSetPiecePresenter live_set_piece_presenter,
+                  LiveBookingPresenter live_booking_presenter,
+                  LiveShootoutPresenter live_shootout_presenter,
+                  LiveRealityPresenter live_reality_presenter,
+                  PhaseResultPresenter phase_result_presenter, bool enable_autosave) {
+    FlowRequestServer server{flow, result, session, data, save_directory, seed, revision, playback, audio_session, music_enabled, live_presenter, transfer_presenter, transfer_decision_presenter, season_presenter, tax_presenter, highscore_presenter, promotion_presenter, cup_draw_presenter, pending_offer_presenter, pending_entry_policy, market_sale_presenter, market_entry_policy, team_info_presenter, player_info_presenter, construction_notice_presenter, compensation_notice_presenter, sportschau_presenter, advertising_renewal_presenter, poach_player_selector, poach_notice_presenter, contract_expiry_presenter, national_friendly_question_presenter, loan_return_presenter, loan_return_offer_presenter, live_intervention_presenter, environment_notice_presenter, live_match_event_presenter, live_ball_presenter, live_chance_presenter, live_shot_presenter, live_set_piece_presenter, live_booking_presenter, live_shootout_presenter, live_reality_presenter, phase_result_presenter, enable_autosave, {}};
+    return server.serve();
 }
 
 // Convenience overload without presenters: forwards to the full version with empty hooks and the
