@@ -23,8 +23,9 @@ struct StadiumBlockExpansionConstants {
     std::array<uint32_t, 8> max_places{};
 };
 
-// OpenBMH1.0.3 expands standard A-H limits to at least144k total. Prices
-// still come from the edition; larger blocks have at least2weeks per1000places.
+// The edition's limits (thousands of places per block A-H), unit prices and construction weeks,
+// exactly as supplied: Diamond 3.7 gives 8/18/8/14 twice = 96,000 places. (1.0.3 to 1.0.12 raised
+// the limits to 144,000; withdrawn in 1.0.13, see stadium_blocks.cpp.)
 StadiumBlockExpansionConstants stadium_block_expansion_constants(const LeImage&);
 
 // An immutable quote binds the Source owner and every record/table value that

@@ -70,25 +70,20 @@ bool valid_resolved_offer(const StandBlockOffer& offer, const StadiumBlockExpans
 } // namespace
 
 StadiumBlockExpansionConstants stadium_block_expansion_constants(const LeImage& image) {
-    // OpenBMH deviates from the original: allow 144,000 standard places and
-    // size-aware construction times while retaining edition-owned unit prices.
-    static constexpr std::array<uint32_t, 8> minima{
-        14000, 24000, 14000, 20000, 14000, 24000, 14000, 20000};
+    // The limits, prices and construction periods of the edition, unchanged: Diamond 3.7 allows
+    // 8/18/8/14 thousand places per block (A-D and E-H), 96,000 in total. Versions 1.0.3 to 1.0.12
+    // raised the limits to 144,000; that is withdrawn, because the match broadcast of the original
+    // has no room for attendances of 100,000 and more and showed them wrongly.
     StadiumBlockExpansionConstants out;
     uint32_t total = 0;
-    for (size_t i = 0; i < minima.size(); ++i) {
+    for (size_t i = 0; i < out.max_places.size(); ++i) {
         out.price_per_1000[i] = image.u32(
             layout::CareerSession_DispatchStadium_RuntimeField + uint32_t((i + 8) * 4));
-        const auto original = uint32_t(image.u8(
+        out.max_places[i] = uint32_t(image.u8(
             layout::CareerSession_Invalid_RuntimeField + uint32_t(i))) * 1000;
-        out.max_places[i] = std::max(original, minima[i]);
         total += out.max_places[i];
-        const auto source_weeks = image.u8(
+        out.weeks[i] = image.u8(
             layout::CareerSession_DispatchStadium_RuntimeField2 + uint32_t((i + 22) * 5));
-        const auto weeks = std::max<uint32_t>(source_weeks, 2 * (out.max_places[i] / 1000));
-        if (weeks > 255)
-            throw FormatError("stadium: expanded construction period exceeds saved byte");
-        out.weeks[i] = uint8_t(weeks);
     }
     if (total > 255000)
         throw FormatError("stadium: combined stand limits exceed saved capacity byte");
