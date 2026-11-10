@@ -22,7 +22,6 @@ describe deliberate changes; they are not a list of every known compatibility li
 - [src/game/national.cpp](../src/game/national.cpp): a new arrival must not inherit the previous occupant's retirement/refusal/month-processing flags.
 - [src/game/season.cpp](../src/game/season.cpp): age/retire each player once, even when a temporary offer row references his club slot or regeneration moves him to a later free-agent slot.
 - [src/game/season.cpp](../src/game/season.cpp): initializes the empty EM qualifier seeds with national teams, preventing club zero from entering the EM.
-- [src/game/stadium_blocks.cpp](../src/game/stadium_blocks.cpp): allow 144,000 standard places and size-aware construction times while retaining edition-owned unit prices.
 - [src/game/state.hpp](../src/game/state.hpp): retains designated set-piece selections in the supported manager-record extension.
 - [src/game/week.cpp](../src/game/week.cpp): widen products before annual-rate division so valid native account amounts do not overflow intermediate sums.
 - [src/game/week.cpp](../src/game/week.cpp): an unknown history receives a grace month; later losses occur at most once per source month.

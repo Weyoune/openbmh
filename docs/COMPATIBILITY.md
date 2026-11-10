@@ -61,20 +61,20 @@ The automatic lineup installs the supplied foreign-player rule switch alongside 
 
 New careers correct the original all-zero EM qualification placeholders to the original national-team placeholders. Supplied nonzero seeds and restored savegame state are not rewritten by this initialization.
 
-## Stadium extension in1.0.3
+## Stadium size: the edition's limits (extension of 1.0.3 withdrawn)
 
-The user-requested stadium extension raises standard A–H maxima to14/24/14/20/
-14/24/14/20thousand places (144,000total), keeping larger supplied custom limits
-where the saved byte fields can represent them. Original unit prices remain
-edition-owned. Each stand's base build period is at least two weeks per1,000
-places of its expanded maximum and never shorter than the edition's original
-period. Contractor shortening remains unchanged.
+The stadium blocks A–H use the limits, unit prices and construction periods of
+the supplied edition unchanged. Diamond 3.6/3.7 allows 8/18/8/14 thousand places
+per block, twice, so 96,000 places in total; its 14k stands take 25 weeks, the 8k
+stands 30 and the 18k stands 37 (original data, not a mistaken timer). Contractor
+shortening remains unchanged. The UI validates quotes against the actual edition.
 
-The original Diamond3.6/3.7 table's14k stands really used25weeks versus30weeks
-for8k and37weeks for18k. That was original data, not a mistaken timer. Expanded
-limits/time policy is an intentional improvement. The UI now validates quotes
-against the actual edition and this shared policy rather than hardcoded Diamond
-prices and sizes. Existing eight capacity/construction bytes and saves are retained.
+Versions 1.0.3 to 1.0.12 raised the standard maxima to 14/24/14/20 thousand
+(144,000 in total) with longer construction periods. That extension is withdrawn:
+the match broadcast of the original has no room for attendances of 100,000 and
+more and showed them wrongly. A savegame whose stadium is already larger than the
+edition's limit keeps its places (the capacity bytes are unchanged), but such a
+block cannot be extended any further.
 ## Daily interest at large native balances
 
 OpenBMH deviates from the original: daily debt and deposit interest uses 64-bit
