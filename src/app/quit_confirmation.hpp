@@ -10,6 +10,8 @@
 #include <functional>
 #include <utility>
 
+#include "app/robot.hpp"
+
 namespace bmh::app {
 
 // OpenBMH deviates from the original: confirms application exit with a localized native dialog, with cancellation selected by default.
@@ -46,6 +48,15 @@ public:
         if (!event) return SDL_PollEvent(nullptr);
         while (SDL_PollEvent(event)) {
             if (event->type != SDL_QUIT || confirm()) return 1;
+        }
+        // No input waiting: a robot run (app/robot.hpp, inactive in normal play) may queue the
+        // events of its next script command now.
+        Robot& robot = Robot::instance();
+        if (robot.active()) {
+            robot.idle();
+            while (SDL_PollEvent(event)) {
+                if (event->type != SDL_QUIT || confirm()) return 1;
+            }
         }
         return 0;
     }

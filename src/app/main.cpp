@@ -296,7 +296,11 @@ int main(int argc, char** argv) {
             pitch_pointer.set_default(bitmap);
             pitch_pointer.show({}, renderer);
         }
-        app::QuitConfirmation quit_confirmation(window, english_game);
+        // A robot run (app/robot.hpp: OPENBMH_ROBOT, a test hook) plays a script and answers the quit question itself.
+        app::Robot::instance().start(window);
+        app::QuitConfirmation quit_confirmation(window, english_game,
+            app::Robot::instance().active() ? app::QuitConfirmation::Presenter(app::Robot::confirm_quit)
+                                            : app::QuitConfirmation::Presenter(SDL_ShowMessageBox));
         try {
             if (!playback.initialize_original(app::original_audio_assets(data, season_exe), audio_error))
                 std::fprintf(stderr, "audio: %s\n", audio_error.c_str());
@@ -349,7 +353,7 @@ int main(int argc, char** argv) {
                 if (present) {
                     SDL_RenderClear(renderer);
                     SDL_RenderCopy(renderer,texture,nullptr,nullptr);
-                    SDL_RenderPresent(renderer);
+                    app::present(renderer);
                 }
             }
             return sample && sample->expired;
@@ -419,7 +423,7 @@ int main(int argc, char** argv) {
             SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
             SDL_RenderClear(renderer);
             SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-            SDL_RenderPresent(renderer);
+            app::present(renderer);
         };
         // Plays the highscore point animation of the desk, one rendered frame per step, if active.
         const auto present_desk_record_points = [&] {
@@ -1549,7 +1553,7 @@ int main(int argc, char** argv) {
                 if(SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4)!=0 ||
                    SDL_RenderClear(renderer)!=0 || SDL_RenderCopy(renderer,texture,nullptr,nullptr)!=0)
                     throw FormatError(std::string("poach renderer: ")+SDL_GetError());
-                SDL_RenderPresent(renderer);
+                app::present(renderer);
             };
             std::unique_ptr<ui::LeagueTableScreen> table;
             // Rebuilds the league table screen from the current engine page.
@@ -2049,7 +2053,7 @@ int main(int argc, char** argv) {
                             SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                             SDL_RenderClear(renderer);
                             SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                            SDL_RenderPresent(renderer);
+                            app::present(renderer);
                             SDL_Event modal;
                             bool redrawn = false;
                             while (quit_confirmation.poll(&modal)) {
@@ -2206,7 +2210,7 @@ int main(int argc, char** argv) {
                     SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                     SDL_RenderClear(renderer);
                     SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                    SDL_RenderPresent(renderer);
+                    app::present(renderer);
                     if (pairings_screen)
                         pairings_screen->mark_presented_source_seconds(overview_source_seconds());
                 };
@@ -2233,7 +2237,7 @@ int main(int argc, char** argv) {
                         SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                         SDL_RenderClear(renderer);
                         SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                        SDL_RenderPresent(renderer);
+                        app::present(renderer);
                         outcome = dialog.after_present();
                         clock_anchor = SDL_GetTicks();
                     };
@@ -2435,7 +2439,7 @@ int main(int argc, char** argv) {
                             SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                             SDL_RenderClear(renderer);
                             SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                            SDL_RenderPresent(renderer);
+                            app::present(renderer);
                             live_frame_shown = true;
                         }
                     }
@@ -2470,7 +2474,7 @@ int main(int argc, char** argv) {
                             SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                             SDL_RenderClear(renderer);
                             SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                            SDL_RenderPresent(renderer);
+                            app::present(renderer);
                             offer_dirty = false;
                         }
                         SDL_Event event;
@@ -2544,7 +2548,7 @@ int main(int argc, char** argv) {
                             SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                             SDL_RenderClear(renderer);
                             SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                            SDL_RenderPresent(renderer);
+                            app::present(renderer);
                             rendered_phase = phase;
                         }
                         SDL_Event event;
@@ -2583,7 +2587,7 @@ int main(int argc, char** argv) {
                         SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                         SDL_RenderClear(renderer);
                         SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                        SDL_RenderPresent(renderer);
+                        app::present(renderer);
                         bool dismissed = false;
                         while (running && !dismissed) {
                             SDL_Event event;
@@ -2765,7 +2769,7 @@ int main(int argc, char** argv) {
                                 SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                                 SDL_RenderClear(renderer);
                                 SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                                SDL_RenderPresent(renderer);
+                                app::present(renderer);
                                 SDL_Event modal;
                                 bool redrawn = false;
                                 while (quit_confirmation.poll(&modal)) {
@@ -2833,7 +2837,7 @@ int main(int argc, char** argv) {
                         SDL_RenderClear(renderer);
                         SDL_RenderCopy(renderer, texture, nullptr, nullptr);
                         SDL_SetWindowTitle(window, "OpenBMH - live_paused");
-                        SDL_RenderPresent(renderer);
+                        app::present(renderer);
 
                         bool resumed = false;
                         while (running && !resumed) {
@@ -2863,7 +2867,7 @@ int main(int argc, char** argv) {
                         SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                         SDL_RenderClear(renderer);
                         SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                        SDL_RenderPresent(renderer);
+                        app::present(renderer);
                     };
                     // Opens the overview selected by key_slot through the session and runs it via
                     // present_running_overview. The sequence counter numbers the overviews opened in this
@@ -2934,7 +2938,7 @@ int main(int argc, char** argv) {
                             SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                             SDL_RenderClear(renderer);
                             SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                            SDL_RenderPresent(renderer);
+                            app::present(renderer);
                         };
                         render_settings();
                         // Modal save/load screen for settings files opened from the settings screen; the result is
@@ -2958,7 +2962,7 @@ int main(int argc, char** argv) {
                                 SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                                 SDL_RenderClear(renderer);
                                 SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                                SDL_RenderPresent(renderer);
+                                app::present(renderer);
                             };
                             render_file();
                             // Give the filename field the native text input focus.
@@ -3270,7 +3274,7 @@ int main(int argc, char** argv) {
                         SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                         SDL_RenderClear(renderer);
                         SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                        SDL_RenderPresent(renderer);
+                        app::present(renderer);
                     };
                     const int count = ui::LiveMatchdayScreen::ball_frame_count(event.displacement);
                     // Converts the saved pause number at the given row into milliseconds.
@@ -3330,7 +3334,7 @@ int main(int argc, char** argv) {
                     SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                     SDL_RenderClear(renderer);
                     SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                    SDL_RenderPresent(renderer);
+                    app::present(renderer);
                     SDL_PumpEvents();
                     SDL_Event quit_event;
                     if (quit_confirmation.peep(&quit_event, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) {
@@ -3365,7 +3369,7 @@ int main(int argc, char** argv) {
                         SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                         SDL_RenderClear(renderer);
                         SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                        SDL_RenderPresent(renderer);
+                        app::present(renderer);
                         SDL_PumpEvents();
                         SDL_Event input;
                         if (quit_confirmation.peep(&input, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) {
@@ -3424,7 +3428,7 @@ int main(int argc, char** argv) {
                         SDL_SetWindowTitle(window,title.c_str());
                         for (size_t i=0;i<pixels.size();++i) pixels[i]=colors.argb[images[index].pixels[i]];
                         SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4);
-                        SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);SDL_RenderPresent(renderer);
+                        SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);app::present(renderer);
                         SDL_PumpEvents();SDL_Event input;
                         if (quit_confirmation.peep(&input,1,SDL_GETEVENT,SDL_QUIT,SDL_QUIT)>0) { running=false;return; }
                         // FirstThen holds the first frame for 40 retraces; later frames
@@ -3447,7 +3451,7 @@ int main(int argc, char** argv) {
                     const auto present=[&](const Image& image) {
                         for (size_t i=0;i<pixels.size();++i) pixels[i]=palette.argb[image.pixels[i]];
                         SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4);
-                        SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);SDL_RenderPresent(renderer);
+                        SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);app::present(renderer);
                     };
                     SDL_SetWindowTitle(window,title.c_str());present(live_screen.render_booking(frame,booking));
                     if (event.kind != 2 && app::match_sound_enabled(state))
@@ -3477,7 +3481,7 @@ int main(int argc, char** argv) {
                     const auto image=live_screen.render_shootout(frame,projection);
                     for (size_t i=0;i<pixels.size();++i) pixels[i]=palette.argb[image.pixels[i]];
                     SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4);
-                    SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);SDL_RenderPresent(renderer);
+                    SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);app::present(renderer);
                     SDL_PumpEvents();SDL_Event input;
                     if (quit_confirmation.peep(&input,1,SDL_GETEVENT,SDL_QUIT,SDL_QUIT)>0) { running=false;return; }
                     const int repeats=event.stage==LiveShootoutStage::preview?4:2;
@@ -3495,7 +3499,7 @@ int main(int argc, char** argv) {
                         SDL_SetWindowTitle(window,title.c_str());
                         for (size_t i=0;i<pixels.size();++i) pixels[i]=colors.argb[image.pixels[i]];
                         SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4);
-                        SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);SDL_RenderPresent(renderer);
+                        SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);app::present(renderer);
                     };
                     const auto delay = [&](uint32_t address) {
                         const int saved=state.memory.has(address)?state.memory.u8(address):0;
@@ -3615,7 +3619,7 @@ int main(int argc, char** argv) {
                 if (SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4) != 0 ||
                     SDL_RenderClear(renderer) != 0 || SDL_RenderCopy(renderer, texture, nullptr, nullptr) != 0)
                     throw std::runtime_error(std::string("Formation save renderer: ") + SDL_GetError());
-                SDL_RenderPresent(renderer);
+                app::present(renderer);
                 if (!restored) SDL_Delay(ui::PitchScreen::formation_save_flash_ms);
             }
         };
@@ -3672,7 +3676,7 @@ int main(int argc, char** argv) {
             if (SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4) != 0 ||
                 SDL_RenderClear(renderer) != 0 || SDL_RenderCopy(renderer, texture, nullptr, nullptr) != 0)
                 throw std::runtime_error(std::string("Table renderer: ") + SDL_GetError());
-            SDL_RenderPresent(renderer);
+            app::present(renderer);
             dirty = false;
             mark_family_table_presented();
         };
@@ -3746,7 +3750,7 @@ int main(int argc, char** argv) {
             const auto image=process_timer_image(flow.render());
             for(size_t i=0;i<pixels.size();++i)pixels[i]=palette.argb[image.pixels[i]];
             SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4);
-            SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);SDL_RenderPresent(renderer);
+            SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);app::present(renderer);
             flow.mark_balance_presented_source_milliseconds(balance_source_milliseconds());
             presented_balance=identity;presented_balance_notice=notice;dirty=false;
         };
@@ -3869,7 +3873,7 @@ int main(int argc, char** argv) {
             SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
             SDL_RenderClear(renderer);
             SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-            SDL_RenderPresent(renderer);
+            app::present(renderer);
             flow.mark_league_pairings_presented_source_seconds(pairings_source_seconds());
             presented_pairings = identity;
             dirty = false;
@@ -4200,7 +4204,7 @@ int main(int argc, char** argv) {
                     SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                     SDL_RenderClear(renderer);
                     SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                    SDL_RenderPresent(renderer);
+                    app::present(renderer);
                     dirty = false;
                     if (flow.in_pitch()) SDL_Delay(90);
                 }
@@ -4224,7 +4228,7 @@ int main(int argc, char** argv) {
                         if (SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4)!=0 ||
                             SDL_RenderClear(renderer)!=0 || SDL_RenderCopy(renderer,texture,nullptr,nullptr)!=0)
                             throw std::runtime_error(std::string("Held controls renderer: ")+SDL_GetError());
-                        SDL_RenderPresent(renderer);
+                        app::present(renderer);
                         mark_stadium_question_presented();
                         mark_national_picker_presented();
                         mark_friendly_picker_presented();
@@ -4241,7 +4245,7 @@ int main(int argc, char** argv) {
                         for(size_t i=0;i<pixels.size();++i)pixels[i]=palette.argb[image.pixels[i]];
                         SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4);
                         SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);
-                        SDL_RenderPresent(renderer);
+                        app::present(renderer);
                         dirty=false;
                     }
                 }
@@ -4254,7 +4258,7 @@ int main(int argc, char** argv) {
                     SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
                     SDL_RenderClear(renderer);
                     SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                    SDL_RenderPresent(renderer);
+                    app::present(renderer);
                     dirty = false;
                 }
                 // Mouse release. Order: an expired question that owns this release, then right-button
@@ -4412,7 +4416,7 @@ int main(int argc, char** argv) {
                 const int copied = SDL_RenderCopy(renderer, texture, nullptr, nullptr);
                 if (source_modal_redraw && (cleared != 0 || copied != 0))
                     throw std::runtime_error(std::string("Source modal renderer: ") + SDL_GetError());
-                SDL_RenderPresent(renderer);
+                app::present(renderer);
                 if(flow.timed_notice_open()&&!timed_notice_presented_at)
                     timed_notice_presented_at=SDL_GetTicks64();
                 if (stadium_redraw) mark_stadium_question_presented();
