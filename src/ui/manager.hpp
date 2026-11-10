@@ -13,6 +13,7 @@
 #include "formats/font.hpp"
 #include "formats/le.hpp"
 #include "formats/m3d.hpp"
+#include "formats/text_encoding.hpp"
 #include "formats/textd.hpp"
 #include "ui/setup.hpp"
 
@@ -100,10 +101,12 @@ private:
     int group_ = 0, hover_ = -1;
 };
 
-// JSON emits UTF-8; rendering/model preserve the original encoding.
-std::string json_quote(std::string_view utf8);
-std::string original_to_utf8(std::string_view original);
-std::string utf8_to_original(std::string_view utf8);
+// JSON emits UTF-8; rendering/model preserve the original encoding. The three functions are
+// defined in formats/text_encoding.hpp (namespace bmh); the screens keep using them as
+// bmh::ui::json_quote etc.
+using ::bmh::json_quote;
+using ::bmh::original_to_utf8;
+using ::bmh::utf8_to_original;
 std::string manager_json(const ManagerChoice& choice);
 
 }  // namespace bmh::ui

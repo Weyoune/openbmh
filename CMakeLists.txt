@@ -126,24 +126,26 @@ if(TARGET SDL2::SDL2main)
     list(PREPEND BMH_SDL_TARGET SDL2::SDL2main)
 endif()
 
-# App sources share objects only within identical compile environments.
-# MSVC consumers currently differ in target/source /utf-8 flags; keep that path.
-set(BMH_APP_SESSION_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/app/career_session.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/app/window_actions.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/app/desktop_actions.cpp")
-set(BMH_APP_SESSION_SDL_SOURCE "${BMH_APP_SESSION_SOURCE}")
-set(BMH_APP_CONTROLLER_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/app/controller.cpp")
-if(NOT MSVC)
-    add_library(bmh_app_session OBJECT src/app/career_session.cpp src/app/window_actions.cpp src/app/desktop_actions.cpp)
-    target_link_libraries(bmh_app_session PRIVATE bmhui)
-    add_library(bmh_app_session_sdl OBJECT src/app/career_session.cpp src/app/window_actions.cpp src/app/desktop_actions.cpp)
-    target_link_libraries(bmh_app_session_sdl PRIVATE bmhui openbmh_audio ${BMH_SDL_TARGET})
-    add_library(bmh_app_controller_sdl OBJECT src/app/controller.cpp)
-    target_link_libraries(bmh_app_controller_sdl PRIVATE bmhui openbmh_audio ${BMH_SDL_TARGET})
-    set(BMH_APP_SESSION_SOURCE "$<TARGET_OBJECTS:bmh_app_session>")
-    set(BMH_APP_SESSION_SDL_SOURCE "$<TARGET_OBJECTS:bmh_app_session_sdl>")
-    set(BMH_APP_CONTROLLER_SOURCE "$<TARGET_OBJECTS:bmh_app_controller_sdl>")
+# The app sources (career session, window/desktop actions, controller) are compiled once per
+# compile environment and shared as objects by the game and by about forty tests and tools.
+# On MSVC they are compiled with /utf-8 like the game itself: their German messages are UTF-8
+# string literals. (Until 1.0.12 the MSVC build compiled these sources again for every
+# consumer, which cost most of the build time; controller.cpp then got /utf-8 only from
+# targets that set it.)
+add_library(bmh_app_session OBJECT src/app/career_session.cpp src/app/window_actions.cpp src/app/desktop_actions.cpp)
+target_link_libraries(bmh_app_session PRIVATE bmhui)
+add_library(bmh_app_session_sdl OBJECT src/app/career_session.cpp src/app/window_actions.cpp src/app/desktop_actions.cpp)
+target_link_libraries(bmh_app_session_sdl PRIVATE bmhui openbmh_audio ${BMH_SDL_TARGET})
+add_library(bmh_app_controller_sdl OBJECT src/app/controller.cpp)
+target_link_libraries(bmh_app_controller_sdl PRIVATE bmhui openbmh_audio ${BMH_SDL_TARGET})
+if(MSVC)
+    target_compile_options(bmh_app_session PRIVATE /utf-8)
+    target_compile_options(bmh_app_session_sdl PRIVATE /utf-8)
+    target_compile_options(bmh_app_controller_sdl PRIVATE /utf-8)
 endif()
+set(BMH_APP_SESSION_SOURCE "$<TARGET_OBJECTS:bmh_app_session>")
+set(BMH_APP_SESSION_SDL_SOURCE "$<TARGET_OBJECTS:bmh_app_session_sdl>")
+set(BMH_APP_CONTROLLER_SOURCE "$<TARGET_OBJECTS:bmh_app_controller_sdl>")
 
 # (before the first subdirectory: tests added there are only registered once testing is on)
 enable_testing()
@@ -211,6 +213,7 @@ add_library(bmhcore STATIC
     src/formats/vga.cpp
     src/formats/font.cpp
     src/formats/textd.cpp
+    src/formats/text_encoding.cpp
     src/formats/fbm.cpp
     src/formats/le.cpp
     src/formats/diamond_image.cpp
@@ -479,9 +482,6 @@ set_target_properties(openbmh_play PROPERTIES WIN32_EXECUTABLE TRUE OUTPUT_NAME 
 target_include_directories(openbmh_play PRIVATE "${CMAKE_BINARY_DIR}/generated")
 if(MSVC)
     target_compile_options(openbmh_play PRIVATE /utf-8)
-    # App sources also compile in headless tests/helpers without target /utf-8.
-    set_source_files_properties(src/app/career_session.cpp src/app/window_actions.cpp
-        src/app/desktop_actions.cpp PROPERTIES COMPILE_OPTIONS /utf-8)
 endif()
 
 # Development helper: drives the career session like the UI, without a window
