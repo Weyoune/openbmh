@@ -41,6 +41,7 @@
 #include <string>
 #include <vector>
 
+#include "app/canvas.hpp"
 #include "app/controller.hpp"
 #include "app/quit_confirmation.hpp"
 #include "launch/archive.hpp"
@@ -274,6 +275,8 @@ int main(int argc, char** argv) {
         if (!texture) throw FormatError(SDL_GetError());
         app::PitchPointer pitch_pointer;
         std::vector<uint32_t> pixels(320 * 240);
+        // The picture on the window (app/canvas.hpp): canvas.show(image, palette) converts, uploads and presents.
+        app::Canvas canvas{renderer, texture, pixels};
         ui::LiveMatchdayScreen live_screen(data);
         ui::RealityReporterPanel reality_reporter(data);
         ui::SportschauIntro sportschau_intro(data);
@@ -419,11 +422,7 @@ int main(int argc, char** argv) {
             season_backdrop = image;
             const Palette& frame_palette = palette_override ? *palette_override : palette;
             const Image painted = process_timer_image(image);
-            for (size_t i = 0; i < pixels.size(); ++i) pixels[i] = frame_palette.argb[painted.pixels[i]];
-            SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-            SDL_RenderClear(renderer);
-            SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-            app::present(renderer);
+            canvas.show(painted, frame_palette);
         };
         // Plays the highscore point animation of the desk, one rendered frame per step, if active.
         const auto present_desk_record_points = [&] {
@@ -2048,12 +2047,7 @@ int main(int argc, char** argv) {
                         while (running && !closed) {
                             pitch_pointer.show(screen.pointer_cursor(palette), renderer);
                             const Image image = screen.render();
-                            for (size_t i = 0; i < pixels.size(); ++i)
-                                pixels[i] = palette.argb[image.pixels[i]];
-                            SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                            SDL_RenderClear(renderer);
-                            SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                            app::present(renderer);
+                            canvas.show(image, palette);
                             SDL_Event modal;
                             bool redrawn = false;
                             while (quit_confirmation.poll(&modal)) {
@@ -2205,12 +2199,7 @@ int main(int argc, char** argv) {
                         : pairings_screen ? pairings_screen->render()
                         : strengths_screen ? strengths_screen->render() : cup_screen->render();
                     SDL_SetWindowTitle(window, overview_title().c_str());
-                    for (size_t i = 0; i < pixels.size(); ++i)
-                        pixels[i] = palette.argb[image.pixels[i]];
-                    SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                    SDL_RenderClear(renderer);
-                    SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                    app::present(renderer);
+                    canvas.show(image, palette);
                     if (pairings_screen)
                         pairings_screen->mark_presented_source_seconds(overview_source_seconds());
                 };
@@ -2232,12 +2221,7 @@ int main(int argc, char** argv) {
                     const auto show_dialog = [&] {
                         const Image image = dialog.render();
                         SDL_SetWindowTitle(window, "OpenBMH - live_table_range");
-                        for (size_t i = 0; i < pixels.size(); ++i)
-                            pixels[i] = palette.argb[image.pixels[i]];
-                        SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                        SDL_RenderClear(renderer);
-                        SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                        app::present(renderer);
+                        canvas.show(image, palette);
                         outcome = dialog.after_present();
                         clock_anchor = SDL_GetTicks();
                     };
@@ -2435,11 +2419,7 @@ int main(int argc, char** argv) {
                         if (!frame.matches.empty()) {
                             SDL_SetWindowTitle(window, "OpenBMH - live_matchday");
                             const Image live_image = live_screen.render(frame);
-                            for (size_t i = 0; i < pixels.size(); ++i) pixels[i] = palette.argb[live_image.pixels[i]];
-                            SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                            SDL_RenderClear(renderer);
-                            SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                            app::present(renderer);
+                            canvas.show(live_image, palette);
                             live_frame_shown = true;
                         }
                     }
@@ -2470,11 +2450,7 @@ int main(int argc, char** argv) {
                         if (offer_dirty) {
                             const auto image = offer_screen.render();
                             outcome_backdrop = image;
-                            for (size_t i = 0; i < pixels.size(); ++i) pixels[i] = palette.argb[image.pixels[i]];
-                            SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                            SDL_RenderClear(renderer);
-                            SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                            app::present(renderer);
+                            canvas.show(image, palette);
                             offer_dirty = false;
                         }
                         SDL_Event event;
@@ -2544,11 +2520,7 @@ int main(int argc, char** argv) {
                         if (phase != rendered_phase) {
                             const auto image = decision_screen.render_at_elapsed(elapsed);
                             if (!confirmation) outcome_backdrop = image;
-                            for (size_t i = 0; i < pixels.size(); ++i) pixels[i] = palette.argb[image.pixels[i]];
-                            SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                            SDL_RenderClear(renderer);
-                            SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                            app::present(renderer);
+                            canvas.show(image, palette);
                             rendered_phase = phase;
                         }
                         SDL_Event event;
@@ -2583,11 +2555,7 @@ int main(int argc, char** argv) {
                         ui::SeasonEntrantsScreen entrants_screen(data, std::move(view));
                         SDL_SetWindowTitle(window, "OpenBMH - season_entrants");
                         const Image image = entrants_screen.render();
-                        for (size_t i = 0; i < pixels.size(); ++i) pixels[i] = palette.argb[image.pixels[i]];
-                        SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                        SDL_RenderClear(renderer);
-                        SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                        app::present(renderer);
+                        canvas.show(image, palette);
                         bool dismissed = false;
                         while (running && !dismissed) {
                             SDL_Event event;
@@ -2764,12 +2732,7 @@ int main(int argc, char** argv) {
                             bool source_completed = false;
                             while (running && !closed) {
                                 const Image image = screen.render();
-                                for (size_t i = 0; i < pixels.size(); ++i)
-                                    pixels[i] = palette.argb[image.pixels[i]];
-                                SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                                SDL_RenderClear(renderer);
-                                SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                                app::present(renderer);
+                                canvas.show(image, palette);
                                 SDL_Event modal;
                                 bool redrawn = false;
                                 while (quit_confirmation.poll(&modal)) {
@@ -2862,12 +2825,7 @@ int main(int argc, char** argv) {
                         if (!running) return;
                         const Image image = live_screen.render(ui::live_matchday_frame(minute, groups, state));
                         SDL_SetWindowTitle(window, "OpenBMH - live_matchday");
-                        for (size_t i = 0; i < pixels.size(); ++i)
-                            pixels[i] = palette.argb[image.pixels[i]];
-                        SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                        SDL_RenderClear(renderer);
-                        SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                        app::present(renderer);
+                        canvas.show(image, palette);
                     };
                     // Opens the overview selected by key_slot through the session and runs it via
                     // present_running_overview. The sequence counter numbers the overviews opened in this
@@ -2933,12 +2891,7 @@ int main(int argc, char** argv) {
                         const auto render_settings = [&] {
                             const Image image = readme ? readme->render() : screen.render();
                             SDL_SetWindowTitle(window, readme ? "OpenBMH - settings_readme" : "OpenBMH - live_settings");
-                            for (size_t i = 0; i < pixels.size(); ++i)
-                                pixels[i] = palette.argb[image.pixels[i]];
-                            SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                            SDL_RenderClear(renderer);
-                            SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                            app::present(renderer);
+                            canvas.show(image, palette);
                         };
                         render_settings();
                         // Modal save/load screen for settings files opened from the settings screen; the result is
@@ -2957,12 +2910,7 @@ int main(int argc, char** argv) {
                             const auto render_file = [&] {
                                 const Image image = file_screen.render();
                                 SDL_SetWindowTitle(window, "OpenBMH - live_settings_file");
-                                for (size_t i = 0; i < pixels.size(); ++i)
-                                    pixels[i] = palette.argb[image.pixels[i]];
-                                SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                                SDL_RenderClear(renderer);
-                                SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                                app::present(renderer);
+                                canvas.show(image, palette);
                             };
                             render_file();
                             // Give the filename field the native text input focus.
@@ -3270,11 +3218,7 @@ int main(int argc, char** argv) {
                     if (frame.matches.empty()) return;
                     // Local helper: paints an image with the normal palette and presents it.
                     const auto present = [&](const Image& image) {
-                        for (size_t i = 0; i < pixels.size(); ++i) pixels[i] = palette.argb[image.pixels[i]];
-                        SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                        SDL_RenderClear(renderer);
-                        SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                        app::present(renderer);
+                        canvas.show(image, palette);
                     };
                     const int count = ui::LiveMatchdayScreen::ball_frame_count(event.displacement);
                     // Converts the saved pause number at the given row into milliseconds.
@@ -3330,11 +3274,7 @@ int main(int argc, char** argv) {
                         std::to_string(event.kind) + "_" + std::to_string(int(event.goal));
                     SDL_SetWindowTitle(window, title.c_str());
                     const Image image = live_screen.render_chance(frame, chance);
-                    for (size_t i = 0; i < pixels.size(); ++i) pixels[i] = palette.argb[image.pixels[i]];
-                    SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                    SDL_RenderClear(renderer);
-                    SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                    app::present(renderer);
+                    canvas.show(image, palette);
                     SDL_PumpEvents();
                     SDL_Event quit_event;
                     if (quit_confirmation.peep(&quit_event, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) {
@@ -3365,11 +3305,7 @@ int main(int argc, char** argv) {
                     for (size_t index = 0; index < frames.size() && running; ++index) {
                         const std::string title = "OpenBMH - live_shot_" + identity + "_" + std::to_string(index);
                         SDL_SetWindowTitle(window, title.c_str());
-                        for (size_t i = 0; i < pixels.size(); ++i) pixels[i] = shot_colors.argb[frames[index].pixels[i]];
-                        SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                        SDL_RenderClear(renderer);
-                        SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                        app::present(renderer);
+                        canvas.show(frames[index], shot_colors);
                         SDL_PumpEvents();
                         SDL_Event input;
                         if (quit_confirmation.peep(&input, 1, SDL_GETEVENT, SDL_QUIT, SDL_QUIT) > 0) {
@@ -3426,9 +3362,7 @@ int main(int argc, char** argv) {
                             std::to_string(event.source_side)+"_"+std::to_string(event.kind)+"_"+
                             std::to_string(index)+"_"+std::to_string(images.size());
                         SDL_SetWindowTitle(window,title.c_str());
-                        for (size_t i=0;i<pixels.size();++i) pixels[i]=colors.argb[images[index].pixels[i]];
-                        SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4);
-                        SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);app::present(renderer);
+                        canvas.show(images[index], colors);
                         SDL_PumpEvents();SDL_Event input;
                         if (quit_confirmation.peep(&input,1,SDL_GETEVENT,SDL_QUIT,SDL_QUIT)>0) { running=false;return; }
                         // FirstThen holds the first frame for 40 retraces; later frames
@@ -3449,9 +3383,7 @@ int main(int argc, char** argv) {
                         std::to_string(event.group)+"_"+std::to_string(event.match)+"_"+
                         std::to_string(event.side)+"_"+std::to_string(event.kind)+"_"+std::to_string(event.player);
                     const auto present=[&](const Image& image) {
-                        for (size_t i=0;i<pixels.size();++i) pixels[i]=palette.argb[image.pixels[i]];
-                        SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4);
-                        SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);app::present(renderer);
+                        canvas.show(image, palette);
                     };
                     SDL_SetWindowTitle(window,title.c_str());present(live_screen.render_booking(frame,booking));
                     if (event.kind != 2 && app::match_sound_enabled(state))
@@ -3479,9 +3411,7 @@ int main(int argc, char** argv) {
                         std::to_string(event.of)+"_"+std::to_string(event.player);
                     SDL_SetWindowTitle(window,title.c_str());
                     const auto image=live_screen.render_shootout(frame,projection);
-                    for (size_t i=0;i<pixels.size();++i) pixels[i]=palette.argb[image.pixels[i]];
-                    SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4);
-                    SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);app::present(renderer);
+                    canvas.show(image, palette);
                     SDL_PumpEvents();SDL_Event input;
                     if (quit_confirmation.peep(&input,1,SDL_GETEVENT,SDL_QUIT,SDL_QUIT)>0) { running=false;return; }
                     const int repeats=event.stage==LiveShootoutStage::preview?4:2;
@@ -3497,9 +3427,7 @@ int main(int argc, char** argv) {
                     const auto frame = ui::live_matchday_frame(event.minute,groups,state);
                     const auto present = [&](const Image& image,const Palette& colors,const std::string& title) {
                         SDL_SetWindowTitle(window,title.c_str());
-                        for (size_t i=0;i<pixels.size();++i) pixels[i]=colors.argb[image.pixels[i]];
-                        SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4);
-                        SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);app::present(renderer);
+                        canvas.show(image, colors);
                     };
                     const auto delay = [&](uint32_t address) {
                         const int saved=state.memory.has(address)?state.memory.u8(address):0;
@@ -3748,9 +3676,7 @@ int main(int argc, char** argv) {
             const bool notice=flow.balance()->notice_open();
             if(presented_balance&&*presented_balance==identity&&notice==presented_balance_notice)return;
             const auto image=process_timer_image(flow.render());
-            for(size_t i=0;i<pixels.size();++i)pixels[i]=palette.argb[image.pixels[i]];
-            SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4);
-            SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);app::present(renderer);
+            canvas.show(image, palette);
             flow.mark_balance_presented_source_milliseconds(balance_source_milliseconds());
             presented_balance=identity;presented_balance_notice=notice;dirty=false;
         };
@@ -3869,11 +3795,7 @@ int main(int argc, char** argv) {
             const auto identity = flow.league_pairings()->state().identity;
             if (presented_pairings && *presented_pairings == identity) return;
             const auto image = process_timer_image(flow.render());
-            for (size_t i = 0; i < pixels.size(); ++i) pixels[i] = palette.argb[image.pixels[i]];
-            SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-            SDL_RenderClear(renderer);
-            SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-            app::present(renderer);
+            canvas.show(image, palette);
             flow.mark_league_pairings_presented_source_seconds(pairings_source_seconds());
             presented_pairings = identity;
             dirty = false;
@@ -4200,11 +4122,7 @@ int main(int argc, char** argv) {
                 if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT &&
                     flow.press_hold(e.button.x, e.button.y)) {
                     const auto image = process_timer_image(flow.render());
-                    for (size_t i = 0; i < pixels.size(); ++i) pixels[i] = palette.argb[image.pixels[i]];
-                    SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                    SDL_RenderClear(renderer);
-                    SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                    app::present(renderer);
+                    canvas.show(image, palette);
                     dirty = false;
                     if (flow.in_pitch()) SDL_Delay(90);
                 }
@@ -4242,10 +4160,7 @@ int main(int argc, char** argv) {
                         // DeskDate waits for the physical release.
                         SDL_SetWindowTitle(window, "OpenBMH - desktop");
                         const auto image=process_timer_image(flow.render());
-                        for(size_t i=0;i<pixels.size();++i)pixels[i]=palette.argb[image.pixels[i]];
-                        SDL_UpdateTexture(texture,nullptr,pixels.data(),320*4);
-                        SDL_RenderClear(renderer);SDL_RenderCopy(renderer,texture,nullptr,nullptr);
-                        app::present(renderer);
+                        canvas.show(image, palette);
                         dirty=false;
                     }
                 }
@@ -4254,11 +4169,7 @@ int main(int argc, char** argv) {
                     // InfoPress→Centered paints immediately and waits for mouse UP.
                     // Present before polling a queued release, which restores the list.
                     const auto image = process_timer_image(flow.render());
-                    for (size_t i = 0; i < pixels.size(); ++i) pixels[i] = palette.argb[image.pixels[i]];
-                    SDL_UpdateTexture(texture, nullptr, pixels.data(), 320 * 4);
-                    SDL_RenderClear(renderer);
-                    SDL_RenderCopy(renderer, texture, nullptr, nullptr);
-                    app::present(renderer);
+                    canvas.show(image, palette);
                     dirty = false;
                 }
                 // Mouse release. Order: an expired question that owns this release, then right-button
