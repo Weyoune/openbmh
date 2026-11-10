@@ -30,9 +30,9 @@ PreparationState fixture(const LeImage& exe) {
     PreparationState s;
     auto& d = s.desktop;
     d.source = "engine_projection"; d.revision = 7;
-    d.manager_slot = 0; d.runtime_club = 12; d.club_name = "UNITFC"; d.manager_name = "Nobody";
+    d.manager_slot = 0; d.runtime_club = 12; d.club_name = "UNITFC"; d.manager_name = "OpenBMH";   // the default name the manager dialog offers
     d.manager_teams = {12};
-    d.managers = {{12,12,0,0,0,"Nobody"}};
+    d.managers = {{12,12,0,0,0,"OpenBMH"}};
     d.league = 0; d.portrait = 0; d.date = desk_date(0, exe); d.strength = 80;
     d.options.managers = 1; d.options.world = false; d.options.league = true;
     d.automation[4] = 0x9f;
