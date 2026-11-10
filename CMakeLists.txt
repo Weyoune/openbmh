@@ -282,7 +282,11 @@ else()
     target_compile_options(bmhcore PRIVATE -Wall -Wextra)
 endif()
 
+# The asset viewer of the first milestone (not the game). Its file is named openbmh_viewer: as
+# "openbmh" it would be the same file as the game (OpenBMH, target openbmh_play below) on a file
+# system that ignores case, and whichever of the two was linked last would win.
 add_executable(openbmh src/main.cpp)
+set_target_properties(openbmh PROPERTIES OUTPUT_NAME openbmh_viewer)
 target_link_libraries(openbmh PRIVATE bmhcore ${BMH_SDL_TARGET})
 if(MSVC)
     target_compile_options(openbmh PRIVATE /utf-8)
