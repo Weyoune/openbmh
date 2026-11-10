@@ -8,7 +8,7 @@
 #include <stdexcept>
 namespace bmh {
 ClubInfoEntry prepare_club_info_entry(GameState& g, int team) {
-    if (team < 0 || (team >= 138 && team != kNoTeam))
+    if (team < 0 || (team >= world_layout().league_teams && team != kNoTeam))
         throw std::invalid_argument("club info: team has no squad");
     const SquadRange range = squad_range(team);
     if (range.first > g.squad_slots.size() || range.count > g.squad_slots.size() - range.first)

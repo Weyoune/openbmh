@@ -37,8 +37,8 @@ void validate(const PlayerCardState& s) {
     const auto& p=s.lineup.players.at(size_t(s.row));
     if(p.player_id!=(p.slot&0xfff)||p.row!=s.row)throw FormatError("player card: inconsistent player identity");
     if(s.statistics && s.statistics->months>12)throw FormatError("player statistics: more than twelve monthly samples");
-    if(s.loan&&(s.loan->owner<0||s.loan->owner>=168||s.loan->borrower!=s.lineup.runtime_club||
-        s.loan->borrower>=168||s.loan->months<0||s.loan->months>255||
+    if(s.loan&&(s.loan->owner<0||s.loan->owner>=world_layout().first_foreign_cup()||s.loan->borrower!=s.lineup.runtime_club||
+        s.loan->borrower>=world_layout().first_foreign_cup()||s.loan->months<0||s.loan->months>255||
         std::any_of(s.loan->badges.begin(),s.loan->badges.end(),[](int badge){return badge<0||badge>511;})))
         throw FormatError("player card: inconsistent ordinary loan context");
 }
@@ -73,7 +73,7 @@ void context(PlayerCardState& out,const StaticMemory& memory,const Bytes& club_h
             // the ordinary borrower row, not the lender's ClubInfo_FormatError_RuntimeField snapshot.
             PlayerCardLoan detail;
             detail.owner=int(loan>>12&0x3ff);detail.borrower=int(loan>>22&0x3ff);
-            if(detail.borrower!=out.lineup.runtime_club||detail.owner>=168||detail.borrower>=168||out.loan||!memory.has(::bmh::layout::ClubPlayerDetail_InvalidArgument_RuntimeField+i)){
+            if(detail.borrower!=out.lineup.runtime_club||detail.owner>=world_layout().first_foreign_cup()||detail.borrower>=world_layout().first_foreign_cup()||out.loan||!memory.has(::bmh::layout::ClubPlayerDetail_InvalidArgument_RuntimeField+i)){
                 out.unsupported_record="loan_record";continue;
             }
             detail.months=memory.u8(::bmh::layout::ClubPlayerDetail_InvalidArgument_RuntimeField+i);

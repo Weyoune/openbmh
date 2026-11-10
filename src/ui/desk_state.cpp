@@ -45,7 +45,7 @@ std::string pool_name(const Bytes& names, const std::vector<uint16_t>& offsets, 
 }
 
 int executable_league(const LeImage& exe, int team) {
-    if (team < 0 || team >= 138 || !exe.contains(::bmh::layout::LeagueSizes + 8)) return -1;
+    if (team < 0 || team >= world_layout().league_teams || !exe.contains(::bmh::layout::LeagueSizes + 8)) return -1;
     int first = 0;
     for (int league = 0; league < 9; ++league) {
         if (!exe.contains(::bmh::layout::LeagueSizes + uint32_t(league))) return -1;
@@ -85,7 +85,7 @@ void project_drawer_rows(DeskState& d, const LeImage& exe, const Bytes& managers
     auto rank_curve = [&](int team, DeskRankCurve& curve) {
         curve.runtime_team = team;
         curve.team_name = pool_name(club_names, club_ids, team);
-        if (team == 0x165) {
+        if (team == kNoTeam) {
             // TablePosition returns rank 2 for this special national row;
             // QuoteNationalFriendlyMatch uses its native no-team squad (no random rating).
             curve.current_position = 2;
@@ -105,7 +105,7 @@ void project_drawer_rows(DeskState& d, const LeImage& exe, const Bytes& managers
             curve.samples.push_back({round + 1, int((packed >> ((round % 3) * 5)) & 0x1f)});
         }
         if (!curve.samples.empty()) curve.current_position = curve.samples.back().source_rank;
-        if (game && team < 138) curve.strength = team_average(*game, team, 0x1ff).value;
+        if (game && team < world_layout().league_teams) curve.strength = team_average(*game, team, 0x1ff).value;
     };
     rank_curve(d.runtime_club < 0 ? 0x165 : d.runtime_club, d.rank_curves[0]);
     if (authenticated_rival && *authenticated_rival >= 0 && *authenticated_rival != d.runtime_club)
@@ -113,7 +113,7 @@ void project_drawer_rows(DeskState& d, const LeImage& exe, const Bytes& managers
 
     // SourceDrawerTeam reads only the prepared opponent's venue history. Other
     // teams' names need not be available to render this manager's current Desk.
-    if (!authenticated_rival || *authenticated_rival < 0 || *authenticated_rival >= 168) return;
+    if (!authenticated_rival || *authenticated_rival < 0 || *authenticated_rival >= world_layout().first_foreign_cup()) return;
     const size_t at = manager * 0x690 + size_t(*authenticated_rival) * 10;
     if (at + 10 > manager_results.size()) return;
     const bool present = std::any_of(manager_results.begin() + at,
@@ -629,7 +629,7 @@ DeskState desk_from_game(const GameState& g, const LeImage& exe, uint64_t revisi
             // OpenBMH deviates from the original: the desk shows the opponent's badge whenever the data has one.
             // The original draws a computer icon for the clubs between its two gate values (the foreign league
             // clubs); only the cup-only teams and the empty selector keep the icon.
-            const bool fallback = (opponent & 0xfff) == 0xfff || (opponent >= 168 && opponent < 357);
+            const bool fallback = (opponent & 0xfff) == 0xfff || (opponent >= world_layout().first_foreign_cup() && opponent < 357);
             d.next_opponent_badge_fallback = fallback;
             if (!fallback) {
                 const size_t badge_at = size_t(opponent) * 2;

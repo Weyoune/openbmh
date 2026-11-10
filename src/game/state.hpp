@@ -14,6 +14,7 @@
 
 #include "formats/m3d.hpp"
 #include "formats/savestate.hpp"
+#include "game/world_layout.hpp"
 #include "formats/textd.hpp"
 #include "game/memory.hpp"
 #include "game/random.hpp"

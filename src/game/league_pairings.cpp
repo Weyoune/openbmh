@@ -113,7 +113,7 @@ void validate(const GameState& g,const LeaguePairingsOwner& o) {
     require(o.supported&&!o.closed&&o.manager>=0&&o.manager<4&&
         size_t(o.manager)<g.manager_teams.size()&&g.memory.has(::bmh::layout::ActiveManager)&&
         g.memory.u8(::bmh::layout::ActiveManager)==o.manager&&g.manager_teams[size_t(o.manager)]==o.runtime_club&&
-        (national||(o.runtime_club>=0&&o.runtime_club<138))&&
+        (national||(o.runtime_club>=0&&o.runtime_club<world_layout().league_teams))&&
         size_t(o.runtime_club)<g.club_ids.size()&&
         g.club_ids[size_t(o.runtime_club)]==o.club_identity,
         "pairings: stale or unsupported manager identity");
@@ -134,7 +134,7 @@ void validate(const GameState& g,const LeaguePairingsOwner& o) {
         "pairings: incomplete Native schedule");
     const auto selection_valid=[&](int team,int identity) {
         return team<0 ? team>=-2&&identity==-1 :
-            team<138&&team_league(team)==o.league&&g.club_ids.at(size_t(team))==identity;
+            team<world_layout().league_teams&&team_league(team)==o.league&&g.club_ids.at(size_t(team))==identity;
     };
     require(selection_valid(o.search_first,o.search_first_identity)&&
         selection_valid(o.search_second,o.search_second_identity)&&
@@ -186,7 +186,7 @@ void validate(const GameState& g,const LeaguePairingsOwner& o) {
             o.filter_offset>=0&&o.filter_offset%10==0&&o.filter_team>=-2,
             "pairings: invalid Source club-filter mode");
         if(o.filter_team>=0) {
-            require(o.filter_team<138&&team_league(o.filter_team)==o.league&&
+            require(o.filter_team<world_layout().league_teams&&team_league(o.filter_team)==o.league&&
                 g.club_ids.at(size_t(o.filter_team))==o.filter_identity&&
                 (o.filter_offset==0||o.filter_offset<filtered_fixture_count(o.league,o.filter_team)),
                 "pairings: stale or out-of-range filtered club");
@@ -320,7 +320,7 @@ LeaguePairingsOwner open_league_pairings_source(GameState& g,int manager,const L
     require(manager>=0&&manager<4&&size_t(manager)<g.manager_teams.size(),"pairings: unsupported manager");
     LeaguePairingsOwner out;out.manager=manager;out.runtime_club=g.manager_teams[size_t(manager)];
     const bool national=out.runtime_club==kNoTeam;
-    require((national||(out.runtime_club>=0&&out.runtime_club<138))&&
+    require((national||(out.runtime_club>=0&&out.runtime_club<world_layout().league_teams))&&
         size_t(out.runtime_club)<g.club_ids.size(),"pairings: unsupported or unowned manager");
     out.club_identity=g.club_ids[size_t(out.runtime_club)];
     // TeamLeague2 maps the Original national runtime team 0x165 to league 0.

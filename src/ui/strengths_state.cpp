@@ -178,7 +178,7 @@ StrengthsProjection strengths_from_game(const GameState& game, int manager_slot,
 
     const int first = league_first_team(league);
     const int size = league_system().sizes[league];
-    if (first < 0 || first + size > 138) invalid("league bounds exceed domestic club table");
+    if (first < 0 || first + size > world_layout().league_teams) invalid("league bounds exceed domestic club table");
     if (game.club_ids.size() < size_t(first + size)) invalid("club ID table is truncated");
     if (game.club_names.empty()) invalid("club name pool is empty");
     for (int team = first; team < first + size; ++team) {

@@ -78,7 +78,7 @@ ClubPlayerDetailContext club_player_detail_context(const GameState& g, const Clu
         out.primary_club = -1;
     } else {
         if (s.rendered_row < 0 || s.rendered_row >= 24 || s.runtime_team < 0 ||
-            (s.runtime_team >= 138 && s.runtime_team != kNoTeam))
+            (s.runtime_team >= world_layout().league_teams && s.runtime_team != kNoTeam))
             throw std::invalid_argument("player detail: invalid runtime club");
         const auto range = squad_range(s.runtime_team);
         if (range.first + range.count > g.squad_slots.size()) throw std::invalid_argument("player detail: truncated squad");

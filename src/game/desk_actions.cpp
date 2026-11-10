@@ -75,7 +75,7 @@ FriendlyBookingQuote make_friendly_quote(const GameState& g, int manager, int op
         return out;
     }
     const int own_team = g.manager_teams[size_t(manager)];
-    if (own_team < 0 || own_team >= 168 || opponent < 0 || opponent >= 168 || opponent == own_team) {
+    if (own_team < 0 || own_team >= world_layout().first_foreign_cup() || opponent < 0 || opponent >= world_layout().first_foreign_cup() || opponent == own_team) {
         out.status = FriendlyQuoteStatus::invalid_opponent;
         return out;
     }
@@ -637,7 +637,7 @@ TransferActionResult submit_transfer_bid_impl(GameState& g, const TransferBidReq
     const bool source_direct_candidate = source_hooks && seller_manager < 0 &&
         fee_pct >= 110 && salary_pct >= g.memory.u8(entry + 0x55);
     if (source_direct_candidate) {
-        if (request.list_entry >= 40 || seller < 0 || (seller >= 0x8a && seller != 0x0fff) || seller == buyer ||
+        if (request.list_entry >= 40 || seller < 0 || (seller >= world_layout().league_teams && seller != 0x0fff) || seller == buyer ||
             request.manager < 0 || size_t(request.manager) >= g.manager_teams.size() ||
             !g.memory.has(::bmh::layout::ActiveManager) || g.memory.u8(::bmh::layout::ActiveManager) != request.manager ||
             source_hooks->direct_mode != HumanBuyerSaleDirectMode::ordinary_ai_purchase ||
@@ -803,7 +803,7 @@ TransferActionResult submit_transfer_bid_source_impl(GameState& g, const Transfe
     // ordinary settlement already removes players using that actual range.
     // Higher club IDs have no ordinary squad; do not invent their settlement
     // or let ReleasePlayer reach its missing-player/internal-error21 boundary.
-    if (seller != 0x0fff && seller >= 138) {
+    if (seller != 0x0fff && seller >= world_layout().league_teams) {
         report.fail(kOrdinarySellerBoundary);
         out.status = TransferActionStatus::unsupported;
         out.player = player; out.list_entry = request.list_entry;
@@ -1022,7 +1022,7 @@ TransferActionResult submit_transfer_bid_source_impl(GameState& g, const Transfe
 std::optional<TransferMarketSnapshotPreview> transfer_market_snapshot_preview(
     const GameState& g,int manager,int runtime_club,int index) {
     if(manager<0||manager>=4||size_t(manager)>=g.manager_teams.size()||
-       g.manager_teams[size_t(manager)]!=runtime_club||runtime_club<0||runtime_club>=138||index<0||index>=12)
+       g.manager_teams[size_t(manager)]!=runtime_club||runtime_club<0||runtime_club>=world_layout().league_teams||index<0||index>=12)
         return std::nullopt;
     const auto owner=squad_range(runtime_club);
     int count=0,ordinal=-1;
@@ -1049,7 +1049,7 @@ std::optional<TransferMarketSnapshotPreview> transfer_market_snapshot_preview(
         // Require exactly one genuine ledger and its authenticated owner.
         if(borrower!=-1||int(loan>>12&0x3ff)!=runtime_club)return std::nullopt;
         borrower=int(loan>>22&0x3ff);
-        if(borrower<0||borrower>=138||borrower==runtime_club)return std::nullopt;
+        if(borrower<0||borrower>=world_layout().league_teams||borrower==runtime_club)return std::nullopt;
     }
     if(borrower<0)return std::nullopt;
     const auto range=squad_range(borrower);
@@ -1104,7 +1104,7 @@ TransferMarketPreviewResult quote_transfer_market_preview_source(
         // with the unchanged42307 formula; do not synthesize a Native slot.
     } else {
         if(request.snapshot_index!=-1)return unsupported("market preview: invalid snapshot index");
-        if(request.seller!=request.runtime_club||request.runtime_club>=138)
+        if(request.seller!=request.runtime_club||request.runtime_club>=world_layout().league_teams)
             return unsupported("market preview: outgoing club is not an ordinary owned squad");
         const auto range=squad_range(request.runtime_club);
         if(range.count==0||range.first+range.count>g.squad_slots.size()||
@@ -1146,7 +1146,7 @@ int editor_slot(const GameState& g,const TransferOfferEditorRequest& r) {
 std::string editor_identity(const GameState& g,const TransferOfferEditorRequest& r) {
     if(r.manager<0||r.manager>=4||size_t(r.manager)>=g.manager_teams.size()||
        !g.memory.has(::bmh::layout::ActiveManager)||g.memory.u8(::bmh::layout::ActiveManager)!=r.manager||
-       g.manager_teams[size_t(r.manager)]!=r.runtime_club||r.runtime_club<0||r.runtime_club>=138)
+       g.manager_teams[size_t(r.manager)]!=r.runtime_club||r.runtime_club<0||r.runtime_club>=world_layout().league_teams)
         return "OpenTransferEditor: stale ordinary manager/team";
     const size_t record=size_t(r.manager)*kRecordSize;
     if(record+kRecordSize>g.manager_records.size()||
@@ -1172,7 +1172,7 @@ std::string editor_identity(const GameState& g,const TransferOfferEditorRequest&
     const int seller=int(r.expected_seller_word&0x7fff);
     if(r.expected_seller_word==0xffff||seller==r.runtime_club)
         return "OpenTransferEditor: targeted/invalid seller is outside ordinary editor";
-    if(seller!=0x0fff&&seller>=138)return kOrdinarySellerBoundary;
+    if(seller!=0x0fff&&seller>=world_layout().league_teams)return kOrdinarySellerBoundary;
     // OpenTransferEditor: the original refuses a loan from a free agent (seller 0x0fff) with the message
     // DeskActionsRuntimeField6 (SDLFlushEvents3) - a rule of the game, not a gap: the code names it
     if(r.loan&&r.expected_seller_word==0x0fff)return "free_agent_loan_refused";

@@ -42,7 +42,7 @@ uint8_t formation_byte(const GameState& g, size_t index) {
 }
 
 bool pitch_context_valid(const GameState& g, int manager, int team) {
-    if (manager < 0 || manager > 3 || team < 0 || team >= 138 || g.lineups_frozen ||
+    if (manager < 0 || manager > 3 || team < 0 || team >= world_layout().league_teams || g.lineups_frozen ||
         !g.memory.has(::bmh::layout::ActiveManager) || !g.memory.has(::bmh::layout::GameMode) ||
         g.memory.u8(::bmh::layout::ActiveManager) != manager || g.memory.u8(::bmh::layout::GameMode) < 1 || g.memory.u8(::bmh::layout::GameMode) > 3 ||
         size_t(manager) >= g.manager_teams.size() || g.manager_teams[size_t(manager)] != team ||
@@ -331,7 +331,7 @@ void install_lineup_rules(const LeImage& exe) {
 }
 
 static void auto_lineup_impl(GameState& g, int team, int mode, int manager) {
-    if (team >= 138 && team != kNoTeam) return;  // teams without squads
+    if (team >= world_layout().league_teams && team != kNoTeam) return;  // teams without squads
     if (g.lineups_frozen) return;  // LineupRuntimeField (the season change)
     const bool improve_from_reserves = (mode & 0x80) != 0;
     mode &= 0x7F;
@@ -687,7 +687,7 @@ void quicksort_by_key(int16_t* items, uint32_t* keys, int count, bool ascending)
 }
 
 bool substitute(GameState& g, int team, int off, int mode, WatcomRandom& rand) {
-    if (!(team < 138 || team == kNoTeam)) return false;
+    if (!(team < world_layout().league_teams || team == kNoTeam)) return false;
     const int manager = g.manager_of(team);
     int used = g.team_flags.at(team) >> 5 & 7;  // substitutions so far
     if (mode == 10) {

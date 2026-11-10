@@ -155,7 +155,7 @@ Bytes save_header(const GameState& g) {
     for (int m = 0; m < managers && m < 4; m++) {
         const size_t rec = size_t(m) * 0xb0c;
         const int team = int16_t(g.manager_records.at(rec + 0x290) | g.manager_records.at(rec + 0x291) << 8);
-        const bool national = team == 0x165;
+        const bool national = team == kNoTeam;
         const size_t at = size_t(m) * 0x28;
         list[at] = national ? 0x1e : g.manager_records.at(rec + 0x210);  // (0x1e: high byte of the loop word)
         list[at + 1] = national ? 1 : 0;

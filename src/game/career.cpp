@@ -269,7 +269,7 @@ bool human_club(const GameState& g, int team) {
     const int managers = g.memory.u8(::bmh::layout::ManagerCount);
     for (int m = 0; m < managers; m++)
         if (team_of(g, m) == uint16_t(team)) return true;
-    return team_of(g, 0) == 0x165 && team_of(g, 4) == uint16_t(team);
+    return team_of(g, 0) == kNoTeam && team_of(g, 4) == uint16_t(team);
 }
 
 // OpenBMH deviates from the original: skips reserved calendar positions when assigning a joining manager to a club.

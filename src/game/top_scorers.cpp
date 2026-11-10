@@ -80,7 +80,7 @@ TopScorersProjection top_scorers_from_game(const GameState& g, int manager_slot,
 
     const int first_team = league_first_team(league);
     const int team_count = league_system().sizes[league];
-    if (first_team < 0 || first_team + team_count > 138 ||
+    if (first_team < 0 || first_team + team_count > world_layout().league_teams ||
         g.club_ids.size() < size_t(first_team + team_count) || g.club_names.empty())
         invalid("incomplete domestic club table");
 

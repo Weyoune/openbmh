@@ -92,7 +92,7 @@ int national_opportunities_rank(const GameState& game,int team,std::array<uint8_
     ranks.fill(1);
     const int rounds=game.league_rounds.empty()?0:int8_t(game.league_rounds.at(0));
     if(rounds<2||rounds>=league_matchdays(0))return 0;
-    return team>=138?9:0;
+    return team>=world_layout().league_teams?9:0;
 }
 
 // Reads one byte of the executable's data at 'address': from the game's memory image when the
@@ -1454,7 +1454,7 @@ std::optional<ui::StrengthsIdentity> CareerSession::begin_friendly_opponent_tabl
         uint64_t revision,std::string& error) {
     error.clear();
     const auto request=strengths_open_request(revision);
-    if(!request||request->identity.runtime_club>=168||request->identity.source_param2||
+    if(!request||request->identity.runtime_club>=world_layout().first_foreign_cup()||request->identity.source_param2||
        league_family_owner_||strengths_owner_||league_pairings_draft_) {
         error="friendly table: unavailable club entry";return {};
     }
@@ -1505,7 +1505,7 @@ std::optional<int> CareerSession::resolve_friendly_table_opponent(
     if(visible.runtime_team_id!=request.runtime_team||visible.club_identity_key!=request.expected_club_identity||
        visible.runtime_team_id<0||size_t(visible.runtime_team_id)>=g_.club_ids.size()||
        visible.club_identity_key!=int(g_.club_ids[size_t(visible.runtime_team_id)])||
-       normal.rank!=row+1||normal.runtime_team_id<0||normal.runtime_team_id>=168||
+       normal.rank!=row+1||normal.runtime_team_id<0||normal.runtime_team_id>=world_layout().first_foreign_cup()||
        size_t(normal.runtime_team_id)>=g_.club_ids.size()||
        normal.club_identity_key!=int(g_.club_ids[size_t(normal.runtime_team_id)])) {
         error="friendly table: opponent row identity changed";return {};
@@ -2860,7 +2860,7 @@ std::optional<ui::TopScorersState> CareerSession::open_top_scorers(
                 throw FormatError("top scorers: unsupported national-coach owner");
             stable_team = int(uint16_t(g_.manager_records[backup] |
                                        uint16_t(g_.manager_records[backup + 1]) << 8));
-        } else if (team < 0 || team >= 138) {
+        } else if (team < 0 || team >= world_layout().league_teams) {
             throw FormatError("top scorers: manager team is outside Source league scope");
         }
         if (stable_team < 0 || stable_team >= 138 || size_t(stable_team) >= g_.club_ids.size())
@@ -2932,7 +2932,7 @@ std::optional<CareerSession::TopScorersDispatch> CareerSession::dispatch_top_sco
             (backup + 2 <= g_.manager_records.size() ?
                 int(uint16_t(g_.manager_records[backup] |
                              uint16_t(g_.manager_records[backup + 1]) << 8)) : -1) : identity.runtime_team;
-        if (identity_team < 0 || identity_team >= 138 ||
+        if (identity_team < 0 || identity_team >= world_layout().league_teams ||
             size_t(identity_team) >= g_.club_ids.size() ||
             int(g_.club_ids[size_t(identity_team)]) != identity.club_identity)
             throw FormatError("top scorers: stable club identity changed");
@@ -3041,7 +3041,7 @@ std::optional<ui::OpportunitiesState> CareerSession::open_opportunities(
         const int manager=request.manager_slot,team=g_.manager_teams[size_t(manager)];
         const int league=national_source_case?0:team_league(team);
         if(national_source_case) {
-            if(team!=0x165||league!=0)throw FormatError("opportunities: invalid national menu-6 owner");
+            if(team!=kNoTeam||league!=0)throw FormatError("opportunities: invalid national menu-6 owner");
             if(stable_identity<0)throw FormatError("opportunities: missing national Desk identity");
         } else if(team<0||team>=138||size_t(team)>=g_.club_ids.size()||league<0||league>=9)
             throw FormatError("opportunities: unsupported team/league");
@@ -3082,7 +3082,7 @@ std::optional<CareerSession::OpportunitiesDispatch> CareerSession::dispatch_oppo
            uint32_t(g_.date)!=current.identity.day_counter||
            size_t(current.identity.runtime_team)>=g_.club_ids.size()||
            (!national_source_case&&int(g_.club_ids[size_t(current.identity.runtime_team)])!=current.identity.stable_club_identity)||
-           (national_source_case&&(current.identity.runtime_team!=0x165||
+           (national_source_case&&(current.identity.runtime_team!=kNoTeam||
                                   current.identity.stable_club_identity<0)))
             throw FormatError("opportunities: desk owner changed");
         OpportunitiesDispatch result;result.page=current;

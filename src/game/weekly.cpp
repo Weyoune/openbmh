@@ -2532,7 +2532,7 @@ PendingOfferResult process_natural_pending_offers_after_desk(GameState& g,
         };
         if (record_team(0)!=kNoTeam) return false;
         const int club=record_team(4*kRecord);
-        if (club<0 || club>=138) return false;
+        if (club<0 || club>=world_layout().league_teams) return false;
         const auto squad=squad_range(club);
         if (squad.first+squad.count>g.squad_slots.size()) return false;
         for (size_t i=squad.first;i<squad.first+squad.count;++i)
@@ -2546,7 +2546,7 @@ PendingOfferResult process_natural_pending_offers_after_desk(GameState& g,
         if(offer==0xffffffffu || int(offer&31)!=manager)continue;
         const int team=native_team;
         const bool national_owner = takeover && team == kNoTeam;
-        if (team<0 || (team>=138 && !national_owner))
+        if (team<0 || (team>=world_layout().league_teams && !national_owner))
             return fail("AdvanceTurn: national or unknown owner is unsupported for normal-club offers");
         // AdvanceTurn scans raw offer words until the first owned player resolves in
         // an ordinary squad. A missing earlier player requires PresentLoanReturn's error
@@ -2710,7 +2710,7 @@ void transfer_list_countdown(GameState& g, GameRandom& game, WatcomRandom& rand,
                     // FindManagerForClub also recognizes the coach's temporarily saved
                     // club as owner 4 while manager 0 runs the national team.
                     return g.manager_of(club) >= 0 || (!g.manager_teams.empty() &&
-                        g.manager_teams[0] == 0x165 && mem.has(::bmh::layout::DeskActions_NationalOpponentManager_RuntimeField) &&
+                        g.manager_teams[0] == kNoTeam && mem.has(::bmh::layout::DeskActions_NationalOpponentManager_RuntimeField) &&
                         int(mem.u16(::bmh::layout::CupDraw_FormatError_RuntimeField3)) == club);
                 };
                 bool human_involved = human_participant(seller);

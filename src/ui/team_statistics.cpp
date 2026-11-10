@@ -73,14 +73,14 @@ TeamStatisticsProjection team_statistics_from_game(const GameState& game, int te
     if (team < 0 || team > 0x165) throw FormatError("team statistics: runtime team outside LeagueCalculations range");
     const int mode_number = int(mode);
     if (mode_number < 0 || mode_number > 2) throw FormatError("team statistics: invalid mode");
-    if (team >= 138 && team < 168)
+    if (team >= world_layout().league_teams && team < world_layout().first_foreign_cup())
         throw FormatError("team statistics: simulated teams require Source draw-state ratings and are not exposed here");
     TeamStatisticsProjection out;
     out.runtime_team = team;
     out.mode = mode;
     out.source_badge_fallback = original_badge_fallback(team,&exe);
     out.badge_heap = game.club_heap_78;
-    if (team != 0x165) {
+    if (team != kNoTeam) {
         int region_team = team;
         const int league_gate = exe.u8(::bmh::layout::LeaguePairings_LeaguePairingsConstants_RuntimeField);
         for (int league = 0; league < 9; ++league) {
@@ -93,7 +93,7 @@ TeamStatisticsProjection team_statistics_from_game(const GameState& game, int te
                 out.flag_index = uint8_t((region_team - int(exe.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6))) / 7 - league_gate + 10);
         }
     }
-    out.source_has_league_panel = team < 0xa8;
+    out.source_has_league_panel = team < world_layout().first_foreign_cup();
     out.league = team > 0x164 ? 0 : team_league(team);
     if (size_t(team) < game.club_ids.size()) out.original_team_name = game.club_name(team);
     if (out.source_has_league_panel) {
@@ -119,7 +119,7 @@ TeamStatisticsProjection team_statistics_from_game(const GameState& game, int te
                         out.position_history.size(), out.position_history.begin());
             out.source_has_position_history = true;
         }
-    } else if (team == 0x165) {
+    } else if (team == kNoTeam) {
         // Source 357 maps to league 0 for common labels, but the save does not
         // contain a position-history row for this national-team pseudo-club.
         out.source_has_position_history = false;
@@ -127,7 +127,7 @@ TeamStatisticsProjection team_statistics_from_game(const GameState& game, int te
     out.gradient_text = (!game.memory.has(::bmh::layout::TextGradientDisabled) || game.memory.u8(::bmh::layout::TextGradientDisabled) == 0) && exe.u8(::bmh::layout::TextGradientMode) == 2;
     out.decorated_background = !game.memory.has(::bmh::layout::PlainBackground) || game.memory.u8(::bmh::layout::PlainBackground) == 0;
 
-    if (team < 138) {
+    if (team < world_layout().league_teams) {
         constexpr std::array<uint16_t, 5> average_flags{0x1f1, 0x1f2, 0x1f4, 0x1f8, 0x1ff};
         for (size_t i = 0; i < average_flags.size(); ++i)
             out.source_averages[i] = uint16_t(team_average(game, team, average_flags[i]).value);
@@ -162,7 +162,7 @@ TeamStatisticsProjection team_statistics_from_game(const GameState& game, int te
                 out.active_manager_team = owned;
                 if (owned >= 0 && size_t(owned) < game.club_ids.size())
                     out.active_manager_team_name = game.club_name(owned);
-                out.source_has_head_to_head = team != owned && team < 0xa8 && owned != 0x165;
+                out.source_has_head_to_head = team != owned && team < world_layout().first_foreign_cup() && owned != kNoTeam;
             }
         }
     }
@@ -415,7 +415,7 @@ Image TeamStatisticsScreen::render() const {
             uint16_t(projection_.badge_heap[size_t(projection_.runtime_team) * 2 + 1]) << 8) & 0x1ff;
         copy(out, crest_, (selector & 7) * 38, 0, 271, 55, 38, 38);
     }
-    if (projection_.source_has_league_panel || projection_.runtime_team == 0x165) {
+    if (projection_.source_has_league_panel || projection_.runtime_team == kNoTeam) {
         const int league = projection_.league;
         rect(out, 225, 150, 1, 43, 0x6a); rect(out, 225, 192, 81, 1, 0x6a);
         if (projection_.source_has_position_history && projection_.source_has_league_panel) {

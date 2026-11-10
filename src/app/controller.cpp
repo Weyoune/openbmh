@@ -191,12 +191,12 @@ void serve_friendly_action(ui::StartupFlow& flow, CareerSession& session,
         const auto& national=*request.national_booking;
         const auto expected=FriendlyActions::national_owner(request);
         if(request.kind!=ui::FriendlyRequestKind::book||!request.quote_id||
-           request.runtime_team!=0x165||request.opponent<0x166||request.opponent>0x1a2||
+           request.runtime_team!=kNoTeam||request.opponent<0x166||request.opponent>0x1a2||
            request.season_day<0||request.season_day>365||request.planner_count<0||
            request.planner_count>253||request.revision!=revision||
            national.owner!=expected||national.quote.owner!=expected||
            national.season_day!=request.season_day||national.quote.terms.manager!=manager||
-           national.quote.terms.manager_team!=0x165||national.quote.terms.opponent!=request.opponent||
+           national.quote.terms.manager_team!=kNoTeam||national.quote.terms.opponent!=request.opponent||
            national.quote.terms.planner_count!=request.planner_count||
            national.quote.terms.home_team!=request.home_team||national.quote.terms.away_team!=request.away_team||
            national.quote.terms.payer_manager!=request.payer_manager||
@@ -287,7 +287,7 @@ void serve_friendly_action(ui::StartupFlow& flow, CareerSession& session,
     // mapped to a German notice if it was not applied.
     if (request.kind != ui::FriendlyRequestKind::book || request.quote_id == 0 ||
         request.season_day < 0 || request.season_day > 365 || request.opponent < 0 ||
-        request.opponent >= 168 || request.cost < 0 || request.planner_count > 253) {
+        request.opponent >= world_layout().first_foreign_cup() || request.cost < 0 || request.planner_count > 253) {
         flow.reject_friendly_action("Die Angaben zum Spieltermin sind ungültig.");
         return;
     }
@@ -316,7 +316,7 @@ bool valid_national_friendly_family(const ui::StartupFlow& flow,const GameState&
     const auto* origin=flow.national_friendly_desk_owner();
     const auto* menu=flow.statistics_menu();
     const auto* desk=flow.desktop();
-    if(!owner||!origin||!menu||!desk||owner->desk_menu!=6||owner->runtime_team!=0x165||
+    if(!owner||!origin||!menu||!desk||owner->desk_menu!=6||owner->runtime_team!=kNoTeam||
        owner->manager<0||owner->revision!=revision||origin->kind!=ui::DeskRequestKind::open_menu||
        origin->menu_kind!=6||origin->manager_slot!=owner->manager||origin->revision!=revision||
        desk->state().revision!=revision||desk->state().manager_slot!=owner->manager||
@@ -342,7 +342,7 @@ void serve_national_friendly_selection(ui::StartupFlow& flow,CareerSession& sess
     const int manager=owner->manager;
     // Identity check: owner and desk request must be the national-coach friendly menu at the current
     // revision for the same manager, who must still be on team slot 0x165 and be the active manager.
-    if(owner->desk_menu!=6||owner->runtime_team!=0x165||owner->revision!=revision||
+    if(owner->desk_menu!=6||owner->runtime_team!=kNoTeam||owner->revision!=revision||
        desk_request->kind!=ui::DeskRequestKind::open_menu||desk_request->menu_kind!=6||
        desk_request->revision!=revision||desk_request->manager_slot!=manager||
        desk.revision!=revision||desk.manager_slot!=manager||manager<0||
@@ -2639,7 +2639,7 @@ struct FlowRequestServer {
                 // for club managers the friendly opponent table is started in the session.
                 const int manager=request.manager_slot;
                 if(manager>=0&&size_t(manager)<game.manager_teams.size()&&
-                   game.manager_teams[size_t(manager)]==0x165) {
+                   game.manager_teams[size_t(manager)]==kNoTeam) {
                     const auto projection=ui::world_cup_statistics_from_game(game,
                         load_le(ui::asset_path(data,"BMH.exe")),
                         ui::WorldCupStatisticsOwner::friendly_match_nation_picker);

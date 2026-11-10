@@ -215,7 +215,7 @@ void list_club_player(GameState& g, int first, int last, WatcomRandom& rand, Min
                 n++;
             }
         }
-        int pick = 0x8a;  // sVar11
+        int pick = world_layout().league_teams;  // sVar11
         int slot = -1;    // unaff_EDI: the slot tried last
         if (n != 0) {
             quicksort_by_key(teams, keys, n);
@@ -237,7 +237,7 @@ void list_club_player(GameState& g, int first, int last, WatcomRandom& rand, Min
             }
             // (when no club had a fitting player the slot tried last is listed all the same)
         }
-        if (pick < 0x8a) {
+        if (pick < world_layout().league_teams) {
             list_player(g, slot, rand, report);
             return;
         }
