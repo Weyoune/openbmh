@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
         const ui::DeskRequest origin{ui::DeskRequestKind::open_menu, 0, 0, 1, 0, revision};
         auto page = session.open_league_pairings(origin, revision, error);
         check(page.has_value(), error);
-        const bool english = kLeagueSizes[0] == 20;
+        const bool english = league_system().sizes[0] == 20;
         const int domestic_rows = english ? 10 : 9;
         check(page->rows.size() == size_t(domestic_rows) && stable(),
               "actual career opens all nine/ten pairings without changing live state or RNG");
@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
         // Four English divisions / five German divisions, then all four foreign
         // leagues. English league 4 has no calendar group and no selector button.
         for (int league = 0; league < 9; ++league) {
-            if (kLeagueBit[league] == 0xff) continue;
+            if (league_system().calendar_bit[league] == 0xff) continue;
             dispatch({LeaguePairingsAction::select_league, league});
             check(page->source.total_rounds == (league < 5 ? (english ? 38 : 34) : 22),
                   "round count follows the loaded domestic/foreign league");

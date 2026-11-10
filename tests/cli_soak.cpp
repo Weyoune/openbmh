@@ -504,7 +504,7 @@ int run(int argc, char** argv) {
             }
             for (const auto& t : final_tables) {
                 // (a league without calendar dates is not played: the English fifth league)
-                if (t.league_id >= 0 && t.league_id < bmh::kLeagueCount && bmh::kLeagueBit[size_t(t.league_id)] > 7) continue;
+                if (t.league_id >= 0 && t.league_id < bmh::kLeagueCount && bmh::league_system().calendar_bit[size_t(t.league_id)] > 7) continue;
                 for (const auto& r : t.rows)
                     if (r.games != 2 * (int(t.rows.size()) - 1))
                         fail("season " + std::to_string(season) + ": " + t.league_name + " " + r.name + " ended with " + std::to_string(r.games) + " games");

@@ -44,7 +44,7 @@ uint8_t source_team_color(const GameState& g,int team) {
 
 DeskRecordsState fair_play_state_from_game(const GameState& g, int league, const Image& underlay,int manager_slot) {
     if(league<0||league>=9) throw FormatError("fair play: invalid Source league");
-    const int first=league_first_team(league), count=kLeagueSizes[league];
+    const int first=league_first_team(league), count=league_system().sizes[league];
     if(first<0||count<=0||first+count>138||g.club_ids.size()<size_t(first+count))
         throw FormatError("fair play: incomplete Source league");
     std::vector<int16_t> teams(static_cast<size_t>(count)); std::vector<uint32_t> keys(static_cast<size_t>(count));
@@ -75,7 +75,7 @@ DeskRecordsScreen::DeskRecordsScreen(const std::filesystem::path& data, DeskReco
     if(state_.kind==DeskRecordKind::fair_play) {
         kb56_=load_vga(asset_path(data/"KB","56.VGA"));
         const int bottom=int(state_.fair_play_rows.size())*9+38;
-        if(state_.league<0||state_.league>=9||state_.fair_play_rows.size()!=size_t(kLeagueSizes[state_.league])||
+        if(state_.league<0||state_.league>=9||state_.fair_play_rows.size()!=size_t(league_system().sizes[state_.league])||
            kb56_.width<296||kb56_.height<9+(bottom-28-1))
             throw FormatError("fair play: incomplete Original view");
     } else if(state_.highscore.ranked) {

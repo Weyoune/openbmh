@@ -189,7 +189,7 @@ int main(int argc, char** argv) {
         const auto& table_state = *standings.object()->at("state").object();
         check(*table_state.at("manager_slot").integer() == table_manager &&
               *table_state.at("league_id").integer() == table_league &&
-              table_state.at("rows").array()->size() == size_t(kLeagueSizes[table_league]),
+              table_state.at("rows").array()->size() == size_t(league_system().sizes[table_league]),
               "table query returns the explicitly selected league and its full roster");
         const auto expected_table = compute_league_table(reference.state(), table_league, 0,
             league_matchdays(table_league), 7, 1);

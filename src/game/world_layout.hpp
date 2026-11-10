@@ -62,4 +62,62 @@ const WorldLayout& world_layout();
 // Installs a layout; throws std::invalid_argument when its ranges or its slot table are inconsistent.
 void set_world_layout(WorldLayout layout);
 
+// The league structure of a game world: sizes, calendar groups, promotion ladder, cup structure.
+//
+// The German versions have 5 leagues of 18 and 4 of 12; the English Football Limited 20 20 20 20 10
+// and the same four international leagues of 12 (both 138 league teams, so the squad layout is the
+// same). Until 1.0.12 these tables were separate mutable globals of schedule.hpp (kLeagueSizes,
+// kGroupLeague, ...). The values and every use are unchanged; the German ones are the default.
+//
+// Still fixed (open for an edition with more leagues): the number of leagues (kLeagueCount, the size
+// of several tables of the save file), eight calendar groups, and the results block of schedule.hpp.
+constexpr int kLeagueCount = 9;
+
+struct LeagueSystem {
+    // Number of teams per league (LeagueSizes of the loaded game). Leagues are contiguous id ranges.
+    uint8_t sizes[kLeagueCount] = {18, 18, 18, 18, 18, 12, 12, 12, 12};
+
+    // The calendar groups: competition bits 0-7 play the leagues group_first[bit] .. + group_count[bit] - 1
+    // (CalendarFirstLeague / CalendarLeagueCounts), and a league plays on calendar bit calendar_bit[league]
+    // (LeagueCalendarBits). German: 3. Liga A and B share bit 2; English: every division has its own
+    // bit and the 10-team fifth league none (0xff in calendar_bit, not played).
+    uint8_t group_first[8] = {0, 1, 2, 4, 5, 6, 7, 8};
+    uint8_t group_count[8] = {1, 1, 2, 1, 1, 1, 1, 1};
+    uint8_t calendar_bit[kLeagueCount] = {0, 1, 2, 2, 3, 4, 4, 4, 4};
+
+    // The promotion ladder (Void / English ClubName):
+    // - relegation[league]: relegation places (CareerSession_InstallLeagueSizes_RuntimeField2; German 3 4 2 2 3,
+    //   English 4 4 4 4 4),
+    // - below_first[group] .. + below_count[group] - 1: the league(s) a promotion group takes its promoted
+    //   clubs from (CareerSession_InstallLeagueSizes_RuntimeField5 / CareerSession_InstallLeagueSizes_RuntimeField4;
+    //   German 1 | 2 | 4 with the two Regionalligen in one group, English 1 | 2 | 3),
+    // - suffix[league]: the letter after a league's name (CareerSession_InstallLeagueSizes_RuntimeField3, two
+    //   bytes per league; German A/B for the Regionalligen, English none),
+    // - newcomer_first / newcomer_count: the clubs the lowest league is refilled from
+    //   (CareerSession_DispatchLineup_RuntimeField / CareerSession_InstallLeagueSizes_RuntimeField6; German the 30
+    //   amateur clubs 138-167; the English game draws from its 12 further English clubs 138-149 - its later
+    //   ids have no name - so the session counts only named clubs).
+    uint8_t relegation[kLeagueCount] = {3, 4, 2, 2, 3, 0, 0, 0, 0};
+    // European places per league for the table prediction (CareerSession_InstallLeagueSizes_RuntimeField;
+    // German 0 3 2 2 4 - league 0 uses 4 in the prediction -, English 0 4 4 4 4)
+    uint8_t europe[kLeagueCount] = {0, 3, 2, 2, 4, 0, 0, 0, 0};
+    uint8_t below_first[8] = {1, 2, 4, 5, 6, 7, 8, 0};
+    uint8_t below_count[8] = {1, 2, 1, 1, 1, 1, 1, 0};
+    char suffix[kLeagueCount] = {0, 0, 'A', 'B', 0, 0, 0, 0, 0};
+    int newcomer_first = 0x8a, newcomer_count = 0x1e;
+
+    // The English competition structure (Football Limited): an FA Cup of 68 clubs with a qualifying
+    // stage (cup entries 0 and 28) and a League Cup (entries 25-27). Its cup memory lies partly in
+    // blocks of its own (career.hpp, english_competition_blocks). A first league of 20 clubs is the
+    // English structure.
+    bool english_competitions = false;
+};
+
+// The league structure of the running game. Read through league_system(); the installer of a game
+// version (app::CareerSession, set_league_sizes / set_league_groups of schedule.hpp) writes through
+// installed_league_system(). One game per process.
+inline LeagueSystem g_league_system;
+inline const LeagueSystem& league_system() { return g_league_system; }
+inline LeagueSystem& installed_league_system() { return g_league_system; }
+
 }  // namespace bmh

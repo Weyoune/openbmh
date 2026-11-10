@@ -61,7 +61,7 @@ std::string competition_name(const MatchdayResultGroup& group,
     if (group.league_id) {
         const int league = *group.league_id;
         name = league < 5 ? league_name(game, league) : game.club_name(0x165 + league - 4);
-    } else if (*group.cup_id == 0xb && !bmh::kEnglishCompetitions) {  // (English: the League Cup, named below)
+    } else if (*group.cup_id == 0xb && !bmh::league_system().english_competitions) {  // (English: the League Cup, named below)
         // FinishEvent/BuildSideRecords: descriptor type 0x0c reads the runtime
         // TEXTD slot TournamentName, then appends edition TEXTD suffix MatchdayResults_CompetitionName_TextPointer.
         // The snapshot owns the name from before finish_event advances cups.

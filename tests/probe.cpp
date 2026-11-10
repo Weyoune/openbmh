@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
     const uint16_t lineup = LINEUP_ONLY | ALL_POSITIONS;
     std::printf("%-22s %3s %3s %3s %3s | %4s %4s %4s | %3s\n", "team", "K", "T", "F", "M", "KT", "KTF", "KTFM", "n");
     int first = league_first_team(league);
-    for (int t = first; t < first + kLeagueSizes[league]; t++) {
+    for (int t = first; t < first + league_system().sizes[league]; t++) {
         TeamAverage k = team_average(g, t, lineup | CONDITION);
         std::printf("%-22s %3d %3d %3d %3d | %4d %4d %4d | %3d\n", name(t).c_str(), k.value,
                     team_average(g, t, lineup | TECHNIQUE).value, team_average(g, t, lineup | FORM).value,
@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
     }
 
     std::printf("\nside ratings (legacy routine, computer teams): goal def mid att p4 p5, formation\n");
-    for (int t = first; t < first + kLeagueSizes[league]; t++) {
+    for (int t = first; t < first + league_system().sizes[league]; t++) {
         if (g.manager_of(t) >= 0) {
             std::printf("%-22s (human manager)\n", name(t).c_str());
             continue;

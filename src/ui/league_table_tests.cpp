@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
             const auto& actual = tables[size_t(league)];
             const auto reference = compute_league_table(game, league, 0, league_matchdays(league), 7, 1);
             check(actual.manager_slot == manager && actual.league_id == league &&
-                  actual.rows.size() == size_t(kLeagueSizes[league]) && actual.points_mode == 1,
+                  actual.rows.size() == size_t(league_system().sizes[league]) && actual.points_mode == 1,
                   "all leagues project an owned state with the engine's configured points rule");
             check(!actual.league_name.empty() && actual.league_name == original_league_title(game, exe, league),
                   "league heading follows the independent EXE-suffix/TEXTD/Nation-ID oracle");

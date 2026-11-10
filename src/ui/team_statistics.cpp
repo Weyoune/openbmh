@@ -100,7 +100,7 @@ TeamStatisticsProjection team_statistics_from_game(const GameState& game, int te
         if (out.league < 0 || out.league >= kLeagueCount)
             throw FormatError("team statistics: Source league index unavailable");
         out.league_row = team - league_first_team(out.league);
-        if (out.league_row < 0 || out.league_row >= kLeagueSizes[out.league])
+        if (out.league_row < 0 || out.league_row >= league_system().sizes[out.league])
             throw FormatError("team statistics: runtime team is not in a supported league table");
         out.source_flags = exe.u8(::bmh::layout::TableFlags + uint32_t(mode_number));
         out.points_mode = exe.u8(::bmh::layout::CareerSession_BeginFriendlyOpponentTable_RuntimeField + uint32_t(out.league));
@@ -419,7 +419,7 @@ Image TeamStatisticsScreen::render() const {
         const int league = projection_.league;
         rect(out, 225, 150, 1, 43, 0x6a); rect(out, 225, 192, 81, 1, 0x6a);
         if (projection_.source_has_position_history && projection_.source_has_league_panel) {
-        const int clubs = kLeagueSizes[league];
+        const int clubs = league_system().sizes[league];
         for (int round = 0; round < projection_.league_rounds && round < 39; ++round) {
             const size_t word_index = size_t(round / 3) * 2;
             const uint16_t packed = uint16_t(projection_.position_history[word_index] |

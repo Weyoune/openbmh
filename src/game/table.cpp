@@ -77,12 +77,12 @@ void sort_table(LeagueTable& t, int parts) {
 }
 
 
-int league_matchdays(int league) { return kLeagueSizes[league] * 2 - 2; }
+int league_matchdays(int league) { return league_system().sizes[league] * 2 - 2; }
 
 LeagueTable compute_league_table(const GameState& g, int league, int from, int to, int flags, int points_mode) {
     LeagueTable t;
     t.league = league;
-    t.size = kLeagueSizes[league];
+    t.size = league_system().sizes[league];
     int parts = 0;
     if (points_mode & 0xE) {
         parts = points_mode >> 1;

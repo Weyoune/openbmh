@@ -358,7 +358,7 @@ void initialize_saved_replay_group(MatchGroup& group, GameState& state, size_t i
         const int match = mem.u8(record + 4);
         if (league < 0 || league >= kLeagueCount || round < 0 ||
             round >= league_matchdays(league) ||
-            match >= int(kLeagueSizes[league] / 2))
+            match >= int(league_system().sizes[league] / 2))
             throw std::runtime_error("saved replay record is outside the league schedule");
         const std::vector<Fixture> fixtures = generate_fixtures(
             league_table_teams(league), round + 1, league_matchdays(league) / 2,
@@ -585,20 +585,20 @@ static void install_league_sizes(const LeImage& exe) {
     for (int l = 0; l < kLeagueCount; ++l) sizes[l] = exe.u8(::bmh::layout::LeagueSizes + uint32_t(l));
     set_league_sizes(sizes);
     install_fixture_tables(exe);
-    kEnglishCompetitions = sizes[0] == 20;
+    installed_league_system().english_competitions = sizes[0] == 20;
     // the calendar groups (CalendarFirstLeague first league, CalendarLeagueCounts league count per bit)
     uint8_t first[8], count[8];
     for (uint32_t b = 0; b < 8; ++b) first[b] = exe.u8(::bmh::layout::CalendarFirstLeague + b), count[b] = exe.u8(::bmh::layout::CalendarLeagueCounts + b);
     set_league_groups(first, count);
     // the promotion ladder (schedule.hpp)
     for (uint32_t l = 0; l < uint32_t(kLeagueCount); ++l) {
-        kLeagueRelegation[l] = exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField2 + l);
-        kLeagueEurope[l] = exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField + l);
-        kLeagueSuffix[l] = char(l < 5 ? exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField3 + l * 2) : 0);
+        installed_league_system().relegation[l] = exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField2 + l);
+        installed_league_system().europe[l] = exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField + l);
+        installed_league_system().suffix[l] = char(l < 5 ? exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField3 + l * 2) : 0);
     }
-    for (uint32_t g = 0; g < 8; ++g) kGroupBelow[g] = exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField5 + g), kGroupBelowCount[g] = exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField4 + g);
-    kNewcomerFirst = exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
-    kNewcomerCount = exe.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6);
+    for (uint32_t g = 0; g < 8; ++g) installed_league_system().below_first[g] = exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField5 + g), installed_league_system().below_count[g] = exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField4 + g);
+    installed_league_system().newcomer_first = exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
+    installed_league_system().newcomer_count = exe.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6);
     // EXE strings the engine posts (messages.hpp)
     install_message_texts(exe);
     install_career_rules(exe);
@@ -1280,9 +1280,9 @@ std::string source_table_range_label(const TextDb& texts,int first,int end) {
     // DE50860 patches offsets 4/7 of its nine-byte TEXTD82 buffer. EN1e83f
     // patches 0/3 of the full " 0-34 only" string instead (the final y is live).
     const auto fixed=texts.raw(82,9);
-    auto raw=kEnglishCompetitions ? texts[82] : std::string(fixed.begin(),fixed.end());
-    const size_t start=kEnglishCompetitions ? 0 : 4;
-    const size_t finish=kEnglishCompetitions ? 3 : 7;
+    auto raw=league_system().english_competitions ? texts[82] : std::string(fixed.begin(),fixed.end());
+    const size_t start=league_system().english_competitions ? 0 : 4;
+    const size_t finish=league_system().english_competitions ? 3 : 7;
     if(raw.size()<finish+2)throw FormatError("league table: incomplete Source range label");
     auto patch_number=[&](size_t at,int value) {
         const int tens=value/10,ones=value%10;
@@ -3051,7 +3051,7 @@ std::optional<ui::OpportunitiesState> CareerSession::open_opportunities(
         uint16_t mode=g_.memory.u16(choice_at);if(mode==0){mode=1;g_.memory.set16(choice_at,mode);}
         if(mode!=1&&mode!=2&&mode!=4&&mode!=8)throw FormatError("opportunities: invalid stored Source mode");
         ui::OpportunitiesState page;page.identity={manager,team,national_source_case?stable_identity:int(g_.club_ids[size_t(team)]),uint32_t(g_.date),revision+1,next_opportunities_scope_,0};
-        page.mode=mode;page.league_size=kLeagueSizes[league];page.underlay=underlay;
+        page.mode=mode;page.league_size=league_system().sizes[league];page.underlay=underlay;
         page.gradient_text=g_.memory.has(::bmh::layout::TextGradientDisabled)&&g_.memory.u8(::bmh::layout::TextGradientDisabled)==0&&g_.memory.has(::bmh::layout::TextGradientMode)&&g_.memory.u8(::bmh::layout::TextGradientMode)==2;
         page.current_rank=national_source_case?national_opportunities_rank(g_,team,page.ranks):table_prediction(g_,team,mode,page.ranks,nullptr);
         opportunities_owner_=OpportunitiesOwner{page,save_stream(g_),game_,rand_,national_source_case};++next_opportunities_scope_;

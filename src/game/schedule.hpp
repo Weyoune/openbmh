@@ -29,6 +29,8 @@
 #include <string>
 #include <vector>
 
+#include "game/world_layout.hpp"
+
 namespace bmh {
 
 class LeImage;
@@ -40,54 +42,17 @@ using FixtureTableCache = std::map<int, std::vector<std::string>>;
 void set_fixture_tables(FixtureTableCache tables);
 void install_fixture_tables(const LeImage& exe);
 
-// Number of teams per league, LeagueSizes of the loaded game: the German versions have 5
-// leagues of 18 and 4 of 12; the English Football Limited 20 20 20 20 10 and the same four
-// international leagues of 12 (both 138 league teams, so the squad layout is the same).
-// The German sizes are the default; set_league_sizes() installs those of the loaded game
-// (app::CareerSession does it from the EXE table). One game per process.
-constexpr int kLeagueCount = 9;
-inline uint8_t kLeagueSizes[kLeagueCount] = {18, 18, 18, 18, 18, 12, 12, 12, 12};
+// The league structure of the loaded game (sizes, calendar groups, promotion ladder, cup structure)
+// is league_system() of world_layout.hpp. The German sizes are the default; app::CareerSession
+// installs those of the loaded game from the EXE tables. One game per process.
+//
 // Installs the league sizes of the loaded game; throws std::invalid_argument unless they
-// add up to 138 (the league teams of every version) and every league has a fixture table (20, 18, 16, 12 or 10 teams).
+// add up to the league teams of the world layout (138 in every version) and every league has a
+// fixture table (20, 18, 16, 12 or 10 teams).
 void set_league_sizes(const uint8_t (&sizes)[kLeagueCount]);
-
-// The calendar groups of the loaded game: competition bits 0-7 play the leagues
-// kGroupLeague[bit] .. + kGroupLeagues[bit] - 1 (CalendarFirstLeague / CalendarLeagueCounts), and a league
-// plays on calendar bit kLeagueBit[league] (LeagueCalendarBits). German: 3. Liga A and B share
-// bit 2; English: every division has its own bit and the 10-team fifth league none (0xff
-// in kLeagueBit, not played). Set with the league sizes from the EXE tables.
-inline uint8_t kGroupLeague[8] = {0, 1, 2, 4, 5, 6, 7, 8};
-inline uint8_t kGroupLeagues[8] = {1, 1, 2, 1, 1, 1, 1, 1};
-inline uint8_t kLeagueBit[kLeagueCount] = {0, 1, 2, 2, 3, 4, 4, 4, 4};
+// Installs the calendar groups (first league and league count per competition bit) and derives
+// the calendar bit of every league from them.
 void set_league_groups(const uint8_t (&first)[8], const uint8_t (&count)[8]);
-
-// The promotion ladder of the loaded game (Void / English ClubName), set with
-// the league sizes from the EXE tables:
-// - kLeagueRelegation[league]: relegation places (CareerSession_InstallLeagueSizes_RuntimeField2; German 3 4 2 2 3, English
-//   4 4 4 4 4),
-// - kGroupBelow[group] .. + kGroupBelowCount[group] - 1: the league(s) a promotion group
-//   takes its promoted clubs from (CareerSession_InstallLeagueSizes_RuntimeField5 / CareerSession_InstallLeagueSizes_RuntimeField4; German 1 | 2 | 4 with the
-//   two Regionalligen in one group, English 1 | 2 | 3),
-// - kLeagueSuffix[league]: the letter after a league's name (CareerSession_InstallLeagueSizes_RuntimeField3, two bytes per
-//   league; German A/B for the Regionalligen, English none),
-// - kNewcomerFirst / kNewcomerCount: the clubs the lowest league is refilled from
-//   (CareerSession_DispatchLineup_RuntimeField / CareerSession_InstallLeagueSizes_RuntimeField6; German the 30 amateur clubs 138-167; the English game
-//   draws from its 12 further English clubs 138-149 - its later ids have no name - so the
-//   session counts only named clubs).
-inline uint8_t kLeagueRelegation[kLeagueCount] = {3, 4, 2, 2, 3, 0, 0, 0, 0};
-// European places per league for the table prediction (CareerSession_InstallLeagueSizes_RuntimeField; German 0 3 2 2 4 - league
-// 0 uses 4 in the prediction -, English 0 4 4 4 4)
-inline uint8_t kLeagueEurope[kLeagueCount] = {0, 3, 2, 2, 4, 0, 0, 0, 0};
-inline uint8_t kGroupBelow[8] = {1, 2, 4, 5, 6, 7, 8, 0};
-inline uint8_t kGroupBelowCount[8] = {1, 2, 1, 1, 1, 1, 1, 0};
-inline char kLeagueSuffix[kLeagueCount] = {0, 0, 'A', 'B', 0, 0, 0, 0, 0};
-inline int kNewcomerFirst = 0x8a, kNewcomerCount = 0x1e;
-
-// The English competition structure (Football Limited): an FA Cup of 68 clubs with a
-// qualifying stage (cup entries 0 and 28) and a League Cup (entries 25-27). Its cup memory
-// lies partly in blocks of its own (career.hpp, english_competition_blocks). Set with the
-// league sizes: a first league of 20 clubs is the English structure.
-inline bool kEnglishCompetitions = false;
 
 // First team id of a league (sum of the sizes of all previous leagues).
 int league_first_team(int league);

@@ -3026,7 +3026,7 @@ bool pre_match_offer(GameState& g, int manager, GameRandom& game, WatcomRandom& 
                message_text(g, ::bmh::layout::Weekly_PreMatchOffer_TextPointer7) +
                // German: "<amount> KAUFEN" (with WeeklyRuntimeField11 " "); the English MessageText puts
                // the verb first: "BUY him for <amount>"
-               (kEnglishCompetitions ? verb + amount : amount + " " + verb) + message_text(g, ::bmh::layout::Weekly_PreMatchOffer_TextPointer10);
+               (league_system().english_competitions ? verb + amount : amount + " " + verb) + message_text(g, ::bmh::layout::Weekly_PreMatchOffer_TextPointer10);
     }
     // SystemIdentity shows it, PostMessage posts it
     post_composed(g, manager, text);

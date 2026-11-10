@@ -1096,13 +1096,13 @@ void check_strengths_semantic_and_controller(const std::filesystem::path& data) 
     for(int n=0;n<9;++n) {
         const int league=(first_navigation+1+n)%9;
         page=action(StrengthsAction::select_league,StrengthsControl::condition,league);
-        check(page&&page->page.projection.rows.size()==size_t(kLeagueSizes[league])&&
+        check(page&&page->page.projection.rows.size()==size_t(league_system().sizes[league])&&
             page->page.projection.age_scratch.basis==StrengthsAgeBasis::entry_or_league_change_bit10&&
             !page->page.projection.age_scratch.lineup_only,"all nine ordinary leagues refresh age from current bit10");
         if(league>=5)check(page->page.projection.league_name==original_to_utf8(session->state().club_name(0x165+league-4)),
             "foreign ordinary leagues use actual country names without domestic suffix-table lookup");
         for(const auto& row:page->page.projection.rows)check(row.runtime_team>=league_first_team(league)&&
-            row.runtime_team<league_first_team(league)+kLeagueSizes[league],"sorted rows retain authoritative runtime club identity");
+            row.runtime_team<league_first_team(league)+league_system().sizes[league],"sorted rows retain authoritative runtime club identity");
     }
     neutral({id,StrengthsAction::team_info,StrengthsControl::condition,0});
     neutral({id,StrengthsAction::pairings});neutral({id,StrengthsAction::table});

@@ -124,7 +124,7 @@ int g_league_goals = 0, g_league_matches = 0;
 void print_first_league_results(const GameState& g, const char* checkpoint) {
     int goals = 0, matches = 0;
     for (int round = 1; round <= league_matchdays(0); ++round)
-        for (int match = 0; match < kLeagueSizes[0] / 2; ++match) {
+        for (int match = 0; match < league_system().sizes[0] / 2; ++match) {
             const Result r = decode_result(g.results.at(result_index(0, round, match)));
             if (!r.played) continue;
             goals += r.home_goals + r.away_goals;

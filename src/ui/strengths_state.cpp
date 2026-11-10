@@ -60,8 +60,8 @@ uint8_t source_name_color(const GameState& game, int team) {
 std::vector<uint8_t> source_age_scratch(const GameState& game, int league, bool lineup_only) {
     const int first = league_first_team(league);
     std::vector<uint8_t> result;
-    result.reserve(kLeagueSizes[league]);
-    for (int team = first; team < first + kLeagueSizes[league]; ++team) {
+    result.reserve(league_system().sizes[league]);
+    for (int team = first; team < first + league_system().sizes[league]; ++team) {
         const SquadRange range = squad_range(team);
         if (range.first > game.squad_slots.size() ||
             range.count > game.squad_slots.size() - range.first)
@@ -177,7 +177,7 @@ StrengthsProjection strengths_from_game(const GameState& game, int manager_slot,
     if (league < 5 && !game.texts) invalid("TEXTD data is unavailable for the league title");
 
     const int first = league_first_team(league);
-    const int size = kLeagueSizes[league];
+    const int size = league_system().sizes[league];
     if (first < 0 || first + size > 138) invalid("league bounds exceed domestic club table");
     if (game.club_ids.size() < size_t(first + size)) invalid("club ID table is truncated");
     if (game.club_names.empty()) invalid("club name pool is empty");

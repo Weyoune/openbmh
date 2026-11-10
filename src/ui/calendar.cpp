@@ -49,7 +49,7 @@ CalendarScreen::CalendarScreen(const std::filesystem::path& data, CalendarState 
         }
         // DE shares the third-tier bit between leagues 2/3; EN division 3
         // has its own bit. Use the loaded calendar topology for hit eligibility.
-        active_calendar_class_ = league < kLeagueCount ? kLeagueBit[league] : -1;
+        active_calendar_class_ = league < kLeagueCount ? league_system().calendar_bit[league] : -1;
     }
     (void)manager_name; // Source calendar's initial footer is empty, not a manager title.
     if (state_.season_start_counter > std::numeric_limits<uint32_t>::max() - 366 ||

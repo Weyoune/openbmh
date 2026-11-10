@@ -78,7 +78,7 @@ void blit_table_region(Image& out, const Image& source, int source_y, int dest_y
 uint8_t original_rank_color(int league, int zero_based_rank) {
     uint8_t color = 0x37;
     if (zero_based_rank < kEuropeanPlaces[size_t(league)]) color = 0x51;
-    else if (int(kLeagueSizes[league]) - zero_based_rank <= kRelegationPlaces[size_t(league)]) color = 0xf7;
+    else if (int(league_system().sizes[league]) - zero_based_rank <= kRelegationPlaces[size_t(league)]) color = 0xf7;
     if (league == 0) {
         if (zero_based_rank == 0) color = 0x27;
         else if (zero_based_rank < 5) color = 0x7a;
@@ -125,7 +125,7 @@ LeagueTableState project_league_table(const bmh::GameState& game, int manager_sl
     if (source_context && source_context->accepted_engine_table) {
         if (source_context->accepted_engine_league != league_id ||
             source_context->accepted_engine_table->league != league_id ||
-            source_context->accepted_engine_table->size != bmh::kLeagueSizes[league_id])
+            source_context->accepted_engine_table->size != bmh::league_system().sizes[league_id])
             throw FormatError("league table: accepted engine projection belongs to another league");
         engine_table = *source_context->accepted_engine_table;
     } else if (source_context) {
@@ -168,7 +168,7 @@ LeagueTableState project_league_table(const bmh::GameState& game, int manager_sl
         state.retained_range_label_source_bytes = source_context->retained_range_label_source_bytes;
         state.forecast = source_context->forecast;
     }
-    if (engine_table.size != bmh::kLeagueSizes[league_id])
+    if (engine_table.size != bmh::league_system().sizes[league_id])
         throw FormatError("league table: incomplete engine projection for league " + std::to_string(league_id));
 
     std::array<int, 20> order{};
@@ -264,7 +264,7 @@ LeagueTableScreen::LeagueTableScreen(const std::filesystem::path& data,
     for (int league = 0; league < bmh::kLeagueCount; ++league) {
         const auto& table = tables_[size_t(league)];
         if (table.manager_slot != manager || table.league_id != league || table.header_text.empty() ||
-            table.rows.size() != size_t(bmh::kLeagueSizes[league]) ||
+            table.rows.size() != size_t(bmh::league_system().sizes[league]) ||
             table.original_table_panel != tables_[0].original_table_panel ||
             table.decorated_background != tables_[0].decorated_background ||
             table.secondary_leagues != tables_[0].secondary_leagues)
@@ -457,8 +457,8 @@ Image LeagueTableScreen::render() const {
             int last_round = std::min<int>(table.rounds_played & 0x7f,
                                            league_matchdays(table.league_id));
             if (last_round < first_round) last_round = first_round;
-            const size_t start=kEnglishCompetitions ? 0 : 4;
-            const size_t finish=kEnglishCompetitions ? 3 : 7;
+            const size_t start=league_system().english_competitions ? 0 : 4;
+            const size_t finish=league_system().english_competitions ? 3 : 7;
             label[start] = char('0' + first_round / 10);
             label[start+1] = char('0' + first_round % 10);
             label[finish] = char('0' + last_round / 10);

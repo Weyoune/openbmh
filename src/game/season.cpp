@@ -202,7 +202,7 @@ struct Entrants {
 
 // OnTableJust(league, rank, ranks): the club with that final rank (0 if none)
 int club_at_rank(int league, int rank, const uint8_t* ranks) {
-    for (int i = 0; i < kLeagueSizes[league]; i++)
+    for (int i = 0; i < league_system().sizes[league]; i++)
         if (ranks[i] == rank) return league_first_team(league) + i;
     return 0;
 }
@@ -370,12 +370,12 @@ void european_setup(GameState& g, GameRandom& game, WatcomRandom& rand, const Se
         if (u == 0) {
             // the national cup winner and finalist (+0x22/+0x24): entry 0, in the English
             // structure the FA Cup proper, entry 28 (U16: SeasonRuntimeField8/83c)
-            const uint32_t cup = kEnglishCompetitions ? ::bmh::layout::CupTable + 28 * 0x28 : ::bmh::layout::CupTable;
+            const uint32_t cup = league_system().english_competitions ? ::bmh::layout::CupTable + 28 * 0x28 : ::bmh::layout::CupTable;
             a = mem.u16(cup + 0x22), b = mem.u16(cup + 0x24);
             if (mem.has(::bmh::layout::Season_CareerSeasonSetup_RuntimeField7)) mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField7, uint16_t(a));
         } else {
-            a = rand.range(0, kLeagueSizes[kLeague[u]] - 1);
-            do b = rand.range(0, kLeagueSizes[kLeague[u]] - 1); while (b == a);
+            a = rand.range(0, league_system().sizes[kLeague[u]] - 1);
+            do b = rand.range(0, league_system().sizes[kLeague[u]] - 1); while (b == a);
         }
         const int first = kLeague[u] == 0 ? 0 : league_first_team(kLeague[u]);
         league_entrants(g, kLeague[u], uint8_t(a + first), uint8_t(b + first), kUefa[u]);
@@ -818,7 +818,7 @@ void change_places(GameState& g, int a, int b) {
         replace(::bmh::layout::Career_CompetitionPointersEnglish_ExecutableField19, 0x20);
         replace(::bmh::layout::Career_CompetitionPointersEnglish_ExecutableField25, 0x40);
         // (the English national cup field: 68 clubs at layout field, InitializeNationalCup(0x44, ...))
-        if (kEnglishCompetitions) {
+        if (league_system().english_competitions) {
             if (mem.has(kEnglishFaField)) replace(kEnglishFaField, 0x44);
         } else {
             replace(::bmh::layout::Field, 0x40);
@@ -850,7 +850,7 @@ void change_places(GameState& g, int a, int b) {
 void order_cup_ties(GameState& g, int teams, int offset) {
     StaticMemory& mem = g.memory;
     uint32_t list = mem.pointer(::bmh::layout::CupTable) + uint32_t(offset) * 2;
-    if (kEnglishCompetitions) {
+    if (league_system().english_competitions) {
         // the Football Limited CupField: the FA Cup stage decides the range - qualifying
         // round 1 (48 clubs from 0), round 2 (24 from 48), the proper rounds (entry 28);
         // with 0x80 the League Cup (entry 25)
@@ -937,7 +937,7 @@ namespace {
 void shuffle_leagues(GameState& g, WatcomRandom& rand) {
     int first = 0;
     for (int l = 0; l < kLeagueCount; l++) {
-        const int end = first + kLeagueSizes[l];
+        const int end = first + league_system().sizes[l];
         for (int t = first; t < end; t++) {
             int r;
             do r = rand.range(first, end - 1); while (uint8_t(r) == uint8_t(t));
@@ -994,7 +994,7 @@ void cup_fields_english(GameState& g, GameRandom& game, const uint8_t (&ranks)[4
     };
     uint32_t n = 0;
     for (int l = 0; l < 4; l++)
-        for (int i = 0; i < kLeagueSizes[l]; i++) {
+        for (int i = 0; i < league_system().sizes[l]; i++) {
             if (l >= 3 && i >= 8) continue;
             const int team = club_at_rank(l, i, ranks[l]);
             mem.set16(kEnglishFaField + n++ * 2, uint16_t(team));
@@ -1012,7 +1012,7 @@ void cup_fields_english(GameState& g, GameRandom& game, const uint8_t (&ranks)[4
     }
     n = 0;
     for (int l = 0; l < 3; l++)
-        for (int i = 0; i < kLeagueSizes[l]; i++) {
+        for (int i = 0; i < league_system().sizes[l]; i++) {
             if (l >= 2 && i >= 4) continue;
             mem.set16(kEnglishLeagueCupField + n++ * 2, uint16_t(club_at_rank(l, i, ranks[l])));
         }
@@ -1029,14 +1029,14 @@ void cup_field(GameState& g, GameRandom& game, const std::function<void(const ch
         const LeagueTable t = compute_league_table(g, l, 0, league_matchdays(l), 7, 1);
         for (int i = 0; i < t.size; i++) ranks[l][i] = uint8_t(t.rank(i));
     }
-    if (kEnglishCompetitions) {
+    if (league_system().english_competitions) {
         cup_fields_english(g, game, ranks, pause, cup_draw);
         return;
     }
     constexpr uint32_t kField = ::bmh::layout::Field;
     uint32_t n = 0;
     for (int l = 0; l < 4; l++)
-        for (int i = 0; i < kLeagueSizes[l]; i++) {
+        for (int i = 0; i < league_system().sizes[l]; i++) {
             if (l >= 2 && i >= 0xe) continue;
             const int team = club_at_rank(l, i, ranks[l]);
             mem.set16(kField + n++ * 2, uint16_t(team));
@@ -1358,7 +1358,7 @@ void licence_withdrawals(GameState& g, int league, std::vector<uint16_t>& down, 
     const int first = league_first_team(league);
     for (size_t m = 0; m < g.manager_teams.size(); m++) {
         const int team = g.manager_teams[m];
-        if (team < first || team >= first + kLeagueSizes[league] || ranks[team - first] <= 5) continue;
+        if (team < first || team >= first + league_system().sizes[league] || ranks[team - first] <= 5) continue;
         static const uint8_t kDownPlaces[kLeagueCount] = {3, 4, 2, 2, 3, 0, 0, 0, 0};  // CareerSession_InstallLeagueSizes_RuntimeField2
         if (kDownPlaces[league] == 0) continue;
         const uint8_t cut = rec8(g, int(m), 0x220);
@@ -1375,7 +1375,7 @@ void licence_withdrawals(GameState& g, int league, std::vector<uint16_t>& down, 
         int t = 0, r = 0;
         do {
             do {
-                r = rand.range(0, kLeagueSizes[league] - 1);
+                r = rand.range(0, league_system().sizes[league] - 1);
                 t = first + r;
             } while (g.manager_of(t) >= 0);
         } while (ranks[r] < 10 || ranks[r] > 15);
@@ -1407,22 +1407,22 @@ void promotion(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteReport&
     }
     // The league ladder is data of the loaded game (schedule.hpp, installed from the EXE):
     // Void reads the German tables, the English ClubName its own copies -
-    // first league / number of leagues of each promotion group (kGroupLeague/s), relegation
-    // places (kLeagueRelegation), the league(s) below (kGroupBelow/Count). German:
+    // first league / number of leagues of each promotion group (league_system().group_first/s), relegation
+    // places (league_system().relegation), the league(s) below (league_system().below_first/Count). German:
     // 0 | 1 | 2+3 (Regionalliga A/B) | 4; English: 0 | 1 | 2 | 3.
-    const uint8_t* kFirst = kGroupLeague;
-    const uint8_t* kCount = kGroupLeagues;
-    const uint8_t* kDown = kLeagueRelegation;
-    const uint8_t* kBelow = kGroupBelow;
-    const uint8_t* kBelowCount = kGroupBelowCount;
-    // The clubs that refill the lowest league: kNewcomerCount clubs from kNewcomerFirst
+    const uint8_t* kFirst = league_system().group_first;
+    const uint8_t* kCount = league_system().group_count;
+    const uint8_t* kDown = league_system().relegation;
+    const uint8_t* kBelow = league_system().below_first;
+    const uint8_t* kBelowCount = league_system().below_count;
+    // The clubs that refill the lowest league: league_system().newcomer_count clubs from league_system().newcomer_first
     // (German: the 30 amateur clubs 138-167). The English game draws from its 12 further
     // English clubs (ClubName: range(CareerSession_DispatchLineup_RuntimeField, CareerSession_DispatchLineup_RuntimeField + 11)); its later ids have no name.
     // The span ends at the last named club, which keeps the German draws unchanged.
     // (OpenBMH deviates from the English original here: its extra coin flip per draw is not
     // ported.)
-    const int newcomer_first = kNewcomerFirst;
-    int newcomer_count = kNewcomerCount;
+    const int newcomer_first = league_system().newcomer_first;
+    int newcomer_count = league_system().newcomer_count;
     while (newcomer_count > 1) {
         const std::string name = g.club_name(newcomer_first + newcomer_count - 1);
         if (club_has_name(name)) break;
@@ -1433,7 +1433,7 @@ void promotion(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteReport&
         for (int l = kFirst[grp]; l < kFirst[grp] + kCount[grp]; l++) {
             int places = kDown[l];
             licence_withdrawals(g, l, down, places, ranks[l], game, rand);
-            for (int rank = kLeagueSizes[l] - 1; places != 0; rank--) {
+            for (int rank = league_system().sizes[l] - 1; places != 0; rank--) {
                 const int team = club_at_rank(l, rank, ranks[l]);
                 if (std::find(down.begin(), down.end(), uint16_t(team)) == down.end()) down.push_back(uint16_t(team)), places--;
             }
@@ -1514,7 +1514,7 @@ void promotion(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteReport&
 std::string league_name(const GameState& g, int league) {
     // CareerSession_InstallLeagueSizes_RuntimeField3 of the loaded game (schedule.hpp: German A/B for the two Regionalligen,
     // English none - its four divisions are one ladder)
-    const char* kSuffix = kLeagueSuffix;
+    const char* kSuffix = league_system().suffix;
     int index = 0;
     for (int l = 0; l < league; l++)
         if (uint8_t(kSuffix[l + 1]) < 0x42) index++;
@@ -1537,7 +1537,7 @@ int best_scorer_team(GameState& g, int league, int flags) {
     for (int i = 0; i < 40; i += 4) list[size_t(i)] = 0xfff, list[size_t(i) + 1] = 0xfff;
     int16_t best[10] = {};
     const int first = league_first_team(league);
-    for (int team = first; team < first + kLeagueSizes[league]; team++) {
+    for (int team = first; team < first + league_system().sizes[league]; team++) {
         if (g.manager_of(team) < 0 && (flags & 1)) continue;
         const SquadRange range = squad_range(team);
         for (size_t s = range.first; s < range.first + range.count; s++) {
@@ -1570,7 +1570,7 @@ int best_scorer_team(GameState& g, int league, int flags) {
 // club's card counter DeskRecords_Teams_RuntimeField) and 1 per yellow, sorted ascending (Games).
 // Returns the club with the fewest points.
 int fair_play_team(const GameState& g, int league) {
-    const int first = league_first_team(league), count = kLeagueSizes[league];
+    const int first = league_first_team(league), count = league_system().sizes[league];
     std::vector<int16_t> teams(static_cast<size_t>(count));
     std::vector<uint32_t> points(static_cast<size_t>(count));
     for (int i = 0; i < count; i++) {
@@ -1683,7 +1683,7 @@ bool career_season_setup(GameState& g, GameRandom& game, WatcomRandom& rand, Min
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField2, foreign);
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField6, uint16_t(first_small + 7));
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField, 7);
-    if (kEnglishCompetitions) mem.set16(::bmh::layout::CupTable + 28 * 0x28 + 0x22, 7);  // (EN: the FA Cup proper, SeasonRuntimeField8)
+    if (league_system().english_competitions) mem.set16(::bmh::layout::CupTable + 28 * 0x28 + 0x22, 7);  // (EN: the FA Cup proper, SeasonRuntimeField8)
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField5, uint16_t(first_small + 0x1f));
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField4, uint16_t(first_small + 0x13));
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField3, uint16_t(foreign + 1));

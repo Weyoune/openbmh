@@ -96,14 +96,14 @@ void install_fixture_tables(const LeImage& exe) {
 
 int league_first_team(int league) {
     int first = 0;
-    for (int l = 0; l < league; l++) first += kLeagueSizes[l];
+    for (int l = 0; l < league; l++) first += league_system().sizes[l];
     return first;
 }
 
 int team_league(int team) {
     int end = 0;
     for (int l = 0; l < kLeagueCount; l++) {
-        end += kLeagueSizes[l];
+        end += league_system().sizes[l];
         if (team < end) return l;
     }
     return kLeagueCount;
@@ -128,18 +128,18 @@ std::vector<Fixture> generate_fixtures(int teams, int matchday, int rounds, int 
     return out;
 }
 
-int league_table_teams(int league) { return league < 5 ? kLeagueSizes[0] : kLeagueSizes[5]; }
+int league_table_teams(int league) { return league < 5 ? league_system().sizes[0] : league_system().sizes[5]; }
 
 void set_league_sizes(const uint8_t (&sizes)[kLeagueCount]) {
     int total = 0;
     for (int l = 0; l < kLeagueCount; l++) total += sizes[l];
     const auto has_table = [](int teams) { return teams == 20 || teams == 18 || teams == 16 || teams == 12; };
-    if (total != 138 || !has_table(sizes[0]) || !has_table(sizes[5]))
-        throw std::invalid_argument("league sizes do not describe 138 league teams with fixture tables");
+    if (total != world_layout().league_teams || !has_table(sizes[0]) || !has_table(sizes[5]))
+        throw std::invalid_argument("league sizes do not describe the league teams of the world with fixture tables");
     for (int l = 0; l < kLeagueCount; l++)
         if (sizes[l] < 2 || sizes[l] > (l < 5 ? sizes[0] : sizes[5]))
             throw std::invalid_argument("a league is larger than its fixture table");
-    for (int l = 0; l < kLeagueCount; l++) kLeagueSizes[l] = sizes[l];
+    for (int l = 0; l < kLeagueCount; l++) installed_league_system().sizes[l] = sizes[l];
 }
 
 void set_league_groups(const uint8_t (&first)[8], const uint8_t (&count)[8]) {
@@ -150,12 +150,12 @@ void set_league_groups(const uint8_t (&first)[8], const uint8_t (&count)[8]) {
         // (bits 4-7 are the four international leagues, all on calendar bit 4)
         for (int l = first[b]; l < first[b] + count[b]; l++) bit[l] = uint8_t(b < 4 ? b : 4);
     }
-    for (int b = 0; b < 8; b++) kGroupLeague[b] = first[b], kGroupLeagues[b] = count[b];
-    for (int l = 0; l < kLeagueCount; l++) kLeagueBit[l] = bit[l];
+    for (int b = 0; b < 8; b++) installed_league_system().group_first[b] = first[b], installed_league_system().group_count[b] = count[b];
+    for (int l = 0; l < kLeagueCount; l++) installed_league_system().calendar_bit[l] = bit[l];
 }
 
 std::vector<Fixture> league_fixtures(int league, int matchday) {
-    const int teams = kLeagueSizes[league];
+    const int teams = league_system().sizes[league];
     return generate_fixtures(league_table_teams(league), matchday, teams - 1, league_first_team(league));
 }
 

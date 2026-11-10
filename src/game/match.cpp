@@ -81,7 +81,7 @@ int team_region(int team) {
     if (team == kNoTeam) return 0;
     int t = team;
     for (int league = 0; league < kLeagueCount; league++) {
-        t -= kLeagueSizes[league];
+        t -= league_system().sizes[league];
         if (t < 0) return league >= kFirstRegionalLeague ? league - kFirstRegionalLeague + 1 : 0;
     }
     if (t - kCupTeams >= 0) return (t - kCupTeams) / 7 - kFirstRegionalLeague + 10;

@@ -23,8 +23,8 @@ constexpr size_t kBoard = 0x840;      // tactics board of a manager
 constexpr size_t kBoardSlot = 0x58;   // one slot of the board
 
 // Static league tables of V2.24 (not part of the savegame):
-// (European places per league, CareerSession_InstallLeagueSizes_RuntimeField, are kLeagueEurope of the loaded game; league 0 uses 4)
-// (the relegation places per league, CareerSession_InstallLeagueSizes_RuntimeField2, are kLeagueRelegation of the loaded game)
+// (European places per league, CareerSession_InstallLeagueSizes_RuntimeField, are league_system().europe of the loaded game; league 0 uses 4)
+// (the relegation places per league, CareerSession_InstallLeagueSizes_RuntimeField2, are league_system().relegation of the loaded game)
 constexpr int kLeagueTeams = 138;  // CareerSession_DispatchLineup_RuntimeField: clubs in the league system
 
 // Text of a pointer variable of the text table TextPointerTable.
@@ -41,11 +41,11 @@ int table_prediction(GameState& g, int team, int mode, std::array<uint8_t, 24>& 
     // (Fill would refresh the desk warning flags PredictionRuntimeField.. here; they are
     //  run-time only and not needed by the game logic.)
     const size_t rec = size_t(manager) * kRecord;
-    const int size = kLeagueSizes[league];  // local_2c
+    const int size = league_system().sizes[league];  // local_2c
     if (size_word) *size_word = size;       // (stored as a word, see the header)
     if (team >= kLeagueTeams) return 9;
     const int pos = team - league_first_team(league);  // local_24
-    const int target[3] = {0, league == 0 ? 4 : kLeagueEurope[league], size - kLeagueRelegation[league]};
+    const int target[3] = {0, league == 0 ? 4 : league_system().europe[league], size - league_system().relegation[league]};
 
     int from = 0;  // local_10
     if (mode > 3) {
@@ -147,7 +147,7 @@ static uint32_t season_bonus_impl(GameState& g, int manager, int team, int board
     if (league == 0 && rank == 0) amount = pay_bonus(g, manager, board_slot, 3, pay);
     if (amount == 0 && rank < 5) amount = pay_bonus(g, manager, board_slot, 4, pay);
     if (amount == 0 && rank < 10) amount = pay_bonus(g, manager, board_slot, 5, pay);
-    if (amount == 0 && league < kLeagueCount && rank < kLeagueSizes[league] - kLeagueRelegation[league])
+    if (amount == 0 && league < kLeagueCount && rank < league_system().sizes[league] - league_system().relegation[league])
         amount = pay_bonus(g, manager, board_slot, 6, pay);
     return amount;
 }

@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "game/schedule.hpp"
 #include "game/state.hpp"
 #include "game/world_layout.hpp"
 
@@ -44,6 +45,34 @@ int main() {
             if (now.first != then.first || now.count != then.count)
                 throw std::runtime_error("squad_range differs from the former table for team " + std::to_string(team));
         }
+        // the league structure: the German tables are the default, exactly as the former globals
+        {
+            const LeagueSystem& s = league_system();
+            const uint8_t sizes[9] = {18, 18, 18, 18, 18, 12, 12, 12, 12}, first[8] = {0, 1, 2, 4, 5, 6, 7, 8},
+                          count[8] = {1, 1, 2, 1, 1, 1, 1, 1}, bit[9] = {0, 1, 2, 2, 3, 4, 4, 4, 4},
+                          down[9] = {3, 4, 2, 2, 3, 0, 0, 0, 0}, europe[9] = {0, 3, 2, 2, 4, 0, 0, 0, 0},
+                          below[8] = {1, 2, 4, 5, 6, 7, 8, 0}, below_count[8] = {1, 2, 1, 1, 1, 1, 1, 0};
+            const char suffix[9] = {0, 0, 'A', 'B', 0, 0, 0, 0, 0};
+            int total = 0;
+            for (int l = 0; l < kLeagueCount; ++l) {
+                check(s.sizes[l] == sizes[l] && s.calendar_bit[l] == bit[l] && s.relegation[l] == down[l] &&
+                      s.europe[l] == europe[l] && s.suffix[l] == suffix[l], "a league table differs from the German default");
+                total += s.sizes[l];
+            }
+            for (int b = 0; b < 8; ++b)
+                check(s.group_first[b] == first[b] && s.group_count[b] == count[b] && s.below_first[b] == below[b] &&
+                      s.below_count[b] == below_count[b], "a group table differs from the German default");
+            check(kLeagueCount == 9 && total == w.league_teams && s.newcomer_first == w.first_amateur() &&
+                  s.newcomer_count == w.amateur_teams && !s.english_competitions, "league totals differ");
+            check(team_league(0) == 0 && team_league(17) == 0 && team_league(18) == 1 && team_league(89) == 4 &&
+                  team_league(90) == 5 && team_league(137) == 8 && team_league(138) == kLeagueCount &&
+                  league_first_team(5) == 90 && league_first_team(8) == 126, "team -> league differs");
+            // league sizes that do not fill the league teams of the world are refused
+            const uint8_t short_sizes[9] = {18, 18, 18, 18, 16, 12, 12, 12, 12};
+            bool thrown = false;
+            try { set_league_sizes(short_sizes); } catch (const std::invalid_argument&) { thrown = true; }
+            check(thrown && league_system().sizes[4] == 18, "league sizes with 136 teams were accepted");
+        }
         // inconsistent layouts are refused and leave the installed one alone
         const auto refused = [](WorldLayout layout) {
             try { set_world_layout(std::move(layout)); } catch (const std::invalid_argument&) { return true; }
@@ -62,7 +91,7 @@ int main() {
         set_world_layout(classic_world_layout());
         check(squad_range(89).first == 89 * 24 && squad_range(90).first == 2160 && squad_range(0x165).first == 3072,
               "installing the Classic layout changed the squad table");
-        std::printf("world layout: Classic numbers, squad table and validation passed\n");
+        std::printf("world layout: Classic numbers, squad table, league structure and validation passed\n");
         return 0;
     } catch (const std::exception& e) {
         std::fprintf(stderr, "%s\n", e.what());

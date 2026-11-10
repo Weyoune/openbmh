@@ -3738,7 +3738,7 @@ int main(int argc, char** argv) {
             const int round = rebound.memory.u8(::bmh::layout::Postponed + uint32_t(postponed_slot) * 6 + 2);
             const int match = rebound.memory.u8(::bmh::layout::Postponed + uint32_t(postponed_slot) * 6 + 4);
             const size_t result_at = size_t(league) * 0x17c + size_t(round) * 10 + size_t(match);
-            const auto scheduled = generate_fixtures(kLeagueSizes[league], round + 1,
+            const auto scheduled = generate_fixtures(league_system().sizes[league], round + 1,
                 league_matchdays(league) / 2, league_first_team(league));
             const std::vector<int> expected_replay{
                 scheduled.at(size_t(match)).home, scheduled.at(size_t(match)).away};

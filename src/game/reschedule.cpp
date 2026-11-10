@@ -33,8 +33,8 @@ constexpr uint8_t kRescheduledMark = 0xce;  // param_5 = -0x32
 constexpr size_t kRecordSize = 0xb0c;
 constexpr size_t kFloodlights = 0x0e;  // manager record byte (RescheduleRuntimeField)
 // LeagueCalendarBits: calendar bit of a league (the two leagues 2 and 3 share bit 2, the four
-// leagues of 12 clubs bit 4; compare kGroupLeague in matchday_setup.cpp).
-// (kLeagueBit: schedule.hpp, set from the groups of the loaded game; 0xff = not played)
+// leagues of 12 clubs bit 4; compare league_system().group_first in matchday_setup.cpp).
+// (league_system().calendar_bit: schedule.hpp, set from the groups of the loaded game; 0xff = not played)
 
 size_t result_at(int league, int round, int match) { return size_t(match) + size_t(round) * 10 + size_t(league) * 0x17c; }
 
@@ -122,14 +122,14 @@ std::vector<LeagueMatchRef> reschedulable_matches(const GameState& g, int manage
     // The screen only reacts to the calendar bit of the club's league for bits 0-3
     // (local_34 == bit); CalendarCell derives local_34 as league - (league > 2).
     const int screen_bit = league > 2 ? league - 1 : league;
-    if (screen_bit > 3 || kLeagueBit[league] != screen_bit) return out;
+    if (screen_bit > 3 || league_system().calendar_bit[league] != screen_bit) return out;
     // DaysIntoSeason, the day of the season; its saved copy in g.memory is only the load day
     const int today = g.season_day();
     const int matchdays = league_matchdays(league);
     int round = -1;
     for (int day = 0; day < kCalendarDays; day++) {
         const uint32_t comps = day_competitions(g, g.memory.u16(kCalendar + uint32_t(day) * 2));
-        if (kLeagueBit[league] > 7 || !((comps >> kLeagueBit[league]) & 1)) continue;
+        if (league_system().calendar_bit[league] > 7 || !((comps >> league_system().calendar_bit[league]) & 1)) continue;
         ++round;  // local_58 - 1: the league days up to this one
         if (day <= today || round == 0 || round + 2 >= matchdays) continue;
         const std::vector<Fixture> fixtures = round_fixtures(league, round);

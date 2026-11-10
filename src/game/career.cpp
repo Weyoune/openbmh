@@ -27,7 +27,7 @@ constexpr size_t kSquadSlots = 3096 + 54;
 constexpr int kLeagueTeams = 138;     // CareerSession_DispatchLineup_RuntimeField
 
 // LeagueSizes: clubs per league; LeagueStrengthRanges: (minimum, maximum) strength per league.
-// (the clubs per league are kLeagueSizes, schedule.hpp)
+// (the clubs per league are league_system().sizes, schedule.hpp)
 int kLeagueStrength[9][2] = {{71, 93}, {49, 71}, {28, 49}, {28, 49}, {10, 28},
                                        {85, 95}, {90, 95}, {75, 95}, {80, 95}};
 
@@ -89,7 +89,7 @@ void startup_players(GameState& g, GameRandom& game, WatcomRandom& rand) {
         const int league = team_league(team);
         index = league == previous ? index + 1 : 0;
         previous = league;
-        const uint32_t count = uint32_t(kLeagueSizes[league]);
+        const uint32_t count = uint32_t(league_system().sizes[league]);
         const uint32_t range = uint32_t(kLeagueStrength[league][1] - kLeagueStrength[league][0]);
         const int level = int16_t(int((count - uint32_t(index)) * range * 100) / int(count) / 100) + kLeagueStrength[league][0];
         const SquadRange r = squad_range(team);
@@ -665,7 +665,7 @@ void english_competition_blocks(StaticMemory& mem) {
 }
 
 void competition_pointers(StaticMemory& mem, const LeImage& exe) {
-    if (kEnglishCompetitions) {
+    if (league_system().english_competitions) {
         competition_pointers_english(mem, exe);
         return;
     }

@@ -38,18 +38,18 @@ void tables(const std::filesystem::path& data) {
     check(bool(identity),error);
     const auto page=session.current_league_table_dispatch(error);
     check(bool(page),error);
-    const bool english=kEnglishCompetitions;
+    const bool english=league_system().english_competitions;
     const auto expected=english ? "01-01 only" : "Nur 01-01";
     check(page->page.retained_range_label_source_bytes==expected,
           std::string("range label follows the actual DE50860 / EN1e83f byte positions and keeps its suffix: ")+page->page.retained_range_label_source_bytes);
     const auto native=save_stream(session.state());const auto g=session.game();const auto w=session.rand();
     const auto all=ui::league_tables_from_game(session.state(),identity->manager);
     for(int league=0;league<kLeagueCount;++league) {
-        if(kLeagueBit[league]==0xff)continue;
+        if(league_system().calendar_bit[league]==0xff)continue;
         auto owner=*identity;owner.league=league;owner.league_group=league>=5;
         ui::LeagueTableScreen screen(data,all,league,ui::LeagueTableScreen::FamilyMode{owner});
         auto frame=screen.render();
-        const int count=kLeagueSizes[league];
+        const int count=league_system().sizes[league];
         check(all[size_t(league)].rows.size()==size_t(count),"table retains every loaded league row");
         check(frame.at(100,count*7+30)==0x40,"panel bottom follows eighteen/twenty/twelve rows");
         const int last_y=28+count*7-1;
@@ -84,8 +84,8 @@ void statistics(const std::filesystem::path& data) {
     auto calendar=ui::calendar_from_game(session.state(),exe);
     const size_t target=size_t(calendar.current_day)+1;
     check(target<calendar.days.size(),"new career has a following calendar cell");
-    const int own_bit=kEnglishCompetitions ? 3 : 2;
-    const int other_bit=kEnglishCompetitions ? 2 : 3;
+    const int own_bit=league_system().english_competitions ? 3 : 2;
+    const int other_bit=league_system().english_competitions ? 2 : 3;
     const int fourth_division_team=league_first_team(3);
     auto accepts=[&](int bit) {
         auto projected=calendar;
@@ -112,7 +112,7 @@ void statistics(const std::filesystem::path& data) {
     std::string error;
     auto opened=session.open_opportunities(owner,revision,menu.render_page(0),error);
     check(bool(opened),error);
-    check(opened->league_size==kLeagueSizes[desk.league],"chances receives actual career league size");
+    check(opened->league_size==league_system().sizes[desk.league],"chances receives actual career league size");
     ui::OpportunitiesScreen screen(data,*opened);
     check(screen.render().height==240,"actual DE/EN chances page renders, including rank-zero startup");
     // Unit-only nonzero ranks exercise the complete English ladder; no career

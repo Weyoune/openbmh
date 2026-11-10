@@ -79,7 +79,7 @@ void enter_desk(GameState& g, int manager, GameRandom& game, WatcomRandom& rand,
             uint8_t v = uint8_t(g.memory.u8(at) & 0xf);
             // EN AlwaysHidesRecordIndoorTableIncluding always hides record 10 (IndoorTable), including
             // Modus III. DE HasNoEquivalentCondition has no equivalent condition.
-            if ((kEnglishCompetitions && b == 10) ||
+            if ((league_system().english_competitions && b == 10) ||
                 (team == kNoTeam && kButtons[b] == 0) || (mode < 3 && kButtons[mode * 0x36 + b] == 0) ||
                 (b == 0x16 && mode2 == 1 && g.date < 0x16e))
                 v |= 0x10;

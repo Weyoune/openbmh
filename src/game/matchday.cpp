@@ -28,7 +28,7 @@ namespace {
 constexpr uint8_t kCompetitionClass[24] = {0, 1, 2, 2, 2, 3, 3, 3, 3, 255, 0, 255,
                                            4, 255, 255, 255, 255, 255, 255, 1, 0, 0, 0, 0};
 // Clubs per league (LeagueSizes): five leagues of 18, four regional leagues of 12.
-// (the clubs per league are kLeagueSizes, schedule.hpp)
+// (the clubs per league are league_system().sizes, schedule.hpp)
 // Three points for a win in every league (CareerSession_BeginFriendlyOpponentTable_RuntimeField, index 9 = "no league" reads the
 // following table byte 18, also non-zero).
 constexpr bool kThreePoints[10] = {true, true, true, true, true, true, true, true, true, true};
@@ -55,7 +55,7 @@ int league_of(int team) {
     if (team > 0x164) return 0;
     int end = 0;
     for (int l = 0; l < 9; l++) {
-        end += kLeagueSizes[l];
+        end += league_system().sizes[l];
         if (team < end) return l;
     }
     return 9;
@@ -313,7 +313,7 @@ void update_club_table(GameState& g, int home, int away, int hg, int ag) {
     auto add16 = [&](size_t o, int v) { wr16(g.club_table, o, uint16_t(rd16(g.club_table, o) + v)); };
     // Only the first league and the regional leagues keep points in this table (the
     // condition tests the home club only).
-    const bool league = home < kLeagueSizes[0] || (home >= 90 && home < 138);
+    const bool league = home < league_system().sizes[0] || (home >= 90 && home < 138);
     const int win_points = kThreePoints[league_of(home)] ? 3 : 2;
     if (league) {
         add16(H + 0x20, hg);
@@ -672,7 +672,7 @@ void manager_match_record(GameState& g, const MatchGroup& grp, int m, int home_g
                 rating += int16_t(add);
             } else {
                 int league = league_of(g.manager_teams[k]);
-                int size = league < 9 ? kLeagueSizes[league] : 0;
+                int size = league < 9 ? league_system().sizes[league] : 0;
                 rating += (size - table_position(g, g.manager_teams[k])) * 4;
             }
             rating = std::clamp(int16_t(rating), int16_t(0), int16_t(200));
@@ -710,15 +710,15 @@ static void store_strength_history(GameState& g, int manager) {
     }
     g.manager_records.at(rec + 0x222 + n) = uint8_t(team_average(g, team, 0xFF).value);
     int pos = table_position(g, team);
-    if (pos == -1) pos = (kLeagueSizes[g.manager_records.at(rec + 0x210)] - 1) >> 1;
+    if (pos == -1) pos = (league_system().sizes[g.manager_records.at(rec + 0x210)] - 1) >> 1;
     g.manager_records.at(rec + 0x248 + n) = uint8_t(pos);
 }
 
 void advance_league_rounds(GameState& g, uint32_t competitions, WatcomRandom& rand, MinuteReport& report,
                            const CompetitionWinnerHook& winner) {
     // CalendarFirstLeague / CalendarLeagueCounts: first league and league count of competition bits 0-7
-    const uint8_t* kFirst = kGroupLeague;  // (schedule.hpp: the groups of the loaded game)
-    const uint8_t* kCount = kGroupLeagues;
+    const uint8_t* kFirst = league_system().group_first;  // (schedule.hpp: the groups of the loaded game)
+    const uint8_t* kCount = league_system().group_count;
     for (int bit = 0; bit < 19; bit++) {
         if (!(competitions >> bit & 1)) continue;
         if (bit >= 5) {
@@ -762,7 +762,7 @@ void advance_league_rounds(GameState& g, uint32_t competitions, WatcomRandom& ra
                 if (c + 1 == end && g.league_rounds.at(2) == league_matchdays(2)) {
                     uint32_t n = 0;
                     for (int l = 2; l < 4; l++)
-                        for (int team = league_first_team(l); team < league_first_team(l) + kLeagueSizes[l]; team++) {
+                        for (int team = league_first_team(l); team < league_first_team(l) + league_system().sizes[l]; team++) {
                             const uint8_t pos = uint8_t(table_position(g, team));
                             if (pos != 0 && pos < 3) g.memory.set16(::bmh::layout::Teams + n++ * 2, uint16_t(team));
                         }

@@ -56,7 +56,7 @@ void source_frame(Image& out,int x,int y) {
 int region_for_team(int id) {
     if(id==kNoTeam)return 0;
     int t=id;
-    for(int league=0;league<kLeagueCount;++league){t-=kLeagueSizes[league];if(t<0)return league>=5?league-5+1:0;}
+    for(int league=0;league<kLeagueCount;++league){t-=league_system().sizes[league];if(t<0)return league>=5?league-5+1:0;}
     if(t-kCupOnlyTeams>=0)return (t-kCupOnlyTeams)/7-5+10;
     return 0;
 }

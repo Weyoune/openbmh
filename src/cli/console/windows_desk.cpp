@@ -427,7 +427,7 @@ void Console::finish_kickoff(const ui::DeskState& before, const TurnAdvanceResul
                 name = ui::league_table_from_game(session_->state(), active_slot(), *group.league_id).league_name;
             // (the indoor tournament, 0xb, has a runtime name: TEXTD only holds the placeholder
             // "...xxx"; the projection already carries the name frozen for these results)
-            else if (group.cup_id && *group.cup_id >= 0 && *group.cup_id < 13 && (*group.cup_id != 0xb || bmh::kEnglishCompetitions))
+            else if (group.cup_id && *group.cup_id >= 0 && *group.cup_id < 13 && (*group.cup_id != 0xb || bmh::league_system().english_competitions))
                 name = text(kCompetitionNames + *group.cup_id);
             if (group.matches.empty()) continue;
             emit('i', name + ":");
