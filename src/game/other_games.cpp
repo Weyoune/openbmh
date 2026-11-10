@@ -153,7 +153,7 @@ OtherGamesRow make_row(const GameState& game, int home, int away, uint16_t resul
 OtherGamesClubMetadata source_metadata(const GameState& game, int team) {
     OtherGamesClubMetadata out;
     bool manager_owned = game.manager_of(team) >= 0;
-    constexpr size_t kNationalOriginalClub = 4 * 0xb0c + 0x290;
+    constexpr size_t kNationalOriginalClub = 4 * kManagerRecordSize + 0x290;
     if (!manager_owned && !game.manager_teams.empty() && game.manager_teams[0] == kNoTeam &&
         game.manager_records.size() >= kNationalOriginalClub + 2) {
         const int original_club = int(uint16_t(game.manager_records[kNationalOriginalClub] |

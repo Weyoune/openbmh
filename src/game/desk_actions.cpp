@@ -33,7 +33,7 @@ void wr32(std::vector<uint8_t>& v, size_t o, int32_t x) {
 }
 
 // Manager record (ManagerRecords + manager * 0xb0c) offsets used here.
-constexpr size_t kRecordSize = 0xb0c;
+constexpr size_t kRecordSize = kManagerRecordSize;
 constexpr size_t kTeam = 0x290;          // club of the manager (low byte used)
 constexpr size_t kFocus = 0xc1;          // four training camp sliders 0..15
 constexpr size_t kStays = 0x21f;         // bits 0-6 stays, bit 7 "in a camp this week"
@@ -1827,7 +1827,7 @@ namespace bmh {
 
 bool submit_pools_coupon(GameState& g, int manager, uint32_t stake,
                          const std::array<uint8_t, 11>& tips) {
-    constexpr size_t kRecord = 0xb0c;
+    constexpr size_t kRecord = kManagerRecordSize;
     constexpr uint32_t kCoupon = ::bmh::layout::Coupon;
     constexpr uint32_t kCouponBytes = 5 * 0x14;
     if (manager < 0 || size_t(manager) >= g.manager_teams.size() ||
@@ -1849,7 +1849,7 @@ bool submit_pools_coupon(GameState& g, int manager, uint32_t stake,
 
 namespace bmh {
 namespace {
-constexpr size_t kAdRecord = 0xb0c;
+constexpr size_t kAdRecord = kManagerRecordSize;
 constexpr size_t kAdPool = 0x8cc;
 constexpr size_t kAdContracts = 0xa34;
 constexpr size_t kAdContractBytes = 0x0c;

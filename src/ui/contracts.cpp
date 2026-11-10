@@ -21,9 +21,9 @@ namespace bmh::ui {
 namespace {
 // Record sizes: one manager record, the per-manager block of player board entries (24 slots)
 // and one board entry (per-player data such as contract, insurance and premiums).
-constexpr size_t kManagerRecord = 0xb0c;
-constexpr size_t kBoard = 0x840;
-constexpr size_t kBoardSlot = 0x58;
+constexpr size_t kManagerRecord = kManagerRecordSize;
+constexpr size_t kBoard = kTacticsBoardSize;
+constexpr size_t kBoardSlot = kTacticsBoardSlotSize;
 
 // Copies a block from a widget/atlas image to the target; throws on out-of-range rectangles.
 // With `transparent` set, palette index 0 is skipped.

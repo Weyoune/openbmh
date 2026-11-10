@@ -21,7 +21,7 @@ namespace bmh {
 
 namespace {
 
-constexpr size_t kRecordSize = 0xb0c;
+constexpr size_t kRecordSize = kManagerRecordSize;
 constexpr uint32_t kPlanTicketPrice = ::bmh::layout::PlanTicketPrice;  // one byte per manager
 // BalancePlanRuntimeField: months left in the business year by calendar month (July: 12, June: 1)
 constexpr int8_t kMonthsLeft[13] = {0, 6, 5, 4, 3, 2, 1, 12, 11, 10, 9, 8, 7};

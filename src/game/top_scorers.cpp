@@ -14,7 +14,6 @@
 namespace bmh::game {
 namespace {
 
-constexpr size_t kManagerRecordSize = 0xb0c;
 constexpr size_t kNationalBackupManager = 4;
 constexpr size_t kManagerTeamOffset = 0x290;
 

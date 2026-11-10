@@ -14,7 +14,7 @@
 
 namespace bmh::ui {
 namespace {
-constexpr size_t kManagerRecord = 0xb0c;
+constexpr size_t kManagerRecord = kManagerRecordSize;
 
 uint32_t require_memory(const GameState& g, uint32_t address, size_t bytes) {
     if (bytes == 0 || !g.memory.has(address) || !g.memory.has(address + uint32_t(bytes - 1)))

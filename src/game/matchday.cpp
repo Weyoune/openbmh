@@ -32,9 +32,9 @@ constexpr uint8_t kCompetitionClass[24] = {0, 1, 2, 2, 2, 3, 3, 3, 3, 255, 0, 25
 // Three points for a win in every league (CareerSession_BeginFriendlyOpponentTable_RuntimeField, index 9 = "no league" reads the
 // following table byte 18, also non-zero).
 constexpr bool kThreePoints[10] = {true, true, true, true, true, true, true, true, true, true};
-constexpr size_t kClubRecord = 0x4a;
-constexpr size_t kManagerRecord = 0xB0C;
-constexpr size_t kBoard = 0x840, kBoardSlot = 0x58;
+constexpr size_t kClubRecord = kClubRecordSize;
+constexpr size_t kManagerRecord = kManagerRecordSize;
+constexpr size_t kBoard = kTacticsBoardSize, kBoardSlot = kTacticsBoardSlotSize;
 
 uint32_t rd32(const std::vector<uint8_t>& v, size_t o) {
     return uint32_t(v.at(o) | v.at(o + 1) << 8 | v.at(o + 2) << 16 | uint32_t(v.at(o + 3)) << 24);

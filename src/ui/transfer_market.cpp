@@ -24,7 +24,6 @@ constexpr size_t kPoolFirst = 0xb70;
 constexpr int kMarketEntries = 40;
 constexpr uint32_t kTransferTable = ::bmh::layout::EditorList;
 constexpr uint32_t kTransferEntrySize = 0x58;
-constexpr size_t kManagerRecordSize = 0xb0c;
 
 // Fills a rectangle with one palette index, clipped to the image.
 void rect(Image& out,int x,int y,int w,int h,uint8_t color) {

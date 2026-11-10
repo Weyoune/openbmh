@@ -20,7 +20,7 @@ namespace bmh {
 
 namespace {
 
-constexpr size_t kManagerRecord = 0xB0C;
+constexpr size_t kManagerRecord = kManagerRecordSize;
 
 int32_t rd32(const std::vector<uint8_t>& v, size_t o) {
     return int32_t(uint32_t(v.at(o)) | uint32_t(v.at(o + 1)) << 8 | uint32_t(v.at(o + 2)) << 16 | uint32_t(v.at(o + 3)) << 24);

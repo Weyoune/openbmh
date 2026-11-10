@@ -30,7 +30,7 @@ namespace bmh {
 
 namespace {
 
-constexpr size_t kManagerRecord = 0xB0C;
+constexpr size_t kManagerRecord = kManagerRecordSize;
 constexpr size_t kDescriptorSize = 0xD0;
 // Competition class per descriptor type (MatchEngineRuntimeField9): which card counters apply.
 constexpr uint8_t kCompetitionClass[24] = {0, 1, 2, 2, 2, 3, 3, 3, 3, 255, 0, 255,
@@ -41,7 +41,6 @@ constexpr uint8_t kCompetitionClass[24] = {0, 1, 2, 2, 2, 3, 3, 3, 3, 255, 0, 25
 // Crowd interest per descriptor type (MatchdaySetupRuntimeField).
 constexpr uint8_t kTypeInterest[24] = {5, 5, 10, 15, 12, 10, 5, 10, 5, 10, 5, 31, 10, 10, 10, 0, 0, 1, 0, 0, 0, 12, 0, 0};
 // Number of clubs taking part in league play (CareerSession_DispatchLineup_RuntimeField).
-constexpr int kLeagueClubCount = 0x8a;
 // Squad slots checked by the driver (CareerRuntimeField).
 constexpr size_t kSquadSlotCount = 0xb70;
 
@@ -613,7 +612,7 @@ std::vector<MatchGroup> setup_matchday(GameState& g, uint32_t competitions, cons
             }
         }
     }
-    for (int team = 0; team < kLeagueClubCount; team++)
+    for (int team = 0; team < world_layout().league_teams; team++)
         if (g.team_flags.at(size_t(team)) & 1) auto_lineup(g, team, 100);
     turn_step = "setup: options";
     cycle_manager_options(g);
@@ -892,8 +891,7 @@ bool select_live_match(GameState& g, int home, int away) {
 // record +0x8ac / 16 + 40.
 void man_marking(GameState& g, int own_manager, int own, int other_manager, int other, int chance, int rate,
                  WatcomRandom& rand) {
-    constexpr int kLeagueTeams = 138;  // CareerSession_DispatchLineup_RuntimeField
-    if (g.indoor || own >= kLeagueTeams || other >= kLeagueTeams || (own_manager < 0 && other_manager < 0)) return;
+    if (g.indoor || own >= world_layout().league_teams || other >= world_layout().league_teams || (own_manager < 0 && other_manager < 0)) return;
     if (other_manager >= 0)
         for (size_t s = 0; s < 24; s++) {
             const size_t at = size_t(other_manager) * 0x840 + s * 0x58 + 0x46;
@@ -1035,7 +1033,7 @@ void kick_off(GameState& g, std::vector<MatchGroup>& groups, const MatchdayConte
                     man_marking(g, own_manager, t, other_manager, opponent, 0x32, rate, rand);
                 }
                 const TeamAverage fit = team_average(g, t, 0x1f1, &rand);
-                if ((t < kLeagueClubCount || t == kNoTeam) && (fit.players & 0xFF) < 8) {
+                if ((t < world_layout().league_teams || t == kNoTeam) && (fit.players & 0xFF) < 8) {
                     // FinishEvent sets this fixture's local void bit and BuildSideRecords writes
                     // the awarded 0:2/2:0 score before continuing to the next fixture.
                     forfeit_side = side;

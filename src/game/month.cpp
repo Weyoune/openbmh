@@ -33,9 +33,9 @@ namespace bmh {
 
 namespace {
 
-constexpr size_t kRecord = 0xB0C;       // manager record
-constexpr size_t kBoard = 0x840;        // tactics board of a manager
-constexpr size_t kBoardSlot = 0x58;
+constexpr size_t kRecord = kManagerRecordSize;       // manager record
+constexpr size_t kBoard = kTacticsBoardSize;        // tactics board of a manager
+constexpr size_t kBoardSlot = kTacticsBoardSlotSize;
 constexpr uint32_t kTransferList = ::bmh::layout::EditorList;
 constexpr uint32_t kListEntry = 0x58;
 constexpr int kPoolFirst = 0xb70;       // CareerRuntimeField: the transfer list (40 slots + 4)
@@ -43,7 +43,6 @@ constexpr int kFreeAgents = 0xb9c;      // CareerRuntimeField2: free agents (80 
 constexpr int kForeignAgents = 0xbec;   // MonthRuntimeField: foreign free agents (20 slots)
 constexpr int kPoolEnd = 0xc00;         // LargeSquadClubCount
 constexpr int kBigSquadClubs = 90;      // TeamsWithSquads
-constexpr int kLeagueClubs = 0x8a;      // CareerSession_DispatchLineup_RuntimeField
 
 // MonthRuntimeField2: development steps by strength / 10; the ten bytes after it (PlayerCard_PlayerCardMarketValue_RuntimeField)
 // are the extra value above 500 points.
@@ -303,7 +302,7 @@ void new_list_entries(GameState& g, WatcomRandom& rand, MinuteReport& report) {
                 while (left-- != 0 && !report.unsupported) list_club_player(g, 0, kBigSquadClubs, rand, report);
                 break;
             case 3:
-                while (left-- != 0 && !report.unsupported) list_club_player(g, kBigSquadClubs, kLeagueClubs, rand, report);
+                while (left-- != 0 && !report.unsupported) list_club_player(g, kBigSquadClubs, world_layout().league_teams, rand, report);
                 break;
         }
     }

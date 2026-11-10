@@ -20,7 +20,7 @@
 namespace bmh {
 namespace {
 constexpr uint32_t kLoans = ::bmh::layout::Loans;
-constexpr size_t kRecord = 0xb0c;
+constexpr size_t kRecord = kManagerRecordSize;
 int32_t signed_word(uint32_t v) { return std::bit_cast<int32_t>(v); }
 uint32_t word(int32_t v) { return std::bit_cast<uint32_t>(v); }
 int32_t add(int32_t a, int32_t b) { return signed_word(word(a) + word(b)); }

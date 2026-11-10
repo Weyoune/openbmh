@@ -31,7 +31,7 @@
 
 namespace bmh::ui {
 namespace {
-constexpr size_t kManagerRecord = 0xb0c;
+constexpr size_t kManagerRecord = kManagerRecordSize;
 constexpr size_t kAdvertisingContracts = 0xa34;
 constexpr size_t kContractBytes = 0x0c;
 constexpr int kBoardCount = 14;
@@ -201,7 +201,7 @@ AdvertisingFinancePreview original_finance_preview_impl(const GameState& game, i
             int32_t(game.manager_records.at(rec + 0x2e + size_t(i)) & 7) * kFacilityCost[size_t(i)]);
     expenses = wrap_add(expenses, signed32(u32(game.manager_records, rec + 0x854)));
     expenses = wrap_add(expenses, signed32(u32(game.manager_records, rec + 0x858)));
-    constexpr size_t kBoard = 0x840, kBoardSlot = 0x58;
+    constexpr size_t kBoard = kTacticsBoardSize, kBoardSlot = kTacticsBoardSlotSize;
     for (size_t slot = 0; slot < 24; ++slot) {
         const size_t board = size_t(manager) * kBoard + slot * kBoardSlot;
         if (game.tactics.at(board + 0x3d) == 0xff) continue;

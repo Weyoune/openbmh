@@ -1183,7 +1183,7 @@ bool other_games_source_manager_owned(const GameState& g,int team) {
         throw FormatError("other games: invalid Source manager count for club detail redraw");
     for(size_t manager=0;manager<count;++manager)
         if(g.manager_teams[manager]==team)return true;
-    constexpr size_t national_record=4*0xb0c+0x290;
+    constexpr size_t national_record=4 * kManagerRecordSize+0x290;
     if(!g.manager_teams.empty()&&g.manager_teams.front()==kNoTeam&&
        g.manager_records.size()>=national_record+2)
         return int(uint16_t(g.manager_records[national_record]|

@@ -22,7 +22,7 @@ namespace bmh {
 
 namespace {
 
-constexpr size_t kRecord = 0xB0C;
+constexpr size_t kRecord = kManagerRecordSize;
 
 // DeskRuntimeField: which of the 0x36 desk buttons exist, for the pseudo club 0x165 and per
 // game mode (GameMode; the table for mode m starts at DeskRuntimeField + m * 0x36).

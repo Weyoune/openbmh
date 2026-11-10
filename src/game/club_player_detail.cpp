@@ -19,7 +19,7 @@
 
 namespace bmh {
 namespace {
-constexpr size_t kRecord = 0xb0c, kBoard = 0x840, kBoardRow = 0x58;
+constexpr size_t kRecord = kManagerRecordSize, kBoard = kTacticsBoardSize, kBoardRow = kTacticsBoardSlotSize;
 
 uint16_t record_word(const GameState& g, size_t manager, size_t offset) {
     const size_t at = manager * kRecord + offset;

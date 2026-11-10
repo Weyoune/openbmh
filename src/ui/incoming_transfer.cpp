@@ -26,7 +26,7 @@ constexpr uint32_t kTitleText = ::bmh::layout::TitleText;
 constexpr uint32_t kPurchaseTitleText = ::bmh::layout::PurchaseTitleText;
 constexpr uint32_t kLoanTitleText = ::bmh::layout::LoanTitleText;
 constexpr uint32_t kTextBase = ::bmh::layout::TextPointerTable;
-constexpr size_t kManagerRecord = 0xb0c;
+constexpr size_t kManagerRecord = kManagerRecordSize;
 
 // Returns the TEXTD string for a text-table address; throws if the address is not a table entry.
 std::string_view text_at(const TextDb& texts, uint32_t address) {

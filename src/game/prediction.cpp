@@ -18,14 +18,13 @@ namespace bmh {
 
 namespace {
 
-constexpr size_t kRecord = 0xB0C;     // manager record
-constexpr size_t kBoard = 0x840;      // tactics board of a manager
-constexpr size_t kBoardSlot = 0x58;   // one slot of the board
+constexpr size_t kRecord = kManagerRecordSize;     // manager record
+constexpr size_t kBoard = kTacticsBoardSize;      // tactics board of a manager
+constexpr size_t kBoardSlot = kTacticsBoardSlotSize;   // one slot of the board
 
 // Static league tables of V2.24 (not part of the savegame):
 // (European places per league, CareerSession_InstallLeagueSizes_RuntimeField, are league_system().europe of the loaded game; league 0 uses 4)
 // (the relegation places per league, CareerSession_InstallLeagueSizes_RuntimeField2, are league_system().relegation of the loaded game)
-constexpr int kLeagueTeams = 138;  // CareerSession_DispatchLineup_RuntimeField: clubs in the league system
 
 // Text of a pointer variable of the text table TextPointerTable.
 }  // namespace
@@ -43,7 +42,7 @@ int table_prediction(GameState& g, int team, int mode, std::array<uint8_t, 24>& 
     const size_t rec = size_t(manager) * kRecord;
     const int size = league_system().sizes[league];  // local_2c
     if (size_word) *size_word = size;       // (stored as a word, see the header)
-    if (team >= kLeagueTeams) return 9;
+    if (team >= world_layout().league_teams) return 9;
     const int pos = team - league_first_team(league);  // local_24
     const int target[3] = {0, league == 0 ? 4 : league_system().europe[league], size - league_system().relegation[league]};
 
@@ -201,7 +200,7 @@ uint32_t expected_bonus_parked_club_source(GameState& g, int rank, int board_slo
         board_slot<0 || board_slot>=24 || g.tactics.size()<5*kBoard)
         throw std::invalid_argument("expected_bonus: invalid FindManagerForClub parked club context");
     const int team=int(g.manager_records[team_at]) | int(g.manager_records[team_at+1])<<8;
-    if(team<0 || team>=kLeagueTeams)
+    if(team<0 || team>=world_layout().league_teams)
         throw std::invalid_argument("expected_bonus: parked record4 has no ordinary club");
     return expected_bonus_impl(g,4,team,rank,board_slot,player,fitness);
 }

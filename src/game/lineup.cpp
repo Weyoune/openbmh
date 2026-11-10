@@ -27,9 +27,8 @@ constexpr int8_t kTypeBySlot[24] = {2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 0, 1, 2, 2,
 constexpr int16_t kUnavailable = -32000;  // 0x8300
 constexpr int kMismatchWeight = 0x40;      // local_54 for computer teams
 
-constexpr size_t kManagerRecordSize = 0xB0C;
-constexpr size_t kManagerBoardSize = 0x840;
-constexpr size_t kBoardRowSize = 0x58;
+constexpr size_t kManagerBoardSize = kTacticsBoardSize;
+constexpr size_t kBoardRowSize = kTacticsBoardSlotSize;
 constexpr size_t kFormationManagerSize = 0x160;
 constexpr size_t kNativeFormationBlockSize = 0x580;
 
@@ -650,7 +649,7 @@ void auto_lineup(GameState& g, int team, int mode) {
 }
 
 void auto_lineup_parked_club_source(GameState& g, int team, int mode) {
-    constexpr size_t record = 4*0xb0c+0x290;
+    constexpr size_t record = 4 * kManagerRecordSize+0x290;
     if (team<0 || team>=138 || g.manager_teams.size()!=1 || g.manager_teams[0]!=kNoTeam ||
         !g.memory.has(::bmh::layout::CoachActive) || g.memory.u8(::bmh::layout::CoachActive)==0 ||
         !g.memory.has(::bmh::layout::ManagerCount) || g.memory.u8(::bmh::layout::ManagerCount)!=1 ||

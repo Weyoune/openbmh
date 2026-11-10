@@ -55,7 +55,7 @@ uint8_t set_club_info_category(GameState& g, int team, int requested) {
     if (manager_count > 4 || manager_count > g.manager_teams.size())
         throw std::invalid_argument("club info: truncated manager teams");
     const bool national = !g.manager_teams.empty() && g.manager_teams.front() == kNoTeam;
-    constexpr size_t national_club = 4 * 0xb0c + 0x290;
+    constexpr size_t national_club = 4 * kManagerRecordSize + 0x290;
     if (national && g.manager_records.size() < national_club + 2)
         throw std::invalid_argument("club info: truncated national manager record");
     // FindManagerForClub matches the first ManagerCount teams, irrespective of manager name,

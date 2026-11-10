@@ -20,7 +20,7 @@
 namespace bmh::ui {
 namespace {
 
-constexpr size_t kRecord = 0xb0c;
+constexpr size_t kRecord = kManagerRecordSize;
 constexpr size_t kTeam = 0x290;
 constexpr size_t kFocus = 0xc1;
 constexpr size_t kStays = 0x21f;

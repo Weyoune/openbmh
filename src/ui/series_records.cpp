@@ -16,8 +16,8 @@
 
 namespace bmh::ui {
 namespace {
-constexpr size_t kManagerRecord = 0xb0c;
-constexpr size_t kClubRecord = 0x4a;
+constexpr size_t kManagerRecord = kManagerRecordSize;
+constexpr size_t kClubRecord = kClubRecordSize;
 constexpr uint32_t kSeriesSelector = ::bmh::layout::SeriesSelector;
 constexpr uint32_t kTableFlags = ::bmh::layout::TableFlags;
 

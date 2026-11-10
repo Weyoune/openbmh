@@ -24,7 +24,6 @@ constexpr size_t kTailFrom = 2928 + 40;
 constexpr size_t kTailTo = 2972;      // CareerRuntimeField2
 constexpr size_t kExtraSlots = 3096;  // CareerSession_DataDirectory_RuntimeField4: 54 extra players from here
 constexpr size_t kSquadSlots = 3096 + 54;
-constexpr int kLeagueTeams = 138;     // CareerSession_DispatchLineup_RuntimeField
 
 // LeagueSizes: clubs per league; LeagueStrengthRanges: (minimum, maximum) strength per league.
 // (the clubs per league are league_system().sizes, schedule.hpp)
@@ -85,7 +84,7 @@ void startup_players(GameState& g, GameRandom& game, WatcomRandom& rand) {
         generate_player(g, int16_t(g.squad_slots.at(kExtraSlots + i)), int16_t(level), game, rand);
     }
     int previous = 0, index = -1;  // local_18, local_1c
-    for (int team = 0; team < kLeagueTeams; team++) {
+    for (int team = 0; team < world_layout().league_teams; team++) {
         const int league = team_league(team);
         index = league == previous ? index + 1 : 0;
         previous = league;
@@ -256,7 +255,7 @@ namespace bmh {
 
 namespace {
 
-constexpr size_t kRecord = 0xb0c;
+constexpr size_t kRecord = kManagerRecordSize;
 
 uint16_t team_of(const GameState& g, int m) {
     const size_t at = size_t(m) * kRecord + 0x290;
@@ -351,7 +350,7 @@ void put32(std::vector<uint8_t>& v, size_t o, uint32_t x) {
 // CareerAddManager2(team, mode): condition and technique of every player of a league club around
 // a level of its league (mode 0 random W(min, max), 1 min + 3, 2 the middle + 1, 3 max - 3).
 void set_club_strength(GameState& g, int team, int mode, WatcomRandom& rand) {
-    if (team >= kLeagueTeams) return;
+    if (team >= world_layout().league_teams) return;
     const int league = team_league(team);
     const int lo = kLeagueStrength[league][0], hi = kLeagueStrength[league][1];
     int level = mode;

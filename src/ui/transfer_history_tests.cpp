@@ -22,7 +22,7 @@ int main() {
     game.manager_records.assign(4 * 0xb0c, 0);
     game.player_names = {'A','n','n','a',0,'M','a','x',0};
     game.club_names = {'O','l','d',' ','F','C',0,'N','e','w',' ','F','C',0};
-    constexpr size_t record = 0xb0c;
+    constexpr size_t record = kManagerRecordSize;
     game.manager_records[record + 0x21d] = 2;
     const uint32_t sell_event = (12u << 19) | (400u << 2) | 0u;
     const uint32_t buy_event = (3u << 19) | (401u << 2) | 1u;

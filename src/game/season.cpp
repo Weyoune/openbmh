@@ -35,8 +35,8 @@ constexpr uint32_t kTransferList = ::bmh::layout::EditorList;  // 44 entries of 
 constexpr uint32_t kListEntry = 0x58;
 constexpr size_t kPoolSlots = 0xb70;         // CareerRuntimeField
 constexpr uint32_t kOffers = ::bmh::layout::OfferSlots;        // OfferSlots: 4 offers, -1 = free
-constexpr size_t kBoard = 0x840;             // tactics board of a manager
-constexpr size_t kBoardSlot = 0x58;
+constexpr size_t kBoard = kTacticsBoardSize;             // tactics board of a manager
+constexpr size_t kBoardSlot = kTacticsBoardSlotSize;
 
 uint32_t board32(const GameState& g, size_t at) {
     return uint32_t(g.tactics.at(at) | g.tactics.at(at + 1) << 8 | g.tactics.at(at + 2) << 16) |

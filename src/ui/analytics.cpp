@@ -16,7 +16,7 @@
 
 namespace bmh::ui {
 namespace {
-constexpr size_t kManagerRecord = 0xb0c;
+constexpr size_t kManagerRecord = kManagerRecordSize;
 constexpr size_t kFlags = ::bmh::layout::Flags;
 constexpr int kSeriesCount = 6;
 constexpr int kSourcePointLimit = 52; // local_1d8[52] in CopyOpaqueSlice.

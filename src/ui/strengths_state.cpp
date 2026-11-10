@@ -22,7 +22,6 @@ namespace bmh::ui {
 namespace {
 
 constexpr uint32_t kManagerSettings = ::bmh::layout::ManagerSettings;
-constexpr size_t kManagerRecordSize = 0xb0c;
 constexpr std::array<uint16_t, 4> kCriterionFlags{0x001, 0x002, 0x004, 0x008};
 
 [[noreturn]] void invalid(const std::string& reason) {

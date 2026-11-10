@@ -16,7 +16,7 @@ namespace bmh {
 
 namespace {
 
-constexpr size_t kRecordSize = 0xb0c;
+constexpr size_t kRecordSize = kManagerRecordSize;
 constexpr size_t kAttempts = 0x8b6;           // five player ids, 0xffff free
 constexpr uint32_t kTransferList = ::bmh::layout::EditorList;   // 44 rows of 0x58 bytes
 constexpr uint32_t kListRow = 0x58;

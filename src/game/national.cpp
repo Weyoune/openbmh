@@ -19,9 +19,9 @@ namespace bmh {
 
 namespace {
 
-constexpr size_t kManagerRecord = 0xb0c;
-constexpr size_t kBoard = 0x840;          // one manager's tactics board (24 x 0x58)
-constexpr size_t kBoardSlot = 0x58;
+constexpr size_t kManagerRecord = kManagerRecordSize;
+constexpr size_t kBoard = kTacticsBoardSize;          // one manager's tactics board (24 x 0x58)
+constexpr size_t kBoardSlot = kTacticsBoardSlotSize;
 constexpr uint32_t kDesktops = ::bmh::layout::Desktops;   // desktop layouts, 0x360 per manager slot
 constexpr size_t kDesktop = 0x360;
 constexpr size_t kPoolSlots = 0xb70;      // CareerRuntimeField: the clubs' squads end here

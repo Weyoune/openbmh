@@ -30,7 +30,7 @@ constexpr int kWinterBreakFirst = 0x96, kWinterBreakLast = 0xc8;
 // target inside 0x15 .. 0x11e.
 constexpr int kLastReplayDay = 0x11e, kFirstDayAfter = 0x15;
 constexpr uint8_t kRescheduledMark = 0xce;  // param_5 = -0x32
-constexpr size_t kRecordSize = 0xb0c;
+constexpr size_t kRecordSize = kManagerRecordSize;
 constexpr size_t kFloodlights = 0x0e;  // manager record byte (RescheduleRuntimeField)
 // LeagueCalendarBits: calendar bit of a league (the two leagues 2 and 3 share bit 2, the four
 // leagues of 12 clubs bit 4; compare league_system().group_first in matchday_setup.cpp).

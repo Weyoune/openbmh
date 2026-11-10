@@ -14,7 +14,7 @@
 
 namespace bmh::ui {
 namespace {
-constexpr size_t kManagerRecord = 0xb0c;
+constexpr size_t kManagerRecord = kManagerRecordSize;
 
 } // namespace
 

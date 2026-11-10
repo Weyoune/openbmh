@@ -14,7 +14,7 @@
 
 namespace bmh {
 namespace {
-constexpr size_t kRecordSize = 0xb0c;
+constexpr size_t kRecordSize = kManagerRecordSize;
 constexpr size_t kManagerClub = 0x290;
 constexpr size_t kBuild = 0x34;
 constexpr size_t kFlags = 0x44;

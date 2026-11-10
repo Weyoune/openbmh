@@ -13,7 +13,7 @@
 namespace bmh {
 namespace {
 
-constexpr size_t kRecord = 0xB0C;                    // manager record
+constexpr size_t kRecord = kManagerRecordSize;                    // manager record
 constexpr uint32_t kTransferList = ::bmh::layout::EditorList;
 constexpr uint32_t kListEntry = 0x58;
 constexpr int kPoolFirst = 0xb70;                    // the transfer list lives in the first 40 pool slots

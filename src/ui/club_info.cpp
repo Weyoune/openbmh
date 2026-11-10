@@ -45,7 +45,7 @@ int sprite_width(const LeImage& exe, std::string_view value) {
 int source_manager_of(const GameState& game, int team) {
     const int manager = game.manager_of(team);
     if (manager >= 0) return manager;
-    constexpr size_t fifth_team_offset = size_t(4) * 0xb0c + 0x290;
+    constexpr size_t fifth_team_offset = size_t(4) * kManagerRecordSize + 0x290;
     if (!game.manager_teams.empty() && game.manager_teams.front() == kNoTeam &&
         game.manager_records.size() >= fifth_team_offset + 2) {
         const uint16_t fifth_team = uint16_t(game.manager_records[fifth_team_offset] |

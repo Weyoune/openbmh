@@ -34,13 +34,12 @@ namespace bmh {
 
 namespace {
 
-constexpr size_t kRecord = 0xB0C;       // manager record
-constexpr size_t kBoard = 0x840;        // tactics board of a manager
-constexpr size_t kBoardSlot = 0x58;
+constexpr size_t kRecord = kManagerRecordSize;       // manager record
+constexpr size_t kBoard = kTacticsBoardSize;        // tactics board of a manager
+constexpr size_t kBoardSlot = kTacticsBoardSlotSize;
 constexpr uint32_t kTransferList = ::bmh::layout::EditorList;  // 44 entries of 0x58 bytes, one per pool slot
 constexpr uint32_t kListEntry = 0x58;
 constexpr size_t kPoolSlots = 0xb70;    // CareerRuntimeField: first squad slot of the transfer pool
-constexpr int kLeagueClubs = 0x8a;      // CareerSession_DispatchLineup_RuntimeField
 constexpr int kBigSquadClubs = 90;      // TeamsWithSquads
 
 // Offers and incidents (Bool): 1 in WeeklyRuntimeField[kind] is only possible while the
@@ -121,9 +120,9 @@ bool source_pending_owner_valid(const GameState& g,const SourcePendingOwner& own
         !mem.has(::bmh::layout::OfferSlots+uint32_t(entry-40)*4+3))return false;
     const auto team=[&](int manager){const size_t at=size_t(manager)*kRecord+0x290;
         return int(g.manager_records[at]) | int(g.manager_records[at+1])<<8;};
-    if(team(0)!=kNoTeam || team(4)<0 || team(4)>=kLeagueClubs ||
+    if(team(0)!=kNoTeam || team(4)<0 || team(4)>=world_layout().league_teams ||
         team(owner.manager)!=owner.team ||
-        (owner.manager==0 ? owner.team!=kNoTeam : owner.team<0 || owner.team>=kLeagueClubs))return false;
+        (owner.manager==0 ? owner.team!=kNoTeam : owner.team<0 || owner.team>=world_layout().league_teams))return false;
     const uint32_t list=kTransferList+uint32_t(entry)*kListEntry;
     if(!mem.has(list+kListEntry-1) || mem.u16(list+2)!=0xffff ||
         mem.u16(list+4)!=0xffff || mem.u16(list+6)!=0xffff)return false;
@@ -582,7 +581,7 @@ void transfer_bid(GameState& g, int slot, uint32_t list, bool high, int months, 
         std::vector<uint32_t> keys;
         std::vector<int> needs;
         int region = 0;  // local_20 (not reset between the clubs)
-        for (int team = 0; team < kLeagueClubs; team++) {
+        for (int team = 0; team < world_layout().league_teams; team++) {
             if (team == own || g.manager_of(team) >= 0) continue;
             if (team >= kBigSquadClubs) region = team_region(team) & 0xFF;
             if (own >= 0 && g.manager_of(own) >= 0 && list != 0 && (w35c >> 27) != 0 && game.range(0, 0xf) != 0) continue;
@@ -867,7 +866,7 @@ TransferBidRating rate_transfer_bid_source(GameState& g, const TransferBidRating
     const int bidder = int(int16_t(g.memory.u16(list + uint32_t(request.bid_slot) * 2)));
     if (player == 0x0fff || size_t(player) >= g.players.size() ||
         player != request.expected_player || bidder != request.expected_bidder ||
-        bidder < 0 || bidder >= kLeagueClubs)
+        bidder < 0 || bidder >= world_layout().league_teams)
         return fail("source player/bidder identity mismatch");
     uint32_t fee_base = 0, salary_base = 0;
     offer_bases(g.memory, list, request.bid_slot, fee_base, salary_base);
@@ -955,7 +954,7 @@ TransferBidRating rate_transfer_bid_source(GameState& g, const TransferBidRating
 static void lineup_after_transfer_impl(GameState& g, int team, bool native_takeover) {
     if (pending_native_manager_of(g,team,native_takeover)==4)
         auto_lineup_parked_club_source(g,team,100);
-    else if (team < kLeagueClubs || team == kNoTeam) auto_lineup(g, team, 100);
+    else if (team < world_layout().league_teams || team == kNoTeam) auto_lineup(g, team, 100);
 }
 
 void lineup_after_transfer(GameState& g, int team) { lineup_after_transfer_impl(g,team,false); }
@@ -1156,7 +1155,7 @@ bool preflight_human_owner_loan(const GameState& g, int seller, size_t pool_slot
         report.fail("transfer: Source free-agent loan return destination is not represented");
         return false;
     }
-    if (buyer < 0 || buyer >= kLeagueClubs) {
+    if (buyer < 0 || buyer >= world_layout().league_teams) {
         report.fail("transfer: loan buyer has no squad");
         return false;
     }
@@ -1685,7 +1684,7 @@ static TransferOfferListView project_transfer_offer_list_impl(const GameState& g
         }
         // Only club IDs have a squad range in the source transfer path. Keep
         // malformed IDs visible for diagnosis but never use them as indexes.
-        const SquadRange range = buyer >= 0 && buyer < kLeagueClubs ? squad_range(buyer) : SquadRange{};
+        const SquadRange range = buyer >= 0 && buyer < world_layout().league_teams ? squad_range(buyer) : SquadRange{};
         offer.has_squad_room = range.count != 0 && squad_count(g, buyer, 3) < int(range.count) - 1;
         offer.passes_foreign_limit = range.count != 0;
         if (view.seller_manager < 0 && range.count != 0) {
@@ -1872,7 +1871,7 @@ PendingSettleOutcome pending_settle(GameState& g, int raw, int player, int bid, 
     const int movement_seller = pending_native_manager_of(g, seller, native_takeover);
     const int buyer = int16_t(mem.u16(list+uint32_t(bid)*2));
     const int buyer_manager = pending_native_manager_of(g, buyer, native_takeover);
-    if (seller_manager < 0 || seller_manager >= 4 || buyer < 0 || buyer >= kLeagueClubs) {
+    if (seller_manager < 0 || seller_manager >= 4 || buyer < 0 || buyer >= world_layout().league_teams) {
         report.fail("DispatchClubPlayerPendingOffers: invalid seller/buyer for Void2"); return PendingSettleOutcome::unsupported;
     }
     const uint8_t term = mem.u8(list+0x34+uint32_t(bid));
@@ -1884,7 +1883,7 @@ PendingSettleOutcome pending_settle(GameState& g, int raw, int player, int bid, 
         return PendingSettleOutcome::unsupported;
     }
     if (buyer_manager >= 0) {
-        const auto buyer_range = buyer >= 0 && buyer < kLeagueClubs ? squad_range(buyer) : SquadRange{};
+        const auto buyer_range = buyer >= 0 && buyer < world_layout().league_teams ? squad_range(buyer) : SquadRange{};
         if (buyer_range.count != 24) {
             report.fail("DispatchClubPlayerPendingOffers: human buyer uses unsupported non-24-slot squad layout");
             return PendingSettleOutcome::unsupported;
@@ -2112,8 +2111,8 @@ HumanBuyerSaleResult settle_human_buyer_sale(GameState& g, const HumanBuyerSaleR
     const bool free_agent = seller == 0x0fff;
     if (player == 0x0fff || size_t(player) >= g.players.size() ||
         seller != request.expected_seller || buyer != request.expected_buyer ||
-        (!free_agent && (seller < 0 || seller >= kLeagueClubs)) ||
-        buyer < 0 || buyer >= kLeagueClubs || seller == buyer)
+        (!free_agent && (seller < 0 || seller >= world_layout().league_teams)) ||
+        buyer < 0 || buyer >= world_layout().league_teams || seller == buyer)
         return fail("SettleHumanBuyerSale/Fail: source player/seller/buyer identity mismatch");
     // SettleHumanBuyerSale uses param8 for the seller's accounts; Fail separately
     // resolves actual movement ownership through FindManagerForClub.
@@ -2387,7 +2386,7 @@ PendingOfferResult process_pending_batch(GameState& g, int clicked_player, int c
                 const int expected_seller=owner->team==kNoTeam
                     ? int(g.manager_records.at(4*kRecord+0x290)) |
                         (int(g.manager_records.at(4*kRecord+0x291))<<8) : owner->team;
-                if(seller<0 || seller>=kLeagueClubs || seller!=expected_seller ||
+                if(seller<0 || seller>=world_layout().league_teams || seller!=expected_seller ||
                     (g.squad_slots.at(kPoolSlots+size_t(raw+40))&0x0fff)!=player) {
                     report.fail("DispatchClubPlayerPendingOffers: invalid special offer seller/pool provenance (PreMatchOffer requires a club seller)");
                     return result;
@@ -2512,7 +2511,7 @@ PendingOfferResult process_natural_pending_offers_after_desk(GameState& g,
     // Records1..3 survive the count-one national takeover. AdvanceTurn reads
     // these records directly even while their clubs have no current desk.
     if ((takeover && manager<count && g.manager_teams[size_t(manager)]!=native_team) ||
-        (native_team!=kNoTeam && (native_team<0 || native_team>=kLeagueClubs)) ||
+        (native_team!=kNoTeam && (native_team<0 || native_team>=world_layout().league_teams)) ||
         (native_team==kNoTeam && (!takeover || manager!=0)))
         return fail("AdvanceTurn: invalid native ordered owner team");
     const auto inactive_club_offer = [&](int raw, int player) {

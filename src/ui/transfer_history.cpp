@@ -14,7 +14,7 @@
 
 namespace bmh::ui {
 namespace {
-constexpr size_t kManagerStride = 0xb0c;
+constexpr size_t kManagerStride = kManagerRecordSize;
 constexpr size_t kHistoryCount = 0x21d;
 constexpr size_t kEventWords = 0x760;
 constexpr size_t kNameWords = 0x7d8;

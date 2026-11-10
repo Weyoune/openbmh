@@ -16,7 +16,7 @@
 
 namespace bmh {
 namespace {
-constexpr size_t kRecord = 0xb0c;
+constexpr size_t kRecord = kManagerRecordSize;
 // OpenBMH deviates from the original: reads the supported edition-specific high-score format from the loaded image.
 // supported rule profile executable HighscoreRuntimeField..a5144, verified against the installed LE image.
 constexpr std::array<uint8_t, 8> kHistoryWeights{3, 5, 4, 30, 20, 10, 5, 40};
