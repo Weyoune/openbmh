@@ -18,18 +18,15 @@
 #include "ui/manager.hpp"
 #include "ui/setup.hpp"
 #include "ui/sprite_font.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
 void copy(Image& d,const Image& s,int sx,int sy,int x,int y,int w,int h,bool transparent=false) {
-    for(int yy=0;yy<h;++yy) for(int xx=0;xx<w;++xx) {
-        const auto p=s.pixels[size_t(sy+yy)*size_t(s.width)+size_t(sx+xx)];
-        if(x+xx>=0&&y+yy>=0&&x+xx<d.width&&y+yy<d.height&&(!transparent||p)) d.at(x+xx,y+yy)=p;
-    }
+    draw::copy_clipped(d, s, sx, sy, x, y, w, h, transparent ? 0 : -1);
 }
 void fill(Image& im,int x,int y,int w,int h,uint8_t c) {
-    for(int yy=std::max(0,y);yy<std::min(im.height,y+h);++yy)
-        for(int xx=std::max(0,x);xx<std::min(im.width,x+w);++xx) im.at(xx,yy)=c;
+    draw::fill(im, x, y, w, h, c);
 }
 Image source_base(const Image& original,bool plain_background,bool has_header_footer_text) {
     if(!plain_background) {

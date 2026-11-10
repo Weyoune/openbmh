@@ -13,6 +13,7 @@
 #include "game/season.hpp"
 #include "ui/manager.hpp"
 #include "ui/setup.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -20,15 +21,10 @@ void copy(Image& out, const Image& src, int sx, int sy, int x, int y, int w, int
           int transparent = -1) {
     if (sx < 0 || sy < 0 || w < 0 || h < 0 || sx + w > src.width || sy + h > src.height)
         throw FormatError("team statistics: Source asset bounds");
-    for (int yy = 0; yy < h; ++yy) for (int xx = 0; xx < w; ++xx) {
-        const uint8_t value = src.pixels[size_t(sy + yy) * size_t(src.width) + size_t(sx + xx)];
-        if (value != transparent && x + xx >= 0 && y + yy >= 0 && x + xx < out.width && y + yy < out.height)
-            out.at(x + xx, y + yy) = value;
-    }
+    draw::copy_clipped(out, src, sx, sy, x, y, w, h, transparent);
 }
 void rect(Image& out, int x, int y, int w, int h, uint8_t value) {
-    for (int yy = std::max(0, y); yy < std::min(out.height, y + h); ++yy)
-        for (int xx = std::max(0, x); xx < std::min(out.width, x + w); ++xx) out.at(xx, yy) = value;
+    draw::fill(out, x, y, w, h, value);
 }
 void source_frame(Image& out, const Image& widgets, const LeImage& exe,
                   int x, int y, int w, int h, uint8_t color) {

@@ -16,6 +16,7 @@
 #include "game/table.hpp"
 #include "ui/manager.hpp"
 #include "ui/setup.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -92,15 +93,11 @@ void copy_region(Image& out, const Image& source, int sx, int sy, int x, int y,
         sx + width > source.width || sy + height > source.height ||
         x + width > out.width || y + height > out.height)
         throw FormatError("league table: original atlas bounds");
-    for (int dy = 0; dy < height; ++dy) for (int dx = 0; dx < width; ++dx) {
-        const auto pixel = source.pixels[size_t(sy + dy) * size_t(source.width) + size_t(sx + dx)];
-        if (pixel != transparent) out.at(x + dx, y + dy) = pixel;
-    }
+    draw::copy_unclipped(out, source, sx, sy, x, y, width, height, transparent);
 }
 
 void fill_region(Image& out, int x, int y, int width, int height, uint8_t color) {
-    for (int dy = y; dy < y + height; ++dy)
-        for (int dx = x; dx < x + width; ++dx) out.at(dx, dy) = color;
+    draw::fill(out, x, y, width, height, color);
 }
 }
 

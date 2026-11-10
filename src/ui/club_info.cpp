@@ -13,6 +13,7 @@
 #include "game/club_info.hpp"
 #include "game/state.hpp"
 #include "ui/manager.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -22,15 +23,10 @@ void copy(Image& out, const Image& src, int sx, int sy, int x, int y, int w, int
         throw FormatError("club info: Original asset rectangle outside source: " + std::to_string(sx) + "," +
                           std::to_string(sy) + " " + std::to_string(w) + "x" + std::to_string(h) + " in " +
                           std::to_string(src.width) + "x" + std::to_string(src.height));
-    for (int yy = 0; yy < h; ++yy) for (int xx = 0; xx < w; ++xx) {
-        const uint8_t value = src.pixels[size_t(sy + yy) * size_t(src.width) + size_t(sx + xx)];
-        if (value != transparent && x + xx >= 0 && y + yy >= 0 &&
-            x + xx < out.width && y + yy < out.height) out.at(x + xx, y + yy) = value;
-    }
+    draw::copy_clipped(out, src, sx, sy, x, y, w, h, transparent);
 }
 void rect(Image& out, int x, int y, int w, int h, uint8_t color) {
-    for (int yy = std::max(0, y); yy < std::min(out.height, y + h); ++yy)
-        for (int xx = std::max(0, x); xx < std::min(out.width, x + w); ++xx) out.at(xx, yy) = color;
+    draw::fill(out, x, y, w, h, color);
 }
 std::string padded(uint64_t value, int width = 2) {
     std::string s = std::to_string(value);

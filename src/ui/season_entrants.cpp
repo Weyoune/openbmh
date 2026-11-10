@@ -10,6 +10,7 @@
 #include "formats/textd.hpp"
 #include "game/state.hpp"
 #include "ui/manager.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -20,9 +21,7 @@ constexpr int kMaxEntrants = 32;
 constexpr int kPlacementSlots = 8;
 
 void fill(Image& out, int x, int y, int w, int h, uint8_t color) {
-    for (int yy = std::max(0, y); yy < std::min(out.height, y + h); ++yy)
-        for (int xx = std::max(0, x); xx < std::min(out.width, x + w); ++xx)
-            out.at(xx, yy) = color;
+    draw::fill(out, x, y, w, h, color);
 }
 
 void source_badge_frame(Image& out, int x, int y) {

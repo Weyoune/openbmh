@@ -11,6 +11,7 @@
 #include "formats/vga.hpp"
 #include "game/messages.hpp"
 #include "ui/setup.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -22,11 +23,7 @@ void copy(Image& out, const Image& src, int sx, int sy, int x, int y, int w, int
           int transparent = -1) {
     if (sx < 0 || sy < 0 || sx + w > src.width || sy + h > src.height)
         throw FormatError("World Cup statistics: Source atlas bounds");
-    for (int yy = 0; yy < h; ++yy) for (int xx = 0; xx < w; ++xx) {
-        const uint8_t value = src.pixels[size_t(sy + yy) * size_t(src.width) + size_t(sx + xx)];
-        if (value != transparent && x + xx >= 0 && y + yy >= 0 && x + xx < out.width && y + yy < out.height)
-            out.at(x + xx, y + yy) = value;
-    }
+    draw::copy_clipped(out, src, sx, sy, x, y, w, h, transparent);
 }
 
 void draw_text(const Font& font, Image& out, int x, int baseline, const std::string& value, uint8_t color) {

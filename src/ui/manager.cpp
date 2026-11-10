@@ -7,6 +7,7 @@
 #include "ui/manager.hpp"
 #include "ui/dialog_frame.hpp"
 #include "ui/button_frame.hpp"
+#include "ui/draw.hpp"
 #include "formats/league_visibility.hpp"
 
 #include <algorithm>
@@ -21,19 +22,13 @@ namespace bmh::ui {
 namespace {
 
 void rect(Image& out, int x, int y, int w, int h, uint8_t color) {
-    for (int yy = std::max(y, 0); yy < std::min(y + h, out.height); ++yy)
-        for (int xx = std::max(x, 0); xx < std::min(x + w, out.width); ++xx) out.at(xx, yy) = color;
+    draw::fill(out, x, y, w, h, color);
 }
 
 void copy(Image& out, const Image& src, int sx, int sy, int x, int y, int w, int h, bool transparent = false) {
     if (sx < 0 || sy < 0 || sx + w > src.width || sy + h > src.height)
         throw FormatError("manager: sprite outside original atlas");
-    for (int yy = 0; yy < h; ++yy)
-        for (int xx = 0; xx < w; ++xx) {
-            const auto c = src.pixels[size_t(sy + yy) * src.width + sx + xx];
-            if (x + xx >= 0 && y + yy >= 0 && x + xx < out.width && y + yy < out.height && (!transparent || c))
-                out.at(x + xx, y + yy) = c;
-        }
+    draw::copy_clipped(out, src, sx, sy, x, y, w, h, transparent ? 0 : -1);
 }
 
 void border(Image& out, int x, int y) {

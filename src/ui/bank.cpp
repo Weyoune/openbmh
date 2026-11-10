@@ -20,6 +20,7 @@
 #include "game/messages.hpp"
 #include "game/state.hpp"
 #include "ui/setup.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -31,8 +32,7 @@ std::string money(int64_t value) {
     return result;
 }
 void rect(Image& image, int x, int y, int w, int h, uint8_t color) {
-    for (int yy = std::max(0, y); yy < std::min(image.height, y + h); ++yy)
-        for (int xx = std::max(0, x); xx < std::min(image.width, x + w); ++xx) image.at(xx, yy) = color;
+    draw::fill(image, x, y, w, h, color);
 }
 void line(Image& image, int x0, int y0, int x1, int y1, uint8_t color) {
     int dx = std::abs(x1 - x0), sx = x0 < x1 ? 1 : -1;

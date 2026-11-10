@@ -15,6 +15,7 @@
 #include "ui/manager.hpp"
 #include "ui/setup.hpp"
 #include "ui/game_end.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -28,15 +29,10 @@ constexpr size_t kMoney = 0x314;
 void copy(Image& out, const Image& src, int sx, int sy, int x, int y, int w, int h, int transparent = -1) {
     if (sx < 0 || sy < 0 || sx + w > src.width || sy + h > src.height)
         throw FormatError("training camp: sprite outside original atlas");
-    for (int yy = 0; yy < h; ++yy) for (int xx = 0; xx < w; ++xx) {
-        const uint8_t color = src.pixels[size_t(sy + yy) * src.width + sx + xx];
-        if (x + xx >= 0 && y + yy >= 0 && x + xx < out.width && y + yy < out.height && color != transparent)
-            out.at(x + xx, y + yy) = color;
-    }
+    draw::copy_clipped(out, src, sx, sy, x, y, w, h, transparent);
 }
 void rect(Image& out, int x, int y, int w, int h, uint8_t color) {
-    for (int yy = std::max(0, y); yy < std::min(out.height, y + h); ++yy)
-        for (int xx = std::max(0, x); xx < std::min(out.width, x + w); ++xx) out.at(xx, yy) = color;
+    draw::fill(out, x, y, w, h, color);
 }
 int32_t rd32(const std::vector<uint8_t>& v, size_t at) {
     return int32_t(uint32_t(v.at(at)) | uint32_t(v.at(at + 1)) << 8 | uint32_t(v.at(at + 2)) << 16 |

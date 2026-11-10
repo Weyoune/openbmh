@@ -2,6 +2,7 @@
 // Implementation of SetupScreen (setup.hpp): layout tables read from the executable, shared render and hit-testing, and the limits between managers and league/world options.
 #include "formats/executable_layout.hpp"
 #include "ui/setup.hpp"
+#include "ui/draw.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -19,13 +20,7 @@ void copy_rect(Image& dst, const Image& src, int sx, int sy, int dx, int dy,
                int width, int height, bool transparent = false) {
     if (sx < 0 || sy < 0 || sx + width > src.width || sy + height > src.height)
         throw FormatError("setup: original sprite rectangle outside atlas");
-    for (int y = 0; y < height; ++y)
-        for (int x = 0; x < width; ++x) {
-            auto c = src.pixels[size_t(sy + y) * src.width + sx + x];
-            if (dx + x >= 0 && dy + y >= 0 && dx + x < dst.width && dy + y < dst.height &&
-                (!transparent || c != 0))
-                dst.at(dx + x, dy + y) = c;
-        }
+    draw::copy_clipped(dst, src, sx, sy, dx, dy, width, height, transparent ? 0 : -1);
 }
 
 }  // namespace

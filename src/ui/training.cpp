@@ -12,6 +12,7 @@
 #include "formats/savestate.hpp"
 #include "game/state.hpp"
 #include "ui/manager.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -84,17 +85,12 @@ TrainingState project(const StaticMemory& memory, const Bytes& records, const By
     validate(s); return s;
 }
 void rect(Image& out, int x, int y, int w, int h, uint8_t color) {
-    for (int yy = std::max(0, y); yy < std::min(out.height, y + h); ++yy)
-        for (int xx = std::max(0, x); xx < std::min(out.width, x + w); ++xx) out.at(xx, yy) = color;
+    draw::fill(out, x, y, w, h, color);
 }
 void copy(Image& out, const Image& atlas, int sx, int sy, int x, int y, int w, int h, int transparent = -1) {
     if (sx < 0 || sy < 0 || sx + w > atlas.width || sy + h > atlas.height)
         throw FormatError("training: sprite outside original atlas");
-    for (int yy = 0; yy < h; ++yy) for (int xx = 0; xx < w; ++xx) {
-        const auto c = atlas.pixels[size_t(sy + yy) * atlas.width + sx + xx];
-        if (c != transparent && x + xx >= 0 && y + yy >= 0 && x + xx < out.width && y + yy < out.height)
-            out.at(x + xx, y + yy) = c;
-    }
+    draw::copy_clipped(out, atlas, sx, sy, x, y, w, h, transparent);
 }
 const char* request_name(TrainingRequestKind kind) {
     switch (kind) {

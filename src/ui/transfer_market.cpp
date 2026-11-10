@@ -13,6 +13,7 @@
 #include "game/state.hpp"
 #include "game/messages.hpp"
 #include "ui/setup.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -27,18 +28,14 @@ constexpr size_t kManagerRecordSize = 0xb0c;
 
 // Fills a rectangle with one palette index, clipped to the image.
 void rect(Image& out,int x,int y,int w,int h,uint8_t color) {
-    for(int yy=std::max(0,y);yy<std::min(out.height,y+h);++yy)
-        for(int xx=std::max(0,x);xx<std::min(out.width,x+w);++xx)out.at(xx,yy)=color;
+    draw::fill(out, x, y, w, h, color);
 }
 // Copies a w*h block from a source image to the output at (x,y), clipped to the output.
 // Pixels equal to `key` are skipped (transparent); throws if the source rectangle is invalid.
 void copy(Image& out,const Image& source,int sx,int sy,int x,int y,int w,int h,int key=-1) {
     if(sx<0||sy<0||w<0||h<0||sx+w>source.width||sy+h>source.height)
         throw FormatError("transfer market: Original asset rectangle outside source");
-    for(int yy=0;yy<h;++yy)for(int xx=0;xx<w;++xx) {
-        const auto pixel=source.pixels.at(size_t(sy+yy)*size_t(source.width)+size_t(sx+xx));
-        if(pixel!=key&&x+xx>=0&&x+xx<out.width&&y+yy>=0&&y+yy<out.height)out.at(x+xx,y+yy)=pixel;
-    }
+    draw::copy_clipped(out, source, sx, sy, x, y, w, h, key);
 }
 // Decimal text of n, left-padded to `width` with '%' characters (used to align number columns).
 std::string padded(uint64_t n,int width=2) {

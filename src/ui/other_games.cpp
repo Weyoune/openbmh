@@ -11,6 +11,7 @@
 #include <sstream>
 
 #include "ui/manager.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -19,18 +20,12 @@ void copy(Image& out, const Image& src, int sx, int sy, int x, int y, int w, int
     if (sx < 0 || sy < 0 || x < 0 || y < 0 || w < 0 || h < 0 ||
         sx + w > src.width || sy + h > src.height || x + w > out.width || y + h > out.height)
         throw FormatError("other games: Original atlas bounds");
-    for (int yy = 0; yy < h; ++yy)
-        for (int xx = 0; xx < w; ++xx) {
-            const uint8_t color = src.pixels[size_t(sy + yy) * size_t(src.width) + size_t(sx + xx)];
-            if (color != transparent) out.at(x + xx, y + yy) = color;
-        }
+    draw::copy_unclipped(out, src, sx, sy, x, y, w, h, transparent);
 }
 
 void fill(Image& out, int x, int y, int w, int h, uint8_t color) {
     if (w <= 0 || h <= 0) return;
-    for (int yy = std::max(0, y); yy < std::min(out.height, y + h); ++yy)
-        for (int xx = std::max(0, x); xx < std::min(out.width, x + w); ++xx)
-            out.at(xx, yy) = color;
+    draw::fill(out, x, y, w, h, color);
 }
 
 std::string source_number(unsigned value, unsigned width = 0) {

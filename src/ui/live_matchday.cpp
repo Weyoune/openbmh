@@ -14,6 +14,7 @@
 #include "ui/manager.hpp"
 #include "ui/live_set_piece.hpp"
 #include "ui/setup.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -24,12 +25,7 @@ void copy_region(Image& target, const Image& source, int sx, int sy, int dx, int
                  int width, int height, int transparent = -1) {
     if (sx < 0 || sy < 0 || width < 0 || height < 0 || sx + width > source.width || sy + height > source.height)
         throw FormatError("live matchday: original asset crop out of bounds");
-    for (int y = 0; y < height; ++y) for (int x = 0; x < width; ++x) {
-        const uint8_t pixel = source.pixels[size_t(sy + y) * size_t(source.width) + size_t(sx + x)];
-        const int tx = dx + x, ty = dy + y;
-        if (pixel != transparent && tx >= 0 && ty >= 0 && tx < target.width && ty < target.height)
-            target.at(tx, ty) = pixel;
-    }
+    draw::copy_clipped(target, source, sx, sy, dx, dy, width, height, transparent);
 }
 
 void pattern_rect(Image& target, const LeImage& exe, int x, int y, int width, int height) {

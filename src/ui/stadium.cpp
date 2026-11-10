@@ -20,14 +20,13 @@
 #include "game/state.hpp"
 #include "ui/manager.hpp"
 #include "ui/setup.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
 // Fills a w*h rectangle with one palette index, clipped to the image. Used for panels, shadows and backgrounds.
 void fill(Image& im, int x, int y, int w, int h, uint8_t color) {
-    for (int yy = std::max(0, y); yy < std::min(im.height, y + h); ++yy)
-        for (int xx = std::max(0, x); xx < std::min(im.width, x + w); ++xx)
-            im.at(xx, yy) = color;
+    draw::fill(im, x, y, w, h, color);
 }
 // Draws a 1-pixel rectangle outline (w*h, clipped to the image). Used for hover and press highlights.
 void outline(Image& im, int x, int y, int w, int h, uint8_t color) {

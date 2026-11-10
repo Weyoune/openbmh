@@ -14,6 +14,7 @@
 
 #include "game/messages.hpp"
 #include "ui/manager.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -23,9 +24,11 @@ std::string_view at(const TextDb& t,uint32_t a){if(a<kTextBase||(a-kTextBase)%4)
 bool in(int x,int y,int x0,int y0,int x1,int y1){return x>=x0&&x<=x1&&y>=y0&&y<=y1;}
 void copy(Image& o,const Image& s,int sx,int sy,int x,int y,int w,int h,int transparent=-1){
  if(sx<0||sy<0||x<0||y<0||w<0||h<0||sx+w>s.width||sy+h>s.height||x+w>o.width||y+h>o.height)throw FormatError("balance: sprite bounds "+std::to_string(sx)+","+std::to_string(sy)+" "+std::to_string(w)+"x"+std::to_string(h)+" source "+std::to_string(s.width)+"x"+std::to_string(s.height)+" dest "+std::to_string(o.width)+"x"+std::to_string(o.height));
- for(int yy=0;yy<h;++yy)for(int xx=0;xx<w;++xx){auto p=s.pixels[size_t(sy+yy)*size_t(s.width)+size_t(sx+xx)];if(transparent<0||p!=transparent)o.at(x+xx,y+yy)=p;}
+    draw::copy_unclipped(o, s, sx, sy, x, y, w, h, transparent);
 }
-void fill(Image& o,int x,int y,int w,int h,uint8_t c){for(int yy=std::max(y,0);yy<std::min(y+h,o.height);++yy)for(int xx=std::max(x,0);xx<std::min(x+w,o.width);++xx)o.at(xx,yy)=c;}
+void fill(Image& o,int x,int y,int w,int h,uint8_t c){
+    draw::fill(o, x, y, w, h, c);
+}
 std::string calc7(uint32_t v){return format_number(GameState{},int32_t(v),7);}
 std::string calc8(uint32_t v){return format_number(GameState{},int32_t(v),8);}
 }

@@ -15,6 +15,7 @@
 
 #include "game/state.hpp"
 #include "ui/manager.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -30,10 +31,7 @@ void copy_region(Image& target, const Image& source, int sx, int sy, int x, int 
     if (sx < 0 || sy < 0 || x < 0 || y < 0 || width < 0 || height < 0 ||
         sx + width > source.width || sy + height > source.height || x + width > target.width || y + height > target.height)
         throw FormatError("contracts: invalid original widget bounds");
-    for (int yy = 0; yy < height; ++yy) for (int xx = 0; xx < width; ++xx) {
-        const uint8_t value = source.pixels[size_t(sy + yy) * size_t(source.width) + size_t(sx + xx)];
-        if (!transparent || value != 0) target.at(x + xx, y + yy) = value;
-    }
+    draw::copy_unclipped(target, source, sx, sy, x, y, width, height, transparent ? 0 : -1);
 }
 
 // Forward declaration; fill() is defined below and is used by frame().
@@ -56,8 +54,7 @@ void frame(Image& out, const LeImage& exe, const Image& widgets, int x, int y, i
 void fill(Image& target, int x, int y, int width, int height, uint8_t color) {
     if (x < 0 || y < 0 || width < 0 || height < 0 || x + width > target.width || y + height > target.height)
         throw FormatError("contracts: invalid fill bounds");
-    for (int row = 0; row < height; ++row)
-        std::fill_n(target.pixels.begin() + size_t(y + row) * size_t(target.width) + size_t(x), size_t(width), color);
+    draw::fill(target, x, y, width, height, color);
 }
 
 // Formats a number right-aligned in `width` characters; with `grouped`, '.' is inserted as thousands separator

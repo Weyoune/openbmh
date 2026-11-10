@@ -8,11 +8,16 @@
 #include "game/table.hpp"
 #include "ui/manager.hpp"
 #include "ui/setup.hpp"
+#include "ui/draw.hpp"
 namespace bmh::ui { namespace {
 constexpr uint32_t kFirst=::bmh::layout::First, kLeague=::bmh::layout::AlltimeTable_Layout_ExecutableField;
 std::string original_text(const TextDb& t,uint32_t at){if(at<::bmh::layout::TextPointerTable||((at-::bmh::layout::TextPointerTable)&3U))throw FormatError("alltime: invalid TEXTD address");return original_to_utf8(t[(at-::bmh::layout::TextPointerTable)/4]);}
-void fill(Image&o,int x,int y,int w,int h,uint8_t c){for(int j=0;j<h;++j)for(int i=0;i<w;++i)o.at(x+i,y+j)=c;}
-void copy(Image&o,const Image&s,int sx,int sy,int x,int y,int w,int h,int tr=-1){if(sx<0||sy<0||x<0||y<0||sx+w>s.width||sy+h>s.height||x+w>o.width||y+h>o.height)throw FormatError("alltime: Original asset bounds");for(int j=0;j<h;++j)for(int i=0;i<w;++i){auto c=s.pixels[size_t(sy+j)*s.width+sx+i];if(c!=tr)o.at(x+i,y+j)=c;}}
+void fill(Image&o,int x,int y,int w,int h,uint8_t c){
+    draw::fill(o, x, y, w, h, c);
+}
+void copy(Image&o,const Image&s,int sx,int sy,int x,int y,int w,int h,int tr=-1){if(sx<0||sy<0||x<0||y<0||sx+w>s.width||sy+h>s.height||x+w>o.width||y+h>o.height)throw FormatError("alltime: Original asset bounds");
+    draw::copy_unclipped(o, s, sx, sy, x, y, w, h, tr);
+}
 std::string source_number(uint32_t value,uint8_t flags){
  const unsigned width=flags&0x3f;std::string digits=std::to_string(value);
  const bool grouped=(flags&0x40)==0&&width>3;

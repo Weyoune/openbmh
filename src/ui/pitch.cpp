@@ -14,6 +14,7 @@
 #include "game/messages.hpp"
 #include "game/state.hpp"
 #include "ui/manager.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -23,8 +24,7 @@ Bytes block(const SaveState& save, uint32_t address) {
 }
 void copy(Image& out,const Image& src,int sx,int sy,int x,int y,int w,int h,int transparent=-1) {
     if(sx<0||sy<0||sx+w>src.width||sy+h>src.height)throw FormatError("pitch: original atlas bounds");
-    for(int yy=0;yy<h;++yy)for(int xx=0;xx<w;++xx){const auto c=src.pixels.at(size_t(sy+yy)*src.width+sx+xx);
-        if(c!=transparent&&x+xx>=0&&y+yy>=0&&x+xx<out.width&&y+yy<out.height)out.at(x+xx,y+yy)=c;}
+    draw::copy_clipped(out, src, sx, sy, x, y, w, h, transparent);
 }
 void source_mask_copy(Image& out,const Image& src,int sx,int sy,int x,int y,int w,int h,
                       int transparent=-1) {
@@ -41,8 +41,7 @@ void source_mask_copy(Image& out,const Image& src,int sx,int sy,int x,int y,int 
     }
 }
 void rect(Image& out,int x,int y,int w,int h,uint8_t color){
-    for(int yy=std::max(0,y);yy<std::min(out.height,y+h);++yy)
-        for(int xx=std::max(0,x);xx<std::min(out.width,x+w);++xx)out.at(xx,yy)=color;
+    draw::fill(out, x, y, w, h, color);
 }
 const char* kind_name(PitchRequestKind k){switch(k){case PitchRequestKind::none:return "none";
     case PitchRequestKind::move_player:return "move_player";case PitchRequestKind::swap_players:return "swap_players";

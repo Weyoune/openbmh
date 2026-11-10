@@ -11,23 +11,19 @@
 #include <sstream>
 
 #include "ui/manager.hpp"
+#include "ui/draw.hpp"
 #include "game/state.hpp"
 #include "game/messages.hpp"
 
 namespace bmh::ui {
 namespace {
 void rect(Image& out, int x, int y, int w, int h, uint8_t color) {
-    for (int yy = std::max(0, y); yy < std::min(out.height, y + h); ++yy)
-        for (int xx = std::max(0, x); xx < std::min(out.width, x + w); ++xx) out.at(xx, yy) = color;
+    draw::fill(out, x, y, w, h, color);
 }
 void copy(Image& out, const Image& src, int sx, int sy, int x, int y, int w, int h, bool transparent = false) {
     if (sx < 0 || sy < 0 || sx + w > src.width || sy + h > src.height)
         throw FormatError("desktop: sprite outside original atlas");
-    for (int yy = 0; yy < h; ++yy) for (int xx = 0; xx < w; ++xx) {
-        const auto color = src.pixels[size_t(sy + yy) * src.width + sx + xx];
-        if (x + xx >= 0 && y + yy >= 0 && x + xx < out.width && y + yy < out.height && (!transparent || color))
-            out.at(x + xx, y + yy) = color;
-    }
+    draw::copy_clipped(out, src, sx, sy, x, y, w, h, transparent ? 0 : -1);
 }
 void border(Image& out, int x, int y) {
     rect(out, x - 1, y - 1, 40, 1, 0x46); rect(out, x - 1, y - 1, 1, 40, 0x46);

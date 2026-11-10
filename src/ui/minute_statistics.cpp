@@ -13,6 +13,7 @@
 #include "game/messages.hpp"
 #include "ui/manager.hpp"
 #include "ui/setup.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -28,11 +29,7 @@ void copy_transparent(Image& target, const Image& source, int sx, int sy,
         sx + width > source.width || sy + height > source.height ||
         dx + width > target.width || dy + height > target.height)
         throw FormatError("minute statistics: Original KB36 crop outside image");
-    for (int y = 0; y < height; ++y)
-        for (int x = 0; x < width; ++x) {
-            const uint8_t pixel = source.pixels[size_t(sy + y) * size_t(source.width) + size_t(sx + x)];
-            if (pixel != transparent) target.at(dx + x, dy + y) = pixel;
-        }
+    draw::copy_unclipped(target, source, sx, sy, dx, dy, width, height, transparent);
 }
 
 // SourceBarColor / SourceBarColor2 scan each current 18-byte series. Their

@@ -14,6 +14,7 @@
 #include "ui/manager.hpp"
 #include "ui/setup.hpp"
 #include "ui/game_end.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -23,11 +24,7 @@ void copy(Image& out, const Image& source, int sx, int sy, int dx, int dy, int w
           bool transparent = false) {
     if (sx < 0 || sy < 0 || sx + w > source.width || sy + h > source.height)
         throw FormatError("mailbox: sprite outside original atlas");
-    for (int y = 0; y < h; ++y) for (int x = 0; x < w; ++x) {
-        const auto c = source.pixels[size_t(sy + y) * source.width + sx + x];
-        if ((!transparent || c) && dx + x >= 0 && dy + y >= 0 &&
-            dx + x < out.width && dy + y < out.height) out.at(dx + x, dy + y) = c;
-    }
+    draw::copy_clipped(out, source, sx, sy, dx, dy, w, h, transparent ? 0 : -1);
 }
 }
 

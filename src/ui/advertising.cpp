@@ -27,6 +27,7 @@
 #include "game/state.hpp"
 #include "ui/manager.hpp"
 #include "ui/setup.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -270,17 +271,13 @@ void copy(Image& out, const Image& src, int sx, int sy, int x, int y, int w, int
     if (sx < 0 || sy < 0 || sx + w > src.width || sy + h > src.height ||
         x < 0 || y < 0 || x + w > out.width || y + h > out.height)
         throw FormatError("advertising: original VGA crop outside image");
-    for (int yy = 0; yy < h; ++yy)
-        for (int xx = 0; xx < w; ++xx)
-            out.at(x + xx, y + yy) = src.pixels[size_t(sy + yy) * src.width + sx + xx];
+    draw::copy_unclipped(out, src, sx, sy, x, y, w, h, -1);
 }
 
 void fill_rect(Image& image, int x, int y, int width, int height, uint8_t color) {
     if (x < 0 || y < 0 || width < 0 || height < 0 || x + width > image.width || y + height > image.height)
         throw FormatError("advertising: rectangle outside image");
-    for (int yy = y; yy < y + height; ++yy)
-        for (int xx = x; xx < x + width; ++xx)
-            image.at(xx, yy) = color;
+    draw::fill(image, x, y, width, height, color);
 }
 
 void rectangle(Image& image, int x, int y, int width, int height, uint8_t color) {

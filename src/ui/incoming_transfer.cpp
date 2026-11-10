@@ -16,6 +16,7 @@
 #include "ui/manager.hpp"
 #include "ui/pending_offer.hpp"
 #include "ui/setup.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -42,10 +43,7 @@ void copy_region(Image& target, const Image& source, int sx, int sy, int x, int 
         sx + width > source.width || sy + height > source.height ||
         x + width > target.width || y + height > target.height)
         throw FormatError("incoming transfer: invalid original sprite bounds");
-    for (int yy = 0; yy < height; ++yy) for (int xx = 0; xx < width; ++xx) {
-        const auto value = source.pixels[size_t(sy + yy) * size_t(source.width) + size_t(xx + sx)];
-        if (transparent_index < 0 || value != transparent_index) target.at(x + xx, y + yy) = value;
-    }
+    draw::copy_unclipped(target, source, sx, sy, x, y, width, height, transparent_index);
 }
 
 // Formats a number right-aligned in `width` characters ('%' padding, as the original font expects);

@@ -14,6 +14,7 @@
 #include "game/season.hpp"
 #include "ui/desk_state.hpp"
 #include "ui/manager.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -38,13 +39,10 @@ void copy(Image& out,const Image& src,int sx,int sy,int x,int y,int w,int h,int 
         throw FormatError("pairings: Original atlas bounds (source "+std::to_string(src.width)+"x"+
             std::to_string(src.height)+", crop "+std::to_string(sx)+","+std::to_string(sy)+" "+
             std::to_string(w)+"x"+std::to_string(h)+", destination "+std::to_string(x)+","+std::to_string(y)+")");
-    for(int yy=0;yy<h;++yy)for(int xx=0;xx<w;++xx) {
-        const uint8_t v=src.pixels[size_t(sy+yy)*size_t(src.width)+size_t(sx+xx)];if(v!=transparent)out.at(x+xx,y+yy)=v;
-    }
+    draw::copy_unclipped(out, src, sx, sy, x, y, w, h, transparent);
 }
 void fill(Image& out,int x,int y,int w,int h,uint8_t color) {
-    for(int yy=std::max(0,y);yy<std::min(out.height,y+h);++yy)
-        for(int xx=std::max(0,x);xx<std::min(out.width,x+w);++xx)out.at(xx,yy)=color;
+    draw::fill(out, x, y, w, h, color);
 }
 }
 

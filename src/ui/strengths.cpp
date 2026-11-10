@@ -6,18 +6,17 @@
 #include <algorithm>
 #include <sstream>
 #include "ui/manager.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
 void copy(Image& out, const Image& src, int sx, int sy, int x, int y, int w, int h, int transparent = -1) {
     if (sx<0||sy<0||x<0||y<0||w<0||h<0||sx+w>src.width||sy+h>src.height||x+w>out.width||y+h>out.height)
         throw FormatError("strengths: Original atlas bounds");
-    for(int yy=0;yy<h;++yy)for(int xx=0;xx<w;++xx) {
-        const auto v=src.pixels[size_t(sy+yy)*size_t(src.width)+size_t(sx+xx)]; if(v!=transparent)out.at(x+xx,y+yy)=v;
-    }
+    draw::copy_unclipped(out, src, sx, sy, x, y, w, h, transparent);
 }
 void fill(Image& out,int x,int y,int w,int h,uint8_t c) {
-    for(int yy=y;yy<y+h;++yy)for(int xx=x;xx<x+w;++xx)out.at(xx,yy)=c;
+    draw::fill(out, x, y, w, h, c);
 }
 std::string number(unsigned value,int width) {
     auto s=std::to_string(value);if(int(s.size())<width)s.insert(0,size_t(width-int(s.size())),'%');return s;

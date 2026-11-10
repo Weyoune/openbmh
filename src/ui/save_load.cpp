@@ -17,6 +17,7 @@
 #include "ui/game_end.hpp"
 #include "ui/host_path.hpp"
 #include "ui/setup.hpp"
+#include "ui/draw.hpp"
 #include "formats/fbm.hpp"
 
 namespace bmh::ui {
@@ -42,8 +43,7 @@ std::string_view text_at(const TextDb& texts, uint32_t address) {
     return texts[(address - kTextBase) / 4];
 }
 void rect(Image& image, int x, int y, int w, int h, uint8_t color) {
-    for (int yy = std::max(0, y); yy < std::min(image.height, y + h); ++yy)
-        for (int xx = std::max(0, x); xx < std::min(image.width, x + w); ++xx) image.at(xx, yy) = color;
+    draw::fill(image, x, y, w, h, color);
 }
 bool has_file_kind_extension(const std::filesystem::path& path, SaveLoadFileKind kind) {
     std::string ext = path_to_utf8(path.extension());
@@ -58,9 +58,7 @@ std::string_view file_kind_extension(SaveLoadFileKind kind) {
 void copy(Image& out, const Image& src, int sx, int sy, int x, int y, int w, int h) {
     if (sx < 0 || sy < 0 || sx + w > src.width || sy + h > src.height)
         throw FormatError("save/load: Original widget outside atlas");
-    for (int yy = 0; yy < h; ++yy) for (int xx = 0; xx < w; ++xx)
-        if (x + xx >= 0 && x + xx < out.width && y + yy >= 0 && y + yy < out.height)
-            out.at(x + xx, y + yy) = src.pixels[size_t(sy + yy) * size_t(src.width) + size_t(sx + xx)];
+    draw::copy_clipped(out, src, sx, sy, x, y, w, h, -1);
 }
 void pattern(Image& out, const LeImage& exe, int x, int y, int w, int h) {
     for (int yy = 0; yy < h; ++yy) for (int xx = 0; xx < w; ++xx)

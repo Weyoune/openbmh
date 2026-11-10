@@ -20,6 +20,7 @@
 #include "game/state.hpp"
 #include "game/season.hpp"
 #include "ui/manager.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -34,8 +35,7 @@ void copy(Image& dst,const Image& src,int sx,int sy,int x,int y,int w,int h) {
     // FormatError2 passes ff as the VGA plane bitmask. The copy is opaque and an
     // out-of-bounds rectangle is rejected in full by SourceMaskCopy.
     if(!valid_rect(dst,src,sx,sy,x,y,w,h))return;
-    for(int yy=0;yy<h;++yy)for(int xx=0;xx<w;++xx)
-        dst.at(x+xx,y+yy)=src.pixels[size_t(sy+yy)*size_t(src.width)+size_t(sx+xx)];
+    draw::copy_unclipped(dst, src, sx, sy, x, y, w, h, -1);
 }
 void copy_key0(Image& dst,const Image& src,int sx,int sy,int x,int y,int w,int h) {
     if(!valid_rect(dst,src,sx,sy,x,y,w,h))return;
@@ -45,8 +45,7 @@ void copy_key0(Image& dst,const Image& src,int sx,int sy,int x,int y,int w,int h
     }
 }
 void fill(Image& out,int x,int y,int w,int h,uint8_t c) {
-    for(int yy=std::max(0,y);yy<std::min(out.height,y+h);++yy)
-        for(int xx=std::max(0,x);xx<std::min(out.width,x+w);++xx)out.at(xx,yy)=c;
+    draw::fill(out, x, y, w, h, c);
 }
 void source_frame(Image& out,int x,int y) {
     for(int xx=x-1;xx<=x+38;++xx)if(xx>=0&&xx<out.width&&y-1>=0&&y-1<out.height)out.at(xx,y-1)=0x46;

@@ -16,6 +16,7 @@
 #include "formats/textd.hpp"
 #include "ui/manager.hpp"
 #include "ui/setup.hpp"
+#include "ui/draw.hpp"
 
 namespace bmh::ui {
 namespace {
@@ -45,18 +46,14 @@ void copy_region(Image& target, const Image& source, int sx, int sy, int x, int 
         sx + width > source.width || sy + height > source.height ||
         x + width > target.width || y + height > target.height)
         throw FormatError("outgoing transfer: invalid Source sprite bounds");
-    for (int yy = 0; yy < height; ++yy) for (int xx = 0; xx < width; ++xx) {
-        const auto pixel = source.pixels[size_t(sy + yy) * size_t(source.width) + size_t(sx + xx)];
-        if (transparent < 0 || pixel != transparent) target.at(x + xx, y + yy) = pixel;
-    }
+    draw::copy_unclipped(target, source, sx, sy, x, y, width, height, transparent);
 }
 
 // Fills a rectangle with one palette index; throws if it leaves the image.
 void fill_rect(Image& out, int x, int y, int width, int height, uint8_t color) {
     if (x < 0 || y < 0 || width < 0 || height < 0 || x + width > out.width || y + height > out.height)
         throw FormatError("outgoing transfer: invalid Source rectangle");
-    for (int yy = y; yy < y + height; ++yy)
-        std::fill_n(out.pixels.begin() + size_t(yy) * size_t(out.width) + size_t(x), width, color);
+    draw::fill(out, x, y, width, height, color);
 }
 
 // Number with '.' as thousands separator, no padding.
