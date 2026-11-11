@@ -1004,7 +1004,7 @@ bool CareerSession::dispatch_pitch(const ui::PitchRequest& request, uint64_t& re
     } else if (!validate_desk_setting_owner(identity, revision, error, false)) return false;
     const size_t badge = size_t(request.runtime_club) * 2;
     const int mode = g_.memory.has(::bmh::layout::GameMode) ? int(g_.memory.u8(::bmh::layout::GameMode)) : int(exe_.u8(::bmh::layout::GameMode));
-    if (request.runtime_club >= int(exe_.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField)) || g_.lineups_frozen ||
+    if (request.runtime_club >= int(exe_.u16(::bmh::layout::LeagueClubCount)) || g_.lineups_frozen ||
         mode < 1 || mode > 3 || g_.manager_options[size_t(request.manager_slot) * 5] > 8 ||
         request.indoor != g_.indoor ||
         (!live_context && (lineup_entry_manager_ != request.manager_slot ||
@@ -1018,7 +1018,7 @@ bool CareerSession::dispatch_pitch(const ui::PitchRequest& request, uint64_t& re
         return false;
     }
     const auto selected_live_opponent = [&](int opponent) {
-        if (!live_context || opponent < 0 || opponent >= int(exe_.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField))) return false;
+        if (!live_context || opponent < 0 || opponent >= int(exe_.u16(::bmh::layout::LeagueClubCount))) return false;
         return std::any_of(live_intervention_->groups.begin(), live_intervention_->groups.end(),
             [&](const MatchGroup& group) {
                 for (int match = 0; match < group.matches(); ++match) {
@@ -1331,13 +1331,13 @@ std::optional<int> CareerSession::prepared_lineup_opponent(int manager_slot, int
         int(g_.memory.u8(::bmh::layout::ActiveManager)) != manager_slot ||
         g_.manager_teams[size_t(manager_slot)] != runtime_club ||
         runtime_club == kNoTeam || runtime_club < 0 ||
-        runtime_club >= int(exe_.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField)) || g_.manager_of(runtime_club) != manager_slot ||
+        runtime_club >= int(exe_.u16(::bmh::layout::LeagueClubCount)) || g_.manager_of(runtime_club) != manager_slot ||
         size_t(manager_slot) >= source_desk_callargs_.size())
         return std::nullopt;
 
     const ui::DeskMatchCallargs& source = source_desk_callargs_[size_t(manager_slot)];
     const int opponent = source.opponent;
-    if (opponent < 0 || opponent == runtime_club || opponent >= int(exe_.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField)) ||
+    if (opponent < 0 || opponent == runtime_club || opponent >= int(exe_.u16(::bmh::layout::LeagueClubCount)) ||
         source.competition == 32 || source.competition == 33 || source.competition == 34)
         return std::nullopt;
     uint32_t competitions = day_competitions(g_, turn_driver_.calendar_entry);

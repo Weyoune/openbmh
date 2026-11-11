@@ -138,8 +138,8 @@ int main(int argc,char**argv){try{
     actual=show(p);
     const std::array<int,3> ranks{31,18,0};
     for(int n=0;n<3;++n){int rank=ranks[size_t(n)],kind=1;
-        if(rank<int(exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField))+int(exe.u8(::bmh::layout::DeskDrawers_Curve_RuntimeField))||rank==0)kind=0;
-        if(int(exe.u8(::bmh::layout::LeagueSizes))-int(exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField2))<=rank)++kind;
+        if(rank<int(exe.u8(::bmh::layout::LeagueEuropeanPlaces))+int(exe.u8(::bmh::layout::DeskDrawers_Curve_RuntimeField))||rank==0)kind=0;
+        if(int(exe.u8(::bmh::layout::LeagueSizes))-int(exe.u8(::bmh::layout::LeagueRelegationPlaces))<=rank)++kind;
         int start=uint8_t(193-2*(int(exe.u8(::bmh::layout::LeagueSizes))-rank));
         for(int stripe=0;stripe<2;++stripe){bool equal=true;
             for(int y=std::min(start,191);y<=std::max(start,191);++y)

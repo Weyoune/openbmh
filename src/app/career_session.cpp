@@ -497,13 +497,13 @@ static void install_league_sizes(const LeImage& exe) {
     set_league_groups(first, count);
     // the promotion ladder (schedule.hpp)
     for (uint32_t l = 0; l < uint32_t(kLeagueCount); ++l) {
-        installed_league_system().relegation[l] = exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField2 + l);
-        installed_league_system().europe[l] = exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField + l);
-        installed_league_system().suffix[l] = char(l < 5 ? exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField3 + l * 2) : 0);
+        installed_league_system().relegation[l] = exe.u8(::bmh::layout::LeagueRelegationPlaces + l);
+        installed_league_system().europe[l] = exe.u8(::bmh::layout::LeagueEuropeanPlaces + l);
+        installed_league_system().suffix[l] = char(l < 5 ? exe.u8(::bmh::layout::LeagueNameSuffixes + l * 2) : 0);
     }
-    for (uint32_t g = 0; g < 8; ++g) installed_league_system().below_first[g] = exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField5 + g), installed_league_system().below_count[g] = exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField4 + g);
-    installed_league_system().newcomer_first = exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
-    installed_league_system().newcomer_count = exe.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6);
+    for (uint32_t g = 0; g < 8; ++g) installed_league_system().below_first[g] = exe.u8(::bmh::layout::PromotionGroupBelowLeagues + g), installed_league_system().below_count[g] = exe.u8(::bmh::layout::PromotionGroupBelowCounts + g);
+    installed_league_system().newcomer_first = exe.u16(::bmh::layout::LeagueClubCount);
+    installed_league_system().newcomer_count = exe.u16(::bmh::layout::NewcomerClubCount);
     // EXE strings the engine posts (messages.hpp)
     install_message_texts(exe);
     install_career_rules(exe);

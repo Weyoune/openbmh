@@ -54,7 +54,7 @@ void national_coach_take_over(GameState& g, int active_manager, uint16_t source_
 // NationalCoachHandBack: with CoachActive set the slots change places again, the number of managers
 // is restored from OriginalManagerCount and CoachActive cleared.
 void national_coach_hand_back(GameState& g);
-// CupDraw_FormatError_RuntimeField2 == 0x165: slot 0 manages the national team.
+// ManagerRecord0Club == 0x165: slot 0 manages the national team.
 bool national_coach_active(const GameState& g);
 // NationalCoachAfterLoad (saving and loading): the savegame holds the slots swapped back with
 // CoachActive still 1; afterwards (and so after loading) SwapManagerSlots2 takes over again.

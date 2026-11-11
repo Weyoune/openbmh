@@ -53,7 +53,7 @@ struct GameState {
     // Block Formations = contents of M3.DAT: formation tables, 2 sets (outdoor, indoor) of
     // 0xB0 bytes = 8 formations x (11 x positions, 11 y positions). The engine uses 4.
     std::vector<uint8_t> formations;
-    // Team id managed by each human manager (manager record +0x290, CupDraw_FormatError_RuntimeField2), one entry
+    // Team id managed by each human manager (manager record +0x290, ManagerRecord0Club), one entry
     // per human manager (ManagerCount).
     std::vector<int> manager_teams;
     bool indoor = false;  // OpenBMH deviates from the original: retains designated set-piece selections in the supported manager-record extension.

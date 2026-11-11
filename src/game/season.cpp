@@ -283,8 +283,8 @@ void observe_initial_international_groups(GameState& g, WatcomRandom& rand, int 
             for(const Fixture& fixture:generate_fixtures(schedule_teams,event.round+1,rounds,0)) {
                 for(int position:{fixture.home,fixture.away}) {
                     const int team=mem.u16(teams+uint32_t(position)*2);
-                    const bool manager_national=mem.has(::bmh::layout::CupDraw_FormatError_RuntimeField2)&&mem.has(::bmh::layout::CupDraw_FormatError_RuntimeField3)&&
-                        mem.u16(::bmh::layout::CupDraw_FormatError_RuntimeField2)==kNoTeam&&mem.u16(::bmh::layout::CupDraw_FormatError_RuntimeField3)==team;
+                    const bool manager_national=mem.has(::bmh::layout::ManagerRecord0Club)&&mem.has(::bmh::layout::ManagerRecord4Club)&&
+                        mem.u16(::bmh::layout::ManagerRecord0Club)==kNoTeam&&mem.u16(::bmh::layout::ManagerRecord4Club)==team;
                     const bool human_owned=g.manager_of(team)>=0||manager_national;
                     if(team<world_layout().first_foreign_cup()||team==kNoTeam||!human_owned)continue;
                     SeasonCupDrawEvent::GroupAverageSnapshot snapshot;
@@ -325,7 +325,7 @@ void european_setup(GameState& g, GameRandom& game, WatcomRandom& rand, const Se
     constexpr uint32_t kField0 = ::bmh::layout::Field0;
     if (!mem.has(kField0)) mem.add_block(kField0, 0x30);
     const int s = g.season % 4;
-    const int base = world_layout().no_team();  // ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField3 + CareerSession_DispatchLineup_RuntimeField + CareerSession_InstallLeagueSizes_RuntimeField6
+    const int base = world_layout().no_team();  // ForeignCupClubCount + LeagueClubCount + NewcomerClubCount
     int n = 1;
     std::vector<uint16_t> last;
     if (s % 2 == 0) {
@@ -395,7 +395,7 @@ void european_setup(GameState& g, GameRandom& game, WatcomRandom& rand, const Se
 void european_fields(GameState& g, GameRandom& game, WatcomRandom& rand) {
     StaticMemory& mem = g.memory;
     Entrants en{mem};
-    const int pool = world_layout().first_foreign_cup();  // CareerSession_DispatchLineup_RuntimeField + CareerSession_InstallLeagueSizes_RuntimeField6: the first foreign club
+    const int pool = world_layout().first_foreign_cup();  // LeagueClubCount + NewcomerClubCount: the first foreign club
     auto pick = [&](int from) {
         int t;
         do t = rand.range(from, from + 6); while (en.find(t) != 0);
@@ -1359,7 +1359,7 @@ void licence_withdrawals(GameState& g, int league, std::vector<uint16_t>& down, 
     for (size_t m = 0; m < g.manager_teams.size(); m++) {
         const int team = g.manager_teams[m];
         if (team < first || team >= first + league_system().sizes[league] || ranks[team - first] <= 5) continue;
-        static const uint8_t kDownPlaces[kLeagueCount] = {3, 4, 2, 2, 3, 0, 0, 0, 0};  // CareerSession_InstallLeagueSizes_RuntimeField2
+        static const uint8_t kDownPlaces[kLeagueCount] = {3, 4, 2, 2, 3, 0, 0, 0, 0};  // LeagueRelegationPlaces
         if (kDownPlaces[league] == 0) continue;
         const uint8_t cut = rec8(g, int(m), 0x220);
         const int32_t total = int32_t(rec8(g, int(m), 0x26f)) * 80000 + (assets(g, int(m), 0xf) - assets(g, int(m), 0x10));
@@ -1417,7 +1417,7 @@ void promotion(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteReport&
     const uint8_t* kBelowCount = league_system().below_count;
     // The clubs that refill the lowest league: league_system().newcomer_count clubs from league_system().newcomer_first
     // (German: the 30 amateur clubs 138-167). The English game draws from its 12 further
-    // English clubs (ClubName: range(CareerSession_DispatchLineup_RuntimeField, CareerSession_DispatchLineup_RuntimeField + 11)); its later ids have no name.
+    // English clubs (ClubName: range(LeagueClubCount, LeagueClubCount + 11)); its later ids have no name.
     // The span ends at the last named club, which keeps the German draws unchanged.
     // (OpenBMH deviates from the English original here: its extra coin flip per draw is not
     // ported.)
@@ -1509,10 +1509,10 @@ void promotion(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteReport&
 }  // namespace
 
 // LeagueName(buf, league): the name of a league (< 5): the texts from Achievements_FormatError_TextPointer3 on - a
-// league whose suffix letter (CareerSession_InstallLeagueSizes_RuntimeField3, two bytes per league) is set shares the text of
+// league whose suffix letter (LeagueNameSuffixes, two bytes per league) is set shares the text of
 // the one before when its letter is from 'B' on (LeagueName2) - with " " + the letter.
 std::string league_name(const GameState& g, int league) {
-    // CareerSession_InstallLeagueSizes_RuntimeField3 of the loaded game (schedule.hpp: German A/B for the two Regionalligen,
+    // LeagueNameSuffixes of the loaded game (schedule.hpp: German A/B for the two Regionalligen,
     // English none - its four divisions are one ladder)
     const char* kSuffix = league_system().suffix;
     int index = 0;
@@ -1679,7 +1679,7 @@ bool career_season_setup(GameState& g, GameRandom& game, WatcomRandom& rand, Min
     }
     // the title holders of the cup entries (+0x22): none yet, the placeholder clubs
     const uint16_t first_small = 90;  // TeamsWithSquads
-    const uint16_t foreign = uint16_t(world_layout().no_team());  // ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField3 + CareerSession_DispatchLineup_RuntimeField + CareerSession_InstallLeagueSizes_RuntimeField6 (0x165)
+    const uint16_t foreign = uint16_t(world_layout().no_team());  // ForeignCupClubCount + LeagueClubCount + NewcomerClubCount (0x165)
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField2, foreign);
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField6, uint16_t(first_small + 7));
     mem.set16(::bmh::layout::Season_CareerSeasonSetup_RuntimeField, 7);

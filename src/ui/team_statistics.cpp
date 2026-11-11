@@ -89,8 +89,8 @@ TeamStatisticsProjection team_statistics_from_game(const GameState& game, int te
                 if (league >= league_gate) out.flag_index = uint8_t(league - league_gate + 1);
                 break;
             }
-            if (league == 8 && region_team >= int(exe.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6)))
-                out.flag_index = uint8_t((region_team - int(exe.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6))) / 7 - league_gate + 10);
+            if (league == 8 && region_team >= int(exe.u16(::bmh::layout::NewcomerClubCount)))
+                out.flag_index = uint8_t((region_team - int(exe.u16(::bmh::layout::NewcomerClubCount))) / 7 - league_gate + 10);
         }
     }
     out.source_has_league_panel = team < world_layout().first_foreign_cup();
@@ -426,9 +426,9 @@ Image TeamStatisticsScreen::render() const {
                 uint16_t(projection_.position_history[word_index + 1]) << 8);
             const int rank_value = (packed >> (5 * (round % 3))) & 0x1f;
             int kind = 1;
-            if (rank_value < int(exe_.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField + league)) + int(exe_.u8(::bmh::layout::DeskDrawers_Curve_RuntimeField + league)) ||
+            if (rank_value < int(exe_.u8(::bmh::layout::LeagueEuropeanPlaces + league)) + int(exe_.u8(::bmh::layout::DeskDrawers_Curve_RuntimeField + league)) ||
                 (rank_value == 0 && league == 0)) kind = 0;
-            if (int(exe_.u8(::bmh::layout::LeagueSizes + league)) - int(exe_.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField2 + league)) <= rank_value) kind = 2;
+            if (int(exe_.u8(::bmh::layout::LeagueSizes + league)) - int(exe_.u8(::bmh::layout::LeagueRelegationPlaces + league)) <= rank_value) kind = 2;
             for (int series = 0; series < 2; ++series) {
                 const int x = 226 + round * 2 + series;
                 if (x >= 306) continue;

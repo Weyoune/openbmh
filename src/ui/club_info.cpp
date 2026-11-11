@@ -65,8 +65,8 @@ ClubInfoProjection club_info_from_game(const GameState& g, int team,
     out.original_club_name = g.club_name(team);
     out.gradient_text = g.memory.u8(::bmh::layout::TextGradientDisabled) == 0 && exe.u8(::bmh::layout::TextGradientMode) == 2;
     out.decorated_background = g.memory.u8(::bmh::layout::PlainBackground) == 0;
-    out.has_squad = team == kNoTeam || team < exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
-    if (team != kNoTeam && team >= exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField)) {
+    out.has_squad = team == kNoTeam || team < exe.u16(::bmh::layout::LeagueClubCount);
+    if (team != kNoTeam && team >= exe.u16(::bmh::layout::LeagueClubCount)) {
         out.has_squad = false;
         out.category = team >= 0 && size_t(team) < g.team_morale.size()
             ? uint8_t((g.team_morale[size_t(team)] >> 6) & 3) : 0;

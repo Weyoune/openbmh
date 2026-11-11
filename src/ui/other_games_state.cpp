@@ -178,7 +178,7 @@ uint8_t source_country(const LeImage& exe, int team) {
             return 0;
         }
     }
-    const int remainder = remaining - int16_t(exe.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6));
+    const int remainder = remaining - int16_t(exe.u16(::bmh::layout::NewcomerClubCount));
     if (remainder >= 0) return uint8_t(remainder / 7 - domestic_cutoff + 10);
     return 0;
 }

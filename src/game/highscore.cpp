@@ -86,7 +86,7 @@ HighscoreScore highscore_score(const GameState& g, int manager, HighscoreContext
     HighscoreScore result;
     const int team = g.manager_teams.at(size_t(manager));
     if (team == kNoTeam) {
-        // CareerSession_DispatchLineup_RuntimeField+CareerSession_InstallLeagueSizes_RuntimeField6+ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField3 == kNoTeam in the supported Original database;
+        // LeagueClubCount+NewcomerClubCount+ForeignCupClubCount == kNoTeam in the supported Original database;
         // national honours store (team-kNoTeam)|0x80, so Germany's index is0.
         for (uint32_t year = 0; year < 20; ++year)
             for (uint32_t place = 0; place < 4; ++place) {

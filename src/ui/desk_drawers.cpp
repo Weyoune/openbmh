@@ -150,8 +150,8 @@ void DeskDrawerRenderer::curve(Image& target, const DeskState& state, const Desk
     }
     const uint32_t league = uint32_t(curve->league);
     const int teams = exe_.u8(::bmh::layout::LeagueSizes + league);
-    const int low_cut = exe_.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField + league) + exe_.u8(::bmh::layout::DeskDrawers_Curve_RuntimeField + league);
-    const int high_cut = teams - exe_.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField2 + league);
+    const int low_cut = exe_.u8(::bmh::layout::LeagueEuropeanPlaces + league) + exe_.u8(::bmh::layout::DeskDrawers_Curve_RuntimeField + league);
+    const int high_cut = teams - exe_.u8(::bmh::layout::LeagueRelegationPlaces + league);
     const int left = item.x + 5, top = item.y + 1, bottom = top + 42;
     line(target, left, top, left, bottom, 0x6a);
     line(target, left, bottom, left + 80, bottom, 0x6a);

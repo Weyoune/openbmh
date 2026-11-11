@@ -50,7 +50,7 @@ PlayerCardState project(LineupState lineup,const LeImage& exe,int row,const Byte
     const auto& p=out.lineup.players.at(size_t(row));
     out.badge=le16(club_heap,size_t(out.lineup.runtime_club)*2)&511;
     const int nation=p.attributes.nationality()+((p.bonus&0x80)?32:0);
-    const size_t nation_club=exe.u16(::bmh::layout::ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField3)+exe.u16(::bmh::layout::NoTeamSquadStart)+nation;
+    const size_t nation_club=exe.u16(::bmh::layout::ForeignCupClubCount)+exe.u16(::bmh::layout::NoTeamSquadStart)+nation;
     out.nationality_name=pool_name(names,offsets.at(nation_club));
     if (out.lineup.runtime_club == kNoTeam) {
         // The national runtime slot is absent from the ordinary short-name

@@ -366,7 +366,7 @@ std::optional<ui::TopScorersState> CareerSession::open_top_scorers(
             throw FormatError("top scorers: manager record does not own the active team");
         int stable_team = team;
         if (team == kNoTeam) {
-            // The live CupDraw_FormatError_RuntimeField3 owner is mirrored by the typed spare manager record 4.
+            // The live ManagerRecord4Club owner is mirrored by the typed spare manager record 4.
             const size_t backup = 4 * 0xb0c + 0x290;
             if (manager != 0 || backup + 2 > g_.manager_records.size())
                 throw FormatError("top scorers: unsupported national-coach owner");

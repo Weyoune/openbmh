@@ -46,7 +46,7 @@ ClubPlayerDetailProjection club_player_detail_from_game(const GameState& g,
     ClubPlayerDetailProjection p;p.redraw=std::move(redraw);
     const auto& c=p.redraw.context;
     const int nation=c.attributes.nationality()+((c.bonus&0x80)?32:0);
-    p.original_nationality_name=g.club_name(exe.u16(::bmh::layout::ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField3)+exe.u16(::bmh::layout::NoTeamSquadStart)+nation);
+    p.original_nationality_name=g.club_name(exe.u16(::bmh::layout::ForeignCupClubCount)+exe.u16(::bmh::layout::NoTeamSquadStart)+nation);
     for(int i=0;i<2;++i){
         const int id=i?c.secondary_club:c.primary_club;if(id<0||id==0xffff)continue;
         ClubPlayerDetailClub club;club.runtime_team=id;club.original_full_name=g.club_name(id);club.original_short_name=club.original_full_name;

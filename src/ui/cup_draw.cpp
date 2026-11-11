@@ -144,7 +144,7 @@ CupDrawProjection cup_draw_from_game(const GameState& game,const SeasonCupDrawEv
         std::string context;
         if(event.group_stage&&event.phase==SeasonCupDrawPhase::overview) {
         const bool human_national=game.manager_of(id)>=0||
-            (game.memory.has(::bmh::layout::CupDraw_FormatError_RuntimeField2)&&game.memory.has(::bmh::layout::CupDraw_FormatError_RuntimeField3)&&game.memory.u16(::bmh::layout::CupDraw_FormatError_RuntimeField2)==kNoTeam&&game.memory.u16(::bmh::layout::CupDraw_FormatError_RuntimeField3)==id);
+            (game.memory.has(::bmh::layout::ManagerRecord0Club)&&game.memory.has(::bmh::layout::ManagerRecord4Club)&&game.memory.u16(::bmh::layout::ManagerRecord0Club)==kNoTeam&&game.memory.u16(::bmh::layout::ManagerRecord4Club)==id);
         if(id>=world_layout().first_foreign_cup()&&!human_national) {
             if(size_t(id-168)>=game.foreign_strength.size())throw FormatError("cup draw: missing Source foreign-strength byte");
             const uint8_t strength=game.foreign_strength[size_t(id-168)];

@@ -2710,7 +2710,7 @@ void transfer_list_countdown(GameState& g, GameRandom& game, WatcomRandom& rand,
                     // club as owner 4 while manager 0 runs the national team.
                     return g.manager_of(club) >= 0 || (!g.manager_teams.empty() &&
                         g.manager_teams[0] == kNoTeam && mem.has(::bmh::layout::DeskActions_NationalOpponentManager_RuntimeField) &&
-                        int(mem.u16(::bmh::layout::CupDraw_FormatError_RuntimeField3)) == club);
+                        int(mem.u16(::bmh::layout::ManagerRecord4Club)) == club);
                 };
                 bool human_involved = human_participant(seller);
                 for (int bid = 0; bid < 4 && !human_involved; ++bid) {

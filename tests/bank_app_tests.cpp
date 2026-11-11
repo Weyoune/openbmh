@@ -1987,7 +1987,7 @@ int main(int argc, char** argv) {
             observe_last_week(sparse_bidder, buy_entry, false, true);
 
             GameState coach_bidder = human_bidder;
-            coach_bidder.memory.set16(::bmh::layout::CupDraw_FormatError_RuntimeField3, uint16_t(coach_bidder.manager_teams.at(0)));
+            coach_bidder.memory.set16(::bmh::layout::ManagerRecord4Club, uint16_t(coach_bidder.manager_teams.at(0)));
             coach_bidder.manager_teams = {0x165};
             observe_last_week(coach_bidder, buy_entry, false, true);
 

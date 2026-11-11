@@ -443,7 +443,7 @@ void national_tournament_end(GameState& g) {
     if (coach) book_money(g, 0, -400000, true, true);
     for (int i = 0; i < 4; i++) {
         if (teams[i] == kNoTeam && coach) book_money(g, 0, -kPremium[i], true, true);
-        // (0x8a + 0x1e + 0xbd = 0x165: CareerSession_DispatchLineup_RuntimeField + CareerSession_InstallLeagueSizes_RuntimeField6 + ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField3)
+        // (0x8a + 0x1e + 0xbd = 0x165: LeagueClubCount + NewcomerClubCount + ForeignCupClubCount)
         if (mem.has(::bmh::layout::Placements)) mem.set8(::bmh::layout::Placements + uint32_t(i), uint8_t((teams[i] - kNoTeam) | 0x80));
     }
 }

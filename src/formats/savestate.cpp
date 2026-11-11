@@ -30,8 +30,8 @@ struct BlockDef {
 // Sizes marked with a Count depend on the master database:
 //   Clubs   = CareerSession_DataDirectory_RuntimeField (419)     Players = CareerSession_DataDirectory_RuntimeField3 (2574)
 //   N42     = CareerSession_DataDirectory_RuntimeField2 (168)     N66     = CareerSession_DataDirectory_RuntimeField4 (3096)
-//   Teams   = CareerSession_DispatchLineup_RuntimeField (138, teams in league play)
-//   TeamsPlusCups = CareerSession_DispatchLineup_RuntimeField + CareerSession_InstallLeagueSizes_RuntimeField6 (138 + 30)
+//   Teams   = LeagueClubCount (138, teams in league play)
+//   TeamsPlusCups = LeagueClubCount + NewcomerClubCount (138 + 30)
 constexpr BlockDef kBlocks[] = {
     {::bmh::layout::Cup_AdvanceCup_RuntimeField3, false, 1, Count::None, 0, false},       {::bmh::layout::LiveMatchday_FormatError_RuntimeField14, false, 6, Count::None, 0, false},
     {::bmh::layout::ManagerRecords, false, 0x373c, Count::None, 0, false},  // 5 manager records of 0xB0C bytes
@@ -110,7 +110,7 @@ constexpr BlockDef kBlocks[] = {
 
 SaveState::SaveState(const Bytes& stream, const DbCounts& c) : stream_(stream) {
     // Teams in league play and cup-only teams are not part of DbCounts yet;
-    // these are the V2.24 values (CareerSession_DispatchLineup_RuntimeField, CareerSession_InstallLeagueSizes_RuntimeField6).
+    // these are the V2.24 values (LeagueClubCount, NewcomerClubCount).
     constexpr uint32_t kTeams = 138, kCupTeams = 30;
     size_t pos = 0;
     uint32_t last_pointer = 0;

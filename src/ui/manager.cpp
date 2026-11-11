@@ -81,7 +81,7 @@ ManagerScreen::ManagerScreen(const std::filesystem::path& data, int slot, const 
         context_.club_order.resize(db_.club_names.size());
         std::iota(context_.club_order.begin(), context_.club_order.end(), 0);
     }
-    if (context_.club_order.size() < size_t(exe_.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField)) + exe_.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6))
+    if (context_.club_order.size() < size_t(exe_.u16(::bmh::layout::LeagueClubCount)) + exe_.u16(::bmh::layout::NewcomerClubCount))
         throw FormatError("manager selection: club order does not cover all selectable groups");
     std::set<int> unique;
     for (int id : context_.club_order)
@@ -106,7 +106,7 @@ ManagerScreen::ManagerScreen(const std::filesystem::path& data, int slot, const 
         first_[i] = start; last_[i] = start + exe_.u8(::bmh::layout::LeagueSizes + i) - 1;
         start = last_[i] + 1;
         leagues_[i] = texts_[text_id];
-        if (auto suffix = exe_.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField3 + i * 2)) {
+        if (auto suffix = exe_.u8(::bmh::layout::LeagueNameSuffixes + i * 2)) {
             auto tail = texts_[(::bmh::layout::Manager_FormatError_TextPointer2 - ::bmh::layout::TextPointerTable) / 4];
             if (tail.empty()) throw FormatError("manager: missing league suffix");
             tail.back() = char(suffix); leagues_[i] += tail;
@@ -115,8 +115,8 @@ ManagerScreen::ManagerScreen(const std::filesystem::path& data, int slot, const 
         if (last_[i] - first_[i] >= 20) throw FormatError("manager: league exceeds picker grid");
     }
     for(int i=player_league_count(exe_);i<5;++i){last_[i]=first_[i]-1;leagues_[i].clear();}
-    first_[5] = exe_.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField); last_[5] = first_[5] + 19;
-    first_[6] = first_[5] + 20; last_[6] = first_[5] + exe_.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6) - 1;
+    first_[5] = exe_.u16(::bmh::layout::LeagueClubCount); last_[5] = first_[5] + 19;
+    first_[6] = first_[5] + 20; last_[6] = first_[5] + exe_.u16(::bmh::layout::NewcomerClubCount) - 1;
     leagues_[5] = texts_[(::bmh::layout::Manager_FormatError_TextPointer - ::bmh::layout::TextPointerTable) / 4]; leagues_[6] = leagues_[5];
     if (leagues_[6].empty()) throw FormatError("manager: missing extra-team label");
     leagues_[6].back() = 'B';

@@ -59,7 +59,7 @@ TrainingState project(const StaticMemory& memory, const Bytes& records, const By
     if (manager_count < 1 || manager_count > 4 || s.manager_slot >= manager_count || teams.size() != size_t(manager_count))
         throw FormatError("training: inconsistent active manager");
     s.runtime_club = teams.at(s.manager_slot);
-    const int max24 = exe.u16(::bmh::layout::TeamsWithSquads), max16 = exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
+    const int max24 = exe.u16(::bmh::layout::TeamsWithSquads), max16 = exe.u16(::bmh::layout::LeagueClubCount);
     if (s.runtime_club < 0 || s.runtime_club >= max16) throw FormatError("training: national/cup-only squad unsupported");
     s.squad_capacity = s.runtime_club < max24 ? 24 : 16;
     const size_t first = size_t(s.runtime_club < max24 ? s.runtime_club * 24 : s.runtime_club * 16 + max24 * 8);

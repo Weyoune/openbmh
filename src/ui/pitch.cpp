@@ -67,7 +67,7 @@ PitchExtras extras(const StaticMemory& memory,const Bytes& managers,const Bytes&
     const bool national=e.runtime_club==kNoTeam&&e.manager_slot==0&&count==1&&
         ((memory.u32(::bmh::layout::CompetitionSelection)&2)!=0||
          (memory.has(::bmh::layout::CoachActive)&&memory.u8(::bmh::layout::CoachActive)!=0));
-    if(e.runtime_club<0||(e.runtime_club>=exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField)&&!national))
+    if(e.runtime_club<0||(e.runtime_club>=exe.u16(::bmh::layout::LeagueClubCount)&&!national))
         throw FormatError("pitch: unsupported club");
     const size_t m=size_t(e.manager_slot)*0xb0c,f=size_t(e.manager_slot)*0x160;
     if(managers.size()<m+0xb0c||formations.size()<f+0x160||

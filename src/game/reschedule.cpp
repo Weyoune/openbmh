@@ -89,7 +89,7 @@ int team_replay_on(const GameState& g, int day, int team, int league) {
 // (bit 15) when it is free (0, 0x4001 or a calendar event 0x1c0), neither it nor its two
 // neighbours conflict for the club (the neighbours before it may already be marked), the
 // day after it lies in 0x15 .. 0x11e and it is not in the winter break. The national team
-// (manager 0 coaching team 0x165) also checks the club of the Bundestrainer, CupDraw_FormatError_RuntimeField3.
+// (manager 0 coaching team 0x165) also checks the club of the Bundestrainer, ManagerRecord4Club.
 std::vector<uint16_t> marked_calendar(const GameState& g, int team) {
     std::vector<uint16_t> cal(kCalendarDays);
     for (int d = 0; d < kCalendarDays; d++) cal[size_t(d)] = g.memory.u16(kCalendar + uint32_t(d) * 2);
@@ -102,7 +102,7 @@ std::vector<uint16_t> marked_calendar(const GameState& g, int team) {
         bool ok = true;
         for (int i = std::max(0, d - 1); i <= std::min(kCalendarDays - 1, d + 1); i++) {
             if (day_conflict(g, team, -1, cal[size_t(i)], i)) ok = false;
-            if (national && day_conflict(g, int16_t(g.memory.u16(::bmh::layout::CupDraw_FormatError_RuntimeField3)), -1, cal[size_t(i)], i)) ok = false;
+            if (national && day_conflict(g, int16_t(g.memory.u16(::bmh::layout::ManagerRecord4Club)), -1, cal[size_t(i)], i)) ok = false;
         }
         if (d + 1 > kLastReplayDay || d + 1 < kFirstDayAfter) ok = false;
         if (d >= kWinterBreakFirst && d <= kWinterBreakLast) ok = false;

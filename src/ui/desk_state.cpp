@@ -127,7 +127,7 @@ void project_drawer_rows(DeskState& d, const LeImage& exe, const Bytes& managers
 }
 
 void project_table_position(DeskState& desk, const GameState& game) {
-    // SourceDrawerTeam permits league clubs and CupDraw_FormatError_RuntimeField2 (the Source 0x165
+    // SourceDrawerTeam permits league clubs and ManagerRecord0Club (the Source 0x165
     // national-team slot) through its rank/strength path.
     const int position = table_position(game, desk.runtime_club);
     if (position >= 0) desk.table_position = position;
@@ -311,7 +311,7 @@ DeskState project(const StaticMemory& memory, const Tables& t, const LeImage& ex
     uint8_t remaining = 18;
     for (size_t kind = 6; kind < 13; ++kind) remaining = uint8_t(remaining - t.managers.at(base + 0xc5 + kind));
     d.warnings[3] = remaining < 4;
-    const int max24 = exe.u16(::bmh::layout::TeamsWithSquads), league_teams = exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
+    const int max24 = exe.u16(::bmh::layout::TeamsWithSquads), league_teams = exe.u16(::bmh::layout::LeagueClubCount);
     if (!d.national_team && d.runtime_club >= league_teams) throw FormatError("desk: cup-only squad projection not supported");
     const size_t first = d.national_team ? 3072 : size_t(d.runtime_club < max24 ? d.runtime_club * 24 : d.runtime_club * 16 + max24 * 8);
     const size_t count = d.national_team ? 24 : (d.runtime_club < max24 ? 24 : 16);

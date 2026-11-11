@@ -42,7 +42,7 @@ std::string original_league_title(const GameState& game, const LeImage& exe, int
         for (int previous = 0; previous < league; ++previous)
             if (exe.u8(::bmh::layout::Manager_FormatError_RuntimeField + uint32_t(previous) * 2) < 'B') ++text;
         std::string name = (*game.texts)[text];
-        const uint8_t suffix = exe.u8(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField3 + uint32_t(league) * 2);
+        const uint8_t suffix = exe.u8(::bmh::layout::LeagueNameSuffixes + uint32_t(league) * 2);
         if (suffix != 0) {
             std::string tail = (*game.texts)[size_t((::bmh::layout::Manager_FormatError_TextPointer2 - ::bmh::layout::TextPointerTable) / 4)];
             check(!tail.empty(), "Original TEXTD league suffix template is present");

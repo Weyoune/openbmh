@@ -86,19 +86,19 @@ struct LeagueSystem {
     uint8_t calendar_bit[kLeagueCount] = {0, 1, 2, 2, 3, 4, 4, 4, 4};
 
     // The promotion ladder (Void / English ClubName):
-    // - relegation[league]: relegation places (CareerSession_InstallLeagueSizes_RuntimeField2; German 3 4 2 2 3,
+    // - relegation[league]: relegation places (LeagueRelegationPlaces; German 3 4 2 2 3,
     //   English 4 4 4 4 4),
     // - below_first[group] .. + below_count[group] - 1: the league(s) a promotion group takes its promoted
-    //   clubs from (CareerSession_InstallLeagueSizes_RuntimeField5 / CareerSession_InstallLeagueSizes_RuntimeField4;
+    //   clubs from (PromotionGroupBelowLeagues / PromotionGroupBelowCounts;
     //   German 1 | 2 | 4 with the two Regionalligen in one group, English 1 | 2 | 3),
-    // - suffix[league]: the letter after a league's name (CareerSession_InstallLeagueSizes_RuntimeField3, two
+    // - suffix[league]: the letter after a league's name (LeagueNameSuffixes, two
     //   bytes per league; German A/B for the Regionalligen, English none),
     // - newcomer_first / newcomer_count: the clubs the lowest league is refilled from
-    //   (CareerSession_DispatchLineup_RuntimeField / CareerSession_InstallLeagueSizes_RuntimeField6; German the 30
+    //   (LeagueClubCount / NewcomerClubCount; German the 30
     //   amateur clubs 138-167; the English game draws from its 12 further English clubs 138-149 - its later
     //   ids have no name - so the session counts only named clubs).
     uint8_t relegation[kLeagueCount] = {3, 4, 2, 2, 3, 0, 0, 0, 0};
-    // European places per league for the table prediction (CareerSession_InstallLeagueSizes_RuntimeField;
+    // European places per league for the table prediction (LeagueEuropeanPlaces;
     // German 0 3 2 2 4 - league 0 uses 4 in the prediction -, English 0 4 4 4 4)
     uint8_t europe[kLeagueCount] = {0, 3, 2, 2, 4, 0, 0, 0, 0};
     uint8_t below_first[8] = {1, 2, 4, 5, 6, 7, 8, 0};

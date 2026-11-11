@@ -250,7 +250,7 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `CareerSession_DispatchDesktopLayout_RuntimeField2` | `0xa2517` | German-compatible image / runtime field |
 | `CareerSession_DispatchLeagueTableControl_RuntimeField` | `0xa454d` | German-compatible image / runtime field |
 | `CareerSession_DispatchLeagueTableControl_RuntimeField2` | `0xbb834` | German-compatible image / runtime field |
-| `CareerSession_DispatchLineup_RuntimeField` | `0xa2c30` | German-compatible image / runtime field |
+| `LeagueClubCount` | `0xa2c30` | German-compatible image / runtime field |
 | `CareerSession_DispatchLiveSubstitution_ExecutableField` | `0xa366c` | German-compatible image / runtime field |
 | `CareerSession_DispatchLiveTactic_RuntimeField` | `0xa20eb` | German-compatible image / runtime field |
 | `CareerSession_DispatchLiveTactic_RuntimeField2` | `0xa20f3` | German-compatible image / runtime field |
@@ -307,12 +307,12 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `CareerSession_FormatNumber_TextPointer` | `0xa137e` | German-compatible image / runtime field |
 | `CareerSession_InitializeClubModalRuntime_ExecutableField` | `0xa25c0` | German-compatible image / runtime field |
 | `CareerSession_InitializeClubModalRuntime_ExecutableFieldUnsigned` | `0xa25c0u` | German-compatible image / runtime field |
-| `CareerSession_InstallLeagueSizes_RuntimeField` | `0xa2be9` | German-compatible image / runtime field |
-| `CareerSession_InstallLeagueSizes_RuntimeField2` | `0xa2bf2` | German-compatible image / runtime field |
-| `CareerSession_InstallLeagueSizes_RuntimeField3` | `0xa2c00` | German-compatible image / runtime field |
-| `CareerSession_InstallLeagueSizes_RuntimeField4` | `0xa2c0b` | German-compatible image / runtime field |
-| `CareerSession_InstallLeagueSizes_RuntimeField5` | `0xa2c13` | German-compatible image / runtime field |
-| `CareerSession_InstallLeagueSizes_RuntimeField6` | `0xa2c34` | German-compatible image / runtime field |
+| `LeagueEuropeanPlaces` | `0xa2be9` | German-compatible image / runtime field |
+| `LeagueRelegationPlaces` | `0xa2bf2` | German-compatible image / runtime field |
+| `LeagueNameSuffixes` | `0xa2c00` | German-compatible image / runtime field |
+| `PromotionGroupBelowCounts` | `0xa2c0b` | German-compatible image / runtime field |
+| `PromotionGroupBelowLeagues` | `0xa2c13` | German-compatible image / runtime field |
+| `NewcomerClubCount` | `0xa2c34` | German-compatible image / runtime field |
 | `CareerSession_Int32T_TextPointer` | `0xaeffc` | German-compatible image / runtime field |
 | `CareerSession_Int32T_TextPointer2` | `0xaf21c` | German-compatible image / runtime field |
 | `CareerSession_Int32T_TextPointer3` | `0xaf228` | German-compatible image / runtime field |
@@ -462,7 +462,7 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `ClubKitSelectorsUnsigned` | `0xbb68bu` | German-compatible image / runtime field |
 | `ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField` | `0xa25bb` | German-compatible image / runtime field |
 | `ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField2` | `0xa25bf` | German-compatible image / runtime field |
-| `ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField3` | `0xa2c36` | German-compatible image / runtime field |
+| `ForeignCupClubCount` | `0xa2c36` | German-compatible image / runtime field |
 | `ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField4` | `0xa364a` | German-compatible image / runtime field |
 | `ClubPlayerDetail_ClubPlayerDetailRedraw_RuntimeField` | `0xa2c4e` | German-compatible image / runtime field |
 | `ClubPlayerDetail_ClubPlayerDetailRedraw_RuntimeField2` | `0xa3c9b` | German-compatible image / runtime field |
@@ -591,8 +591,8 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `CupDraw_FormatError_ExecutableField5` | `0xae704` | German-compatible image / runtime field |
 | `CupDraw_FormatError_ExecutableField6` | `0xae70c` | German-compatible image / runtime field |
 | `CupDraw_FormatError_RuntimeField` | `0xa2547` | German-compatible image / runtime field |
-| `CupDraw_FormatError_RuntimeField2` | `0xb6ea8` | German-compatible image / runtime field |
-| `CupDraw_FormatError_RuntimeField3` | `0xb9ad8` | German-compatible image / runtime field |
+| `ManagerRecord0Club` | `0xb6ea8` | German-compatible image / runtime field |
+| `ManagerRecord4Club` | `0xb9ad8` | German-compatible image / runtime field |
 | `CupDraw_FormatError_TextPointer` | `0xa1612` | German-compatible image / runtime field |
 | `CupDraw_FormatError_TextPointer2` | `0xa1619` | German-compatible image / runtime field |
 | `CupDraw_FormatError_TextPointer3` | `0xa161e` | German-compatible image / runtime field |
@@ -893,6 +893,12 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `EnglishLayoutTranslation256` | `0x6f2ae` | English image adapter |
 | `EnglishLayoutTranslation257` | `0x6f2d4` | English image adapter |
 | `EnglishLayoutTranslation258` | `0x6f2e0` | English image adapter |
+| `EnglishEnvironmentTileX` | `0x6d230` | English image adapter |
+| `EnglishEnvironmentTileY` | `0x6d238` | English image adapter |
+| `EnglishEnvironmentYouthColors` | `0x6d240` | English image adapter |
+| `EnglishEnvironmentBudgetSteps` | `0x6d244` | English image adapter |
+| `EnglishEnvironmentYouthPositionSuffix` | `0x6d24a` | English image adapter |
+| `EnglishEnvironmentCostSuffix` | `0x6d24f` | English image adapter |
 | `EnglishLayoutTranslation259` | `0x6f2fc` | English image adapter |
 | `EnglishLayoutTranslation26` | `0x6bf2c` | English image adapter |
 | `EnglishLayoutTranslation260` | `0x6f300` | English image adapter |
@@ -1927,6 +1933,8 @@ declarations change. Game text, resort, image and audio fallbacks belong outside
 | `TransferMarket_Rect_TextPointer3` | `0xae148` | German-compatible image / runtime field |
 | `TransferMarket_Rect_TextPointer4` | `0xae14c` | German-compatible image / runtime field |
 | `TransferMarket_Rect_TextPointer5` | `0xae150` | German-compatible image / runtime field |
+| `TransferMarket_SearchRows_RuntimeField` | `0xa20fb` | German-compatible image / runtime field |
+| `TransferMarket_SearchButton_TextPointer` | `0xae144` | German-compatible image / runtime field |
 | `TransferMarket_Rect_TextPointer6` | `0xaecac` | German-compatible image / runtime field |
 | `TransferMarket_Rect_TextPointer7` | `0xaf250` | German-compatible image / runtime field |
 | `TransferMarket_Render_TextPointer` | `0xaf264` | German-compatible image / runtime field |

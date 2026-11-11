@@ -42,7 +42,7 @@ LineupState project(const StaticMemory& memory, const LeImage& exe, const std::v
     if (out.manager_slot < 0 || out.manager_slot > 3 || size_t(out.manager_slot) >= teams.size())
         throw FormatError("lineup: unsupported active manager");
     out.runtime_club = teams.at(out.manager_slot);
-    const int split = exe.u16(::bmh::layout::TeamsWithSquads), limit = exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
+    const int split = exe.u16(::bmh::layout::TeamsWithSquads), limit = exe.u16(::bmh::layout::LeagueClubCount);
     const bool national = out.runtime_club == kNoTeam && out.manager_slot == 0 && teams.size() == 1 &&
                           ((memory.u32(::bmh::layout::CompetitionSelection) & 2) != 0 ||
                            (memory.has(::bmh::layout::CoachActive) && memory.u8(::bmh::layout::CoachActive) != 0));

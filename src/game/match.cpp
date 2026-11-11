@@ -30,7 +30,7 @@ constexpr int8_t kRegionTemperature[48] = {0,  -1, 5,  0,  0, 5,  0, -1, -5, -4,
 constexpr uint8_t kLeagueCrowd[10] = {27, 12, 7, 7, 3, 27, 27, 27, 27, 27};
 // First league that counts as a regional league (LeaguePairings_LeaguePairingsConstants_RuntimeField).
 constexpr int kFirstRegionalLeague = 5;
-// Number of cup-only teams before the amateur blocks (CareerSession_InstallLeagueSizes_RuntimeField6).
+// Number of cup-only teams before the amateur blocks (NewcomerClubCount).
 constexpr int kCupTeams = 30;
 
 int clamp(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }

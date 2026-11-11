@@ -133,7 +133,7 @@ void Console::register_info_commands() {
         if (window_ == "Fixtures" && pairings_) fixtures_action(LeaguePairingsAction::close);
         std::string error;
         ClubInfoEntry entry;
-        if (team < int(exe_.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField))) {  // league teams get the entry step (as the app does)
+        if (team < int(exe_.u16(::bmh::layout::LeagueClubCount))) {  // league teams get the entry step (as the app does)
             const auto prepared = session_->enter_club_information(team, error);
             if (!prepared) fail("E_RULE", "club information: " + error);
             entry = *prepared;

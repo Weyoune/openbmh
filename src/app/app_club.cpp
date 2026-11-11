@@ -30,7 +30,7 @@ auto App::club_information_dialog(app::ClubModalServices& services, int team) ->
     const auto redraw = [&] {
         std::string error;
         ClubInfoEntry snapshot;
-        if (team == kNoTeam || team < season_exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField)) {
+        if (team == kNoTeam || team < season_exe.u16(::bmh::layout::LeagueClubCount)) {
             snapshot = services.enter_club(team);
         }
         auto projection = ui::club_info_from_game(services.state(), team, snapshot,

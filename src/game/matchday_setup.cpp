@@ -40,7 +40,7 @@ constexpr uint8_t kCompetitionClass[24] = {0, 1, 2, 2, 2, 3, 3, 3, 3, 255, 0, 25
 // (league_system().group_first / league_system().group_count: schedule.hpp, the calendar groups of the loaded game)
 // Crowd interest per descriptor type (MatchdaySetupRuntimeField).
 constexpr uint8_t kTypeInterest[24] = {5, 5, 10, 15, 12, 10, 5, 10, 5, 10, 5, 31, 10, 10, 10, 0, 0, 1, 0, 0, 0, 12, 0, 0};
-// Number of clubs taking part in league play (CareerSession_DispatchLineup_RuntimeField).
+// Number of clubs taking part in league play (LeagueClubCount).
 // Squad slots checked by the driver (CareerRuntimeField).
 constexpr size_t kSquadSlotCount = 0xb70;
 

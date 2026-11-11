@@ -23,8 +23,8 @@ constexpr size_t kBoard = kTacticsBoardSize;      // tactics board of a manager
 constexpr size_t kBoardSlot = kTacticsBoardSlotSize;   // one slot of the board
 
 // Static league tables of V2.24 (not part of the savegame):
-// (European places per league, CareerSession_InstallLeagueSizes_RuntimeField, are league_system().europe of the loaded game; league 0 uses 4)
-// (the relegation places per league, CareerSession_InstallLeagueSizes_RuntimeField2, are league_system().relegation of the loaded game)
+// (European places per league, LeagueEuropeanPlaces, are league_system().europe of the loaded game; league 0 uses 4)
+// (the relegation places per league, LeagueRelegationPlaces, are league_system().relegation of the loaded game)
 
 // Text of a pointer variable of the text table TextPointerTable.
 }  // namespace

@@ -15,7 +15,7 @@ namespace bmh {
 
 SportschauRatingTables sportschau_rating_tables(const LeImage& exe) {
     SportschauRatingTables t;
-    t.domestic_teams = exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField);
+    t.domestic_teams = exe.u16(::bmh::layout::LeagueClubCount);
     for (size_t i = 0; i < 4; ++i) {
         const auto offset = uint32_t(i);
         t.position_limit[i] = std::bit_cast<int8_t>(exe.u8(::bmh::layout::SportschauRating_SportschauRatingTables_RuntimeField + offset));

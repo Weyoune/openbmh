@@ -101,7 +101,7 @@ int national_opponent_manager(const GameState& g, const NationalFriendlyOwner& o
     // FindManagerForClub's second lookup: spare manager record 4 represents the
     // Bundestrainer's own association only for the first human national coach.
     if (owner.manager == 0 && !g.manager_teams.empty() && g.manager_teams[0] == kNoTeam &&
-        g.memory.has(::bmh::layout::DeskActions_NationalOpponentManager_RuntimeField) && int(g.memory.u16(::bmh::layout::CupDraw_FormatError_RuntimeField3)) == opponent &&
+        g.memory.has(::bmh::layout::DeskActions_NationalOpponentManager_RuntimeField) && int(g.memory.u16(::bmh::layout::ManagerRecord4Club)) == opponent &&
         5 * kRecordSize <= g.manager_records.size()) return 4;
     return -1;
 }

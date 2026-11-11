@@ -178,7 +178,7 @@ int main() {
     constexpr size_t national_backup = 4 * 0xb0c + 0x290;
     game.manager_records[national_backup] = 200;
     game.manager_records[national_backup + 1] = 0;
-    game.memory.set16(::bmh::layout::CupDraw_FormatError_RuntimeField3, 199); // stale raw cache deliberately disagrees with typed slot4.
+    game.memory.set16(::bmh::layout::ManagerRecord4Club, 199); // stale raw cache deliberately disagrees with typed slot4.
     game.memory.set16(::bmh::layout::SyntheticCupParticipantsBegin, 200);
     bool owned_foreign_rejected = false;
     try { (void)bmh::other_games_from_game(game, db, 0, 0, 0); }

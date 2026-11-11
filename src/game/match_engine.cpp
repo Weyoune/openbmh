@@ -532,7 +532,7 @@ ForcedMatchEvent MatchEngine::event_impl(MatchGroup& g, int m, int s, int minute
     int opp_team = g.fixtures.at(m * 2 + 1 - s);  // MatchEngineRuntimeField11
     // Small-squad teams (id >= 90) only half of the time; teams without squads never. The
     // national team (0x165, squad nominated on the national team days) only while manager
-    // slot 0 holds it (CupDraw_FormatError_RuntimeField2 == 0x165: a Bundestrainer's match).
+    // slot 0 holds it (ManagerRecord0Club == 0x165: a Bundestrainer's match).
     if (!(team < 90 || rand.range(0, 1) == 0)) return result;
     if (!(team < world_layout().league_teams || team == kNoTeam)) return result;
     if (team == kNoTeam && (state.manager_teams.empty() || state.manager_teams[0] != kNoTeam)) return result;
@@ -854,7 +854,7 @@ void MatchEngine::side(MatchGroup& g, int m, int& s, int minute, int& own_att, i
             return;
         }
         const auto& exe = *reality_rules;
-        if (team < exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField) && opp_team < exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField)) {
+        if (team < exe.u16(::bmh::layout::LeagueClubCount) && opp_team < exe.u16(::bmh::layout::LeagueClubCount)) {
             const int displacement = (1 - s * 2) * rand.range(21, 45);
             if (live_ball && button(::bmh::layout::MatchEngine_Side_ExecutableField3) == 0)
                 live_ball({minute, show_group, m, displacement});

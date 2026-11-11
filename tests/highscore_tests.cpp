@@ -52,7 +52,7 @@ void check_original_score(const std::filesystem::path& data, const std::filesyst
     constexpr uint8_t weights[] = {3,5,4,30,20,10,5,40,30,50};
     for (uint32_t k = 0; k < sizeof weights; ++k)
         require(exe.u8(::bmh::layout::HighscoreRuntimeField + k) == weights[k], "Source score weights changed");
-    require(exe.u16(::bmh::layout::CareerSession_DispatchLineup_RuntimeField) + exe.u16(::bmh::layout::CareerSession_InstallLeagueSizes_RuntimeField6) + exe.u16(::bmh::layout::ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField3) == kNoTeam,
+    require(exe.u16(::bmh::layout::LeagueClubCount) + exe.u16(::bmh::layout::NewcomerClubCount) + exe.u16(::bmh::layout::ForeignCupClubCount) == kNoTeam,
             "national honours base changed");
     auto g = post7(fixture);
     const auto before = save_stream(g);

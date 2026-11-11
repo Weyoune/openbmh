@@ -42,7 +42,7 @@ GameState fixture() {
     g.memory.add_block(kPlannerTeams, 30 * 4);
     g.memory.add_block(kCalendar, 0x16e * 2);
     g.memory.add_block(::bmh::layout::DaysIntoSeason, 2);
-    g.memory.add_block(::bmh::layout::CupDraw_FormatError_RuntimeField3, 2);
+    g.memory.add_block(::bmh::layout::ManagerRecord4Club, 2);
     g.date = 50;
     g.season_start = 0;
     g.level = 1;
@@ -219,7 +219,7 @@ void check_stale_and_source_association_payer() {
           "unowned away side is not charged to the national coach");
 
     GameState home_association = fixture();
-    home_association.memory.set16(::bmh::layout::CupDraw_FormatError_RuntimeField3, 0x16c);
+    home_association.memory.set16(::bmh::layout::ManagerRecord4Club, 0x16c);
     WatcomRandom home_rand(0xabcdef01);
     auto home_quote = accepted_quote(home_association, home_rand, 0x16c, true);
     NationalFriendlyBookingRequest home_request;
@@ -237,7 +237,7 @@ void check_stale_and_source_association_payer() {
           home_game.calls() == home_before.calls(), "opponent refusal changes neither Native nor G");
 
     GameState association = fixture();
-    association.memory.set16(::bmh::layout::CupDraw_FormatError_RuntimeField3, 0x16c);
+    association.memory.set16(::bmh::layout::ManagerRecord4Club, 0x16c);
     WatcomRandom association_rand(0xabcdef01);
     auto association_quote = accepted_quote(association, association_rand, 0x16c, false);
     check(association_quote.terms.opponent_manager == 4 &&

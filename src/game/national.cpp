@@ -205,7 +205,7 @@ void national_coach_take_over(GameState& g, int active_manager, uint16_t source_
         set_manager_count(g, 1);
         swap_manager_slots(g, 4, 0);                               // SwapManagerSlots(4, 0)
         uint8_t* coach = &g.manager_records.at(0);
-        coach[0x290] = uint8_t(kNoTeam & 0xff), coach[0x291] = uint8_t(kNoTeam >> 8);  // CupDraw_FormatError_RuntimeField2 = 0x165
+        coach[0x290] = uint8_t(kNoTeam & 0xff), coach[0x291] = uint8_t(kNoTeam >> 8);  // ManagerRecord0Club = 0x165
         coach[0x218] = g.manager_records.at(4 * kManagerRecord + 0x218);       // NationalRuntimeField2 = NationalRuntimeField3
         g.manager_teams.at(0) = kNoTeam;
         auto_lineup(g, kNoTeam, 0xe4);                             // Int2(0x165, 0xe4)

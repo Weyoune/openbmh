@@ -31,8 +31,8 @@ GameState empty_game(std::vector<int> managers = {0}) {
     GameState g;
     g.memory.add_block(::bmh::layout::ManagerCount, 1);
     g.memory.set8(::bmh::layout::ManagerCount, uint8_t(managers.size()));
-    g.memory.add_block(::bmh::layout::CupDraw_FormatError_RuntimeField3, 2);
-    g.memory.set16(::bmh::layout::CupDraw_FormatError_RuntimeField3, 0);
+    g.memory.add_block(::bmh::layout::ManagerRecord4Club, 2);
+    g.memory.set16(::bmh::layout::ManagerRecord4Club, 0);
     g.manager_teams = std::move(managers);
     g.club_ids.assign(138, 0);
     g.club_names = {0};
@@ -127,10 +127,10 @@ void test_manager_and_national_original_club_scope() {
           managers.rows[1].player == second, "manager scope includes every active manager's club only");
 
     auto national = empty_game({kNoTeam, 1});
-    // Source's live ManagerCount/CupDraw_FormatError_RuntimeField3 counterparts can diverge from these loaded
+    // Source's live ManagerCount/ManagerRecord4Club counterparts can diverge from these loaded
     // StaticMemory bytes after the typed national-coach handoff.
     national.memory.set8(::bmh::layout::ManagerCount, 1);
-    national.memory.set16(::bmh::layout::CupDraw_FormatError_RuntimeField3, 2);
+    national.memory.set16(::bmh::layout::ManagerRecord4Club, 2);
     national.manager_records.assign(5 * 0xb0c, 0);
     national.manager_records[4 * 0xb0c + 0x290] = 0;
     national.manager_records[4 * 0xb0c + 0x291] = 0;
@@ -345,8 +345,8 @@ void test_live_national_takeover_projection(const std::filesystem::path& data) {
 
     // Deliberately make the loaded StaticMemory copy disagree with the live
     // Source global; the native manager-record swap is authoritative.
-    if (!live.memory.has(::bmh::layout::CupDraw_FormatError_RuntimeField3)) live.memory.add_block(::bmh::layout::CupDraw_FormatError_RuntimeField3, 2);
-    live.memory.set16(::bmh::layout::CupDraw_FormatError_RuntimeField3, uint16_t((home + 1) % 138));
+    if (!live.memory.has(::bmh::layout::ManagerRecord4Club)) live.memory.add_block(::bmh::layout::ManagerRecord4Club, 2);
+    live.memory.set16(::bmh::layout::ManagerRecord4Club, uint16_t((home + 1) % 138));
     const auto native = save_stream(live);
     const auto w = session->rand(); const auto g = session->game();
     const auto page = game::top_scorers_from_game(live, 0, game::TopScorersMetric::goals,
