@@ -1,4 +1,5 @@
 #include "runtime_fixture_tables.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "ui/team_statistics.hpp"
 
@@ -14,7 +15,7 @@
 #include "ui/setup.hpp"
 
 namespace {
-void check(bool value, const char* message) { if (!value) throw std::runtime_error(message); }
+using bmh::test_support::check;
 uint8_t pixel(const bmh::Image& image, int x, int y) {
     return image.pixels.at(size_t(y) * size_t(image.width) + size_t(x));
 }

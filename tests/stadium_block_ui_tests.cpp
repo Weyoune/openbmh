@@ -11,14 +11,13 @@
 #include <iostream>
 #include <stdexcept>
 #include <utility>
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool ok, const char* message) {
-    if (!ok) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 
 void copy_crop(Image& dst, const Image& src, int sx, int sy, int x, int y, int w, int h) {
     for (int row = 0; row < h; ++row) for (int col = 0; col < w; ++col) {

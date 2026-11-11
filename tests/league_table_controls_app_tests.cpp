@@ -10,11 +10,12 @@
 #include "formats/le.hpp"
 #include "ui/league_family_request.hpp"
 #include "ui/league_table.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace fs = std::filesystem;
 namespace {
-void check(bool ok, const char* why) { if (!ok) throw std::runtime_error(why); }
+using bmh::test_support::check;
 struct Fixture {
     app::CareerSession session;
     uint64_t revision = 1;

@@ -8,9 +8,10 @@
 #include "game/messages.hpp"
 #include "game/save.hpp"
 #include "ui/pending_offer.hpp"
+#include "testing/check.hpp"
 using namespace bmh;
 namespace {
-void check(bool value,const char* message){if(!value)throw std::runtime_error(message);}
+using bmh::test_support::check;
 constexpr ClubPlayerDetailSelection selection{33,14,5,5,-1};
 struct Snapshot { Bytes native; uint32_t w; int32_t g; uint64_t wc,gc; };
 Snapshot snap(app::CareerSession& s){return {save_stream(s.state()),s.rand().seed(),s.game().seed(),s.rand().calls(),s.game().calls()};}

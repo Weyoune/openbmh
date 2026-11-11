@@ -4,9 +4,10 @@
 #include "app/career_session.hpp"
 #include "game/save.hpp"
 #include "ui/sportschau.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
-static void check(bool b, const char* why) { if (!b) throw std::runtime_error(why); }
+using bmh::test_support::check;
 static void dword(Bytes& b, size_t at, uint32_t v) {
     for (size_t i = 0; i < 4; ++i) b.at(at+i) = uint8_t(v >> (8*i));
 }

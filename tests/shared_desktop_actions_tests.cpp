@@ -8,13 +8,12 @@
 #include <chrono>
 #include <cstdio>
 #include <stdexcept>
+#include "testing/check.hpp"
 
 using namespace bmh;
 
 namespace {
-void check(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 
 struct Snapshot {
     Bytes native;

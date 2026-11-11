@@ -18,12 +18,13 @@
 #include "game/schedule.hpp"
 #include "game/match_engine.hpp"
 #include "game/turn_driver.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool ok, const char* why) { if (!ok) throw std::runtime_error(why); }
+using bmh::test_support::check;
 void rejected(const std::function<void()>& action) {
     try { action(); } catch (const FormatError&) { return; }
     throw std::runtime_error("expected rejected results input");

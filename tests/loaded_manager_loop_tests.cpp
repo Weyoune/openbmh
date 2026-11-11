@@ -1,4 +1,5 @@
 #include "runtime_fixture_tables.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include <filesystem>
@@ -26,9 +27,7 @@ constexpr uint32_t kManagerPosition = ::bmh::layout::DeskPosition;
 constexpr uint32_t kManagerOrder = ::bmh::layout::NextDeskManager;
 constexpr uint32_t kOfferWords = ::bmh::layout::OfferSlots;
 
-void check(bool value, const char* message) {
-    if (!value) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 
 GameState load(const std::filesystem::path& path, const LeImage& exe, const TextDb& texts) {
     const auto file = load_savegame(path);

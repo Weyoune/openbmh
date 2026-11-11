@@ -12,11 +12,12 @@
 #include "game/match_engine.hpp"
 #include "game/save.hpp"
 #include "ui/pending_offer.hpp"
+#include "testing/check.hpp"
 
 namespace fs = std::filesystem;
 using namespace bmh;
 namespace {
-void check(bool value,const char* message){if(!value)throw std::runtime_error(message);}
+using bmh::test_support::check;
 bool contains(const GameState& g,int team,int player){const auto r=squad_range(team);
  for(size_t i=r.first;i<r.first+r.count;++i)if((g.squad_slots.at(i)&0xfff)==player)return true;
  return false;

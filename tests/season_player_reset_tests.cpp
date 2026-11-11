@@ -5,9 +5,10 @@
 #include <iostream>
 #include <stdexcept>
 #include <utility>
+#include "testing/check.hpp"
 
 namespace {
-void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
+using bmh::test_support::check;
 bmh::GameState fixture(int slot, int age, bool foreign = false) {
     bmh::GameState g;
     constexpr uint32_t data_begin = 0xa0000;

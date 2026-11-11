@@ -1,4 +1,5 @@
 #include "runtime_fixture_tables.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include <cstdio>
@@ -9,7 +10,7 @@
 #include "game/save.hpp"
 using namespace bmh;
 namespace {
-void check(bool value,const char* text) { if (!value) throw std::runtime_error(text); }
+using bmh::test_support::check;
 MatchGroup fixture() {
     MatchGroup g;g.desc.resize(0xd0);g.desc[1]=2;g.desc[2]=1;
     g.fixtures={0,1};g.results={0};g.end_minute={0};g.spectators={12000};

@@ -90,7 +90,7 @@ Json mailbox_record(const ui::MailboxState& m) {
 
 }  // namespace
 
-// --- Advice and Scoreboard (for agents that learn: docs/CLI_CONCEPT/16-playbook.md) -------
+// --- Advice and Scoreboard (for agents that learn: docs/CLI_CONCEPT/10-agenten-und-tests.md) -------
 // Advice names what needs a decision now, from the engine's own data; it judges nothing
 // the player could not see on his screens, it only collects it. Scoreboard compares the
 // human managers. Both read only.

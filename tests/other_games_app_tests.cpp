@@ -21,6 +21,7 @@
 #include "game/messages.hpp"
 #include "ui/flow.hpp"
 #include "ui/other_games_state.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 
@@ -29,9 +30,7 @@ uint32_t other_games_source_round_day_for_test(const GameState&,uint32_t,int);
 }
 
 namespace {
-void check(bool value, const char* message) {
-    if (!value) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 
 void start_career(const std::filesystem::path& data, ui::StartupFlow& flow,
                   std::unique_ptr<app::CareerSession>& session, uint64_t& revision,

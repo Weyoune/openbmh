@@ -1,4 +1,5 @@
 #include "runtime_fixture_tables.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include <cstdio>
@@ -10,7 +11,7 @@
 #include "game/save.hpp"
 using namespace bmh;
 namespace {
-void check(bool ok,const char* text){if(!ok)throw std::runtime_error(text);}
+using bmh::test_support::check;
 GameState fixture(const std::filesystem::path& data,const LeImage& exe,const TextDb& texts) {
  const DbCounts counts{exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField),exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField3),exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField2),exe.u32(::bmh::layout::CareerSession_DataDirectory_RuntimeField4)};
  auto state=GameState::from_save(SaveState(load_savegame(data/"AUTOSAVE.FBM").stream,counts),counts);

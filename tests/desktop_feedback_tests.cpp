@@ -10,9 +10,10 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include "testing/check.hpp"
 using namespace bmh;
 using namespace bmh::ui;
-void check(bool ok,const char* message){if(!ok)throw std::runtime_error(message);}
+using bmh::test_support::check;
 void capture(const std::filesystem::path& dir,const char* name,const Image& image,const Palette& palette){
     if(dir.empty())return;
     std::filesystem::create_directories(dir);

@@ -10,12 +10,13 @@
 #include "game/messages.hpp"
 #include "game/state.hpp"
 #include "ui/setup.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool value, const char* reason) { if (!value) throw std::runtime_error(reason); }
+using bmh::test_support::check;
 void rejected(const std::function<void()>& action) {
     try { action(); } catch (const FormatError&) { return; }
     throw std::runtime_error("invalid mailbox screen state was accepted");

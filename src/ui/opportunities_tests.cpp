@@ -1,4 +1,5 @@
 #include "../../tests/test_inputs.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 // Tests for OpportunitiesScreen and StatisticsMenuScreen: mode buttons, rank strip clipping, owner refresh and request guards.
 #include "formats/executable_layout.hpp"
@@ -14,7 +15,7 @@ using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool ok,const char* what){if(!ok)throw std::runtime_error(what);}
+using bmh::test_support::check;
 OpportunitiesState fixture(){
     OpportunitiesState s;s.identity={0,45,17,196,8,12,0};s.mode=1;s.league_size=18;
     s.current_rank=3;s.ranks.fill(1);s.ranks[0]=0;s.ranks[2]=0xff;s.underlay=Image(320,240);return s;

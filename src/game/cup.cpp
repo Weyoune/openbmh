@@ -642,7 +642,7 @@ void advance_cup(GameState& g, int id, WatcomRandom& rand, MinuteReport& report,
             if (mem.u8(e + 0x17) != 0 && winners.size() > 1)
                 mem.set16(cup_entry_address(mem.u8(e + 0x17)) + 0x22, winners[1]);
             // (the indoor tournament only: the English League Cup has no Masters; its winner
-            //  would go to EN CupRuntimeField6 for Europe - not ported, see docs/fltd.md)
+            //  would go to EN CupRuntimeField6 for Europe - not ported)
             if (type != 0xb || league_system().english_competitions) return;
             // the indoor tournament: the four places (CupRuntimeField7 picks them from the list
             // champion..fourth) earn points for the Masters (CupRuntimeField8 x strength class

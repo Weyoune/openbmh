@@ -3,10 +3,11 @@
 #include <algorithm>
 #include <stdexcept>
 #include "game/reality_duel.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool ok,const char* text) { if (!ok) throw std::runtime_error(text); }
+using bmh::test_support::check;
 GameState state_fixture() {
     GameState s;s.players.resize(22);s.player_bonus.resize(22);s.team_morale={24,24};s.squad_slots.resize(48,kEmptySlot);
     for (int i=0;i<22;++i) {

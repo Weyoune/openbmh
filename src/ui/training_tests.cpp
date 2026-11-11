@@ -10,12 +10,13 @@
 #include "formats/fbm.hpp"
 #include "formats/savestate.hpp"
 #include "game/state.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
+using bmh::test_support::check;
 void rejected(const std::function<void()>& fn) {
     try { fn(); } catch (const FormatError&) { return; }
     throw std::runtime_error("expected rejected operation");

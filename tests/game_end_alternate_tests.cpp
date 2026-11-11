@@ -5,11 +5,12 @@
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
 namespace {
-void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
+using bmh::test_support::check;
 size_t colored(const Image& image, uint8_t color) {
     return size_t(std::count(image.pixels.begin(),image.pixels.end(),color));
 }

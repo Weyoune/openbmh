@@ -7,9 +7,10 @@
 #include "game/month.hpp"
 #include "game/save.hpp"
 #include "game/turn_driver.hpp"
+#include "testing/check.hpp"
 using namespace bmh;
 namespace {
-void check(bool ok,const char* text){if(!ok)throw std::runtime_error(text);}
+using bmh::test_support::check;
 void install_contract_decisions(app::CareerSession& s){
     s.set_contract_expiry_presenter([](GameState& g,WatcomRandom& w,int m,int row){
         const auto demands=contract_demands(g,m,row,false,w);

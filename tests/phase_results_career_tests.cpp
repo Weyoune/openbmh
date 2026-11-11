@@ -9,12 +9,11 @@
 #include "game/save.hpp"
 #include "ui/league_pairings.hpp"
 #include "ui/other_games.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool value, const char* message) {
-    if (!value) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 uint64_t start(app::CareerSession& session) {
     ui::SetupOptions options;
     ui::ManagerChoice choice;

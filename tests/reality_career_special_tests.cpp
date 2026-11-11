@@ -5,12 +5,11 @@
 
 #include "app/career_session.hpp"
 #include "game/save.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool value, const char* message) {
-    if (!value) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 
 struct Coverage {
     int scenes = 0, scene_humans = 0, ordinary_humans = 0, direct_penalties = 0;

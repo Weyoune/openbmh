@@ -7,10 +7,11 @@
 
 #include "app/career_session.hpp"
 #include "game/save.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool ok, const char* why) { if (!ok) throw std::runtime_error(why); }
+using bmh::test_support::check;
 
 struct Snapshot {
     Bytes native;

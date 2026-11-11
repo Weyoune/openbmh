@@ -9,7 +9,7 @@
 //
 // The data directory is an original installation (supported game edition 2026/27 in development).
 // The optional reference directory holds savegames recorded in the running original
-// (see docs/REFERENCE.md): SP1VOR.FBM right before and SP2VOR.FBM right after
+// (measured in the original): SP1VOR.FBM right before and SP2VOR.FBM right after
 // matchday 1. Expected values in these tests were read off the original's screens.
 #include <cstdio>
 #include <filesystem>
@@ -221,7 +221,7 @@ static void test_schedule(const fs::path& data) {
     for (size_t i = 0; i < kResultsSize; i++) CHECK(!decode_result(results[i]).played);
 }
 
-// Matchday 1 of the Bundesliga as shown by the original (docs/REFERENCE.md).
+// Matchday 1 of the Bundesliga as shown by the original.
 static void test_matchday1(const fs::path& refs) {
     Savegame s = load_savegame(refs / "SP2VOR.FBM");
     CHECK(s.checksum_ok);

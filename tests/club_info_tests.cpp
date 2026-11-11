@@ -3,8 +3,9 @@
 #include <stdexcept>
 #include "game/club_info.hpp"
 #include "game/random.hpp"
+#include "testing/check.hpp"
 using namespace bmh;
-static void check(bool ok,const char* m){if(!ok)throw std::runtime_error(m);}
+using bmh::test_support::check;
 static GameState fixture(int team,int count=20){GameState g;auto r=squad_range(team);g.squad_slots.assign(r.first+r.count,0x0fff);g.players.resize(64);for(int i=0;i<count;++i)g.squad_slots[r.first+size_t(i)]=uint16_t(i|(i<11?0x4000:i<17?0x8000:0x2000));return g;}
 int main(){try{
  int draws=0;auto prior=draw_hook;draw_hook=+[](int){};

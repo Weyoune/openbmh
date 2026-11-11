@@ -18,6 +18,7 @@
 #include "game/prediction.hpp"
 #include "game/save.hpp"
 #include "game/season.hpp"
+#include "testing/check.hpp"
 
 // Private QA composition of format field -> IncomingTransferScreen/ProjectTransferOfferList -> Void2 ->
 // SettleHumanBuyerSale -> PendingOfferAnswer -> 42707. No production pending adapter is called.
@@ -428,7 +429,7 @@ using namespace bmh;
 namespace {
 constexpr uint32_t kOffers=::bmh::layout::OfferSlots, kList=::bmh::layout::EditorList+40*0x58;
 constexpr size_t kPool=0xb70+40, kRecord=0xb0c, kBoard=0x840, kBoardSlot=0x58;
-void check(bool v,const char* what){if(!v)throw std::runtime_error(what);}
+using bmh::test_support::check;
 uint32_t read32(const std::vector<uint8_t>& b,size_t at){uint32_t v=0;for(int i=0;i<4;++i)v|=uint32_t(b.at(at+size_t(i)))<<(8*i);return v;}
 void write32(std::vector<uint8_t>& b,size_t at,uint32_t v){for(int i=0;i<4;++i)b.at(at+size_t(i))=uint8_t(v>>(i*8));}
 bool contains(const GameState& g,int team,int player){const auto r=squad_range(team);for(size_t i=r.first;i<r.first+r.count;++i)if((g.squad_slots.at(i)&0x0fff)==player)return true;return false;}

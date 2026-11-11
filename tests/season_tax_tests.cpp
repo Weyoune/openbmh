@@ -10,9 +10,10 @@
 #include "game/save.hpp"
 #include "game/season.hpp"
 #include "game/messages.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
-void check(bool value, const char* text) { if (!value) throw std::runtime_error(text); }
+using bmh::test_support::check;
 void put(GameState& g, size_t at, uint32_t v) {
     for (size_t i=0;i<4;++i)g.manager_records.at(at+i)=uint8_t(v>>(8*i));
 }

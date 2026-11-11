@@ -16,12 +16,13 @@
 #include "game/lineup.hpp"
 #include "game/save.hpp"
 #include "game/state.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool ok, const char* message) { if(!ok)throw std::runtime_error(message); }
+using bmh::test_support::check;
 void rejected(const std::function<void()>& action) {
     try { action(); } catch(const FormatError&) { return; }
     throw std::runtime_error("expected rejected lineup operation");

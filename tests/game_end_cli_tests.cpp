@@ -7,12 +7,13 @@
 
 #include "app/career_session.hpp"
 #include "game/save.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 using cli::Json;
 using Object = Json::Object;
 namespace {
-void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
+using bmh::test_support::check;
 Json request(Object fields) { return Json(std::move(fields)); }
 bool ok(const Json& response) { return *response.object()->at("ok").boolean(); }
 std::string error(const Json& response) {

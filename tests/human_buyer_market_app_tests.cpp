@@ -21,11 +21,12 @@
 #include "game/save.hpp"
 #include "game/weekly.hpp"
 #include "ui/pending_offer.hpp"
+#include "testing/check.hpp"
 
 namespace fs = std::filesystem;
 using namespace bmh;
 namespace {
-void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
+using bmh::test_support::check;
 uint32_t read32(const Bytes& b, size_t at) {
     uint32_t result = 0;
     for (size_t i = 0; i < 4; ++i) result |= uint32_t(b.at(at + i)) << (8 * i);

@@ -15,12 +15,13 @@
 #include "game/pending_offer.hpp"
 #include "game/save.hpp"
 #include "game/season.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
 constexpr uint32_t offers=::bmh::layout::OfferSlots, list40=::bmh::layout::EditorList+40*0x58;
 constexpr size_t pool40=0xb70+40, board5=5*0x58;
-void check(bool v,const char* what){if(!v)throw std::runtime_error(what);}
+using bmh::test_support::check;
 uint32_t read(const std::vector<uint8_t>& b,size_t at){uint32_t v=0;for(int i=0;i<4;++i)v|=uint32_t(b.at(at+size_t(i)))<<(8*i);return v;}
 void write(std::vector<uint8_t>& b,size_t at,uint32_t v){for(int i=0;i<4;++i)b.at(at+size_t(i))=uint8_t(v>>(8*i));}
 bool contains(const GameState& g,int team,int player){const auto r=squad_range(team);for(size_t i=r.first;i<r.first+r.count;++i)if((g.squad_slots.at(i)&0xfff)==player)return true;return false;}

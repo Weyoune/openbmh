@@ -8,10 +8,11 @@
 #include "formats/savestate.hpp"
 #include "game/matchday_setup.hpp"
 #include "game/save.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool ok, const char* reason) { if (!ok) throw std::runtime_error(reason); }
+using bmh::test_support::check;
 void set_f6(app::CareerSession& session, uint64_t& revision, uint8_t value) {
     if (session.state().memory.u8(::bmh::layout::MatchdaySetup_MatchdayNeedsManagerDesks_RuntimeField) == value) return;
     std::string error;

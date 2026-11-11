@@ -4,9 +4,10 @@
 #include "app/career_session.hpp"
 #include "game/save.hpp"
 #include "ui/sportschau.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
-static void check(bool b,const char* message) {if(!b) throw std::runtime_error(message);}
+using bmh::test_support::check;
 static void word(Bytes& b,size_t at,uint16_t v) {b.at(at)=uint8_t(v);b.at(at+1)=uint8_t(v>>8);}
 
 static void controlled(const std::filesystem::path& data) {

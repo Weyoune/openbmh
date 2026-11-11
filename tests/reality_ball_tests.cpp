@@ -3,10 +3,11 @@
 #include <stdexcept>
 
 #include "game/reality_ball.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool ok,const char* text) { if (!ok) throw std::runtime_error(text); }
+using bmh::test_support::check;
 GameState state_fixture() {
     GameState state;state.players.resize(22);state.player_bonus.resize(22);state.team_morale={24,24};
     for (auto& player:state.players) { player.w35c=48u|(100u<<7)|(100u<<14);player.w368=3u|(3u<<4)|(3u<<6); }

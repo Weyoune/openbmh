@@ -1,5 +1,6 @@
 // Tests for the analytics projection, toggles and acknowledgement (ui/analytics.hpp).
 #include "../../tests/test_inputs.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "ui/analytics.hpp"
@@ -8,7 +9,7 @@
 #include <stdexcept>
 
 namespace {
-void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
+using bmh::test_support::check;
 void put32(std::vector<uint8_t>& b, size_t at, uint32_t v) {
     for (int i = 0; i < 4; ++i) b.at(at + size_t(i)) = uint8_t(v >> (i * 8));
 }

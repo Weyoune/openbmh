@@ -10,14 +10,13 @@
 #include "formats/binary.hpp"
 #include "formats/font.hpp"
 #include "formats/le.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 
 uint8_t pixel(const Image& image, int x, int y) {
     return image.pixels.at(size_t(y) * size_t(image.width) + size_t(x));

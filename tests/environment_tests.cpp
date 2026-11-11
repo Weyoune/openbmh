@@ -4,10 +4,11 @@
 #include "ui/live_timing.hpp"
 #include <iostream>
 #include <stdexcept>
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
+using bmh::test_support::check;
 GameState fixture() {
     GameState g;
     g.manager_teams = {0, 1};

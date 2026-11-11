@@ -3,11 +3,10 @@
 #include <stdexcept>
 
 #include "game/lineup.hpp"
+#include "testing/check.hpp"
 
 namespace {
-void check(bool ok, const char* what) {
-    if (!ok) throw std::runtime_error(what);
-}
+using bmh::test_support::check;
 
 bmh::GameState fixture(uint8_t style, uint8_t option, bool indoor) {
     bmh::GameState g;

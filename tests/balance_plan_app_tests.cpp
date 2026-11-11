@@ -11,10 +11,11 @@
 #include "game/balance_plan.hpp"
 #include "game/save.hpp"
 #include "ui/balance_plan.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace fs=std::filesystem;
-static void check(bool value,const char* why){if(!value)throw std::runtime_error(why);}
+using bmh::test_support::check;
 static void immediate_close(const fs::path& data,const fs::path& save){
  app::CareerSession session(data,911,save);uint64_t revision=23;std::string error;
  const int manager=session.state().memory.u8(::bmh::layout::ActiveManager);auto& records=session.state().manager_records;

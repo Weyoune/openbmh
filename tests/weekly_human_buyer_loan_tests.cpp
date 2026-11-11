@@ -12,10 +12,11 @@
 #include "game/save.hpp"
 #include "game/transfer_allocator.hpp"
 #include "game/weekly.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool value, const char* why) { if (!value) throw std::runtime_error(why); }
+using bmh::test_support::check;
 void write32(std::vector<uint8_t>& bytes, size_t at, uint32_t value) {
     for (size_t n = 0; n < 4; ++n) bytes.at(at + n) = uint8_t(value >> (n * 8));
 }

@@ -5,11 +5,10 @@
 #include <numeric>
 
 #include "ui/flow.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh::ui;
-static void check(bool condition, const char* message) {
-    if (!condition) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 
 int main(int argc, char** argv) {
     try {

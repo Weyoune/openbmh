@@ -1,4 +1,5 @@
 #include "../../tests/runtime_fixture_tables.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 // Tests for the settings screen: availability rules, edit requests, sound capabilities and the readme viewer paging.
 #include "formats/executable_layout.hpp"
@@ -20,9 +21,7 @@ using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool condition, const char* why) {
-    if (!condition) throw std::runtime_error(why);
-}
+using bmh::test_support::check;
 }
 
 int main(int argc, char** argv) try {

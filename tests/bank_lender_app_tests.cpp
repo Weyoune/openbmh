@@ -9,10 +9,11 @@
 #include "app/controller.hpp"
 #include "game/bank_credit.hpp"
 #include "game/save.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
+using bmh::test_support::check;
 
 struct TemporarySaves {
     std::filesystem::path path = std::filesystem::temp_directory_path() /

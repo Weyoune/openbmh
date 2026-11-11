@@ -3,10 +3,11 @@
 #include <stdexcept>
 
 #include "game/reality_setup.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool value, const char* text) { if (!value) throw std::runtime_error(text); }
+using bmh::test_support::check;
 void put16(Bytes& bytes,size_t at,uint16_t value) {
     bytes.at(at)=uint8_t(value);bytes.at(at+1)=uint8_t(value>>8);
 }

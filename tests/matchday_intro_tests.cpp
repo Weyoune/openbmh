@@ -7,9 +7,10 @@
 #include "game/season.hpp"
 #include "ui/sportschau.hpp"
 #include "ui/live_reality.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
-static void check(bool b,const char* why){if(!b)throw std::runtime_error(why);}
+using bmh::test_support::check;
 static MatchGroup group(uint8_t type,uint32_t id=0){MatchGroup g;g.desc.assign(0xd0,0);g.desc[0]=type;
     for(size_t i=0;i<4;++i)g.desc[0xcc+i]=uint8_t(id>>(8*i));return g;}
 static void projection_and_pixels(const std::filesystem::path& data,const std::filesystem::path& input) {

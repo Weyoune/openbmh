@@ -5,9 +5,10 @@
 
 #include <iostream>
 #include <stdexcept>
+#include "testing/check.hpp"
 
 namespace {
-void check(bool value, const char* what) { if (!value) throw std::runtime_error(what); }
+using bmh::test_support::check;
 
 bmh::ui::ClubInfoProjection projection(bool squad) {
     bmh::ui::ClubInfoProjection p;

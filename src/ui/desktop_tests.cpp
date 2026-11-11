@@ -1,5 +1,6 @@
 // Tests for the desk state projection, DesktopScreen input and request flow (ui/desktop.hpp, ui/desk_state.hpp).
 #include "../../tests/runtime_fixture_tables.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "../../tests/test_inputs.hpp"
@@ -31,7 +32,7 @@ using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
+using bmh::test_support::check;
 void rejected(const std::function<void()>& action) {
     static int index = 0; ++index;
     try { action(); } catch (const FormatError&) { return; }

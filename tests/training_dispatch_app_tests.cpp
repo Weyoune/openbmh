@@ -7,12 +7,13 @@
 #include "formats/le.hpp"
 #include "ui/flow.hpp"
 #include "ui/training.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
+using bmh::test_support::check;
 
 TrainingRequest request_for(const TrainingState& state, TrainingRequestKind kind) {
     TrainingRequest request;

@@ -1,5 +1,6 @@
 // Tests for the achievements projection and screen (ui/achievements.hpp).
 #include "../../tests/test_inputs.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "ui/achievements.hpp"
@@ -12,7 +13,7 @@
 #include "game/messages.hpp"
 
 namespace {
-void check(bool ok, const char* why) { if (!ok) throw std::runtime_error(why); }
+using bmh::test_support::check;
 }
 
 int main(int argc, char** argv) {

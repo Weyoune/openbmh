@@ -7,10 +7,11 @@
 #include <chrono>
 #include <iostream>
 #include <stdexcept>
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool ok,const char* why){if(!ok)throw std::runtime_error(why);}
+using bmh::test_support::check;
 void cash(GameState& state,int manager,int32_t value) {
     const size_t at=size_t(manager)*0xb0c+0x314;
     for(size_t n=0;n<4;++n)state.manager_records.at(at+n)=uint8_t(uint32_t(value)>>(8*n));

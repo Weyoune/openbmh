@@ -9,10 +9,11 @@
 #include "ui/live_reality.hpp"
 #include "ui/live_matchday.hpp"
 #include "ui/setup.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool value, const char* message) { if (!value) throw std::runtime_error(message); }
+using bmh::test_support::check;
 template<class F> void rejected(F f) {
     bool failed = false; try { f(); } catch (const FormatError&) { failed = true; }
     check(failed, "invalid Reality input must fail before drawing");

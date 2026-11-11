@@ -166,7 +166,7 @@ void Console::register_squad_commands() {
         });
     // Moving a player, the formations and the automatic weights: the requests the SDL pitch
     // screen builds (src/ui/pitch.cpp click / save_formation), dispatched through
-    // CareerSession::dispatch_pitch (PitchScreen pitch branch, Codex's source port).
+    // CareerSession::dispatch_pitch (PitchScreen pitch branch, the source port).
     auto pitch_context = [this] {
         const auto p = prep();
         if (!p.pitch || !p.pitch->indoor.has_value()) fail("E_ENGINE_GAP", "no pitch mode projection");

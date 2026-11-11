@@ -6,10 +6,11 @@
 #include <iostream>
 #include <set>
 #include <stdexcept>
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool value, const char* message) { if (!value) throw std::runtime_error(message); }
+using bmh::test_support::check;
 template<class F> void invalid(F action) {
     try { action(); } catch (const std::invalid_argument&) { return; }
     throw std::runtime_error("malformed fixture input was accepted");

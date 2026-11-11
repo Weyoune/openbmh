@@ -6,9 +6,10 @@
 #include "game/save.hpp"
 #include "ui/live_matchday.hpp"
 #include "ui/sportschau.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
-static void check(bool b,const char* message) { if(!b) throw std::runtime_error(message); }
+using bmh::test_support::check;
 static void same_random(const WatcomRandom& a,const WatcomRandom& b) {
     check(a.seed()==b.seed()&&a.calls()==b.calls(),"Source scene draw sequence matches existing animation functions");
 }

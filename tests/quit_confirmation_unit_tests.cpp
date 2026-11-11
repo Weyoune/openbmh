@@ -4,9 +4,10 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include "testing/check.hpp"
 
 namespace {
-void check(bool value, const char* message) { if (!value) throw std::runtime_error(message); }
+using bmh::test_support::check;
 void push(Uint32 type) {
     SDL_Event event{}; event.type = type;
     check(SDL_PushEvent(&event) == 1, "cannot enqueue authored event");

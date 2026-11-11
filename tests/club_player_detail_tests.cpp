@@ -6,10 +6,11 @@
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool value, const char* message) { if (!value) throw std::runtime_error(message); }
+using bmh::test_support::check;
 GameState fixture() {
     GameState g;
     g.manager_teams = {0}; g.manager_records.resize(5 * 0xb0c); g.tactics.resize(5 * 0x840);

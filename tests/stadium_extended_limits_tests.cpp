@@ -6,8 +6,9 @@
 #include <iostream>
 #include <numeric>
 #include <stdexcept>
+#include "testing/check.hpp"
 namespace {
-void check(bool value,const char* message){if(!value)throw std::runtime_error(message);}
+using bmh::test_support::check;
 }
 int main()try{
     using namespace bmh;

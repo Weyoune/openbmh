@@ -9,8 +9,9 @@
 #include "ui/sportschau.hpp"
 #include <iostream>
 #include <stdexcept>
+#include "testing/check.hpp"
 using namespace bmh;
-void check(bool value,const char* why){if(!value)throw std::runtime_error(why);}
+using bmh::test_support::check;
 int main(int argc,char**argv){try{
  check(argc==3,"winner tests data real-last-league-save");const std::filesystem::path data=argv[1],input=argv[2];
  app::CareerSession plain(data,8128,input),observed(data,8128,input);auto& g=observed.state();

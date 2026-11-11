@@ -1,5 +1,6 @@
 #include "runtime_fixture_tables.hpp"
 #include "test_inputs.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "ui/cup_draw.hpp"
@@ -20,7 +21,7 @@
 #include "ui/manager.hpp"
 
 namespace {
-void check(bool ok,const char* what){if(!ok)throw std::runtime_error(what);}
+using bmh::test_support::check;
 struct Native {
     bmh::GameState game; bmh::LeImage exe; bmh::TextDb texts; bmh::Bytes native_stream;
     Native(const std::filesystem::path& data,const std::filesystem::path& save)

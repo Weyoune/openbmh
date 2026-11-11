@@ -3,10 +3,11 @@
 #include <stdexcept>
 
 #include "game/reality_movement.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool ok,const char* text) { if (!ok) throw std::runtime_error(text); }
+using bmh::test_support::check;
 GameState players() {
     GameState state;state.players.resize(22);
     for (auto& player:state.players) { player.w35c=127u<<14;player.w368=3u<<3; }

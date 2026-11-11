@@ -1,4 +1,5 @@
 #include "runtime_fixture_tables.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include <algorithm>
@@ -19,7 +20,7 @@
 
 using namespace bmh;
 namespace {
-void check(bool ok,const char* message){if(!ok)throw std::runtime_error(message);}
+using bmh::test_support::check;
 struct Candidate { int player; int score; };
 }
 int main(int argc,char**argv){try{

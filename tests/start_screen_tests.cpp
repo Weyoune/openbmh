@@ -10,8 +10,9 @@
 #include <memory>
 #include <stdexcept>
 #include <vector>
+#include "testing/check.hpp"
 namespace {
-void check(bool value,const char* message){if(!value)throw std::runtime_error(message);}
+using bmh::test_support::check;
 void frame(int width,int height,const std::filesystem::path& output) {
     const std::unique_ptr<SDL_Surface,decltype(&SDL_FreeSurface)> surface(
         SDL_CreateRGBSurfaceWithFormat(0,width,height,32,SDL_PIXELFORMAT_RGBA32),SDL_FreeSurface);

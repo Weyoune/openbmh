@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
+#include "testing/check.hpp"
 // Controller/Flow integration coverage for the Source Table UI protocol.
 // These tests simulate the SDL host's real-present callback sequence; they are
 // not evidence of an actual SDL window run. The separate E37 root QA runner
@@ -23,9 +24,7 @@ using namespace bmh;
 namespace fs = std::filesystem;
 
 namespace {
-void check(bool ok, const char* message) {
-    if (!ok) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 
 struct Context {
     fs::path data;

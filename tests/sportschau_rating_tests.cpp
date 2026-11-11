@@ -5,9 +5,10 @@
 #include "game/matchday.hpp"
 #include "game/save.hpp"
 #include "game/turn.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
-static void check(bool b, const char* message) { if (!b) throw std::runtime_error(message); }
+using bmh::test_support::check;
 static void put16(Bytes& b,size_t at,uint16_t value) {b.at(at)=uint8_t(value);b.at(at+1)=uint8_t(value>>8);}
 
 static void controlled(const LeImage& exe) {

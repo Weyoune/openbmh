@@ -1,5 +1,6 @@
 // Tests for the environment view, rendering and requests (ui/environment.hpp).
 #include "../../tests/runtime_fixture_tables.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "ui/environment.hpp"
@@ -21,9 +22,7 @@ using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool ok, const char* message) {
-    if (!ok) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 uint8_t pixel(const Image& image, int x, int y) {
     return image.pixels.at(size_t(y) * size_t(image.width) + size_t(x));
 }

@@ -4,10 +4,11 @@
 #include "ui/manager.hpp"
 #include <iostream>
 #include <stdexcept>
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
-static void check(bool ok, const char* why) { if (!ok) throw std::runtime_error(why); }
+using bmh::test_support::check;
 int main(int argc,char**argv) {try {
     if(argc!=2)throw std::runtime_error("data directory required");
     const auto exe=load_le(asset_path(argv[1],"BMH.exe"));

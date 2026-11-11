@@ -1,4 +1,5 @@
 #include "runtime_fixture_tables.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include <cstdio>
@@ -11,7 +12,7 @@
 #include "game/save.hpp"
 using namespace bmh;
 namespace {
-void check(bool ok,const char* text){if(!ok)throw std::runtime_error(text);}
+using bmh::test_support::check;
 // Independent Source cursor interpreter. Unlike the product's parsed tree,
 // this walks # delimiters and skips unchosen nested expressions (legacy routine).
 size_t skip(std::string_view text,size_t at) {

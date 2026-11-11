@@ -6,9 +6,10 @@
 #include "formats/executable_layout.hpp"
 #include <iostream>
 #include <stdexcept>
+#include "testing/check.hpp"
 
 namespace {
-void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
+using bmh::test_support::check;
 void enabled(bool value) {
     auto exe = bmh::LeImage::from_bytes(bmh::layout::ForeignPlayerLimitEnabled, bmh::Bytes{uint8_t(value)});
     bmh::install_lineup_rules(exe);

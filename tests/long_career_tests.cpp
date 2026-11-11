@@ -8,9 +8,10 @@
 #include "game/matchday.hpp"
 #include "game/national.hpp"
 #include "game/save.hpp"
+#include "testing/check.hpp"
 using namespace bmh;
 namespace {
-void check(bool yes, const char* why) { if (!yes) throw std::runtime_error(why); }
+using bmh::test_support::check;
 GameState fixture() {
     GameState g; g.season = 0; g.manager_teams = {0};
     g.manager_records.resize(5 * 0xb0c); g.tactics.resize(5 * 0x840);

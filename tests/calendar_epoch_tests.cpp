@@ -8,8 +8,9 @@
 #include <iostream>
 #include <stdexcept>
 #include <utility>
+#include "testing/check.hpp"
 
-void check(bool ok,const char* message){if(!ok)throw std::runtime_error(message);}
+using bmh::test_support::check;
 bmh::LeImage image(int year,int weekday) {
     constexpr uint32_t base=0x10000;
     constexpr size_t image_size=0xb0000;

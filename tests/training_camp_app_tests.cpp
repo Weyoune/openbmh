@@ -9,12 +9,13 @@
 #include "formats/le.hpp"
 #include "game/save.hpp"
 #include "ui/flow.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool ok, const char* message) { if (!ok) throw std::runtime_error(message); }
+using bmh::test_support::check;
 
 void content_lifecycle(const std::filesystem::path& data) {
     const auto exe = load_le(data / "BMH.exe");

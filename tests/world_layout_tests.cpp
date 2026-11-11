@@ -9,13 +9,12 @@
 #include "game/schedule.hpp"
 #include "game/state.hpp"
 #include "game/world_layout.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 
 namespace {
-void check(bool value, const char* message) {
-    if (!value) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 
 // squad_range as it was written before the world layout existed (state.cpp up to 1.0.12).
 SquadRange former_squad_range(int team) {

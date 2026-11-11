@@ -11,12 +11,13 @@
 #include "game/save.hpp"
 #include "game/messages.hpp"
 #include "ui/world_cup_statistics.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool condition, const char* text) { if (!condition) throw std::runtime_error(text); }
+using bmh::test_support::check;
 
 void test_national_friendly_calendar_deadline(const std::filesystem::path& data,const std::filesystem::path& fixture) {
     for(int kind=0;kind<3;++kind) {

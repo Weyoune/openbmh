@@ -13,14 +13,13 @@
 #include <memory>
 #include <stdexcept>
 #include <utility>
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool ok, const char* message) {
-    if (!ok) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 
 std::unique_ptr<app::CareerSession> career(const std::filesystem::path& data, int manager_count) {
     auto session = std::make_unique<app::CareerSession>(data, uint32_t(0x31415926 + manager_count));

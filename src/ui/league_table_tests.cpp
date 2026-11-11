@@ -17,6 +17,7 @@
 #include "ui/desktop.hpp"
 #include "ui/manager.hpp"
 #include "ui/setup.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
@@ -24,9 +25,7 @@ using namespace bmh::ui;
 namespace {
 int counted_draws = 0;
 void count_draw(int) { ++counted_draws; }
-void check(bool ok, const char* message) {
-    if (!ok) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 void rejected(const std::function<void()>& action) {
     try { action(); } catch (const FormatError&) { return; }
     throw std::runtime_error("expected rejected league table input");

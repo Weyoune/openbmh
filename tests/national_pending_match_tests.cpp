@@ -7,9 +7,10 @@
 #include "app/career_session.hpp"
 #include "game/save.hpp"
 #include "national_coach_desk_pending_fixture.hpp"
+#include "testing/check.hpp"
 using namespace bmh;
 namespace {
-void check(bool ok,const char* why){if(!ok)throw std::runtime_error(why);}
+using bmh::test_support::check;
 auto request(const GameState& g){return PendingOfferDeskRequest{
     PendingOfferDeskRuntimeMode::normal_interactive,int(g.manager_teams.size()),int(g.memory.u8(::bmh::layout::DeskPosition))};}
 TurnAdvanceResult advance(app::CareerSession& s,uint64_t& revision){

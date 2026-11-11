@@ -19,13 +19,12 @@
 #include "game/schedule.hpp"
 #include "ui/settings.hpp"
 #include "ui/flow.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 
 namespace {
-void check(bool ok,const char* message) {
-    if(!ok) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 
 void start_career(const std::filesystem::path& data,ui::StartupFlow& flow,
                   std::unique_ptr<app::CareerSession>& session,uint64_t& revision,

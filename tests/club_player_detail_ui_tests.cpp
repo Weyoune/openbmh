@@ -5,11 +5,12 @@
 #include "ui/manager.hpp"
 #include <iostream>
 #include <stdexcept>
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
 namespace {
-void check(bool ok,const char* why){if(!ok)throw std::runtime_error(why);}
+using bmh::test_support::check;
 GameState fixture(const LeImage& exe){
     GameState g;g.manager_teams={0};g.manager_records.resize(5*0xb0c);g.manager_options.resize(20);
     g.tactics.resize(5*0x840);g.squad_slots.assign(3096,0x0fff);

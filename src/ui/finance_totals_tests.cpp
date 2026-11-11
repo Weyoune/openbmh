@@ -1,5 +1,6 @@
 // Tests for the finance totals projection (ui/finance_totals.hpp).
 #include "../../tests/runtime_fixture_tables.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "finance_totals.hpp"
@@ -15,7 +16,7 @@
 #include "ui/setup.hpp"
 
 namespace {
-void check(bool b,const char* what){if(!b)throw std::runtime_error(what);}
+using bmh::test_support::check;
 uint32_t u32(const std::vector<uint8_t>& b,size_t at){return uint32_t(b.at(at))|uint32_t(b.at(at+1))<<8|uint32_t(b.at(at+2))<<16|uint32_t(b.at(at+3))<<24;}
 uint16_t u16(const std::vector<uint8_t>& b,size_t at){return uint16_t(b.at(at))|uint16_t(b.at(at+1))<<8;}
 int32_t si32(const std::vector<uint8_t>& b,size_t at){return int32_t(u32(b,at));}

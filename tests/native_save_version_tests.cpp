@@ -7,9 +7,10 @@
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include "testing/check.hpp"
 using namespace bmh;
 namespace {
-void check(bool value,const char* why){if(!value)throw std::runtime_error(why);}
+using bmh::test_support::check;
 template<class F>void rejects(F function,const char* message){bool rejected=false;try{function();}catch(const FormatError&){rejected=true;}check(rejected,message);}
 }
 int main()try {

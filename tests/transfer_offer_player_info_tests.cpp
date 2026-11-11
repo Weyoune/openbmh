@@ -1,4 +1,5 @@
 #include "runtime_fixture_tables.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include <algorithm>
@@ -22,7 +23,7 @@
 using namespace bmh;
 namespace fs=std::filesystem;
 namespace {
-void check(bool ok,const char* why){if(!ok)throw std::runtime_error(why);}
+using bmh::test_support::check;
 struct Snapshot {
     Bytes native; GameRandom game; WatcomRandom rand; uint64_t revision;
     Snapshot(app::CareerSession& s,uint64_t rev):native(save_stream(s.state())),game(s.game()),rand(s.rand()),revision(rev){}

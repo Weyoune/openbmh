@@ -1,5 +1,6 @@
 #include "runtime_fixture_tables.hpp"
 #include "test_inputs.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include <algorithm>
@@ -21,7 +22,7 @@
 #include "ui/strengths_state.hpp"
 using namespace bmh; namespace fs=std::filesystem;
 namespace {
-void check(bool b,const char* why){if(!b)throw std::runtime_error(why);}
+using bmh::test_support::check;
 template<class F> void rejects(F f,const char* why){bool rejected=false;try{f();}catch(const std::exception&){rejected=true;}check(rejected,why);}
 struct Oracle {uint32_t w;int32_t g;uint64_t wc,gc;
  void stir(){++wc;w=w*0x41c64e6du+0x3039;const int n=int(((w>>16)&32767)*201u/32768)+100;

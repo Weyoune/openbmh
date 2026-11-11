@@ -4,10 +4,11 @@
 #include <stdexcept>
 
 #include "game/reality_space.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool value,const char* text) { if (!value) throw std::runtime_error(text); }
+using bmh::test_support::check;
 void player(RealitySetup& scene,int id,int x,int y) {
     check(scene.grid.place(id,x,y,id/11),"fixture player placement");
     scene.motion.figures[size_t(id)]={true,x,y,x,y,0};

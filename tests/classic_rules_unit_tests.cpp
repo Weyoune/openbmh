@@ -7,7 +7,8 @@
 #include <filesystem>
 #include <iostream>
 #include <stdexcept>
-void check(bool v,const char* m){if(!v)throw std::runtime_error(m);}
+#include "testing/check.hpp"
+using bmh::test_support::check;
 int main()try {
     using namespace bmh;
     constexpr uint32_t image_base=0x10000;

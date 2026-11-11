@@ -10,12 +10,13 @@
 #include "formats/textd.hpp"
 #include "game/pending_offer.hpp"
 #include "game/save.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
 constexpr uint32_t kOffers=::bmh::layout::OfferSlots, kOrder=::bmh::layout::NextDeskManager, kPosition=::bmh::layout::DeskPosition;
 constexpr size_t kPool40=0xb70+40, kClickedBoard=5*0x58;
-void check(bool ok,const char* message){if(!ok)throw std::runtime_error(message);}
+using bmh::test_support::check;
 uint32_t read32(const std::vector<uint8_t>& bytes,size_t at){uint32_t v=0;for(int i=0;i<4;++i)v|=uint32_t(bytes.at(at+size_t(i)))<<(8*i);return v;}
 PendingOfferDeskRequest request(const GameState& g,int position=0,
     PendingOfferDeskRuntimeMode mode=PendingOfferDeskRuntimeMode::normal_interactive){

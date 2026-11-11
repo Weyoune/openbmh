@@ -12,13 +12,12 @@
 #include "game/schedule.hpp"
 #include "game/state.hpp"
 #include "game/messages.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh::ui;
 
 namespace {
-void check(bool ok, const char* message) {
-    if (!ok) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 
 FriendlyMatchState fixture(const std::filesystem::path& data) {
     FriendlyMatchState state;

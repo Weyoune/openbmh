@@ -18,14 +18,13 @@
 #include "game/national.hpp"
 #include "ui/flow.hpp"
 #include "ui/manager.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 
 namespace {
 
-void check(bool value, const char* message) {
-    if (!value) throw std::runtime_error(message);
-}
+using bmh::test_support::check;
 
 GameState empty_game(std::vector<int> managers = {0}) {
     GameState g;

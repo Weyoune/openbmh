@@ -4,10 +4,11 @@
 #include <iostream>
 #include <limits>
 #include <stdexcept>
+#include "testing/check.hpp"
 
 using namespace bmh;
 namespace {
-void check(bool ok,const char* message){if(!ok)throw std::runtime_error(message);}
+using bmh::test_support::check;
 void write(GameState& state,size_t at,int32_t value) {
     for(int byte=0;byte<4;++byte)state.manager_records.at(at+byte)=uint8_t(uint32_t(value)>>(byte*8));
 }

@@ -1,4 +1,5 @@
 #include "test_inputs.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include "formats/league_visibility.hpp"
@@ -47,7 +48,7 @@ using namespace bmh;
 using namespace bmh::ui;
 
 namespace {
-void check(bool value, const char* message) { if (!value) throw std::runtime_error(message); }
+using bmh::test_support::check;
 
 uint8_t session_runtime_byte(const GameState& state,const std::map<uint32_t,uint8_t>& runtime,uint32_t address) {
     if(state.memory.has(address))return state.memory.u8(address);

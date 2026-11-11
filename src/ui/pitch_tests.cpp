@@ -10,11 +10,12 @@
 #include "formats/fbm.hpp"
 #include "formats/savestate.hpp"
 #include "game/state.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
 namespace {
-void check(bool ok,const char* message){if(!ok)throw std::runtime_error(message);}
+using bmh::test_support::check;
 void rejected(const std::function<void()>& fn){try{fn();}catch(const FormatError&){return;}throw std::runtime_error("expected pitch rejection");}
 LineupState lineup(){LineupState s;s.manager_slot=0;s.runtime_club=12;s.revision=7;s.source="engine_projection";
     s.club_name="UNITFC";s.entry_prepared=true;s.view=LineupView::data_b;

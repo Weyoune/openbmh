@@ -7,8 +7,9 @@
 #include "ui/manager.hpp"
 #include <iostream>
 #include <stdexcept>
+#include "testing/check.hpp"
 namespace {
-void check(bool ok,const char* why){if(!ok)throw std::runtime_error(why);}
+using bmh::test_support::check;
 void put16(bmh::Bytes& b,uint32_t base,uint32_t a,uint16_t x){b.at(a-base)=uint8_t(x);b.at(a-base+1)=uint8_t(x>>8);}
 void rec(bmh::GameState&g,int team,uint16_t points,uint16_t gf,uint16_t ga,uint16_t w,uint16_t d,uint16_t l){size_t p=size_t(team)*0x4a+0x1e;for(auto [o,v]:{std::pair{0,points},std::pair{2,gf},std::pair{4,ga},std::pair{6,w},std::pair{8,d},std::pair{10,l}}){g.club_table[p+o]=uint8_t(v);g.club_table[p+o+1]=uint8_t(v>>8);}}
 }

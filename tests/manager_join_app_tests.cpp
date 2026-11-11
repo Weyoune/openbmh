@@ -5,11 +5,12 @@
 #include <stdexcept>
 #include "app/controller.hpp"
 #include "game/save.hpp"
+#include "testing/check.hpp"
 
 using namespace bmh;
 using namespace bmh::ui;
 namespace {
-void check(bool value, const char* message) { if (!value) throw std::runtime_error(message); }
+using bmh::test_support::check;
 struct Harness {
     std::filesystem::path data, saves;
     StartupFlow flow;

@@ -1,4 +1,5 @@
 #include "test_inputs.hpp"
+#include "testing/check.hpp"
 // SPDX-License-Identifier: GPL-3.0-only
 #include "formats/executable_layout.hpp"
 #include <cstdio>
@@ -7,7 +8,7 @@
 #include "ui/reality_reporter.hpp"
 using namespace bmh;
 namespace {
-void check(bool ok,const char* text){if(!ok)throw std::runtime_error(text);}
+using bmh::test_support::check;
 Image background(){Image image(320,240);for(int y=0;y<240;++y)for(int x=0;x<320;++x)image.at(x,y)=uint8_t((x+3*y)%47);return image;}
 }
 int main(int argc,char** argv){try{
