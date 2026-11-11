@@ -138,7 +138,7 @@ void store_replays(GameState& g, int day) {
         if (mem.u16(at) != day) continue;
         const uint16_t r = mem.u16(kReplayResults + uint32_t(k++) * 2);
         const uint8_t result = uint8_t(((r >> 5) << 4) | (r & 0xf));
-        g.results.at(size_t(mem.u8(at + 4)) + size_t(mem.u8(at + 2)) * 10 + size_t(mem.u8(at + 3)) * 0x17C) = result;
+        g.results.at(size_t(mem.u8(at + 4)) + size_t(mem.u8(at + 2)) * 10 + size_t(mem.u8(at + 3)) * kLeagueResultsStride) = result;
         mem.set16(at, 0);
     }
     remove_competition(mem, 9);

@@ -593,7 +593,7 @@ DeskState desk_from_game(const GameState& g, const LeImage& exe, uint64_t revisi
                 } else if (type == 0 && league >= 0 &&
                            league < int(g.league_rounds.size())) {
                     const int round = int(g.league_rounds[size_t(league)]);
-                    const size_t result_at = size_t(league) * 0x17c +
+                    const size_t result_at = size_t(league) * kLeagueResultsStride +
                                              size_t(round) * 10 + match;
                     if (round >= 0 && result_at < g.results.size()) {
                         has_result = true;

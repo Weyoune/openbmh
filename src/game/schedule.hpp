@@ -29,6 +29,7 @@
 #include <string>
 #include <vector>
 
+#include "game/records.hpp"
 #include "game/world_layout.hpp"
 
 namespace bmh {
@@ -81,7 +82,9 @@ std::vector<Fixture> league_fixtures(int league, int matchday);
 std::vector<Fixture> generate_fixtures(int teams, int matchday, int rounds, int first_team);
 
 constexpr uint8_t kNotPlayed = 0xCC;
+// (one league's part of the block is kLeagueResultsStride bytes, records.hpp)
 constexpr size_t kResultsSize = 0xD5C;
+static_assert(kResultsSize == size_t(kLeagueCount) * kLeagueResultsStride, "the results block holds every league");
 
 struct Result {
     bool played = false;
@@ -97,7 +100,7 @@ inline Result decode_result(uint8_t v) {
 
 // Index into the results block for a league match.
 inline size_t result_index(int league, int matchday, int match) {
-    return size_t(league) * 0x17C + size_t(matchday - 1) * 10 + size_t(match);
+    return size_t(league) * kLeagueResultsStride + size_t(matchday - 1) * 10 + size_t(match);
 }
 
 }  // namespace bmh

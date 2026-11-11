@@ -32,6 +32,23 @@ The current game model combines interpreted vectors with fixed-layout compatibil
 
 Legacy saves serialize blocks in a fixed order and store name pools separately. Runtime UI owners, pending input and frontend capabilities are not additional save fields. See [FBM](formats/FBM.md), [state records](formats/STATE.md) and [RNG](RNG.md).
 
+## World layout
+
+The dimensions of the game world are described in one place, `src/game/world_layout.hpp`, instead of as numbers spread over the engine:
+
+- `WorldLayout` holds the team id ranges (league clubs, amateur clubs, foreign cup clubs without squads, the pseudo team "no club", national teams) and the squad slot table with the player pools behind it.
+- `LeagueSystem` holds the league structure of the loaded game: league sizes, calendar groups, promotion ladder, European places and the cup structure. The session installs it from the tables of the game version, so the same engine runs the German and the English data.
+- `src/game/records.hpp` names the sizes of the fixed records (manager record, tactics board, club record).
+
+OpenBMH Classic only ever uses `classic_world_layout()`, which returns the numbers of the original; a test compares them and the squad table with the former literals. Code asks `world_layout()` and `league_system()` rather than writing 138 or 168.
+
+This is a parameterisation, not yet a larger world. Still fixed, and to be lifted for an edition with more leagues:
+
+- the number of leagues (`kLeagueCount`) and of calendar groups (eight competition bits),
+- the results block (one fixed stride per league, `kLeagueResultsStride`) and the other save blocks sized for the Classic world; the save format is unchanged and a larger world needs a format of its own,
+- the id of "no club" as a compile-time constant (`kNoTeam`), five manager records, and some stack tables sized for the Classic club count,
+- the per-club tables of the loaded state, whose sizes are checked against the Classic numbers.
+
 ## Public interfaces and validation
 
 The [console reference](CLI_CONCEPT/README.md) documents window commands. [protocol.md](protocol.md) describes structured requests, and [CONSOLE_CLIENTS.md](CONSOLE_CLIENTS.md) explains safe client ownership and batching. Prefer shared projections/actions when adding another frontend.

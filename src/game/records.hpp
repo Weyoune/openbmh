@@ -16,5 +16,8 @@ constexpr size_t kTacticsBoardSize = 0x840;
 constexpr size_t kTacticsBoardSlotSize = 0x58;
 // The league record of a club (*ClubSeasonRecords), one per club with league records.
 constexpr size_t kClubRecordSize = 0x4a;
+// One league's part of the results block (LeagueResults, schedule.hpp): 38 matchdays x 10 matches,
+// whatever the size of the league.
+constexpr size_t kLeagueResultsStride = 0x17C;
 
 }  // namespace bmh

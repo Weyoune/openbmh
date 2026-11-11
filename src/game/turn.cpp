@@ -202,7 +202,7 @@ void finish_event(GameState& g, std::vector<MatchGroup>& groups, uint16_t calend
         if (id < 0x15) {
             if (league_screen_shown(buttons, 1, 90, int(id))) stir_random(game, rand);
             const int round = g.league_rounds.at(id);
-            for (int m = 0; m < grp.matches(); m++) g.results.at(size_t(id) * 0x17C + size_t(round) * 10 + size_t(m)) = grp.results.at(size_t(m));
+            for (int m = 0; m < grp.matches(); m++) g.results.at(size_t(id) * kLeagueResultsStride + size_t(round) * 10 + size_t(m)) = grp.results.at(size_t(m));
         } else {
             store_cup_results(g, grp);
         }

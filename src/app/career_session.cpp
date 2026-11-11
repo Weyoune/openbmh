@@ -157,7 +157,7 @@ void initialize_saved_match_group(MatchGroup& group, const GameState& state, siz
         group.fixtures.push_back(fixture.home);
         group.fixtures.push_back(fixture.away);
     }
-    const size_t result_at = size_t(league) * 0x17c + size_t(round) * 10;
+    const size_t result_at = size_t(league) * kLeagueResultsStride + size_t(round) * 10;
     if (result_at + fixtures.size() > state.results.size())
         throw std::runtime_error("saved turn cursor: league result block is incomplete");
     group.results.assign(state.results.begin() + long(result_at),
@@ -365,7 +365,7 @@ void initialize_saved_replay_group(MatchGroup& group, GameState& state, size_t i
             league_first_team(league));
         if (match >= int(fixtures.size()))
             throw std::runtime_error("saved replay record has no corresponding fixture");
-        const size_t result = size_t(league) * 0x17c + size_t(round) * 10 + size_t(match);
+        const size_t result = size_t(league) * kLeagueResultsStride + size_t(round) * 10 + size_t(match);
         if (result >= state.results.size() || state.results[result] != kPostponedMark)
             throw std::runtime_error("saved replay record has no postponed result marker");
         const uint32_t key = (uint32_t(league) << 16) | (uint32_t(round) << 8) | uint32_t(match);
@@ -1828,7 +1828,7 @@ std::optional<CareerSession::LiveOverviewProjection> CareerSession::open_phase_r
         for (const auto& group : turn_driver_.groups) {
             const uint32_t id = le32(group.desc, 0xcc);
             if (id < 0x15) {
-                const size_t at = size_t(id)*0x17c + size_t(entered.league_rounds.at(id))*10;
+                const size_t at = size_t(id)*kLeagueResultsStride + size_t(entered.league_rounds.at(id))*10;
                 for (size_t m = 0; m < group.results.size(); ++m)
                     entered.results.at(at+m) = group.results[m];
             } else store_cup_results(entered, group);
@@ -7747,7 +7747,7 @@ std::optional<int> CareerSession::prepared_lineup_opponent(int manager_slot, int
                     raw_result = group.results[size_t(match)];
                 } else if (league >= 0 && league < int(g_.league_rounds.size())) {
                     const int round = int(g_.league_rounds[size_t(league)]);
-                    const size_t result_at = size_t(league) * 0x17c + size_t(round) * 10 + size_t(match);
+                    const size_t result_at = size_t(league) * kLeagueResultsStride + size_t(round) * 10 + size_t(match);
                     if (round >= 0 && result_at < g_.results.size()) {
                         has_result = true;
                         raw_result = g_.results[result_at];

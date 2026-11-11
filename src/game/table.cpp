@@ -111,7 +111,7 @@ LeagueTable compute_league_table(const GameState& g, int league, int from, int t
         std::vector<Fixture> fx = generate_fixtures(league_table_teams(league), r + 1, matchdays / 2, first_team);
         bool counted = false;
         for (size_t i = 0; i < fx.size(); i++) {
-            uint8_t b = g.results.at(size_t(league) * 0x17C + size_t(r) * 10 + i);
+            uint8_t b = g.results.at(size_t(league) * kLeagueResultsStride + size_t(r) * 10 + i);
             int club[2] = {fx[i].home - first_team, fx[i].away - first_team};
             if ((b & 0xCC) == 0xCC) {
                 if (b == 0xCD)

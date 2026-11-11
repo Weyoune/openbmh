@@ -36,7 +36,7 @@ constexpr size_t kFloodlights = 0x0e;  // manager record byte (RescheduleRuntime
 // leagues of 12 clubs bit 4; compare league_system().group_first in matchday_setup.cpp).
 // (league_system().calendar_bit: schedule.hpp, set from the groups of the loaded game; 0xff = not played)
 
-size_t result_at(int league, int round, int match) { return size_t(match) + size_t(round) * 10 + size_t(league) * 0x17c; }
+size_t result_at(int league, int round, int match) { return size_t(match) + size_t(round) * 10 + size_t(league) * kLeagueResultsStride; }
 
 bool memory_ok(const GameState& g) {
     return g.memory.has(kCalendar + kCalendarDays * 2 - 1) &&

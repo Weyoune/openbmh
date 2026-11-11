@@ -287,7 +287,7 @@ bool schedule_replay(GameState& g, int day, int league, int m, int slot, int rou
             g.memory.set8(at + 2, uint8_t(round));
             g.memory.set8(at + 3, uint8_t(league));
             g.memory.set8(at + 4, uint8_t(m));
-            g.results.at(size_t(m) + size_t(round) * 10 + size_t(league) * 0x17C) = kPostponedMark;
+            g.results.at(size_t(m) + size_t(round) * 10 + size_t(league) * kLeagueResultsStride) = kPostponedMark;
             g.memory.set8(kCalendar + uint32_t(date) * 2 + 1, g.memory.u8(kCalendar + uint32_t(date) * 2 + 1) | 0x40);
             return true;
         }
@@ -312,7 +312,7 @@ void winter_postponements(GameState& g, int day, int league, GameRandom& game, W
         for (int slot = 0; slot < kPostponedEntries; slot++) {
             if (g.memory.u16(kPostponed + uint32_t(slot) * 6) != 0) continue;
             const int m = rand.range(0, league_system().sizes[league] / 2 - 1);
-            if ((g.results.at(size_t(m) + size_t(round) * 10 + size_t(league) * 0x17C) & 0xcf) == 0xcc &&
+            if ((g.results.at(size_t(m) + size_t(round) * 10 + size_t(league) * kLeagueResultsStride) & 0xcf) == 0xcc &&
                 schedule_replay(g, day, league, m, slot, round, game)) {
                 count--;
                 break;
@@ -510,7 +510,7 @@ bool matchday_needs_manager_desks(const GameState& g, uint16_t calendar_entry,
         const uint32_t competition = rd32(group.desc, 0xcc);
         for (size_t fixture = 0; fixture < size_t(group.matches()); ++fixture) {
             if (competition < 0x14) {
-                const size_t result = size_t(competition) * 0x17c +
+                const size_t result = size_t(competition) * kLeagueResultsStride +
                     size_t(g.league_rounds.at(competition)) * 10 + fixture;
                 if (g.results.at(result) != 0xcc) continue;
             } else if (int8_t(mem.u8(competition + 0x18) + 5) >= 0x1e) {
@@ -578,7 +578,7 @@ std::vector<MatchGroup> setup_matchday(GameState& g, uint32_t competitions, cons
                     grp.fixtures.push_back(f.home);
                     grp.fixtures.push_back(f.away);
                 }
-                const size_t at = size_t(league) * 0x17C + size_t(round) * 10;
+                const size_t at = size_t(league) * kLeagueResultsStride + size_t(round) * 10;
                 for (int m = 0; m < size / 2; m++) {
                     uint8_t& r = g.results.at(at + size_t(m));
                     if ((r & 0xCF) == 0xCE) r = 0xCD;  // postponed -> to be replayed later
@@ -1006,7 +1006,7 @@ void kick_off(GameState& g, std::vector<MatchGroup>& groups, const MatchdayConte
             grp.cup_results.assign(size_t(n), 0);
         } else {
         grp.results.assign(size_t(n), 0);
-        const size_t at = size_t(league) * 0x17C + size_t(g.league_rounds.at(size_t(league))) * 10;
+        const size_t at = size_t(league) * kLeagueResultsStride + size_t(g.league_rounds.at(size_t(league))) * 10;
         for (int m = 0; m < n; m++) {
             uint8_t& r = g.results.at(at + size_t(m));
             if (r == 0xCC)
@@ -1053,7 +1053,7 @@ void kick_off(GameState& g, std::vector<MatchGroup>& groups, const MatchdayConte
                 const int home_goals = forfeit_side == 0 ? 0 : 2;
                 const int away_goals = forfeit_side == 0 ? 2 : 0;
                 if (grp.desc.at(0) == 0) {
-                    const size_t at = size_t(league) * 0x17C +
+                    const size_t at = size_t(league) * kLeagueResultsStride +
                                       size_t(g.league_rounds.at(size_t(league))) * 10 + size_t(m);
                     const uint8_t score = uint8_t((home_goals << 4) | away_goals);
                     g.results.at(at) = score;
@@ -1149,7 +1149,7 @@ namespace {
 void raw_score(const GameState& g, const MatchGroup& grp, int m, int& home, int& away) {
     if (grp.desc.at(0) == 0) {
         const int league = int(le32(grp.desc, 0xcc));
-        const uint8_t r = g.results.at(size_t(league) * 0x17C + size_t(g.league_rounds.at(size_t(league))) * 10 + size_t(m));
+        const uint8_t r = g.results.at(size_t(league) * kLeagueResultsStride + size_t(g.league_rounds.at(size_t(league))) * 10 + size_t(m));
         home = r >> 4, away = r & 0xF;
     } else {
         const uint16_t r = grp.cup_results.at(size_t(m));
