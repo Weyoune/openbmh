@@ -132,9 +132,21 @@ endif()
 # string literals. (Until 1.0.12 the MSVC build compiled these sources again for every
 # consumer, which cost most of the build time; controller.cpp then got /utf-8 only from
 # targets that set it.)
-add_library(bmh_app_session OBJECT src/app/career_session.cpp src/app/window_actions.cpp src/app/desktop_actions.cpp)
+# The career session is defined by topic in career_session*.cpp (the class: src/app/career_session.hpp).
+set(BMH_APP_SESSION_SOURCES
+    src/app/career_session.cpp
+    src/app/career_session_club.cpp
+    src/app/career_session_league.cpp
+    src/app/career_session_statistics.cpp
+    src/app/career_session_transfer.cpp
+    src/app/career_session_desk.cpp
+    src/app/career_session_match.cpp
+    src/app/career_session_management.cpp
+    src/app/window_actions.cpp
+    src/app/desktop_actions.cpp)
+add_library(bmh_app_session OBJECT ${BMH_APP_SESSION_SOURCES})
 target_link_libraries(bmh_app_session PRIVATE bmhui)
-add_library(bmh_app_session_sdl OBJECT src/app/career_session.cpp src/app/window_actions.cpp src/app/desktop_actions.cpp)
+add_library(bmh_app_session_sdl OBJECT ${BMH_APP_SESSION_SOURCES})
 target_link_libraries(bmh_app_session_sdl PRIVATE bmhui openbmh_audio ${BMH_SDL_TARGET})
 add_library(bmh_app_controller_sdl OBJECT src/app/controller.cpp)
 target_link_libraries(bmh_app_controller_sdl PRIVATE bmhui openbmh_audio ${BMH_SDL_TARGET})
