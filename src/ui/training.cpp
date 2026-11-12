@@ -63,7 +63,7 @@ TrainingState project(const StaticMemory& memory, const Bytes& records, const By
     if (s.runtime_club < 0 || s.runtime_club >= max16) throw FormatError("training: national/cup-only squad unsupported");
     s.squad_capacity = s.runtime_club < max24 ? 24 : 16;
     const size_t first = size_t(s.runtime_club < max24 ? s.runtime_club * 24 : s.runtime_club * 16 + max24 * 8);
-    const size_t manager = size_t(s.manager_slot) * 0xb0c, board = size_t(s.manager_slot) * 0x840;
+    const size_t manager = size_t(s.manager_slot) * kManagerRecordSize, board = size_t(s.manager_slot) * 0x840;
     if (records.size() < manager + 0xb0c || tactics.size() < board + size_t(s.squad_capacity) * 0x58 ||
         options.size() < size_t(s.manager_slot + 1) * 5 || squads.size() < first + size_t(s.squad_capacity))
         throw FormatError("training: truncated manager/squad tables");
@@ -117,7 +117,7 @@ TrainingState training_from_save(const SaveState& save, const LeImage& exe, uint
     std::vector<Player> players;
     for (size_t at = 0; at < w1.size(); at += 4) players.push_back({{}, le32(w1, at), le32(w2, at), le32(w3, at)});
     std::vector<int> teams;
-    for (int slot = 0; slot < memory.u8(::bmh::layout::ManagerCount); ++slot) teams.push_back(le16(records, size_t(slot) * 0xb0c + 0x290));
+    for (int slot = 0; slot < memory.u8(::bmh::layout::ManagerCount); ++slot) teams.push_back(le16(records, size_t(slot) * kManagerRecordSize + 0x290));
     auto state = project(memory, records, tactics, options, teams, words(block_copy(save, ::bmh::layout::SquadSlots)), players,
                          words(block_copy(save, ::bmh::layout::ClubIdentities)), save.pool(0), words(block_copy(save, ::bmh::layout::PlayerNameOffsets)), save.pool(1), exe, revision);
     state.source = "original_save_read_only"; return state;

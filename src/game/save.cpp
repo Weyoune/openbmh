@@ -153,7 +153,7 @@ Bytes save_header(const GameState& g) {
     for (size_t i = 0; i < 11; i++) h.push_back(i < date.size() ? uint8_t(date[i]) : 0);
     Bytes list(0xa0, 0);
     for (int m = 0; m < managers && m < 4; m++) {
-        const size_t rec = size_t(m) * 0xb0c;
+        const size_t rec = size_t(m) * kManagerRecordSize;
         const int team = int16_t(g.manager_records.at(rec + 0x290) | g.manager_records.at(rec + 0x291) << 8);
         const bool national = team == kNoTeam;
         const size_t at = size_t(m) * 0x28;

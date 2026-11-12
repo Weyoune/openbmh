@@ -104,7 +104,7 @@ const char* request_name(LineupRequestKind kind) {
 LineupState lineup_from_save(const SaveState& s,const LeImage& exe,uint64_t revision) {
     StaticMemory memory(s); auto managers=block(s,::bmh::layout::ManagerRecords);
     std::vector<int> teams;
-    for(int i=0;i<memory.u8(::bmh::layout::ManagerCount);++i) teams.push_back(le16(managers,size_t(i)*0xb0c+0x290));
+    for(int i=0;i<memory.u8(::bmh::layout::ManagerCount);++i) teams.push_back(le16(managers,size_t(i)*kManagerRecordSize+0x290));
     auto w1=block(s,::bmh::layout::PlayerConditionTechniqueForm),w2=block(s,::bmh::layout::PlayerSkillWords),w3=block(s,::bmh::layout::PlayerIdentityWords);
     if(w1.size()!=w2.size()||w1.size()!=w3.size()||w1.size()%4) throw FormatError("lineup: inconsistent player tables");
     std::vector<Player> players;

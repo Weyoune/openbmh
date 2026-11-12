@@ -118,7 +118,7 @@ PlayerCardState player_card_from_save(const SaveState& s,const LeImage& exe,int 
     for(size_t at=0;at<offsets.size();at+=2)names.push_back(le16(offsets,at));
     auto out=project(lineup_from_save(s,exe,revision),exe,row,block(s,::bmh::layout::ClubBadgeSelectors),names,s.pool(0),block(s,::bmh::layout::ClubShortNameOffsets));
     context(out,StaticMemory(s),block(s,::bmh::layout::ClubBadgeSelectors),names,s.pool(0),block(s,::bmh::layout::ClubShortNameOffsets));
-    out.statistics=PlayerStatisticsContext{s.data(::bmh::layout::ManagerRecords)[size_t(out.lineup.manager_slot)*0xb0c+0x286],
+    out.statistics=PlayerStatisticsContext{s.data(::bmh::layout::ManagerRecords)[size_t(out.lineup.manager_slot)*kManagerRecordSize+0x286],
         s.data(::bmh::layout::Flags)[size_t(out.lineup.manager_slot)*3+2]};
     validate(out);
     // layout field checks available heap; the Linux renderer has enough memory and
@@ -130,7 +130,7 @@ PlayerCardState player_card_from_game(const GameState& g,const LeImage& exe,int 
     for(int club=0;club<exe.u16(::bmh::layout::CareerSession_DataDirectory_RuntimeField2);++club)short_names.push_back(g.memory.u8(::bmh::layout::ClubShortNameOffsets+club));
     auto out=project(lineup_from_game(g,exe,revision),exe,row,g.club_heap_78,g.club_ids,g.club_names,short_names);
     context(out,g.memory,g.club_heap_78,g.club_ids,g.club_names,short_names);
-    const size_t months=size_t(out.lineup.manager_slot)*0xb0c+0x286;
+    const size_t months=size_t(out.lineup.manager_slot)*kManagerRecordSize+0x286;
     const uint32_t flags=::bmh::layout::Flags+uint32_t(out.lineup.manager_slot)*3+2;
     if(months<g.manager_records.size() && g.memory.has(flags))
         out.statistics=PlayerStatisticsContext{g.manager_records[months],g.memory.u8(flags)};

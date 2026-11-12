@@ -197,7 +197,7 @@ DeskState project(const StaticMemory& memory, const Tables& t, const LeImage& ex
             throw FormatError("desk: invalid manager identity");
         d.managers.push_back(std::move(identity));
     }
-    const size_t base = size_t(d.manager_slot) * 0xb0c;
+    const size_t base = size_t(d.manager_slot) * kManagerRecordSize;
     if (t.managers.size() < base + 0xb0c || t.options.size() < size_t(d.manager_slot + 1) * 5)
         throw FormatError("desk: truncated manager records/options");
     d.runtime_club = t.teams.at(d.manager_slot);
@@ -516,7 +516,7 @@ DeskState desk_from_save(const SaveState& s, const LeImage& exe, uint64_t revisi
     if (w1.size() != w2.size() || w1.size() != w3.size() || w1.size() % 4) throw FormatError("desk: inconsistent player tables");
     for (size_t at = 0; at < w1.size(); at += 4) players.push_back({{}, le32(w1, at), le32(w2, at), le32(w3, at)});
     std::vector<int> teams;
-    for (int i = 0; i < memory.u8(::bmh::layout::ManagerCount); ++i) teams.push_back(word(manager, size_t(i) * 0xb0c + 0x290));
+    for (int i = 0; i < memory.u8(::bmh::layout::ManagerCount); ++i) teams.push_back(word(manager, size_t(i) * kManagerRecordSize + 0x290));
     auto rounds = block_copy(s, ::bmh::layout::LeagueRoundCounters);
     auto d = project(memory, {manager, tactics, options, stocks, badges, s.pool(0), offsets, squads, players, morale, teams, rounds},
                      exe, memory.u8(::bmh::layout::Difficulty), memory.u32(::bmh::layout::CalendarDay), memory.u16(::bmh::layout::DaysIntoSeason), int16_t(memory.u16(::bmh::layout::SeasonIndex)), revision);
@@ -618,7 +618,7 @@ DeskState desk_from_game(const GameState& g, const LeImage& exe, uint64_t revisi
           }
         }
         if (d.next_opponent && *d.next_opponent >= 0) {
-            const size_t manager_record = size_t(d.manager_slot) * 0xb0c;
+            const size_t manager_record = size_t(d.manager_slot) * kManagerRecordSize;
             d.next_match_away = manager_record + 0x28a < g.manager_records.size() &&
                 g.manager_records[manager_record + 0x28a] != 0;
         }

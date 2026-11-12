@@ -1318,7 +1318,7 @@ bool CareerSession::dispatch_menu_layout(const ui::SaveLoadRequest& request, uin
     std::transform(extension.begin(), extension.end(), extension.begin(),
                    [](unsigned char c) { return char(std::tolower(c)); });
     if (extension != ".men") { error = "invalid_menu_layout_extension"; return false; }
-    const size_t active_base = size_t(request.manager_slot) * 0xb0c;
+    const size_t active_base = size_t(request.manager_slot) * kManagerRecordSize;
     if (active_base + 0xb0c > g_.manager_records.size() ||
         size_t(request.manager_slot) >= g_.manager_teams.size() ||
         (int(g_.manager_records[active_base + 0x290]) |

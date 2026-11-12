@@ -1815,7 +1815,7 @@ void move_to_deposit(GameState& g, int manager, int32_t amount) {
 }
 
 void open_lineup_screen(GameState& g, int manager) {
-    uint8_t* rec = &g.manager_records.at(size_t(manager) * 0xb0c);
+    uint8_t* rec = &g.manager_records.at(size_t(manager) * kManagerRecordSize);
     if ((rec[0xb0a] | rec[0xb0b] << 8) == 0x3253) return;
     for (int i = 0; i < 4; i++) rec[0xafc + i] = 0;
     rec[0xb08] = 0, rec[0xb09] = 0, rec[0xb0a] = 0x53, rec[0xb0b] = 0x32;

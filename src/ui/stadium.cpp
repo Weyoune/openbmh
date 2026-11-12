@@ -318,7 +318,7 @@ StadiumState stadium_from_game(const GameState& game, const LeImage& exe, uint64
                                int construction_percent) {
     const int manager = int(game.memory.u8(::bmh::layout::ActiveManager));
     // Each manager has a fixed 0xb0c-byte record in manager_records; all record offsets below are relative to it.
-    const size_t record = size_t(manager) * 0xb0c;
+    const size_t record = size_t(manager) * kManagerRecordSize;
     if (size_t(manager) >= game.manager_teams.size() || record + 0x5d > game.manager_records.size())
         throw FormatError("stadium: invalid active manager or truncated record");
     StadiumState state;
@@ -413,7 +413,7 @@ StadiumDataProjection stadium_data_from_game(const GameState& game, const LeImag
     if (manager < 0 || manager > 4) throw FormatError("stadium data: invalid manager");
     StadiumDataProjection out;
     out.flags = flags;
-    const size_t at = size_t(manager) * 0xb0c;
+    const size_t at = size_t(manager) * kManagerRecordSize;
     const auto& r = game.manager_records;
     out.ticket_price = r.at(at + 0x26e);
     // Curves: the executable assigns each curve a history selector (0..3) whose record counter gives the

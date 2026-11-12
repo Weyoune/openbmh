@@ -69,7 +69,7 @@ void copy_region(Image& target, const Image& source, int sx, int sy, int x, int 
 BankState bank_from_game(const GameState& g, const LeImage& exe, uint64_t revision) {
     const int manager = int(g.memory.u8(::bmh::layout::ActiveManager));
     if (manager < 0 || size_t(manager) >= g.manager_teams.size()) throw FormatError("bank: invalid active manager");
-    const size_t record = size_t(manager) * 0xb0c;
+    const size_t record = size_t(manager) * kManagerRecordSize;
     if (record + 0x328 > g.manager_records.size()) throw FormatError("bank: truncated manager record");
     BankState state;
     state.manager_slot = manager;
@@ -92,7 +92,7 @@ BankState bank_from_game(const GameState& g, const LeImage& exe, uint64_t revisi
         throw FormatError("bank: unsupported configured manager count");
     for (int slot = 0; slot < configured_managers && state.credit_lenders.size() < 3; ++slot) {
         if (slot == manager) continue;
-        const size_t lender_record = size_t(slot) * 0xb0c;
+        const size_t lender_record = size_t(slot) * kManagerRecordSize;
         if (lender_record + 0x314 > g.manager_records.size())
             throw FormatError("bank: truncated lender manager record");
         const auto lender_end = std::find(g.manager_records.begin() + lender_record + 0xa8,

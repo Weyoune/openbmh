@@ -71,9 +71,9 @@ std::string friendly_status_message(FriendlyBookingStatus status) {
 // from the manager record and club table of the game state. Throws FormatError when the
 // manager slot or its record is missing.
 ui::NationalFriendlyIdentity national_friendly_identity(const GameState& game,int manager,int team) {
-    if(manager<0||manager>=5||size_t(manager+1)*0xb0c>game.manager_records.size())
+    if(manager<0||manager>=5||size_t(manager+1)*kManagerRecordSize>game.manager_records.size())
         throw FormatError("national friendly: missing Source manager identity");
-    const size_t record=size_t(manager)*0xb0c;
+    const size_t record=size_t(manager)*kManagerRecordSize;
     ui::NationalFriendlyIdentity out;
     for(size_t i=0;i<30&&game.manager_records[record+0xa8+i];++i)
         out.manager_name.push_back(char(game.manager_records[record+0xa8+i]));
@@ -138,7 +138,7 @@ std::string national_friendly_status_message(FriendlyBookingStatus status) {
 // Throws FormatError for an invalid slot, a missing record or an out-of-range count.
 int source_transfer_history_count(const GameState& game, int manager_slot) {
     if (manager_slot < 0 || manager_slot >= 4) throw FormatError("statistics: invalid manager slot");
-    const size_t at=size_t(manager_slot)*0xb0c+0x21d;
+    const size_t at=size_t(manager_slot)*kManagerRecordSize+0x21d;
     if(at>=game.manager_records.size())throw FormatError("statistics: missing manager transfer-history counter");
     const int count=game.manager_records[at];
     if(count>25)throw FormatError("statistics: Original transfer-history count exceeds 25");
@@ -1191,7 +1191,7 @@ struct FlowRequestServer {
                 const auto& game=session->state();
                 if(manager<0||size_t(manager)>=game.manager_teams.size()||
                    !game.memory.has(::bmh::layout::ActiveManager)||game.memory.u8(::bmh::layout::ActiveManager)!=manager||
-                   size_t(manager+1)*0xb0c>game.manager_records.size())
+                   size_t(manager+1)*kManagerRecordSize>game.manager_records.size())
                     throw FormatError("fair play: invalid active manager");
                 const int team=game.manager_teams[size_t(manager)];
                 if(team!=kNoTeam&&(team<0||size_t(team)>=game.team_flags.size()))
@@ -1204,12 +1204,12 @@ struct FlowRequestServer {
                 const int manager=result.desk_action.manager_slot;
                 if(manager<0||size_t(manager)>=game.manager_teams.size()||
                    !game.memory.has(::bmh::layout::ActiveManager)||game.memory.u8(::bmh::layout::ActiveManager)!=manager||
-                   size_t(manager+1)*0xb0c>game.manager_records.size())
+                   size_t(manager+1)*kManagerRecordSize>game.manager_records.size())
                     throw FormatError("highscore: invalid active manager/roster owner");
                 const int team=game.manager_teams[size_t(manager)];
                 if(team!=kNoTeam&&(team<0||size_t(team)>=game.team_flags.size()))
                     throw FormatError("highscore: active manager has no Source roster");
-                const size_t name_at=size_t(manager)*0xb0c+0xa8;
+                const size_t name_at=size_t(manager)*kManagerRecordSize+0xa8;
                 size_t name_length=0;
                 while(name_length<30&&game.manager_records[name_at+name_length])++name_length;
                 if(name_length==30)throw FormatError("highscore: unterminated active manager name");
@@ -2599,7 +2599,7 @@ struct FlowRequestServer {
                 const auto& game = session->state();
                 const auto& desk = flow.desktop()->state();
                 const int manager = request.manager_slot;
-                const size_t record = size_t(manager) * 0xb0c;
+                const size_t record = size_t(manager) * kManagerRecordSize;
                 const auto live = session->desktop_projection(revision);
                 // Calendar identity check: the manager's record must point to the manager's current team and a
                 // fresh desk projection must equal the desk on screen (manager, club, day counter, season,

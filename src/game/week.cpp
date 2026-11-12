@@ -150,7 +150,7 @@ void familiarity_decay(GameState& g, GameRandom& game, WatcomRandom& rand) {
 }
 
 void train_squad(GameState& g, int manager, GameRandom& game, WatcomRandom& rand) {
-    const size_t rec = size_t(manager) * 0xB0C;
+    const size_t rec = size_t(manager) * kManagerRecordSize;
     uint8_t table[4][9];
     for (int pos = 0; pos < 4; pos++)
         for (int a = 0; a < 9; a++)
@@ -247,7 +247,7 @@ void auto_training(GameState& g, int manager) {
     uint8_t& option = g.manager_options.at(size_t(manager) * 5 + 4);  // CareerSessionRuntimeField3
     if (!(option & 0x80)) option = 0x9f;
     const uint8_t flags = (option & 1) ? option : 0;  // local_14
-    const size_t rec = size_t(manager) * 0xB0C;
+    const size_t rec = size_t(manager) * kManagerRecordSize;
     const int team = int16_t(rd16w(g.manager_records, rec + 0x290));
     uint8_t plan[13];
     for (int i = 0; i < 13; i++) plan[i] = g.manager_records.at(rec + 0xc5 + size_t(i));

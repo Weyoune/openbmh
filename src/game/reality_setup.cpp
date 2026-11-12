@@ -54,7 +54,7 @@ void validate(const GameState& state, const std::array<int,2>& teams, int side, 
         if (range.first+range.count > state.squad_slots.size() || range.count < 11)
             throw FormatError("Reality setup: truncated squad");
         const int m = manager(state,team);
-        if (m >= 0 && (state.manager_records.size() < size_t(m)*0xb0c+0xd9 ||
+        if (m >= 0 && (state.manager_records.size() < size_t(m)*kManagerRecordSize+0xd9 ||
                        state.tactics.size() < size_t(m+1)*0x840))
             throw FormatError("Reality setup: truncated manager/board");
         for (const auto& p : positions[size_t(s)])
@@ -110,7 +110,7 @@ void initialize_reality(GameState& state, const std::array<int,2>& teams, int at
         for (int option = 0; option < 7; ++option)
             setup.tactics[size_t(side)][size_t(option)] = uint8_t(m < 0 ?
                 rand.range(0,exe.u8(::bmh::layout::RealitySetup_InitializeReality_RuntimeFieldUnsigned+uint32_t(option))) :
-                state.manager_records.at(size_t(m)*0xb0c+0xd2+size_t(option)));
+                state.manager_records.at(size_t(m)*kManagerRecordSize+0xd2+size_t(option)));
     }
     setup.grid.reset_occupancy(); // SizeT2 clears only the two occupancy planes.
     for (int pass = 0; pass < 2; ++pass) {

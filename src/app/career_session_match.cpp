@@ -33,7 +33,7 @@ bool CareerSession::dispatch_tactics(const ui::TacticsRequest& request, uint64_t
     }
     // RerateTeam: only +d2..+d9 and (index 0) option byte +2.
     // The tactic board, player order and both RNG streams stay untouched.
-    const size_t rec = size_t(request.manager_slot) * 0xb0c;
+    const size_t rec = size_t(request.manager_slot) * kManagerRecordSize;
     const size_t option = size_t(request.manager_slot) * 5 + 2;
     if (g_.manager_records.size() < rec + 0xb0c || g_.manager_options.size() <= option) {
         error = "Die Taktikdaten sind unvollständig."; return false;
@@ -905,7 +905,7 @@ bool CareerSession::dispatch_live_tactic(const ui::TacticsRequest& request, int 
         error = "Ungültige Assistenteneinstellung.";
         return false;
     }
-    const size_t record = size_t(manager) * 0xb0c;
+    const size_t record = size_t(manager) * kManagerRecordSize;
     const size_t option = size_t(manager) * 5 + 2;
     if (g_.manager_records.size() < record + 0xb0c || g_.manager_options.size() <= option) {
         error = "Die Taktikdaten sind unvollständig.";
@@ -994,7 +994,7 @@ bool CareerSession::dispatch_pitch(const ui::PitchRequest& request, uint64_t& re
     if (live_context) {
         const int manager = live_intervention_->manager;
         const int team = live_intervention_->team;
-        const size_t rec = size_t(manager) * 0xb0c;
+        const size_t rec = size_t(manager) * kManagerRecordSize;
         if (request.indoor != g_.indoor || manager < 0 || manager >= int(g_.manager_teams.size()) ||
             g_.manager_teams[size_t(manager)] != team || g_.manager_of(team) != manager ||
             size_t(team) >= g_.club_ids.size() || rec + 0xb0c > g_.manager_records.size() ||
@@ -1052,7 +1052,7 @@ bool CareerSession::dispatch_pitch(const ui::PitchRequest& request, uint64_t& re
     try {
         GameState staged = g_;
         bool accepted = false;
-        const size_t manager_rec = size_t(request.manager_slot) * 0xb0c;
+        const size_t manager_rec = size_t(request.manager_slot) * kManagerRecordSize;
         static constexpr size_t set_piece_offsets[] = {0xafc,0xafe,0xb08};
         std::array<uint16_t,3> current_set_piece{};
         for(size_t i=0;i<3;++i){const size_t at=manager_rec+set_piece_offsets[i];
@@ -1444,10 +1444,10 @@ ui::PreparationState CareerSession::preparation_projection(const GameState& stat
         stadium.gradient_text = source_runtime_byte(state, club_modal_runtime_, exe_, ::bmh::layout::TextGradientDisabled) == 0 &&
             source_runtime_byte(state, club_modal_runtime_, exe_, ::bmh::layout::TextGradientMode) == 2;
         stadium.source_level = state.level;
-        stadium.season_tickets = uint16_t(state.manager_records.at(size_t(stadium.manager_slot) * 0xb0c + 0x2ac)) |
-            uint16_t(state.manager_records.at(size_t(stadium.manager_slot) * 0xb0c + 0x2ad)) << 8;
-        const int source_team = int16_t(uint16_t(state.manager_records.at(size_t(stadium.manager_slot) * 0xb0c + 0x290)) |
-            uint16_t(state.manager_records.at(size_t(stadium.manager_slot) * 0xb0c + 0x291)) << 8);
+        stadium.season_tickets = uint16_t(state.manager_records.at(size_t(stadium.manager_slot) * kManagerRecordSize + 0x2ac)) |
+            uint16_t(state.manager_records.at(size_t(stadium.manager_slot) * kManagerRecordSize + 0x2ad)) << 8;
+        const int source_team = int16_t(uint16_t(state.manager_records.at(size_t(stadium.manager_slot) * kManagerRecordSize + 0x290)) |
+            uint16_t(state.manager_records.at(size_t(stadium.manager_slot) * kManagerRecordSize + 0x291)) << 8);
         const int source_league = source_team > 0x164 ? 0 : team_league(source_team);
         if (source_league < 0 || size_t(source_league) >= state.league_rounds.size())
             throw FormatError("stadium source league is outside the live league table");

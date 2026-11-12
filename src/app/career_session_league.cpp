@@ -51,7 +51,7 @@ bool source_table_identity_is_live(const GameState& game,const ui::StrengthsIden
        game.date!=id.day_counter||id.runtime_club<0||size_t(id.runtime_club)>=game.club_ids.size()||
        int(game.club_ids[size_t(id.runtime_club)])!=id.club_identity||
        id.league_group>1) return false;
-    const size_t record=size_t(id.manager)*0xb0c;
+    const size_t record=size_t(id.manager)*kManagerRecordSize;
     if(record+0x212>game.manager_records.size()||
        id.manager_default_league!=int(game.manager_records[record+0x210])) return false;
     const uint32_t settings=::bmh::layout::ManagerSettings+uint32_t(id.manager)*2;
@@ -103,7 +103,7 @@ std::optional<ui::StrengthsRequest> CareerSession::strengths_open_request(uint64
     request.identity={manager,club,int(g_.club_ids[size_t(club)]),club>356?0:team_league(club),g_.date,
         revision,0,0,g_.memory.u16(setting),g_.memory.u16(family)};
     request.identity.league_group=uint8_t(request.identity.league>=5);
-    const size_t record=size_t(manager)*0xb0c;
+    const size_t record=size_t(manager)*kManagerRecordSize;
     if(record+0x212<=g_.manager_records.size())
         request.identity.manager_default_league=int(g_.manager_records[record+0x210]);
     else return {};
@@ -492,7 +492,7 @@ bool CareerSession::prepare_league_family_child(const ui::StrengthsIdentity& id,
           league_family_owner_->identity.family_sequence+1!=id.family_sequence))) {
         error="league family: missing owner binding for child entry";return false;
     }
-    const size_t record=size_t(id.manager)*0xb0c;
+    const size_t record=size_t(id.manager)*kManagerRecordSize;
     if(record+0x212>g_.manager_records.size()||id.manager_default_league!=int(g_.manager_records[record+0x210])) {
         error="league family: stale manager default league";return false;
     }
@@ -1093,7 +1093,7 @@ bool CareerSession::select_league_family_page(const ui::LeagueFamilyRequest& req
     }
     const uint8_t old_group=id.league_group;
     const uint8_t next_group=toggle?uint8_t(old_group^1):old_group;
-    const size_t record=size_t(id.manager)*0xb0c;
+    const size_t record=size_t(id.manager)*kManagerRecordSize;
     const auto checkpoint=league_family_checkpoint();
     try {
         if(toggle) {
@@ -1230,7 +1230,7 @@ std::optional<ui::StrengthsIdentity> CareerSession::dispatch_family_table_team_i
         // Nein/Radio/Video setting made in it.
         if(!live_unchanged||!accepted||entry_calls<1)
             throw FormatError("league family: TeamInfo presenter changed owner or did not enter the selected club");
-        const size_t record=size_t(id.manager)*0xb0c;
+        const size_t record=size_t(id.manager)*kManagerRecordSize;
         if(next.date!=g_.date||next.manager_teams!=g_.manager_teams||
            !next.memory.has(::bmh::layout::ActiveManager)||next.memory.u8(::bmh::layout::ActiveManager)!=id.manager||record+0x292>next.manager_records.size()||
            (int(next.manager_records[record+0x290])|int(next.manager_records[record+0x291])<<8)!=id.runtime_club||

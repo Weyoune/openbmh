@@ -129,7 +129,7 @@ void validate(const GameState& g,const LeaguePairingsOwner& o) {
          (g.memory.u8(::bmh::layout::CareerSession_CloseLeagueFamily_ExecutableField+uint32_t(o.manager))&0x0f)==8)&&
         g.memory.has(::bmh::layout::LeagueTableDisplayModes+uint32_t(o.manager)*2+1),
         "pairings: missing preferences or unsupported saved list mode");
-    require(g.results.size()>=kResultsSize&&g.club_ids.size()>=138&&g.league_rounds.size()>=9&&
+    require(g.results.size()>=kResultsSize&&g.club_ids.size()>=size_t(world_layout().league_teams)&&g.league_rounds.size()>=size_t(kLeagueCount)&&
         g.memory.has(::bmh::layout::Postponed+0xef)&&g.memory.has(::bmh::layout::CompetitionCalendar+365*2+1),
         "pairings: incomplete Native schedule");
     const auto selection_valid=[&](int team,int identity) {
@@ -373,9 +373,9 @@ LeaguePairingsOwner edit_league_pairings_source(GameState& g,const LeaguePairing
         require(g.memory.has(::bmh::layout::CalendarState_FormatError_RuntimeField2)&&g.memory.u8(::bmh::layout::CalendarState_FormatError_RuntimeField2)==0,
             "pairings: secondary leagues disabled");
         out.league_group^=1;
-        require(size_t(out.manager)*0xb0c+0x210<g.manager_records.size(),
+        require(size_t(out.manager)*kManagerRecordSize+0x210<g.manager_records.size(),
             "pairings: missing manager league preference");
-        out.league=out.league_group?5:g.manager_records.at(size_t(out.manager)*0xb0c+0x210);
+        out.league=out.league_group?5:g.manager_records.at(size_t(out.manager)*kManagerRecordSize+0x210);
         require(out.league>=0&&out.league<9,"pairings: invalid manager league preference");
         [[fallthrough]];
     case LeaguePairingsAction::select_league:

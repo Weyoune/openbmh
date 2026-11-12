@@ -32,7 +32,7 @@ bool legacy_academy(const GameState& g, int manager) {
     return value == 1500000 || value == 1000000 || value == 580000 || value == 280000;
 }
 uint32_t academy_paid(const GameState& g, int manager) {
-    const auto at = size_t(manager) * 0xb0c + 0x880;
+    const auto at = size_t(manager) * kManagerRecordSize + 0x880;
     return uint32_t(g.manager_records.at(at)) | uint32_t(g.manager_records.at(at + 1)) << 8 |
         uint32_t(g.manager_records.at(at + 2)) << 16 | uint32_t(g.manager_records.at(at + 3)) << 24;
 }

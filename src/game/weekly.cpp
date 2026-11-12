@@ -1333,7 +1333,7 @@ bool decide_bids(GameState& g, int k, GameRandom& game, WatcomRandom& rand, Minu
         const int bidder_manager = g.manager_of(bidder);
         if (bidder_manager >= 0) {
             const int32_t fee = int32_t(mem.u32(list + 0x1c + uint32_t(bid) * 4));
-            const size_t rec = size_t(bidder_manager) * 0xb0c;
+            const size_t rec = size_t(bidder_manager) * kManagerRecordSize;
             const int32_t balance = int32_t(uint32_t(g.manager_records.at(rec + 0x314)) |
                 uint32_t(g.manager_records.at(rec + 0x315)) << 8 | uint32_t(g.manager_records.at(rec + 0x316)) << 16 |
                 uint32_t(g.manager_records.at(rec + 0x317)) << 24);

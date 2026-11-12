@@ -207,7 +207,7 @@ void new_career_markets_and_moods(GameState& g, GameRandom& game, WatcomRandom& 
     if (g.texts) {
         auto name = [&](int record, uint32_t pointer) {
             const std::string& t = (*g.texts)[(pointer - ::bmh::layout::TextPointerTable) / 4];
-            const size_t at = size_t(record) * 0xb0c + 0xa8;
+            const size_t at = size_t(record) * kManagerRecordSize + 0xa8;
             for (size_t i = 0; i <= t.size(); i++) g.manager_records.at(at + i) = i < t.size() ? uint8_t(t[i]) : 0;
         };
         name(first, ::bmh::layout::Career_NewCareerMarketsAndMoods_ExecutableField);
@@ -438,20 +438,21 @@ void career_managers_begin(GameState& g, bool adding) {
 bool career_add_manager(GameState& g, const LeImage& exe, int m, const CareerManager& choice, bool adding,
                         GameRandom& game, WatcomRandom& rand, MinuteReport& report) {
     // Reject malformed requests before changing records or consuming either RNG.
+    const size_t clubs = size_t(world_layout().first_foreign_cup());  // clubs with records (Classic: 168)
     if (!g.memory.has(::bmh::layout::ManagerCount) || m < 0 || m >= 4 ||
         g.memory.u8(::bmh::layout::ManagerCount) > 4 || m >= g.memory.u8(::bmh::layout::ManagerCount) ||
         size_t(m) >= g.manager_teams.size() || g.manager_records.size() < 5 * kRecord ||
-        choice.team < 0 || choice.team >= 168 || size_t(choice.team) >= g.club_ids.size() ||
+        choice.team < 0 || choice.team >= world_layout().first_foreign_cup() || size_t(choice.team) >= g.club_ids.size() ||
         choice.league < 0 || choice.league > 4 || choice.strength < 0 || choice.strength > 2 ||
         choice.portrait < 0 || choice.portrait > 11 || choice.name.size() > 24 ||
         g.tactics.size() < size_t(m + 1) * 0x840 ||
         g.manager_ratings.size() < size_t(m + 1) * 0x3c ||
         g.manager_results.size() < g.manager_teams.size() * 0x690 ||
-        g.squad_slots.size() < kSquadSlots || g.club_ids.size() < 168 ||
-        g.team_morale.size() < 168 || g.team_flags.size() < 168 ||
-        g.club_heap_bc.size() < 168 * 2 || g.club_heap_78.size() < 168 * 2 ||
-        g.club_heap_b8.size() < 168 || g.position_history.size() < 138 * 0x1a ||
-        (!g.club_table.empty() && g.club_table.size() < 168 * 0x4a) ||
+        g.squad_slots.size() < kSquadSlots || g.club_ids.size() < clubs ||
+        g.team_morale.size() < clubs || g.team_flags.size() < clubs ||
+        g.club_heap_bc.size() < clubs * 2 || g.club_heap_78.size() < clubs * 2 ||
+        g.club_heap_b8.size() < clubs || g.position_history.size() < size_t(world_layout().league_teams) * 0x1a ||
+        (!g.club_table.empty() && g.club_table.size() < clubs * kClubRecordSize) ||
         g.player_bonus.size() < g.players.size() || g.player_cards.size() < g.players.size() ||
         !exe.contains(::bmh::layout::Career_CareerAddManager_ExecutableField) || !exe.contains(::bmh::layout::Career_BuildStadium_RuntimeField3 + 0x15 * 5) ||
         !exe.contains(::bmh::layout::Career_BuildStadium_RuntimeField + 4 * 0x17 + 0x15)) {

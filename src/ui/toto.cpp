@@ -36,7 +36,7 @@ TotoState toto_from_game(const GameState& g, uint64_t revision) {
     TotoState s;
     const int manager = int(g.memory.u8(::bmh::layout::ActiveManager));
     if (manager < 0 || size_t(manager) >= g.manager_teams.size()) throw FormatError("toto: invalid active manager");
-    const size_t record = size_t(manager) * 0xb0c;
+    const size_t record = size_t(manager) * kManagerRecordSize;
     if (record + 0x318 > g.manager_records.size() || !g.memory.has(kCoupon + uint32_t(manager) * 0x14 + 0x13))
         throw FormatError("toto: missing coupon or manager record");
     s.manager_slot = manager; s.runtime_club = g.manager_teams.at(size_t(manager)); s.revision = revision;

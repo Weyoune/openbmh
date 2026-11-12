@@ -663,7 +663,7 @@ int attendance(GameState& g, int home, int away, int bits, int temperature, int 
         }
     }
     const int home_manager = g.manager_of(home), away_manager = g.manager_of(away);  // local_20, local_14
-    const size_t rec = size_t(home_manager) * 0xB0C;  // EDI / puVar10: the home manager's record
+    const size_t rec = size_t(home_manager) * kManagerRecordSize;  // EDI / puVar10: the home manager's record
     auto r8 = [&](size_t off) { return int(g.manager_records.at(rec + off)); };
     auto r16 = [&](size_t off) { return int(g.manager_records.at(rec + off) | g.manager_records.at(rec + off + 1) << 8); };
     auto r32 = [&](size_t off) { return int32_t(rd32(g.manager_records, rec + off)); };
@@ -851,7 +851,7 @@ int attendance(GameState& g, int home, int away, int bits, int temperature, int 
     if (away_manager >= 0 && (bits & 0x180)) {
         // a shared gate (cups, bits 7/8): the human away club gets the same half and counts
         // the match in its attendance statistics (no catering, no records)
-        const size_t away_rec = size_t(away_manager) * 0xB0C;
+        const size_t away_rec = size_t(away_manager) * kManagerRecordSize;
         auto& m = g.manager_records;
         if ((m.at(away_rec + 0x290) | m.at(away_rec + 0x291) << 8) != kNoTeam) {
             book_money(g, away_manager, -income, true);
@@ -903,7 +903,7 @@ void man_marking(GameState& g, int own_manager, int own, int other_manager, int 
             const size_t at = size_t(own_manager) * 0x840 + s * 0x58 + 0x44;
             g.tactics.at(at) = 0xFF, g.tactics.at(at + 1) = 0x0F;
         }
-        const size_t rec = size_t(own_manager) * 0xB0C + 0x8ac;
+        const size_t rec = size_t(own_manager) * kManagerRecordSize + 0x8ac;
         rate = uint8_t((int16_t(g.manager_records.at(rec) | g.manager_records.at(rec + 1) << 8) >> 4) + 0x28);
     }
     bool marking[24] = {};  // local_70: own slots already marking

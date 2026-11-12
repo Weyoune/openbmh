@@ -189,7 +189,7 @@ uint8_t source_name_color(const GameState& game, const std::map<uint32_t,uint8_t
     const int active = source_byte(game,runtime,exe,::bmh::layout::ActiveManager);
     const int current_manager = source_byte(game,runtime,exe,::bmh::layout::DeskPosition);
     for (int slot = 0; slot < count && slot < 4; ++slot) {
-        const size_t record = size_t(slot) * 0xb0c;
+        const size_t record = size_t(slot) * kManagerRecordSize;
         if (record + 0xa8 < game.manager_records.size() && game.manager_records[record + 0xa8] != 0 &&
             game.manager_teams[size_t(slot)] == team)
             return slot == active && current_manager < count ? 0x7a : 0x75;

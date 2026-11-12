@@ -215,7 +215,7 @@ bool CareerSession::dispatch_training_camp(const ui::TrainingCampRequest& reques
         error = "stale_manager_or_revision";
         return false;
     }
-    const size_t rec = size_t(request.manager_slot) * 0xb0c;
+    const size_t rec = size_t(request.manager_slot) * kManagerRecordSize;
     if (request.kind == ui::TrainingCampRequestKind::set_focus) {
         const std::array<uint8_t, 4> current{
             g_.manager_records.at(rec + 0xc1), g_.manager_records.at(rec + 0xc2),
@@ -278,7 +278,7 @@ bool CareerSession::dispatch_bank(const ui::BankRequest& request, uint64_t& revi
         request.runtime_club != g_.manager_teams[size_t(request.manager_slot)] || request.revision != revision) {
         error = "stale_manager_or_revision"; return false;
     }
-    const size_t rec = size_t(request.manager_slot) * 0xb0c;
+    const size_t rec = size_t(request.manager_slot) * kManagerRecordSize;
     std::optional<ui::BankState::PropertyNotice> property_notice;
     std::optional<ui::BankState::CreditNotice> credit_notice;
     const auto read_signed = [&](size_t offset) {
@@ -380,7 +380,7 @@ bool CareerSession::dispatch_bank(const ui::BankRequest& request, uint64_t& revi
             if (lender >= 0) {
                 who.clear();
                 for (size_t i = 0; i < 26; ++i) {
-                    const uint8_t ch = g_.manager_records.at(size_t(lender) * 0xb0c + 0xa8 + i);
+                    const uint8_t ch = g_.manager_records.at(size_t(lender) * kManagerRecordSize + 0xa8 + i);
                     if (!ch) break;
                     who += char(ch);
                 }
@@ -457,7 +457,7 @@ bool CareerSession::dispatch_stadium(const ui::StadiumRequest& supplied_request,
         request.revision != revision || revision == UINT64_MAX || !g_.memory.has(::bmh::layout::GameMode)) {
         error = "stale_manager_or_revision"; return false;
     }
-    const size_t record = size_t(active) * 0xb0c;
+    const size_t record = size_t(active) * kManagerRecordSize;
     if (record + 0xb0c > g_.manager_records.size() ||
         (int(g_.manager_records[record + 0x290]) | int(g_.manager_records[record + 0x291]) << 8) != request.runtime_club) {
         error = "invalid_stadium_owner"; return false;

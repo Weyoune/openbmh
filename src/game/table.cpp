@@ -94,7 +94,7 @@ LeagueTable compute_league_table(const GameState& g, int league, int from, int t
         for (int c = 0; c < t.size; c++) {
             int manager = g.manager_of(first_team + c);
             if (manager < 0) continue;
-            uint8_t d = g.manager_records.at(size_t(manager) * 0xB0C + 0x220);
+            uint8_t d = g.manager_records.at(size_t(manager) * kManagerRecordSize + 0x220);
             if (d >> 5 == 3) t.points[c] = int8_t(t.points[c] - (d & 0x1F));
         }
         flags &= ~4;

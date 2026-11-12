@@ -92,7 +92,7 @@ TaxDialogProjection environment_notice_dialog(const bmh::GameState& game, int ma
                                                std::string body) {
     if (manager < 0 || size_t(manager) >= game.manager_teams.size())
         throw FormatError("environment notice: invalid manager");
-    const size_t record = size_t(manager) * 0xb0c;
+    const size_t record = size_t(manager) * kManagerRecordSize;
     if (record + 0x222 >= game.manager_records.size())
         throw FormatError("environment notice: truncated manager record");
     TaxDialogProjection view;

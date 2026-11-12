@@ -56,7 +56,7 @@ AchievementsState achievements_from_game(const GameState& game,const LeImage& ex
        size_t(owner.manager_slot)>=game.manager_teams.size()||owner.revision==UINT64_MAX||
        underlay.width!=320||underlay.height!=240||!game.texts)
         throw FormatError("achievements: invalid Source desk owner");
-    const size_t base=size_t(owner.manager_slot)*0xb0c;
+    const size_t base=size_t(owner.manager_slot)*kManagerRecordSize;
     if(base+0x556>game.manager_records.size())throw FormatError("achievements: truncated Source manager history");
     AchievementsState out;out.owner=owner;out.manager_slot=owner.manager_slot;out.underlay=underlay;
     out.season_count=std::clamp(game.season+1,1,50);out.selected_season=out.season_count-1;

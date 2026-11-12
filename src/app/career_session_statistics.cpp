@@ -136,7 +136,7 @@ std::optional<CareerSession::StrengthsDispatch> CareerSession::dispatch_strength
        stadium_.investment||stadium_.tip||stadium_.periphery_quote||top_scorers_owner_||top_scorers_dispatch_active_ || stadium_.block_expansion||other_games_owner_||other_games_dispatch_active_) {
         error="strengths: stale or unavailable owner";return {};
     }
-    const size_t rec=size_t(id.manager)*0xb0c;
+    const size_t rec=size_t(id.manager)*kManagerRecordSize;
     const uint32_t setting=::bmh::layout::ManagerSettings+uint32_t(id.manager)*2,family=::bmh::layout::LeagueTableDisplayModes+uint32_t(id.manager)*2;
     if(rec+0xb0c>g_.manager_records.size()||
        (int(g_.manager_records[rec+0x290])|int(g_.manager_records[rec+0x291])<<8)!=id.runtime_club||
@@ -359,7 +359,7 @@ std::optional<ui::TopScorersState> CareerSession::open_top_scorers(
     try {
         const int manager = request.manager_slot;
         const int team = g_.manager_teams[size_t(manager)];
-        const size_t manager_record = size_t(manager) * 0xb0c;
+        const size_t manager_record = size_t(manager) * kManagerRecordSize;
         if (manager_record + 0x292 > g_.manager_records.size() ||
             uint16_t(g_.manager_records[manager_record + 0x290] |
                      uint16_t(g_.manager_records[manager_record + 0x291]) << 8) != uint16_t(team))
@@ -433,7 +433,7 @@ std::optional<CareerSession::TopScorersDispatch> CareerSession::dispatch_top_sco
             !g_.memory.has(::bmh::layout::ActiveManager) || g_.memory.u8(::bmh::layout::ActiveManager) != identity.manager_slot ||
             uint32_t(g_.date) != identity.day_counter || identity.league != current.projection.league)
             throw FormatError("top scorers: desk owner changed");
-        const size_t manager_record = size_t(identity.manager_slot) * 0xb0c;
+        const size_t manager_record = size_t(identity.manager_slot) * kManagerRecordSize;
         if (manager_record + 0x292 > g_.manager_records.size() ||
             uint16_t(g_.manager_records[manager_record + 0x290] |
                      uint16_t(g_.manager_records[manager_record + 0x291]) << 8) !=
@@ -672,7 +672,7 @@ std::optional<ui::OtherGamesState> CareerSession::open_other_games(
         if (size_t(manager) >= next.manager_teams.size())
             throw FormatError("other games: active manager slot is outside typed manager list");
         const int team = next.manager_teams[size_t(manager)];
-        const size_t record = size_t(manager) * 0xb0c;
+        const size_t record = size_t(manager) * kManagerRecordSize;
         if (record + 0x292 > next.manager_records.size() || team < 0 || team >= 0x190 ||
             uint16_t(next.manager_records[record + 0x290] |
                      uint16_t(next.manager_records[record + 0x291]) << 8) != uint16_t(team))
@@ -772,7 +772,7 @@ std::optional<CareerSession::OtherGamesDispatch> CareerSession::dispatch_other_g
             g_.memory.u8(::bmh::layout::ActiveManager) != id.manager_slot || uint32_t(g_.date) != id.day_counter ||
             g_.memory.u8(::bmh::layout::CareerSession_DispatchOtherGames_RuntimeField + uint32_t(id.manager_slot)) != id.expected_view_byte)
             throw FormatError("other games: desk owner or view byte changed");
-        const size_t rec = size_t(id.manager_slot) * 0xb0c;
+        const size_t rec = size_t(id.manager_slot) * kManagerRecordSize;
         if (rec + 0x292 > g_.manager_records.size() ||
             uint16_t(g_.manager_records[rec + 0x290] | uint16_t(g_.manager_records[rec + 0x291]) << 8) !=
                 uint16_t(id.runtime_team))
@@ -831,7 +831,7 @@ std::optional<CareerSession::OtherGamesDispatch> CareerSession::dispatch_other_g
                next.memory.u8(::bmh::layout::ActiveManager)!=id.manager_slot||
                next.memory.u8(::bmh::layout::CareerSession_DispatchOtherGames_RuntimeField+uint32_t(id.manager_slot))!=id.expected_view_byte)
                 throw FormatError("other games: TeamInfo changed its outer desk or saved page owner");
-            const size_t active_record=size_t(id.manager_slot)*0xb0c;
+            const size_t active_record=size_t(id.manager_slot)*kManagerRecordSize;
             if(active_record+0x292>next.manager_records.size()||
                uint16_t(next.manager_records[active_record+0x290]|
                    uint16_t(next.manager_records[active_record+0x291])<<8)!=uint16_t(id.runtime_team))
@@ -1158,7 +1158,7 @@ std::optional<CareerSession::BalanceDispatch> CareerSession::dispatch_balance_pl
                 notice.source_manager_flags=uint8_t(manager)|0x40;
                 notice.compact_dialog_frame=next.notice_gate.compact_dialog_frame!=0;
                 notice.body=message_text(next.state,::bmh::layout::BalancePlan_BalanceFromGame_TextPointer2);
-                const size_t record=size_t(manager)*0xb0c;
+                const size_t record=size_t(manager)*kManagerRecordSize;
                 if(record+0x223>next.state.manager_records.size())throw FormatError("balance: missing manager display identity");
                 const size_t name_at=record+0xa8;size_t name_end=name_at;
                 while(name_end<name_at+30&&next.state.manager_records[name_end])++name_end;

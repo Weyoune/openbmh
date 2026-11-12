@@ -427,14 +427,14 @@ void european_fields(GameState& g, GameRandom& game, WatcomRandom& rand) {
 }
 
 int32_t rec32(const GameState& g, int m, size_t o) {
-    const size_t at = size_t(m) * 0xB0C + o;
+    const size_t at = size_t(m) * kManagerRecordSize + o;
     return int32_t(uint32_t(g.manager_records.at(at) | g.manager_records.at(at + 1) << 8 | g.manager_records.at(at + 2) << 16) |
                    uint32_t(g.manager_records.at(at + 3)) << 24);
 }
 void set_rec32(GameState& g, int m, size_t o, int32_t v) {
-    for (size_t i = 0; i < 4; i++) g.manager_records.at(size_t(m) * 0xB0C + o + i) = uint8_t(uint32_t(v) >> (8 * i));
+    for (size_t i = 0; i < 4; i++) g.manager_records.at(size_t(m) * kManagerRecordSize + o + i) = uint8_t(uint32_t(v) >> (8 * i));
 }
-uint8_t& rec8(GameState& g, int m, size_t o) { return g.manager_records.at(size_t(m) * 0xB0C + o); }
+uint8_t& rec8(GameState& g, int m, size_t o) { return g.manager_records.at(size_t(m) * kManagerRecordSize + o); }
 uint16_t mem_u16(const GameState& g, uint32_t a) { return g.memory.u16(a); }
 
 // HighscoreScore(mask, 0, 0xff): bit 0 the account (+0x314), 1 the deposit (+0x318), 2 the
@@ -512,8 +512,8 @@ void season_tickets(GameState& g, int m, WatcomRandom& rand) {
     const int low = std::max(pop - kBase[league], 0);
     const int r = rand.range(low, low + 10);
     const int sold = ((100 - g.level * 5) * (kTickets[league] + r * 300)) / 100;
-    g.manager_records.at(size_t(m) * 0xB0C + 0x2ac) = uint8_t(sold);
-    g.manager_records.at(size_t(m) * 0xB0C + 0x2ad) = uint8_t(sold >> 8);
+    g.manager_records.at(size_t(m) * kManagerRecordSize + 0x2ac) = uint8_t(sold);
+    g.manager_records.at(size_t(m) * kManagerRecordSize + 0x2ad) = uint8_t(sold >> 8);
     const int32_t income = int32_t(kPrice[league]) * int16_t(sold);
     book_money(g, m, -income, true);
     set_rec32(g, m, 0x754, rec32(g, m, 0x754) + income);
@@ -999,7 +999,7 @@ void cup_fields_english(GameState& g, GameRandom& game, const uint8_t (&ranks)[4
             const int team = club_at_rank(l, i, ranks[l]);
             mem.set16(kEnglishFaField + n++ * 2, uint16_t(team));
             if (const int m = g.manager_of(team); m >= 0)
-                g.manager_records.at(size_t(m) * 0xB0C + 0xda + 1 + size_t(std::min<int>(g.season, 0x31)) * 3) = 1;
+                g.manager_records.at(size_t(m) * kManagerRecordSize + 0xda + 1 + size_t(std::min<int>(g.season, 0x31)) * 3) = 1;
         }
     shuffle(kEnglishFaField, 0x14);
     shuffle(kEnglishFaQualifyingField, 0x30);
@@ -1041,7 +1041,7 @@ void cup_field(GameState& g, GameRandom& game, const std::function<void(const ch
             const int team = club_at_rank(l, i, ranks[l]);
             mem.set16(kField + n++ * 2, uint16_t(team));
             if (const int m = g.manager_of(team); m >= 0)
-                g.manager_records.at(size_t(m) * 0xB0C + 0xda + 1 + size_t(std::min<int>(g.season, 0x31)) * 3) = 1;
+                g.manager_records.at(size_t(m) * kManagerRecordSize + 0xda + 1 + size_t(std::min<int>(g.season, 0x31)) * 3) = 1;
         }
     for (uint32_t i = 0; i < 0x40; i++) {  // PrepareEvent
         const uint32_t j = uint32_t(game.range(0, 0x3f));
@@ -1202,8 +1202,8 @@ void season_players(GameState& g, GameRandom& game, WatcomRandom& rand, MinuteRe
                     bool gone = true;
                     if (owner != -1) {
                         std::string text;
-                        const int doctor = int16_t(g.manager_records.at(size_t(owner) * 0xB0C + 0x8ae) |
-                                                   g.manager_records.at(size_t(owner) * 0xB0C + 0x8af) << 8);
+                        const int doctor = int16_t(g.manager_records.at(size_t(owner) * kManagerRecordSize + 0x8ae) |
+                                                   g.manager_records.at(size_t(owner) * kManagerRecordSize + 0x8af) << 8);
                         if (doctor > rand.range(700, 0x4b0)) {
                             text = message_text(g, ::bmh::layout::Season_SeasonPlayers_TextPointer) + g.player_name(player) + message_text(g, ::bmh::layout::Season_SeasonPlayers_TextPointer2);
                             gone = false;

@@ -320,7 +320,7 @@ void MatchEngine::set_piece_animation(int kind, int distance, int side, int grou
 int MatchEngine::designated_slot(int team, int offset, int exclude) const {
     int manager = state.manager_of(team);
     if (manager < 0 || state.manager_records.empty()) return -1;
-    const uint8_t* rec = state.manager_records.data() + size_t(manager) * 0xB0C;
+    const uint8_t* rec = state.manager_records.data() + size_t(manager) * kManagerRecordSize;
     auto u16 = [&](int at) { return int(rec[at] | rec[at + 1] << 8); };
     if (u16(0xb0a) != 0x3253) return -1;
     int id = u16(offset);
@@ -473,8 +473,8 @@ int injure_player(GameState& g, int slot, int type, bool match, int manager, Wat
         // duration * (doctor / 100 - 5) / 8; a poor doctor makes it longer. The cut is limited
         // only for the heavy injuries: types 20-25 by 4 matchdays, types 26-27 by 6, types 28-30
         // by 8; lighter types have no limit (the duration is cut to 0 at the lowest).
-        const int doctor = int16_t(g.manager_records.at(size_t(manager) * 0xB0C + 0x8ae) |
-                                   g.manager_records.at(size_t(manager) * 0xB0C + 0x8af) << 8);
+        const int doctor = int16_t(g.manager_records.at(size_t(manager) * kManagerRecordSize + 0x8ae) |
+                                   g.manager_records.at(size_t(manager) * kManagerRecordSize + 0x8af) << 8);
         // (the / 8 is Watcom's SAR/SHL/SBB idiom: (x + 7) >> 3 for negative x)
         const int x = duration * (doctor / 100 - 5);
         int cut = (x + (x < 0 ? 7 : 0)) >> 3;
@@ -703,7 +703,7 @@ ForcedMatchEvent MatchEngine::event_impl(MatchGroup& g, int m, int s, int minute
         }
         if (human) {
             const int bucket = std::min(minute, 0x59) / 5;
-            state.manager_records.at(size_t(manager) * 0xB0C + 0x1ae + size_t(bucket) + size_t((kind == 1) + 2) * 0x12)++;
+            state.manager_records.at(size_t(manager) * kManagerRecordSize + 0x1ae + size_t(bucket) + size_t((kind == 1) + 2) * 0x12)++;
         }
     }
 
@@ -761,7 +761,7 @@ void MatchEngine::side(MatchGroup& g, int m, int& s, int minute, int& own_att, i
                 report.fail("attitude of a human team needs the manager records (savegame)");
                 return;
             }
-            own[8] = state.manager_records.at(size_t(manager) * 0xB0C + 0xd2);
+            own[8] = state.manager_records.at(size_t(manager) * kManagerRecordSize + 0xd2);
             return;
         }
         int home = 0, away = 0;
@@ -1077,7 +1077,7 @@ void MatchEngine::side(MatchGroup& g, int m, int& s, int minute, int& own_att, i
         const size_t bucket = size_t(std::min(minute, 0x59) / 5);
         for (int t : {opp_team, team}) {
             const int mgr = state.manager_of(t);
-            if (mgr >= 0) state.manager_records.at(size_t(mgr) * 0xB0C + 0x1c0 + bucket)++;
+            if (mgr >= 0) state.manager_records.at(size_t(mgr) * kManagerRecordSize + 0x1c0 + bucket)++;
         }
     }
 

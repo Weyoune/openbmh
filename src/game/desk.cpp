@@ -110,7 +110,7 @@ void enter_desk(GameState& g, int manager, GameRandom& game, WatcomRandom& rand,
     // (<goal>. Platz) nicht erreicht haben." Reached: (4 - league) * 50000 per place better
     // than the goal plus one (the third divisions count as the second), booked as income.
     std::vector<uint8_t>& r = g.manager_records;
-    const size_t rec = size_t(manager) * 0xB0C;
+    const size_t rec = size_t(manager) * kManagerRecordSize;
     const int goal = r.at(rec + 0x176);
     if (g.memory.has(::bmh::layout::CareerSession_RuntimeError_RuntimeField4) && g.memory.u8(::bmh::layout::CareerSession_RuntimeError_RuntimeField4) != 0 && goal != 0) {
         const int place = int16_t(table_position(g, team)) + 1;  // TablePosition

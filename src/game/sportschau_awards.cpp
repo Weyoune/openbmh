@@ -76,7 +76,7 @@ std::optional<SportschauAwardsView> finish_sportschau_awards(GameState& state,
     for (size_t i = 0; i < 11; ++i) {
         const int manager = state.manager_of(slot_team(group.desc.at(0x70 + i)));
         if (manager >= 0) {
-            auto& counter = state.manager_records.at(size_t(manager) * 0xb0c + 0x21e);
+            auto& counter = state.manager_records.at(size_t(manager) * kManagerRecordSize + 0x21e);
             counter = uint8_t(counter + 1);
         }
     }

@@ -112,7 +112,7 @@ void rate_side(GameState& g, const MatchSetup& m, int side, int previous6, Watco
         int base = kLeagueCrowd[league < 10 ? league : 9] * 1000;
         if (unsigned(rand.range(base + 3000, base + 6000)) < unsigned(m.spectators)) {
             // a human manager's side with record +0x289 set suffers more from a full house
-            modifier -= manager >= 0 && g.manager_records.at(size_t(manager) * 0xB0C + 0x289) != 0 ? 9 : 6;
+            modifier -= manager >= 0 && g.manager_records.at(size_t(manager) * kManagerRecordSize + 0x289) != 0 ? 9 : 6;
         }
     }
     modifier = clamp(int8_t(modifier), -10, 10);
@@ -141,7 +141,7 @@ void rate_side(GameState& g, const MatchSetup& m, int side, int previous6, Watco
     } else {
         // human teams: record +0xd9 (signed) * 5 plus a constant 110, scaled to 0-100. Diamond 3.7: the
         // condition/technique balance r[6] no longer enters (before: d9 * 5 + r[6]).
-        const int8_t d9 = int8_t(g.manager_records.at(size_t(manager) * 0xB0C + 0xd9));
+        const int8_t d9 = int8_t(g.manager_records.at(size_t(manager) * kManagerRecordSize + 0xd9));
         r[7] = uint8_t((d9 * 5 + 110) * 100 / 0xFF);
     }
 }
@@ -162,7 +162,7 @@ std::array<SideRecord, 2> build_side_records(GameState& g, const MatchSetup& m, 
         // state; OpenBMH uses a cleared record (0) as a deterministic stand-in.
         const int manager = g.manager_of(side ? m.away : m.home);
         if (manager >= 0 && !g.manager_option(manager, 2))
-            r.b[8] = g.manager_records.at(size_t(manager) * 0xB0C + 0xd2);  // the manager's own setting
+            r.b[8] = g.manager_records.at(size_t(manager) * kManagerRecordSize + 0xd2);  // the manager's own setting
         else
             r.b[8] = uint8_t(initial_attitude(r, rec[1 - side], side, m.match_index, rand));
     }

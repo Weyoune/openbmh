@@ -180,7 +180,7 @@ auto App::wait_season_ack() -> void {
 // player answered Yes. A button counts only when pressed and released on the same button.
 auto App::show_tax(const GameState& state, const SeasonTaxEvent& event) -> bool {
     if (!running) return false;
-    const size_t base = size_t(event.manager_slot) * 0xb0c;
+    const size_t base = size_t(event.manager_slot) * kManagerRecordSize;
     ui::TaxDialogProjection view;
     view.kind = event.kind == SeasonTaxEventKind::question
         ? ui::TaxDialogKind::question : ui::TaxDialogKind::acknowledgement;

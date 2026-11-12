@@ -88,7 +88,7 @@ LiveMatchRow make_row(const MatchGroup& group, int match, int home, int away, co
         row.spectators = group.spectators[size_t(match)];
         row.spectators_text = original_to_utf8(format_number(state, int32_t(row.spectators), 0x81));
         const int manager = state.manager_of(home);
-        const size_t capacity_at = manager >= 0 ? size_t(manager) * 0xb0c + 0x5c : state.manager_records.size();
+        const size_t capacity_at = manager >= 0 ? size_t(manager) * kManagerRecordSize + 0x5c : state.manager_records.size();
         if (capacity_at < state.manager_records.size())
             row.attendance_at_capacity = state.manager_records[capacity_at] == row.spectators / 1000;
     }

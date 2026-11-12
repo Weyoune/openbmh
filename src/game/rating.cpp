@@ -151,7 +151,7 @@ int team_rating(GameState& g, int team, const RatingProfile& profile, RatingCont
     const int manager = team == kNoTeam ? -1 : g.manager_of(team);  // local_5a
     int rank = 0;                                                     // local_5e
     if (manager >= 0) {
-        const size_t rec = size_t(manager) * 0xB0C;
+        const size_t rec = size_t(manager) * kManagerRecordSize;
         const int league = g.manager_records.at(rec + 0x210);
         const int mode = (league < int(g.league_rounds.size()) && g.league_rounds[size_t(league)] > 9) + 1;
         std::array<uint8_t, 24> buf;

@@ -855,7 +855,7 @@ std::optional<AdvertisingRenewal> CareerSession::dispatch_advertising_renewal(
         error = "Diese Werbeaktion ist nicht mehr aktuell.";
         return std::nullopt;
     }
-    const size_t record = size_t(request.manager_slot) * 0xb0c + 0xa34 +
+    const size_t record = size_t(request.manager_slot) * kManagerRecordSize + 0xa34 +
                           size_t(request.renewal_contract_slot) * 0x0c;
     if (record + 12 > g_.manager_records.size() ||
         !std::equal(request.renewal_expected_contract.begin(), request.renewal_expected_contract.end(),
@@ -1231,7 +1231,7 @@ bool CareerSession::validate_desk_setting_owner(const DeskSettingIdentity& ident
         error = "stale_manager_or_revision"; return false;
     }
     const int club = g_.manager_teams[size_t(active)];
-    const size_t rec = size_t(active) * 0xb0c;
+    const size_t rec = size_t(active) * kManagerRecordSize;
     if (identity.runtime_club != club || club < 0 || club > kNoTeam || size_t(club) >= g_.club_ids.size() ||
         identity.stable_club_identity != std::optional<int>(int(g_.club_ids[size_t(club)])) ||
         rec + 0xb0c > g_.manager_records.size() || size_t(active + 1) * 5 > g_.manager_options.size() ||
@@ -1246,7 +1246,7 @@ bool CareerSession::validate_desk_setting_owner(const DeskSettingIdentity& ident
 // mask, 1-3 flags, 4 training automation not for the national team). Sets 'error' on a rejected
 // value; does not bump the revision (the caller does).
 bool CareerSession::apply_desk_setting(int manager, bool price, int index, int value, std::string& error) {
-    const size_t rec = size_t(manager) * 0xb0c;
+    const size_t rec = size_t(manager) * kManagerRecordSize;
     const bool national = g_.manager_teams[size_t(manager)] == kNoTeam;
     if (price) {
         // Uint8T4: local offsets35..86 map to admission values8..25.
@@ -1376,7 +1376,7 @@ bool CareerSession::dispatch_desk_widget(const ui::DeskRequest& request, uint64_
         if (request.value == 0) {
             if (g_.manager_options[at] > 8) { error = "invalid_saved_formation_automation"; return false; }
             value = g_.manager_options[at];
-            const uint8_t mask = g_.manager_records[size_t(active) * 0xb0c + 0x218 + size_t(g_.indoor)];
+            const uint8_t mask = g_.manager_records[size_t(active) * kManagerRecordSize + 0x218 + size_t(g_.indoor)];
             do { value = (value + 1) % 9; } while (value != 0 && !(mask & (1u << (value - 1))));
         } else value = (g_.manager_options[at] ^ 1) & 1;
     }

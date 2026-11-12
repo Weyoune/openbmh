@@ -596,7 +596,7 @@ void advance_cup(GameState& g, int id, WatcomRandom& rand, MinuteReport& report,
         for (uint16_t t : winners) {
             const int manager = g.manager_of(t);
             if (manager < 0) continue;
-            const size_t at = size_t(manager) * 0xB0C + 0xda + size_t(std::min(g.season, 0x31)) * 3 + (type > 0 ? 2 : 1);
+            const size_t at = size_t(manager) * kManagerRecordSize + 0xda + size_t(std::min(g.season, 0x31)) * 3 + (type > 0 ? 2 : 1);
             g.manager_records.at(at) = uint8_t(g.manager_records.at(at) + 1);
         }
     if (cup_round(mem, entry) == mem.u8(e + 0x1b)) {
@@ -622,7 +622,7 @@ void advance_cup(GameState& g, int id, WatcomRandom& rand, MinuteReport& report,
                 if (mem.u8(::bmh::layout::Cup_AdvanceCup_RuntimeField) == 0 && mem.has(::bmh::layout::CareerSession_BeginFriendlyOpponentTable_ExecutableField2)) mem.set8(::bmh::layout::CareerSession_BeginFriendlyOpponentTable_ExecutableField2, 0);
                 const int manager = g.manager_of(winners[0]);
                 if (manager >= 0 && type >= 0 && type < 4) {
-                    const size_t at = size_t(manager) * 0xB0C + (type == 0 ? 0x8a6 : 0x8a8);
+                    const size_t at = size_t(manager) * kManagerRecordSize + (type == 0 ? 0x8a6 : 0x8a8);
                     const uint16_t n = uint16_t(g.manager_records.at(at) | g.manager_records.at(at + 1) << 8);
                     g.manager_records.at(at) = uint8_t(n + 1), g.manager_records.at(at + 1) = uint8_t((n + 1) >> 8);
                 }

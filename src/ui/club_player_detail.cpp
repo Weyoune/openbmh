@@ -67,7 +67,7 @@ ClubPlayerDetailProjection club_player_detail_from_game(const GameState& g,
     p.gradient_text=(!g.memory.has(::bmh::layout::TextGradientDisabled)||g.memory.u8(::bmh::layout::TextGradientDisabled)==0)&&exe.u8(::bmh::layout::TextGradientMode)==2;
     p.injury_as_text=g.memory.has(::bmh::layout::ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField4)?g.memory.u8(::bmh::layout::ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField4)!=0:exe.u8(::bmh::layout::ClubPlayerDetail_ClubPlayerDetailFromGame_RuntimeField4)!=0;
     if(c.board && !c.human_loan){
-        const size_t month=size_t(c.active_manager)*0xb0c+0x286;
+        const size_t month=size_t(c.active_manager)*kManagerRecordSize+0x286;
         if(month>=g.manager_records.size())throw FormatError("club player detail: missing active statistics months");
         p.statistics_months=g.manager_records[month];
         const uint32_t flags=::bmh::layout::Flags+uint32_t(c.active_manager)*3+2;

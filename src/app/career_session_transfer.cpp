@@ -234,7 +234,7 @@ bool CareerSession::dispatch_poach_ui(const ui::TransferMarketRequest& request,
     const auto checkpoint=advertising_session_checkpoint(revision);
     try {
         const int manager=request.manager_slot;
-        const size_t record=size_t(manager)*0xb0c;
+        const size_t record=size_t(manager)*kManagerRecordSize;
         PoachDispatch result;
         result.start.manager=manager;
         // These three notices precede the Table modal in Reset.

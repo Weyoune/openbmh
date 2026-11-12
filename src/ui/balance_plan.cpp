@@ -42,7 +42,7 @@ BalanceState balance_from_game(const GameState& g,const BalancePlanDraft& d,cons
   uint32_t first=p.maximum/10,step=p.maximum/5;
   int64_t first_signed=first;uint32_t advance=step;
   if(row==20){
-   const size_t rec=size_t(d.manager)*0xb0c;const uint32_t attendance=rec+0x5c<g.manager_records.size()?g.manager_records[rec+0x5c]:0;
+   const size_t rec=size_t(d.manager)*kManagerRecordSize;const uint32_t attendance=rec+0x5c<g.manager_records.size()?g.manager_records[rec+0x5c]:0;
    if(d.rows[20]==0){first_signed=int64_t(attendance)*400;advance=attendance*100;}
    else {const uint32_t value=p.initial;if(value<10){
      // The Original helper divides by zero while deriving its decimal step for 1..9.
@@ -53,7 +53,7 @@ BalanceState balance_from_game(const GameState& g,const BalancePlanDraft& d,cons
   for(size_t i=0;i<6;++i){first_signed=std::max<int64_t>(0,first_signed);if(uint64_t(first_signed)<=p.maximum)p.presets[i]=uint32_t(first_signed);if(uint64_t(first_signed)>p.maximum)p.presets[i].reset();first_signed+=advance;}
   p.presets[6]=0;p.presets[7]=p.maximum;
  }
- const size_t rec=size_t(d.manager)*0xb0c;
+ const size_t rec=size_t(d.manager)*kManagerRecordSize;
  for(size_t n=0;n<30&&rec+0xa8+n<g.manager_records.size();++n){char c=char(g.manager_records[rec+0xa8+n]);if(!c)break;s.read_only_notice.manager_name.push_back(c);s.close_notice.manager_name.push_back(c);}
  s.read_only_notice.kind=TaxDialogKind::acknowledgement;s.read_only_notice.source_manager_flags=uint8_t(d.manager)|0x40;s.read_only_notice.body=message_text(g,::bmh::layout::BalancePlan_BalanceFromGame_TextPointer);
  s.close_notice.kind=TaxDialogKind::acknowledgement;s.close_notice.source_manager_flags=uint8_t(d.manager)|0x40;s.close_notice.body=message_text(g,::bmh::layout::BalancePlan_BalanceFromGame_TextPointer2);

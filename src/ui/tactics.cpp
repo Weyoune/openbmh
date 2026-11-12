@@ -30,7 +30,7 @@ TacticsState project(const StaticMemory& memory, const Bytes& managers, const By
     const int count = memory.u8(::bmh::layout::ManagerCount), slot = memory.u8(::bmh::layout::ActiveManager);
     if (count < 1 || count > 4 || slot < 0 || slot >= count || teams.size() != size_t(count))
         throw FormatError("tactics: invalid/unsupported active manager");
-    const size_t manager = size_t(slot) * 0xb0c, first = size_t(slot) * 0x840;
+    const size_t manager = size_t(slot) * kManagerRecordSize, first = size_t(slot) * 0x840;
     if (managers.size() < manager + 0xb0c || board.size() < first + 0x840 ||
             options.size() < size_t(slot + 1) * 5)
         throw FormatError("tactics: truncated manager/board/options");
@@ -76,9 +76,9 @@ TacticsState tactics_from_save(const SaveState& save, const LeImage& exe, uint64
     for (size_t i = 0; i < raw_offsets.size(); i += 2) offsets.push_back(le16(raw_offsets, i));
     std::vector<int> teams;
     const int count = memory.u8(::bmh::layout::ManagerCount);
-    if (count < 1 || count > 4 || managers.size() < size_t(count) * 0xb0c)
+    if (count < 1 || count > 4 || managers.size() < size_t(count) * kManagerRecordSize)
         throw FormatError("tactics: unsupported/truncated managers");
-    for (int i = 0; i < count; ++i) teams.push_back(le16(managers, size_t(i) * 0xb0c + 0x290));
+    for (int i = 0; i < count; ++i) teams.push_back(le16(managers, size_t(i) * kManagerRecordSize + 0x290));
     auto s = project(memory, managers, board, options, teams, save.pool(0), offsets, exe, revision);
     s.source = "original_save_read_only"; return s;
 }

@@ -20,7 +20,7 @@ uint32_t key(int team, int player) {
 }
 int manager_team(const GameState& g, int manager) {
     if (manager >= 0 && size_t(manager) < g.manager_teams.size()) return g.manager_teams[size_t(manager)];
-    const size_t at = size_t(manager) * 0xb0c + 0x290;
+    const size_t at = size_t(manager) * kManagerRecordSize + 0x290;
     if (manager < 0 || manager > 4 || at + 1 >= g.manager_records.size())
         throw FormatError("long career: invalid manager");
     return int(g.manager_records[at] | uint16_t(g.manager_records[at + 1]) << 8);

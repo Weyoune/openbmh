@@ -368,7 +368,7 @@ static void auto_lineup_impl(GameState& g, int team, int mode, int manager) {
                 g.club_heap_78[club_word + 1] = uint8_t(badge_word >> 8);
                 formation = 0;
                 set = manager;
-                const uint8_t style = g.manager_records.at(size_t(manager) * 0xB0C + 0x288);
+                const uint8_t style = g.manager_records.at(size_t(manager) * kManagerRecordSize + 0x288);
                 weight = 1 << ((style & 3) + 4);
                 familiarity = (style >> 4) & 3;
                 if (g.level >= 6) detail = (style >> 2) & 3;
@@ -447,7 +447,7 @@ static void auto_lineup_impl(GameState& g, int team, int mode, int manager) {
             if (option == -1) throw std::invalid_argument("auto_lineup: invalid human formation option");
             formation = option;
             set = manager;
-            const uint8_t style = g.manager_records.at(size_t(manager) * 0xB0C + 0x288);  // assistant settings
+            const uint8_t style = g.manager_records.at(size_t(manager) * kManagerRecordSize + 0x288);  // assistant settings
             weight = 1 << ((style & 3) + 4);
             familiarity = (style >> 4) & 3;
             if (g.level >= 6) detail = (style >> 2) & 3;
@@ -788,7 +788,7 @@ bool substitute(GameState& g, int team, int off, int mode, WatcomRandom& rand) {
         // human teams: the re-sort uses a formation after the attitude (mode / 2 for the
         // tactical changes, else the manager's setting, record +0xd2): option byte 0 is set
         // to 4 - attitude for the call and restored afterwards
-        int attitude = mode < 9 ? mode >> 1 : int8_t(g.manager_records.at(size_t(manager) * 0xB0C + 0xd2));  // (mode as clamped above)
+        int attitude = mode < 9 ? mode >> 1 : int8_t(g.manager_records.at(size_t(manager) * kManagerRecordSize + 0xd2));  // (mode as clamped above)
         if (attitude > 3) attitude = 3;
         uint8_t& option = g.manager_options.at(size_t(manager) * 5);
         const uint8_t saved = option;

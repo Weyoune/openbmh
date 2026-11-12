@@ -61,7 +61,7 @@ StatisticsRankingState statistics_rankings_from_game(const GameState& game, cons
     if (!game.memory.has(kTitles + kTitleCount * kSeasonCount * 2 - 1))
         throw FormatError("statistics rankings: save lacks the Original Titles title-holder block");
     if (manager_slot < 0 || manager_slot >= 4 ||
-        size_t(manager_slot) * 0xb0c + 0x2aa + 1 >= game.manager_records.size())
+        size_t(manager_slot) * kManagerRecordSize + 0x2aa + 1 >= game.manager_records.size())
         throw FormatError("statistics rankings: missing Source manager season-number field");
     if (underlay.width != 320 || underlay.height != 240)
         throw FormatError("statistics rankings: expected accepted 320x240 parent underlay");

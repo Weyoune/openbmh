@@ -69,7 +69,7 @@ PitchExtras extras(const StaticMemory& memory,const Bytes& managers,const Bytes&
          (memory.has(::bmh::layout::CoachActive)&&memory.u8(::bmh::layout::CoachActive)!=0));
     if(e.runtime_club<0||(e.runtime_club>=exe.u16(::bmh::layout::LeagueClubCount)&&!national))
         throw FormatError("pitch: unsupported club");
-    const size_t m=size_t(e.manager_slot)*0xb0c,f=size_t(e.manager_slot)*0x160;
+    const size_t m=size_t(e.manager_slot)*kManagerRecordSize,f=size_t(e.manager_slot)*0x160;
     if(managers.size()<m+0xb0c||formations.size()<f+0x160||
        (!national&&badges.size()<size_t(e.runtime_club+1)*2))
         throw FormatError("pitch: truncated manager/formations/badges");
@@ -90,8 +90,8 @@ PitchExtras extras(const StaticMemory& memory,const Bytes& managers,const Bytes&
 PitchExtras pitch_extras_from_save(const SaveState& save,const LeImage& exe,uint64_t revision){
     StaticMemory memory(save);const auto managers=block(save,::bmh::layout::ManagerRecords);std::vector<int> teams;
     const int count=memory.u8(::bmh::layout::ManagerCount);
-    if(count<1||count>4||managers.size()<size_t(count)*0xb0c)throw FormatError("pitch: unsupported save managers");
-    for(int i=0;i<count;++i)teams.push_back(le16(managers,size_t(i)*0xb0c+0x290));
+    if(count<1||count>4||managers.size()<size_t(count)*kManagerRecordSize)throw FormatError("pitch: unsupported save managers");
+    for(int i=0;i<count;++i)teams.push_back(le16(managers,size_t(i)*kManagerRecordSize+0x290));
     auto e=extras(memory,managers,block(save,::bmh::layout::Formations),block(save,::bmh::layout::ClubBadgeSelectors),teams,exe,revision);
     e.source="original_save_read_only";return e;
 }
@@ -101,7 +101,7 @@ PitchExtras pitch_extras_from_game(const GameState& game,const LeImage& exe,uint
     // The independent indoor template set uses the same per-manager stride.
     if(game.indoor){const size_t at=size_t(e.manager_slot)*0x160+0xb0;
         std::copy_n(game.formations.begin()+at,8*22,e.formations.begin());
-        e.formation_mask=game.manager_records.at(size_t(e.manager_slot)*0xb0c+0x219);}
+        e.formation_mask=game.manager_records.at(size_t(e.manager_slot)*kManagerRecordSize+0x219);}
     if(opponent_team>=0){
         const auto range=squad_range(opponent_team);
         if(!range.count||range.first+range.count>game.squad_slots.size())
